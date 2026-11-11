@@ -23,9 +23,7 @@ export {
 export { managerChanges } from "./managerChanges";
 export {
   parseDateField,
-  parsePatternName,
   parseWeek,
-  makeRoomForDatedRow,
   type PatternVersion,
   type PatternWeek,
   type WeekdayMinutes,
@@ -36,8 +34,18 @@ export {
   cancelPlannedVersion,
   earliestChangeDate,
   parseChangeDate,
-  versionsFromToday,
+  SETUP_START_DATE,
 } from "./datedChange";
+export {
+  type Assignment,
+  type AssignmentOwner,
+  type AssignmentPlan,
+  isSameOwner,
+  NEW_ROW,
+  planOrRefusal,
+  rowsAfterPlan,
+  type VersionStatus,
+} from "./assignment";
 export {
   cancelTermsMove,
   planTermsMove,
@@ -53,7 +61,6 @@ export {
 } from "./personTimeline";
 export {
   workingWeeksOf,
-  type DatedPattern,
   type TermsMembership,
   type WorkingPatternTimeline,
 } from "./workingPatternTimeline";

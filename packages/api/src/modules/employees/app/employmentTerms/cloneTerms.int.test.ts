@@ -1,148 +1,158 @@
 import {
   ADMIN,
-  calendarDate,
   EMPLOYEE,
   expect,
   giveTermsPolicies,
   readTermsPolicyVersions,
   recordCloneService,
-  seedTimeOffPolicyVersions,
+  seedTermsWeek,
+  seedTermsPolicy,
   termsService,
   test,
+  timeOffService,
+  workingPatternService,
 } from "#test/support";
-
 import { locationRepository, workingPatternRepository } from "../../db";
 
-test("clones today's working week from the beginning and keeps planned weeks, leaving past weeks out", async ({
+test("clones only today's published working week as a new unpublished pattern", async ({
   orm,
   seed,
 }) => {
-  const id = await seed.defaultTermsId();
-  const patterns = workingPatternRepository(orm);
-  const pattern = (await patterns.findPatterns()).find(({ termsId }) => termsId === id)!;
-  const { id: pastId, ...week } = pattern.versions[0]!;
-  await patterns.endVersion(pastId, calendarDate("2026-03-31"));
-  await patterns.insertVersion(pattern.id, {
-    ...week,
-    startDate: calendarDate("2026-04-01"),
-    endDate: calendarDate("2026-12-31"),
+  const id = await seed.terms("Source");
+  await seedTermsWeek(orm, { termsId: id, startDate: "2026-01-01", endDate: "2026-03-31" });
+  const current = await seedTermsWeek(orm, {
+    termsId: id,
+    startDate: "2026-04-01",
+    endDate: "2026-12-31",
     minutes: [480, 480, 480, 480, 0, 0, 0],
     bankHolidayCalendar: "scotland",
   });
-  await patterns.insertVersion(pattern.id, {
-    ...week,
-    startDate: calendarDate("2027-01-01"),
-    endDate: null,
+  await seedTermsWeek(orm, {
+    termsId: id,
+    startDate: "2027-01-01",
     minutes: [360, 360, 360, 360, 360, 0, 0],
     bankHolidayCalendar: "northern_ireland",
   });
-  const before = (await patterns.findPatterns()).find(({ termsId }) => termsId === id);
+  await workingPatternService(orm).saveWorkingPattern(ADMIN, {
+    termsId: id,
+    minutes: [300, 300, 300, 300, 300, 0, 0],
+    bankHolidayCalendar: "england_and_wales",
+  });
+  const before = await termsService(orm).readTerms(ADMIN, id);
 
-  const clone = await recordCloneService(orm, { today: "2026-11-09" }).cloneRecord(ADMIN, {
+  const clone = await recordCloneService(orm, { today: "2026-06-01" }).cloneRecord(ADMIN, {
     recordType: "terms",
     id,
     name: "Senior staff",
   });
 
-  const saved = await termsService(orm, { today: "2026-11-09" }).readTerms(ADMIN, clone.id);
-  expect(saved!.workingWeek).toMatchObject([
-    {
-      startDate: null,
-      endDate: "2026-12-31",
+  const saved = await termsService(orm).readTerms(ADMIN, clone.id);
+  expect(saved).toMatchObject({
+    workingWeek: [],
+    unpublishedWorkingWeek: {
+      termsId: clone.id,
+      status: "draft",
+      revision: 1,
       minutes: [480, 480, 480, 480, 0, 0, 0],
       bankHolidayCalendar: "scotland",
     },
-    {
-      startDate: "2027-01-01",
-      endDate: null,
-      minutes: [360, 360, 360, 360, 360, 0, 0],
-      bankHolidayCalendar: "northern_ireland",
-    },
-  ]);
-  expect(
-    (await patterns.findPatterns()).find(({ termsId }) => termsId === clone.id)!.versions,
-  ).toHaveLength(2);
-  expect((await patterns.findPatterns()).find(({ termsId }) => termsId === id)).toEqual(before);
+  });
+  expect(saved!.unpublishedWorkingWeek!.workingPatternId).not.toBe(current.workingPatternId);
+  const pattern = (await workingPatternRepository(orm).findPatterns()).find(
+    ({ id }) => id === saved!.unpublishedWorkingWeek!.workingPatternId,
+  )!;
+  expect(pattern.versions).toHaveLength(1);
+  expect(await termsService(orm).readTerms(ADMIN, id)).toEqual(before);
 });
 
-test("clones each offered type's current and planned rules from the current leave year, leaving ended rules out", async ({
+test("clones each type's current rules as unpublished copies without past or planned assignments", async ({
   orm,
   seed,
-  transact,
 }) => {
-  const id = await seed.defaultTermsId();
-  await giveTermsPolicies(orm, transact, {
+  const id = await seed.terms("Source");
+  const types = (await timeOffService(orm).listTimeOffTypes(ADMIN)).timeOffTypes.map(
+    ({ timeOffType }) => timeOffType,
+  );
+  const annualId = types.find(({ typeKey }) => typeKey === "annual_leave")!.id;
+  const sicknessId = types.find(({ typeKey }) => typeKey === "sickness")!.id;
+  const current: Parameters<typeof seedTermsPolicy>[1]["version"] = {
+    balance: "balance_from_allowance",
+    bankHolidays: "bank_holidays_on_top_of_allowance",
+    leaveYear: { kind: "leave_year_from_fixed_date", month: 1, day: 1 },
+    rules: [
+      { kind: "yearly_entitlement", entitlementDays: 22, entitlementDaysPerWeek: 4, maxDays: 30 },
+      { kind: "service_extra", afterYears: 3, extraDays: 2 },
+      { kind: "service_extra", afterYears: 5, extraDays: 4 },
+    ],
+  };
+  await seedTermsPolicy(orm, {
     termsId: id,
-    today: "2026-11-09",
-    policies: [{ key: "uk_statutory_minimum" }, { recordOnly: "sickness" }],
+    timeOffTypeId: annualId,
+    version: {
+      ...current,
+      rules: [
+        {
+          kind: "yearly_entitlement",
+          entitlementDays: 20,
+          entitlementDaysPerWeek: 5,
+          maxDays: null,
+        },
+      ],
+    },
+    startDate: "2026-01-01",
+    endDate: "2026-05-31",
   });
-  const annual = (await readTermsPolicyVersions(orm, id)).find(
-    (policy) => policy.timeOffType.typeKey === "annual_leave",
-  )!;
-  const { id: pastId, ...past } = annual.versions[0]!;
-  const current = {
-    ...past,
-    startDate: calendarDate("2026-06-01"),
-    endDate: calendarDate("2026-12-31"),
-    bankHolidays: "bank_holidays_on_top_of_allowance" as const,
-    rules: [
-      {
-        kind: "yearly_entitlement" as const,
-        entitlementDays: 22,
-        entitlementDaysPerWeek: 4,
-        maxDays: 30,
-      },
-      { kind: "service_extra" as const, afterYears: 3, extraDays: 2 },
-      { kind: "service_extra" as const, afterYears: 5, extraDays: 4 },
-    ],
-  };
-  const planned = {
-    ...current,
-    startDate: calendarDate("2027-01-01"),
-    endDate: null,
-    rules: [
-      {
-        kind: "yearly_entitlement" as const,
-        entitlementDays: 25,
-        entitlementDaysPerWeek: 5,
-        maxDays: 35,
-      },
-      { kind: "service_extra" as const, afterYears: 4, extraDays: 3 },
-    ],
-  };
-  await seedTimeOffPolicyVersions(orm, {
-    policyId: annual.id,
-    past: { id: pastId, endDate: calendarDate("2026-05-31") },
-    versions: [current, planned],
+  const source = await seedTermsPolicy(orm, {
+    termsId: id,
+    timeOffTypeId: annualId,
+    version: current,
+    startDate: "2026-06-01",
+    endDate: "2026-12-31",
+  });
+  await seedTermsPolicy(orm, {
+    termsId: id,
+    timeOffTypeId: annualId,
+    version: {
+      ...current,
+      rules: [
+        { kind: "yearly_entitlement", entitlementDays: 25, entitlementDaysPerWeek: 5, maxDays: 35 },
+      ],
+    },
+    startDate: "2027-01-01",
+  });
+  await seedTermsPolicy(orm, {
+    termsId: id,
+    timeOffTypeId: sicknessId,
+    version: { balance: "no_balance", bankHolidays: null, leaveYear: null, rules: [] },
+    startDate: "2026-01-01",
   });
   const before = await readTermsPolicyVersions(orm, id);
 
-  const clone = await recordCloneService(orm, { today: "2026-11-09" }).cloneRecord(ADMIN, {
+  const clone = await recordCloneService(orm, { today: "2026-06-01" }).cloneRecord(ADMIN, {
     recordType: "terms",
     id,
     name: "Senior staff",
   });
 
-  const copied = await readTermsPolicyVersions(orm, clone.id);
-  expect(copied.map(({ timeOffType }) => timeOffType.typeKey).sort()).toEqual([
-    "annual_leave",
-    "sickness",
-  ]);
-  expect(
-    copied.find(({ timeOffType }) => timeOffType.typeKey === "annual_leave")!.versions,
-  ).toMatchObject([{ ...current, startDate: "2026-01-01" }, planned]);
-  expect(
-    copied.find(({ timeOffType }) => timeOffType.typeKey === "sickness")!.versions,
-  ).toMatchObject([
-    {
-      startDate: "2026-01-01",
-      endDate: null,
+  const copied = (await timeOffService(orm).readTermsTimeOff(ADMIN, [clone.id])).get(clone.id)!;
+  const annual = copied.find(({ timeOffType }) => timeOffType.id === annualId)!;
+  const sickness = copied.find(({ timeOffType }) => timeOffType.id === sicknessId)!;
+  expect(annual).toMatchObject({
+    versions: [],
+    unpublished: { ...current, status: "draft", termsId: clone.id, revision: 1 },
+  });
+  expect(annual.unpublished!.timeOffPolicyId).not.toBe(source.id);
+  expect(sickness).toMatchObject({
+    versions: [],
+    unpublished: {
       balance: "no_balance",
       bankHolidays: null,
       leaveYear: null,
       rules: [],
+      status: "draft",
     },
-  ]);
+  });
+  expect(copied.filter(({ unpublished }) => unpublished !== null)).toHaveLength(2);
   expect(await readTermsPolicyVersions(orm, id)).toEqual(before);
 });
 

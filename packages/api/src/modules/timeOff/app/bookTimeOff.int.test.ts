@@ -4,7 +4,6 @@ import {
   giveDefaultTermsStatutoryMinimum,
   giveTermsPolicies,
   OWNER,
-  readTermsPolicies,
   seedEmploymentEnd,
   seedTimeOffType,
   signedIn,
@@ -22,25 +21,29 @@ test("books while a policy change runs for the same people without a deadlock", 
   transact,
 }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-  const [policy] = await readTermsPolicies(orm, await seed.defaultTermsId());
+  const termsId = await seed.defaultTermsId();
   const bookings = bookTimeOffService(orm);
   const policies = timeOffPolicyService(orm, { today: "2026-11-09" });
 
+  const rules = {
+    balance: "balance_from_allowance",
+    entitlementDays: 27,
+    bankHolidays: "bank_holidays_included_in_allowance",
+  } as const;
+
   for (const date of ["2026-12-07", "2026-12-08", "2026-12-09", "2026-12-10", "2026-12-11"]) {
+    const draft = await policies.saveTimeOffPolicy(OWNER, { termsId, ...person, rules });
     await expect(
       Promise.all([
         bookings.bookTimeOff(OWNER, { ...person, startDate: date, endDate: date }),
-        policies.changePolicy(OWNER, {
-          timeOffPolicyId: policy!.id,
+        policies.publishTerms(OWNER, {
+          termsId,
+          versions: [draft],
           startDate: "2026-11-09",
-          rules: {
-            balance: "balance_from_allowance",
-            entitlementDays: 27,
-            bankHolidays: "bank_holidays_included_in_allowance",
-          },
+          owners: [{ termsId }],
         }),
       ]),
-    ).resolves.toMatchObject([{ cost: 1 }, { id: policy!.id }]);
+    ).resolves.toMatchObject([{ cost: 1 }, { id: termsId }]);
   }
 });
 

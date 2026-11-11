@@ -60,16 +60,15 @@ const MAX_WHOS_OUT_DAYS = 62;
 export function createWhosOutService({
   orm,
   transact,
-  logger,
   bankHolidays,
   today = todayInLondon,
-}: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
+}: Pick<ModuleDependencies, "orm" | "transact"> & {
   bankHolidays: BankHolidayService;
   today?: () => CalendarDate;
 }): WhosOutService {
   const dependencies: Dependencies = {
     employeeReads: createEmployeeReadService({ orm }),
-    workingWeeks: createEmployeeWorkingPatternService({ transact, logger, today }),
+    workingWeeks: createEmployeeWorkingPatternService({ transact, today }),
     bankHolidays,
   };
   return {

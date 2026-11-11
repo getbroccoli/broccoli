@@ -25,14 +25,20 @@ test("changing Annual leave from this year's start corrects the allowance and re
   const service = timeOffPolicyService(orm, { today: "2026-11-06" });
   expect(await readAllowances(orm, employee.id)).toMatchObject([{ total: 20 }]);
 
-  await service.changePolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
-    startDate: "2026-01-01",
+  const draft1 = await service.saveTimeOffPolicy(OWNER, {
+    termsId,
+    timeOffTypeId: policy!.timeOffTypeId,
     rules: {
       balance: "balance_from_allowance",
       entitlementDays: 22,
       bankHolidays: "bank_holidays_on_top_of_allowance",
     },
+  });
+  await service.publishTerms(OWNER, {
+    termsId,
+    versions: [draft1],
+    startDate: "2026-01-01",
+    owners: [{ termsId }],
   });
 
   const allowances = await readAllowances(orm, employee.id);
@@ -44,18 +50,9 @@ test("changing Annual leave from this year's start corrects the allowance and re
       effectiveDate: "2026-01-01",
     }),
   );
-  expect(await timeOffPolicyRepository(orm).findAll()).toMatchObject([
-    {
-      versions: [
-        { startDate: null, endDate: "2025-12-31" },
-        {
-          startDate: "2026-01-01",
-          endDate: null,
-          rules: [{ kind: "yearly_entitlement", entitlementDays: 22 }],
-        },
-      ],
-    },
-  ]);
+  expect(await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).toMatchObject(
+    [{ versionId: draft1.id, startDate: "2026-01-01", endDate: null }],
+  );
 });
 
 test("planning next year's rules leaves this year's allowance untouched", async ({
@@ -74,25 +71,29 @@ test("planning next year's rules leaves this year's allowance untouched", async 
   const service = timeOffPolicyService(orm, { today: "2026-11-06" });
   const before = await readAllowances(orm, employee.id);
 
-  await service.changePolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
-    startDate: "2027-01-01",
+  const draft2 = await service.saveTimeOffPolicy(OWNER, {
+    termsId,
+    timeOffTypeId: policy!.timeOffTypeId,
     rules: {
       balance: "balance_from_allowance",
       entitlementDays: 22,
       bankHolidays: "bank_holidays_on_top_of_allowance",
     },
   });
+  await service.publishTerms(OWNER, {
+    termsId,
+    versions: [draft2],
+    startDate: "2027-01-01",
+    owners: [{ termsId }],
+  });
 
   expect(await readAllowances(orm, employee.id)).toEqual(before);
-  expect(await timeOffPolicyRepository(orm).findAll()).toMatchObject([
-    {
-      versions: [
-        { startDate: null, endDate: "2026-12-31", rules: [{ entitlementDays: 20 }] },
-        { startDate: "2027-01-01", endDate: null, rules: [{ entitlementDays: 22 }] },
-      ],
-    },
-  ]);
+  expect(await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).toMatchObject(
+    [
+      { startDate: "2026-01-01", endDate: "2026-12-31" },
+      { versionId: draft2.id, startDate: "2027-01-01", endDate: null },
+    ],
+  );
 });
 
 test("changing rules in July splits this year's allowance at that date", async ({
@@ -110,14 +111,20 @@ test("changing rules in July splits this year's allowance at that date", async (
   const [policy] = await readTermsPolicies(orm, termsId);
   const service = timeOffPolicyService(orm, { today: "2026-11-06" });
 
-  await service.changePolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
-    startDate: "2026-07-01",
+  const draft3 = await service.saveTimeOffPolicy(OWNER, {
+    termsId,
+    timeOffTypeId: policy!.timeOffTypeId,
     rules: {
       balance: "balance_from_allowance",
       entitlementDays: 22,
       bankHolidays: "bank_holidays_on_top_of_allowance",
     },
+  });
+  await service.publishTerms(OWNER, {
+    termsId,
+    versions: [draft3],
+    startDate: "2026-07-01",
+    owners: [{ termsId }],
   });
 
   const [allowance] = await readAllowances(orm, employee.id);
@@ -130,17 +137,15 @@ test("changing rules in July splits this year's allowance at that date", async (
       effectiveDate: "2026-07-01",
     }),
   );
-  expect(await timeOffPolicyRepository(orm).findAll()).toMatchObject([
-    {
-      versions: [
-        { startDate: null, endDate: "2026-06-30" },
-        { startDate: "2026-07-01", endDate: null, rules: [{ entitlementDays: 22 }] },
-      ],
-    },
-  ]);
+  expect(await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).toMatchObject(
+    [
+      { startDate: "2026-01-01", endDate: "2026-06-30" },
+      { versionId: draft3.id, startDate: "2026-07-01", endDate: null },
+    ],
+  );
 });
 
-test("saving twice on the same date replaces rules already used to grant allowances", async ({
+test("publishing twice on the same date corrects allowances without editing published versions", async ({
   orm,
   seed,
   transact,
@@ -154,39 +159,67 @@ test("saving twice on the same date replaces rules already used to grant allowan
   });
   const [policy] = await readTermsPolicies(orm, termsId);
   const service = timeOffPolicyService(orm, { today: "2026-11-06" });
-  await service.changePolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
-    startDate: "2026-01-01",
+  const draft4 = await service.saveTimeOffPolicy(OWNER, {
+    termsId,
+    timeOffTypeId: policy!.timeOffTypeId,
     rules: {
       balance: "balance_from_allowance",
       entitlementDays: 22,
       bankHolidays: "bank_holidays_on_top_of_allowance",
     },
   });
+  await service.publishTerms(OWNER, {
+    termsId,
+    versions: [draft4],
+    startDate: "2026-01-01",
+    owners: [{ termsId }],
+  });
   expect(await readAllowances(orm, employee.id)).toMatchObject([{ total: 22 }]);
 
-  await service.changePolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
-    startDate: "2026-01-01",
+  const draft5 = await service.saveTimeOffPolicy(OWNER, {
+    termsId,
+    timeOffTypeId: policy!.timeOffTypeId,
     rules: {
       balance: "balance_from_allowance",
       entitlementDays: 25,
       bankHolidays: "bank_holidays_on_top_of_allowance",
     },
+  });
+  await service.publishTerms(OWNER, {
+    termsId,
+    versions: [draft5],
+    startDate: "2026-01-01",
+    owners: [{ termsId }],
   });
 
   expect(await readAllowances(orm, employee.id)).toMatchObject([{ total: 25 }]);
-  expect(await timeOffPolicyRepository(orm).findAll()).toMatchObject([
-    {
-      versions: [
-        { startDate: null, endDate: "2025-12-31" },
-        { startDate: "2026-01-01", endDate: null, rules: [{ entitlementDays: 25 }] },
-      ],
-    },
-  ]);
+  const published = (await timeOffPolicyRepository(orm).findAll()).find(
+    ({ id }) => id === policy!.id,
+  )!;
+  expect(published.versions).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        id: draft4.id,
+        status: "published",
+        rules: expect.arrayContaining([
+          expect.objectContaining({ entitlementDays: 22 }),
+        ]) as unknown,
+      }),
+      expect.objectContaining({
+        id: draft5.id,
+        status: "published",
+        rules: expect.arrayContaining([
+          expect.objectContaining({ entitlementDays: 25 }),
+        ]) as unknown,
+      }),
+    ]),
+  );
+  expect(await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).toMatchObject(
+    [{ versionId: draft5.id, startDate: "2026-01-01", endDate: null }],
+  );
 });
 
-test("changing rules before a later plan keeps that plan and splits only the covering version", async ({
+test("publishing replaces later assignments of the same policy as well as the covering assignment, as one row", async ({
   orm,
   seed,
   transact,
@@ -199,75 +232,42 @@ test("changing rules before a later plan keeps that plan and splits only the cov
   });
   const [policy] = await readTermsPolicies(orm, termsId);
   const service = timeOffPolicyService(orm, { today: "2026-11-06" });
-  await service.changePolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
-    startDate: "2027-01-01",
+  const draft6 = await service.saveTimeOffPolicy(OWNER, {
+    termsId,
+    timeOffTypeId: policy!.timeOffTypeId,
     rules: {
       balance: "balance_from_allowance",
       entitlementDays: 25,
       bankHolidays: "bank_holidays_on_top_of_allowance",
     },
   });
-
-  await service.changePolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
-    startDate: "2026-07-01",
-    rules: {
-      balance: "balance_from_allowance",
-      entitlementDays: 22,
-      bankHolidays: "bank_holidays_on_top_of_allowance",
-    },
-  });
-
-  expect(await timeOffPolicyRepository(orm).findAll()).toMatchObject([
-    {
-      versions: [
-        { startDate: null, endDate: "2026-06-30", rules: [{ entitlementDays: 20 }] },
-        { startDate: "2026-07-01", endDate: "2026-12-31", rules: [{ entitlementDays: 22 }] },
-        { startDate: "2027-01-01", endDate: null, rules: [{ entitlementDays: 25 }] },
-      ],
-    },
-  ]);
-});
-
-test("changing one terms' rules leaves the other terms' policy and allowance untouched", async ({
-  orm,
-  seed,
-  transact,
-}) => {
-  const employee = await seed.employee({ startDate: "2025-01-01" });
-  const termsId = await seed.defaultTermsId();
-  await giveTermsPolicies(orm, transact, {
+  await service.publishTerms(OWNER, {
     termsId,
-    policies: [{ key: "uk_20_days_plus_bank_holidays" }],
-    today: "2026-11-06",
+    versions: [draft6],
+    startDate: "2027-01-01",
+    owners: [{ termsId }],
   });
-  const [policy] = await readTermsPolicies(orm, termsId);
-  const service = timeOffPolicyService(orm, { today: "2026-11-06" });
-  const otherTermsId = await seed.terms("Scotland");
-  const otherEmployee = await seed.employee({ startDate: "2025-01-01" });
-  await seed.moveToTerms(otherEmployee.id, otherTermsId);
-  await giveTermsPolicies(orm, transact, {
-    termsId: otherTermsId,
-    policies: [{ key: "uk_25_days_plus_bank_holidays" }],
-    today: "2026-11-06",
-  });
-  const otherPolicy = (await timeOffPolicyRepository(orm).findAll()).find(
-    ({ termsId }) => termsId === otherTermsId,
-  )!;
-  const before = await readAllowances(orm, otherEmployee.id);
 
-  await service.changePolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
-    startDate: "2026-01-01",
+  const draft7 = await service.saveTimeOffPolicy(OWNER, {
+    termsId,
+    timeOffTypeId: policy!.timeOffTypeId,
     rules: {
       balance: "balance_from_allowance",
       entitlementDays: 22,
       bankHolidays: "bank_holidays_on_top_of_allowance",
     },
   });
+  await service.publishTerms(OWNER, {
+    termsId,
+    versions: [draft7],
+    startDate: "2026-07-01",
+    owners: [{ termsId }],
+  });
 
-  expect(await readAllowances(orm, employee.id)).toMatchObject([{ total: 22 }]);
-  expect(await readAllowances(orm, otherEmployee.id)).toEqual(before);
-  expect(await timeOffPolicyRepository(orm).findAll()).toContainEqual(otherPolicy);
+  expect(await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).toMatchObject(
+    [
+      { startDate: "2026-01-01", endDate: "2026-06-30" },
+      { versionId: draft7.id, startDate: "2026-07-01", endDate: null },
+    ],
+  );
 });

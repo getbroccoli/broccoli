@@ -1,13 +1,22 @@
 import { sql } from "drizzle-orm";
-import { check, date, foreignKey, index, integer, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import {
+  check,
+  foreignKey,
+  index,
+  integer,
+  pgTable,
+  text,
+  unique,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 
-import type { CalendarDate } from "../../../utils";
 import { timeOffPolicies } from "./timeOffPoliciesTable";
 
 /**
- * A policy's rules from a date to a date: how leave is counted, bank holidays and the leave year;
- * the amounts are its allowance rules. Never edited: a change ends one and adds the next. A
- * policy's versions never overlap (an exclusion constraint the migration adds).
+ * A policy's rules, with no dates: how leave is counted, bank holidays and the leave year; the
+ * amounts are its allowance rules. A draft is edited until it is published; a published version
+ * never changes. The migration adds the foreign key to terms, which another module owns.
  */
 export const timeOffPolicyVersions = pgTable(
   "time_off_policy_versions",
@@ -16,10 +25,11 @@ export const timeOffPolicyVersions = pgTable(
       .primaryKey()
       .default(sql`uuidv7()`),
     timeOffPolicyId: uuid("time_off_policy_id").notNull(),
-    /** Null: from the beginning. */
-    startDate: date("start_date", { mode: "string" }).$type<CalendarDate>(),
-    /** The last day it applies; null: open-ended. */
-    endDate: date("end_date", { mode: "string" }).$type<CalendarDate>(),
+    status: text("status", { enum: ["draft", "published"] }).notNull(),
+    /** Set only on a draft: the terms whose screen saved it; publishing clears it. */
+    termsId: uuid("terms_id"),
+    /** 1 on creation, plus 1 on every save of a draft, so Publish sees what the admin reviewed. */
+    revision: integer("revision").notNull().default(1),
     balance: text("balance", {
       enum: ["balance_from_allowance", "unlimited_balance", "no_balance"],
     }).notNull(),
@@ -40,7 +50,16 @@ export const timeOffPolicyVersions = pgTable(
       foreignColumns: [timeOffPolicies.id],
     }).onDelete("cascade"),
     index("time_off_policy_versions_policy_idx").on(table.timeOffPolicyId),
-    check("time_off_policy_versions_dates_in_order", sql`${table.endDate} >= ${table.startDate}`),
+    // The target of the assignments' foreign key, which keeps a version under its policy.
+    unique("time_off_policy_versions_id_policy_unique").on(table.id, table.timeOffPolicyId),
+    uniqueIndex("time_off_policy_versions_one_draft_per_terms")
+      .on(table.timeOffPolicyId, table.termsId)
+      .where(sql`${table.status} = 'draft'`),
+    check("time_off_policy_versions_status_known", sql`${table.status} in ('draft', 'published')`),
+    check(
+      "time_off_policy_versions_terms_only_on_draft",
+      sql`(${table.termsId} is not null) = (${table.status} = 'draft')`,
+    ),
     check(
       "time_off_policy_versions_bank_holidays_with_allowance",
       sql`(${table.bankHolidays} is not null) = (${table.balance} = 'balance_from_allowance')`,

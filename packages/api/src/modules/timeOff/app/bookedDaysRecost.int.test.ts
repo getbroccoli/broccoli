@@ -8,7 +8,8 @@ import {
   bookTimeOffService,
   whosOutService,
   timeOffService,
-  workingPatternService,
+  seedOwnWeek,
+  seedWorkingPattern,
 } from "#test/support";
 
 test("refunds a booked Friday when the person's working week becomes Monday to Thursday", async ({
@@ -26,14 +27,10 @@ test("refunds a booked Friday when the person's working week becomes Monday to T
   const service = timeOffService(orm, { today: "2026-11-09" });
   const before = await service.readTimeOffTypes(OWNER, { employeeIds: [person.employeeId] });
   expect(before.get(person.employeeId)).toMatchObject([{ used: 1, remaining: 19 }]);
-  const patterns = workingPatternService(orm, { today: "2026-11-09" });
-  const pattern = await patterns.createPattern(OWNER, {
-    name: "Monday to Thursday",
-    minutes: [450, 450, 450, 450, 0, 0, 0],
-  });
-  await patterns.assignPattern(OWNER, {
+  const week = await seedWorkingPattern(orm, { minutes: [450, 450, 450, 450, 0, 0, 0] });
+  await seedOwnWeek(orm, {
     employeeId: person.employeeId,
-    workingPatternId: pattern.id,
+    versionId: week.versionId,
     startDate: "2026-12-01",
   });
   const [beforeRecost] = await readAllowances(orm, person.employeeId);

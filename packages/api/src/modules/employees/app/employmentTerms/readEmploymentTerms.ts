@@ -55,12 +55,11 @@ export async function readEmploymentTerms(
   if (ids.length === 0) return new Map();
   return transact(async (tx) => {
     await workingPatternRepository(tx).lockForReads();
-    const { timelines, memberships, patterns } = await readTimelines(tx, ids, input.move);
+    const { timelines, memberships } = await readTimelines(tx, ids, input.move);
     const startDates = await employmentRepository(tx).findStartDates(ids);
     const leaveYearStart = earliestChangeDate(today());
     const termsIds = [...memberships.values()].flat().map(({ termsId }) => termsId);
     const names = await termsRepository(tx).findNames([...new Set(termsIds)]);
-    const termsPatternIds = new Set(patterns.filter((p) => p.termsId).map(({ id }) => id));
     return new Map(
       ids.map((id) => [
         id,
@@ -74,9 +73,7 @@ export async function readEmploymentTerms(
               endDate,
             }))
             .toSorted(byStartDate),
-          workingWeek: personVersionsFrom(timelines.get(id)!, input.from ?? today(), (patternId) =>
-            termsPatternIds.has(patternId),
-          ),
+          workingWeek: personVersionsFrom(timelines.get(id)!, input.from ?? today()),
           earliestChange: laterOf(leaveYearStart, startDates.get(id) ?? null),
         },
       ]),

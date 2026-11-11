@@ -4,7 +4,6 @@ import {
   giveTermsPolicies,
   OWNER,
   readAllowances,
-  readTermsPolicies,
   test,
   bookTimeOffService,
   whosOutService,
@@ -26,11 +25,18 @@ test("previews no balance for a year whose policy stops counting", async ({
     startDate: "2027-01-04",
     endDate: "2027-01-04",
   });
-  const [policy] = await readTermsPolicies(orm, await seed.defaultTermsId());
-  await timeOffPolicyService(orm, { today: "2026-11-09" }).changePolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
-    startDate: "2027-01-01",
+  const termsId = await seed.defaultTermsId();
+  const policies = timeOffPolicyService(orm, { today: "2026-11-09" });
+  const draft = await policies.saveTimeOffPolicy(OWNER, {
+    termsId,
+    timeOffTypeId: person.timeOffTypeId,
     rules: { balance: "no_balance" },
+  });
+  await policies.publishTerms(OWNER, {
+    termsId,
+    versions: [draft],
+    startDate: "2027-01-01",
+    owners: [{ termsId }],
   });
 
   const preview = await service.previewBooking(OWNER, {

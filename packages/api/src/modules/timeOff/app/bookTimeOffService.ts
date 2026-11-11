@@ -86,7 +86,7 @@ export function createBookTimeOffService({
     logger,
     timeOff,
     employeeReads: createEmployeeReadService({ orm }),
-    workingWeeks: createEmployeeWorkingPatternService({ transact, logger, today }),
+    workingWeeks: createEmployeeWorkingPatternService({ transact, today }),
     bankHolidays,
     today,
   };
@@ -103,7 +103,7 @@ interface BookingDependencies {
   timeOff: Pick<TimeOffService, "ensureAllowances">;
   employeeReads: Pick<
     EmployeeReadService,
-    "lockEmployees" | "readEmploymentPeriods" | "readTermsMemberships"
+    "holdEmployeeWrites" | "lockEmployees" | "readEmploymentPeriods" | "readTermsMemberships"
   >;
   workingWeeks: Pick<EmployeeWorkingPatternService, "readWorkingWeeksInTransaction">;
   bankHolidays: BankHolidayService;
@@ -260,15 +260,17 @@ function checkBooking(
 }
 
 /**
- * Locks what a booking reads in the order everyone takes it: policies, then working patterns (as
- * assigning a pattern takes them before the person's row), then the person. False when the person
- * is gone.
+ * Locks what a booking reads in the order everyone takes it: employee writes, then policies, then
+ * working patterns (as publishing terms takes them before the person's row), then the person. False
+ * when the person is gone.
  */
 async function lockPerson(
   { employeeReads, workingWeeks, today }: BookingDependencies,
   tx: Tx,
   employeeId: string,
 ): Promise<boolean> {
+  // Deleting a person takes it before their row, and their row before the working patterns.
+  await employeeReads.holdEmployeeWrites(tx);
   await timeOffPolicyRepository(tx).sharePolicies();
   // A one-day read only to take the working patterns' read lock before the person's.
   await workingWeeks.readWorkingWeeksInTransaction(tx, {

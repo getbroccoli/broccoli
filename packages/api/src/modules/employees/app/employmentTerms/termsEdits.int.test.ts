@@ -13,7 +13,7 @@ import {
 
 import { employeeTerms, locationRepository } from "../../db";
 
-test("creates trimmed terms with the chosen bank holidays and an open Monday to Friday week", async ({
+test("creates trimmed terms with the chosen bank holidays and an unpublished Monday to Friday week", async ({
   orm,
 }) => {
   const service = termsService(orm, { today: "2026-11-06" });
@@ -29,14 +29,14 @@ test("creates trimmed terms with the chosen bank holidays and an open Monday to 
     peopleCount: 0,
     locations: [],
     deleteBlocker: null,
-    workingWeek: [
-      {
-        startDate: null,
-        endDate: null,
-        minutes: [450, 450, 450, 450, 450, 0, 0],
-        bankHolidayCalendar: "scotland",
-      },
-    ],
+    workingWeek: [],
+    earliestChange: "2026-01-01",
+    unpublishedWorkingWeek: {
+      status: "draft",
+      revision: 1,
+      minutes: [450, 450, 450, 450, 450, 0, 0],
+      bankHolidayCalendar: "scotland",
+    },
   });
   expect(await service.readTerms(ADMIN, created.id)).toEqual(created);
   expect(await service.listTerms(ADMIN)).toContainEqual(created);

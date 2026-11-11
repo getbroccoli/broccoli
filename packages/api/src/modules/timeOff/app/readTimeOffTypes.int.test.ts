@@ -143,6 +143,7 @@ test("returns used days and null figures for a person's unlimited policy", async
     employeeId: employee.id,
     timeOffTypeId: policy.timeOffTypeId,
     timeOffPolicyId: policy.id,
+    versionId: policy.versionId,
   });
   const service = timeOffService(orm);
   await transact((tx) =>

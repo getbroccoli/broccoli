@@ -1039,8 +1039,8 @@
       },
       "isRLSEnabled": false
     },
-    "public.employee_working_pattern_assignments": {
-      "name": "employee_working_pattern_assignments",
+    "public.working_pattern_assignments": {
+      "name": "working_pattern_assignments",
       "schema": "",
       "columns": {
         "id": {
@@ -1050,17 +1050,23 @@
           "notNull": true,
           "default": "uuidv7()"
         },
-        "employee_id": {
-          "name": "employee_id",
+        "working_pattern_version_id": {
+          "name": "working_pattern_version_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "working_pattern_id": {
-          "name": "working_pattern_id",
+        "employee_id": {
+          "name": "employee_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "terms_id": {
+          "name": "terms_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         },
         "start_date": {
           "name": "start_date",
@@ -1076,11 +1082,26 @@
         }
       },
       "indexes": {
-        "employee_working_pattern_assignments_pattern_idx": {
-          "name": "employee_working_pattern_assignments_pattern_idx",
+        "working_pattern_assignments_version_idx": {
+          "name": "working_pattern_assignments_version_idx",
           "columns": [
             {
-              "expression": "working_pattern_id",
+              "expression": "working_pattern_version_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "working_pattern_assignments_terms_idx": {
+          "name": "working_pattern_assignments_terms_idx",
+          "columns": [
+            {
+              "expression": "terms_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1093,22 +1114,31 @@
         }
       },
       "foreignKeys": {
-        "employee_working_pattern_assignments_employee_fk": {
-          "name": "employee_working_pattern_assignments_employee_fk",
-          "tableFrom": "employee_working_pattern_assignments",
+        "working_pattern_assignments_version_fk": {
+          "name": "working_pattern_assignments_version_fk",
+          "tableFrom": "working_pattern_assignments",
+          "tableTo": "working_pattern_versions",
+          "columnsFrom": ["working_pattern_version_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "working_pattern_assignments_employee_fk": {
+          "name": "working_pattern_assignments_employee_fk",
+          "tableFrom": "working_pattern_assignments",
           "tableTo": "employees",
           "columnsFrom": ["employee_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "employee_working_pattern_assignments_pattern_fk": {
-          "name": "employee_working_pattern_assignments_pattern_fk",
-          "tableFrom": "employee_working_pattern_assignments",
-          "tableTo": "working_patterns",
-          "columnsFrom": ["working_pattern_id"],
+        "working_pattern_assignments_terms_fk": {
+          "name": "working_pattern_assignments_terms_fk",
+          "tableFrom": "working_pattern_assignments",
+          "tableTo": "terms",
+          "columnsFrom": ["terms_id"],
           "columnsTo": ["id"],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -1116,9 +1146,13 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "employee_working_pattern_assignments_dates_in_order": {
-          "name": "employee_working_pattern_assignments_dates_in_order",
-          "value": "\"employee_working_pattern_assignments\".\"end_date\" >= \"employee_working_pattern_assignments\".\"start_date\""
+        "working_pattern_assignments_one_owner": {
+          "name": "working_pattern_assignments_one_owner",
+          "value": "num_nonnulls(\"working_pattern_assignments\".\"employee_id\", \"working_pattern_assignments\".\"terms_id\") = 1"
+        },
+        "working_pattern_assignments_dates_in_order": {
+          "name": "working_pattern_assignments_dates_in_order",
+          "value": "\"working_pattern_assignments\".\"end_date\" >= \"working_pattern_assignments\".\"start_date\""
         }
       },
       "isRLSEnabled": false
@@ -1491,12 +1525,6 @@
           "notNull": true,
           "default": "uuidv7()"
         },
-        "terms_id": {
-          "name": "terms_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "name": {
           "name": "name",
           "type": "text",
@@ -1505,24 +1533,9 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {
-        "working_patterns_terms_fk": {
-          "name": "working_patterns_terms_fk",
-          "tableFrom": "working_patterns",
-          "tableTo": "terms",
-          "columnsFrom": ["terms_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "working_patterns_terms_unique": {
-          "name": "working_patterns_terms_unique",
-          "nullsNotDistinct": false,
-          "columns": ["terms_id"]
-        },
         "working_patterns_name_unique": {
           "name": "working_patterns_name_unique",
           "nullsNotDistinct": false,
@@ -1531,10 +1544,6 @@
       },
       "policies": {},
       "checkConstraints": {
-        "working_patterns_named_unless_terms": {
-          "name": "working_patterns_named_unless_terms",
-          "value": "(\"working_patterns\".\"terms_id\" is null) = (\"working_patterns\".\"name\" is not null)"
-        },
         "working_patterns_name_not_blank": {
           "name": "working_patterns_name_not_blank",
           "value": "btrim(\"working_patterns\".\"name\") <> ''"
@@ -1559,17 +1568,24 @@
           "primaryKey": false,
           "notNull": true
         },
-        "start_date": {
-          "name": "start_date",
-          "type": "date",
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "terms_id": {
+          "name": "terms_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
-        "end_date": {
-          "name": "end_date",
-          "type": "date",
+        "revision": {
+          "name": "revision",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": 1
         },
         "monday_minutes": {
           "name": "monday_minutes",
@@ -1621,7 +1637,30 @@
           "default": "'england_and_wales'"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "working_pattern_versions_one_draft_per_terms": {
+          "name": "working_pattern_versions_one_draft_per_terms",
+          "columns": [
+            {
+              "expression": "working_pattern_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "terms_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"working_pattern_versions\".\"status\" = 'draft'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "working_pattern_versions_pattern_fk": {
           "name": "working_pattern_versions_pattern_fk",
@@ -1631,15 +1670,28 @@
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
+        },
+        "working_pattern_versions_terms_fk": {
+          "name": "working_pattern_versions_terms_fk",
+          "tableFrom": "working_pattern_versions",
+          "tableTo": "terms",
+          "columnsFrom": ["terms_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "working_pattern_versions_dates_in_order": {
-          "name": "working_pattern_versions_dates_in_order",
-          "value": "\"working_pattern_versions\".\"end_date\" >= \"working_pattern_versions\".\"start_date\""
+        "working_pattern_versions_status_known": {
+          "name": "working_pattern_versions_status_known",
+          "value": "\"working_pattern_versions\".\"status\" in ('draft', 'published')"
+        },
+        "working_pattern_versions_terms_only_on_draft": {
+          "name": "working_pattern_versions_terms_only_on_draft",
+          "value": "(\"working_pattern_versions\".\"terms_id\" is not null) = (\"working_pattern_versions\".\"status\" = 'draft')"
         },
         "working_pattern_versions_minutes_in_a_day": {
           "name": "working_pattern_versions_minutes_in_a_day",
@@ -2842,12 +2894,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "terms_id": {
-          "name": "terms_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "name": {
           "name": "name",
           "type": "text",
@@ -2895,19 +2941,10 @@
           "name": "time_off_policies_id_type_unique",
           "nullsNotDistinct": false,
           "columns": ["id", "time_off_type_id"]
-        },
-        "time_off_policies_terms_type_unique": {
-          "name": "time_off_policies_terms_type_unique",
-          "nullsNotDistinct": false,
-          "columns": ["terms_id", "time_off_type_id"]
         }
       },
       "policies": {},
       "checkConstraints": {
-        "time_off_policies_named_unless_terms": {
-          "name": "time_off_policies_named_unless_terms",
-          "value": "(\"time_off_policies\".\"terms_id\" is null) = (\"time_off_policies\".\"name\" is not null)"
-        },
         "time_off_policies_name_not_blank": {
           "name": "time_off_policies_name_not_blank",
           "value": "btrim(\"time_off_policies\".\"name\") <> ''"
@@ -2930,7 +2967,13 @@
           "name": "employee_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "terms_id": {
+          "name": "terms_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         },
         "time_off_type_id": {
           "name": "time_off_type_id",
@@ -2940,6 +2983,12 @@
         },
         "time_off_policy_id": {
           "name": "time_off_policy_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "time_off_policy_version_id": {
+          "name": "time_off_policy_version_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -2972,6 +3021,36 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "time_off_policy_assignments_version_idx": {
+          "name": "time_off_policy_assignments_version_idx",
+          "columns": [
+            {
+              "expression": "time_off_policy_version_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "time_off_policy_assignments_terms_idx": {
+          "name": "time_off_policy_assignments_terms_idx",
+          "columns": [
+            {
+              "expression": "terms_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -2992,12 +3071,25 @@
           "columnsTo": ["id", "time_off_type_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "time_off_policy_assignments_version_of_policy_fk": {
+          "name": "time_off_policy_assignments_version_of_policy_fk",
+          "tableFrom": "time_off_policy_assignments",
+          "tableTo": "time_off_policy_versions",
+          "columnsFrom": ["time_off_policy_version_id", "time_off_policy_id"],
+          "columnsTo": ["id", "time_off_policy_id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
+        "time_off_policy_assignments_one_owner": {
+          "name": "time_off_policy_assignments_one_owner",
+          "value": "num_nonnulls(\"time_off_policy_assignments\".\"employee_id\", \"time_off_policy_assignments\".\"terms_id\") = 1"
+        },
         "time_off_policy_assignments_dates_in_order": {
           "name": "time_off_policy_assignments_dates_in_order",
           "value": "\"time_off_policy_assignments\".\"end_date\" >= \"time_off_policy_assignments\".\"start_date\""
@@ -3022,17 +3114,24 @@
           "primaryKey": false,
           "notNull": true
         },
-        "start_date": {
-          "name": "start_date",
-          "type": "date",
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "terms_id": {
+          "name": "terms_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
-        "end_date": {
-          "name": "end_date",
-          "type": "date",
+        "revision": {
+          "name": "revision",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": 1
         },
         "balance": {
           "name": "balance",
@@ -3080,6 +3179,28 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "time_off_policy_versions_one_draft_per_terms": {
+          "name": "time_off_policy_versions_one_draft_per_terms",
+          "columns": [
+            {
+              "expression": "time_off_policy_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "terms_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"time_off_policy_versions\".\"status\" = 'draft'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -3094,12 +3215,22 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "time_off_policy_versions_id_policy_unique": {
+          "name": "time_off_policy_versions_id_policy_unique",
+          "nullsNotDistinct": false,
+          "columns": ["id", "time_off_policy_id"]
+        }
+      },
       "policies": {},
       "checkConstraints": {
-        "time_off_policy_versions_dates_in_order": {
-          "name": "time_off_policy_versions_dates_in_order",
-          "value": "\"time_off_policy_versions\".\"end_date\" >= \"time_off_policy_versions\".\"start_date\""
+        "time_off_policy_versions_status_known": {
+          "name": "time_off_policy_versions_status_known",
+          "value": "\"time_off_policy_versions\".\"status\" in ('draft', 'published')"
+        },
+        "time_off_policy_versions_terms_only_on_draft": {
+          "name": "time_off_policy_versions_terms_only_on_draft",
+          "value": "(\"time_off_policy_versions\".\"terms_id\" is not null) = (\"time_off_policy_versions\".\"status\" = 'draft')"
         },
         "time_off_policy_versions_bank_holidays_with_allowance": {
           "name": "time_off_policy_versions_bank_holidays_with_allowance",

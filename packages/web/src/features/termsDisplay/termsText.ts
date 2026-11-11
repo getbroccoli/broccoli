@@ -8,8 +8,11 @@ export type WeekMinutes = Record<(typeof DAY_FIELDS)[number], number>;
 /** A time off policy version's rules, as the terms' rows describe them. */
 export type PolicyVersionText = Pick<
   NonNullable<EmploymentTermsStackQuery["terms"]>["timeOff"][number]["versions"][number],
-  "startDate" | "balance" | "bankHolidays" | "leaveYearStart" | "yearlyEntitlement"
->;
+  "balance" | "bankHolidays" | "leaveYearStart" | "yearlyEntitlement"
+> & {
+  /** Unset on unpublished rules, which have no date until they are published. */
+  startDate?: string | null;
+};
 
 /** "Mon–Fri, 7.5 hours"; days that are not a run are listed; unequal hours read as a weekly total. */
 export function weekSummary(week: WeekMinutes): string {

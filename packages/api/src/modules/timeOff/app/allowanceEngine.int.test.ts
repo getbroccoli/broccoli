@@ -8,7 +8,8 @@ import {
   SYSTEM,
   test,
   timeOffService,
-  workingPatternService,
+  seedWorkingPattern,
+  seedOwnWeek,
 } from "#test/support";
 
 test("ensuring allowances writes nothing when no policy is linked", async ({
@@ -123,15 +124,14 @@ test("a September switch to Tuesday through Thursday cuts the grant and restores
   const service = timeOffService(orm);
   await giveDefaultTermsStatutoryMinimum(orm, seed, transact);
   const [before] = await readAllowances(orm, employee.id);
-  const patterns = workingPatternService(orm);
-  const pattern = await patterns.createPattern(OWNER, {
+  const pattern = await seedWorkingPattern(orm, {
     name: "Tuesday to Thursday",
     minutes: [0, 450, 450, 450, 0, 0, 0],
   });
 
-  await patterns.assignPattern(OWNER, {
+  await seedOwnWeek(orm, {
     employeeId: employee.id,
-    workingPatternId: pattern.id,
+    versionId: pattern.versionId,
     startDate: "2026-09-01",
   });
   await transact((tx) =>
@@ -167,15 +167,14 @@ test("a Scottish working pattern charges Scotland's ten weekday bank holidays", 
   transact,
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
-  const patterns = workingPatternService(orm);
-  const pattern = await patterns.createPattern(OWNER, {
+  const pattern = await seedWorkingPattern(orm, {
     name: "Scotland",
     minutes: [450, 450, 450, 450, 450, 0, 0],
     bankHolidayCalendar: "scotland",
   });
-  await patterns.assignPattern(OWNER, {
+  await seedOwnWeek(orm, {
     employeeId: employee.id,
-    workingPatternId: pattern.id,
+    versionId: pattern.versionId,
     startDate: "2026-01-01",
   });
 

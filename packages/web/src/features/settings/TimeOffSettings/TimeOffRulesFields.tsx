@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 import type { TimeOffBalanceKind } from "@/__generated__/graphql";
 import { FieldError, OptionCard } from "@/components/form";
 import { Input } from "@/components/ui/input";
@@ -11,18 +9,12 @@ import { daysError, type RulesValues } from "./timeOffRules";
 type Props<Values extends RulesValues> = {
   values: Values;
   onChange: (values: Values) => void;
-  /** Keeps how the type counts as it is, such as from a date off a leave year's start. */
-  countsLocked?: boolean;
-  /** A line under the counts choice. */
-  countsHint?: ReactNode;
 };
 
 /** How a type counts, with its allowance and bank holidays when it counts from a balance. */
 export function TimeOffRulesFields<Values extends RulesValues>({
   values,
   onChange,
-  countsLocked = false,
-  countsHint,
 }: Props<Values>) {
   const error = daysError(values);
   return (
@@ -35,13 +27,11 @@ export function TimeOffRulesFields<Values extends RulesValues>({
             name="counts"
             value={balance}
             selected={values.balance}
-            disabled={countsLocked && balance !== values.balance}
             onSelect={(value) => onChange({ ...values, balance: value })}
             title={t(title)}
             hint={t(hint)}
           />
         ))}
-        {countsHint}
       </fieldset>
 
       {values.balance === "BALANCE_FROM_ALLOWANCE" && (

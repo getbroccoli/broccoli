@@ -2,7 +2,7 @@ export type { AllowanceCause } from "./allowanceCause";
 export {
   changesCountsMidYear,
   parseRules,
-  refuseCountsChangeMidYear,
+  refuseCountsChangesMidYear,
   rulesOfVersion,
   rulesValue,
   type TimeOffRules,

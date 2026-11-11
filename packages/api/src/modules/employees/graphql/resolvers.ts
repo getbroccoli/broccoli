@@ -18,9 +18,10 @@ import type {
   WorkingPatternService,
 } from "../app";
 import type { BankHolidayCalendar } from "../../bankHolidays";
-import { parseUuid, todayInLondon } from "../../../utils";
-import { earliestChangeDate, type Employee, parseDateField } from "../domain";
+import { parseUuid } from "../../../utils";
+import { type Employee, parseDateField } from "../domain";
 import { avatarUrl } from "../http";
+import { WEEK_FIELDS } from "./weekFields";
 import { DEFAULT_TERMS, employeeLoaders } from "./loaders";
 
 export function createResolvers(
@@ -94,31 +95,20 @@ export function createResolvers(
           first: first ?? undefined,
           after,
         }),
-      workingPattern: ({ workingPattern }) => workingPattern,
-    },
-    WorkingPattern: {
-      versions: ({ versions }) => {
-        const today = todayInLondon();
-        return versions.filter(({ endDate }) => endDate === null || endDate >= today);
-      },
-      reach: ({ id }, { from }, context) =>
-        services.readPatternReach(context.getActor(), { workingPatternId: id, from }),
-      earliestChange: () => earliestChangeDate(todayInLondon()),
+      workingWeek: ({ workingWeek }) =>
+        workingWeek.map(({ id, startDate, endDate, version }) => ({
+          ...version,
+          id,
+          startDate,
+          endDate,
+        })),
     },
     PersonWorkingWeek: {
       source: ({ source }) => toEnum(source),
-      week: ({ version }) => version,
+      week: ({ startDate, endDate, version }) => ({ ...version, startDate, endDate }),
     },
-    WorkingWeekVersion: {
-      mondayMinutes: ({ minutes }) => minutes[0],
-      tuesdayMinutes: ({ minutes }) => minutes[1],
-      wednesdayMinutes: ({ minutes }) => minutes[2],
-      thursdayMinutes: ({ minutes }) => minutes[3],
-      fridayMinutes: ({ minutes }) => minutes[4],
-      saturdayMinutes: ({ minutes }) => minutes[5],
-      sundayMinutes: ({ minutes }) => minutes[6],
-      bankHolidayCalendar: ({ bankHolidayCalendar }) => toEnum(bankHolidayCalendar),
-    },
+    UnpublishedWorkingWeek: WEEK_FIELDS,
+    WorkingWeekVersion: WEEK_FIELDS,
     Mutation: {
       employees: () => ({}),
     },
@@ -203,12 +193,11 @@ export function createResolvers(
           () => services.deleteTerms(context.getActor(), input),
           ["NOT_FOUND", "CONFLICT"],
         ),
-      changeWorkingPattern: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["WorkingPatternChangePayload"]>(
+      saveWorkingPattern: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["WorkingPatternSavePayload"]>(
           async () => ({
-            workingPattern: await services.changePattern(context.getActor(), {
-              workingPatternId: input.workingPatternId,
-              startDate: input.startDate,
+            workingWeek: await services.saveWorkingPattern(context.getActor(), {
+              termsId: input.termsId,
               minutes: [
                 input.mondayMinutes,
                 input.tuesdayMinutes,
@@ -221,8 +210,13 @@ export function createResolvers(
               bankHolidayCalendar: input.bankHolidayCalendar.toLowerCase(),
             }),
           }),
-          ["INVALID_INPUT", "NOT_FOUND"],
+          ["INVALID_INPUT"],
         ),
+      discardWorkingPattern: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["WorkingPatternDiscardPayload"]>(async () => {
+          await services.discardWorkingPattern(context.getActor(), input);
+          return { discardedVersionId: input.versionId };
+        }, ["NOT_FOUND"]),
       changeTerms: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["EmployeeTermsChangePayload"]>(async () => {
           const actor = context.getActor();
@@ -242,12 +236,10 @@ export function createResolvers(
           return { employee: await services.readEmployee(context.getActor(), input.employeeId) };
         }, ["NOT_FOUND", "CONFLICT"]),
       cancelWorkingPatternChange: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["WorkingPatternCancelChangePayload"]>(
-          async () => ({
-            workingPattern: await services.cancelPatternChange(context.getActor(), input),
-          }),
-          ["NOT_FOUND", "CONFLICT"],
-        ),
+        mutationPayload<ResolversTypes["WorkingPatternCancelChangePayload"]>(async () => {
+          await services.cancelWorkingPatternChange(context.getActor(), input);
+          return { cancelledAssignmentId: input.assignmentId };
+        }, ["NOT_FOUND", "CONFLICT"]),
     },
     Setup: {
       // The setup holder previews setup's invites before the owner exists.

@@ -98,7 +98,7 @@ export { expectBlockedBy } from "./expectBlockedBy";
 export { recordChangedEvents } from "./recordChangedEvents";
 export { signedIn } from "./signedIn";
 export { bankHolidayService } from "./bankHolidayService";
-export { createStandardPattern, workingPatternService } from "./workingPatternService";
+export { workingPatternService } from "./workingPatternService";
 
 export { fakeMail } from "./fakeMail";
 export { startFakeResend } from "./fakeResend";
@@ -133,7 +133,7 @@ export {
   seedTimeOff,
   seedTimeOffAssignment,
   seedTimeOffPolicy,
-  seedTimeOffPolicyVersions,
+  seedTermsPolicy,
   seedTimeOffType,
 } from "./seedTimeOff";
 export { testTransactor } from "./testTransactor";
@@ -141,7 +141,17 @@ export {
   timeOffSetupService,
   scotlandTimeOffSetup,
   readTimeOffTerms,
+  readWorkingPatterns,
   readOwnPatternAssignments,
 } from "./timeOffSetup";
 
 export { DecisionsError, type Answers, type Decisions } from "../../src/integrations/ai";
+
+export { seedWorkingPattern, seedTermsWeek, seedOwnWeek } from "./seedWorkingPattern";
+
+export {
+  setUpEmploymentTerms,
+  readTermsSettings,
+  saveTermsWeek,
+  saveTermsRules,
+} from "./employmentTermsGraphql";

@@ -25,6 +25,8 @@ import { avatarRouter, inviteRateLimit } from "./http";
 
 // Public values.
 export {
+  applyAssignmentPlan,
+  firstReplaced,
   createEmployeeInviteService,
   createEmployeeManagerService,
   createEmployeePermissionService,
@@ -44,13 +46,16 @@ export {
   createPersonTimeline,
   earliestChangeDate,
   employeeFieldErrors,
-  makeRoomForDatedRow,
   parseChangeDate,
   parseDateField,
   parseEmployeeField,
   parseTermsSetup,
+  isSameOwner,
+  NEW_ROW,
   personVersionsFrom,
-  versionsFromToday,
+  planOrRefusal,
+  rowsAfterPlan,
+  SETUP_START_DATE,
 } from "./domain";
 
 // Public types.
@@ -64,11 +69,13 @@ export type {
   EmployeeSetupService,
   ImportedEmployees,
   InviteDetails,
+  WorkingPatternPublish,
   WorkingPatternService,
   EmployeeTermsService,
   EmployeeWorkingPatternService,
   LocationService,
   TermsMovePreview,
+  TermsOverview,
 } from "./app";
 export type {
   Employee,
@@ -76,8 +83,12 @@ export type {
   EmployeeOrderField,
   NewEmployee,
   NewEmployeeInput,
+  Assignment,
+  AssignmentOwner,
+  AssignmentPlan,
   PersonTimeline,
   PersonVersion,
+  VersionStatus,
   TermsMembership,
   TermsSetup,
   WeekdayMinutes,
