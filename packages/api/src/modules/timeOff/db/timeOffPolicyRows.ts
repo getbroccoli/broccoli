@@ -60,6 +60,7 @@ export function toVersion(
     status: row.status,
     termsId: row.termsId,
     revision: row.revision,
+    stops: row.stops,
     balance: row.balance,
     bankHolidays: row.bankHolidays,
     leaveYear:

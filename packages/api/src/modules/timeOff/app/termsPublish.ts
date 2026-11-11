@@ -33,6 +33,7 @@ import {
   rulesChanged,
   versionOf,
 } from "./policyRules";
+import { publishStop } from "./policyStop";
 import type { TimeOffService } from "./timeOffService";
 
 /** What Publish on a set of terms would do from a date. */
@@ -167,7 +168,14 @@ async function applyPublish(
     }),
   ];
   for (const publish of policies) {
-    const people = await publishPolicy(employeeReads, ctx, tx, publish, owners, from);
+    const people = await (publish.version.stops ? publishStop : publishPolicy)(
+      employeeReads,
+      ctx,
+      tx,
+      publish,
+      owners,
+      from,
+    );
     runs.push(
       await timeOff.ensureAllowances(ctx, tx, {
         employeeIds: people,

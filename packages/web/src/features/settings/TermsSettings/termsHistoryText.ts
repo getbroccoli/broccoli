@@ -41,6 +41,8 @@ export function termsChangeSentence(
   }
   if (field.startsWith("timeOff.")) {
     const type = newLabel ?? "";
+    const stop = stopSentence(type, oldValue, newValue, madeOn);
+    if (stop) return stop;
     const rules = parseValue<RulesValue>(newValue);
     const before = parseValue<RulesValue>(oldValue);
     if (!rules) {
@@ -124,6 +126,28 @@ interface RulesValue {
   balance: string;
   entitlementDays: number | null;
   bankHolidays: string | null;
+}
+
+/** A stop as history keeps it: the first day the type is not offered. */
+type StopValue = { stopDate: string } | RulesValue;
+
+/** "stopped offering Family leave from 1 Jan 2027", or its cancel; null for a change of rules. */
+function stopSentence(
+  type: string,
+  oldValue: string | null,
+  newValue: string | null,
+  madeOn: string,
+): string | null {
+  const stop = parseValue<StopValue>(newValue);
+  if (stop && "stopDate" in stop) {
+    return stop.stopDate === madeOn
+      ? t("terms.history.stopped", { type })
+      : t("terms.history.stoppedFrom", { type, date: shortDate(stop.stopDate) });
+  }
+  const before = parseValue<StopValue>(oldValue);
+  return before && "stopDate" in before
+    ? t("terms.history.stopCancelled", { type, date: shortDate(before.stopDate) })
+    : null;
 }
 
 function parseValue<V>(value: string | null): V | null {

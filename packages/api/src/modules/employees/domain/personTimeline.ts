@@ -94,7 +94,36 @@ export function createPersonTimeline<V>(args: TimelineCreateInputArgs<V>): Perso
   };
 }
 
+/**
+ * Whether `after` gives the person other versions than `before` on a day from `from` that one of
+ * `periods`, such as their employment, covers; where a version comes from does not count.
+ */
+export function changesWithin<V>(
+  before: PersonTimeline<V>,
+  after: PersonTimeline<V>,
+  from: CalendarDate,
+  periods: readonly CalendarDateRange[],
+): boolean {
+  return periods.some(({ startDate, endDate }) => {
+    const start = startDate !== null && startDate > from ? startDate : from;
+    const end = endDate ?? LAST_DATE;
+    return start <= end && versionSpans(before, start, end) !== versionSpans(after, start, end);
+  });
+}
+
 const LAST_DATE = "9999-12-31" as CalendarDate;
+
+/** The versions from `start` to `end` as comparable text, neighbours with the same version joined. */
+function versionSpans<V>(timeline: PersonTimeline<V>, start: CalendarDate, end: CalendarDate) {
+  const spans: { versionId: string; startDate: CalendarDate; endDate: CalendarDate }[] = [];
+  for (const { versionId, startDate, endDate } of timeline.getVersions(start, end)) {
+    const last = spans.at(-1);
+    if (last?.versionId === versionId && addDays(last.endDate, 1) === startDate)
+      last.endDate = endDate;
+    else spans.push({ versionId, startDate, endDate });
+  }
+  return JSON.stringify(spans);
+}
 
 function isSameFound(
   a: { versionId: string; source: RuleSource } | null,

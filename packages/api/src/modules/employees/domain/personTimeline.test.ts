@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
 import type { CalendarDate, CalendarDateRange } from "../../../utils";
-import { createPersonTimeline } from "./personTimeline";
+import { changesWithin, createPersonTimeline } from "./personTimeline";
 
 it("uses a direct assignment over the terms on a date it covers", () => {
   const timeline = createPersonTimeline({
@@ -279,6 +279,32 @@ it("does not reach a person whose own assignment covers every later day", () => 
   ).toBe(false);
 });
 
+it("detects a terms assignment ending when the person has no own assignment", () => {
+  const before = onTerms([assignment("standard")]);
+  const after = onTerms([assignment("standard", "2026-01-01", "2026-10-31")]);
+
+  expect(changesWithin(before, after, date("2026-11-01"), [period("2026-01-01")])).toBe(true);
+});
+
+it("ignores a terms assignment ending when an own assignment keeps the same version", () => {
+  const before = onTerms([assignment("standard")]);
+  const after = onTerms(
+    [assignment("standard", "2026-01-01", "2026-10-31")],
+    [assignment("standard", "2026-11-01")],
+  );
+
+  expect(changesWithin(before, after, date("2026-11-01"), [period("2026-01-01")])).toBe(false);
+});
+
+it("ignores a version change after the person's employment ends", () => {
+  const before = onTerms([assignment("standard")]);
+  const after = onTerms([assignment("standard", "2026-01-01", "2026-11-30")]);
+
+  expect(
+    changesWithin(before, after, date("2026-11-01"), [period("2026-01-01", "2026-11-30")]),
+  ).toBe(false);
+});
+
 function date(value: string): CalendarDate {
   return value as CalendarDate;
 }
@@ -291,4 +317,17 @@ function assignment(versionId: string, startDate = "2026-01-01", endDate: string
     startDate: date(startDate),
     endDate: endDate === null ? null : date(endDate),
   };
+}
+
+/** A person always on one set of terms with `termsRows`, and `direct` rows of their own. */
+function onTerms(
+  termsRows: ReturnType<typeof assignment>[],
+  direct: ReturnType<typeof assignment>[] = [],
+) {
+  return createPersonTimeline({
+    direct,
+    terms: [{ termsId: "terms", startDate: null, endDate: null }],
+    version: (versionId: string) => versionId,
+    termsAssignments: () => termsRows,
+  });
 }

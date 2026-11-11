@@ -3,6 +3,7 @@ import { toast } from "sonner";
 
 import {
   CancelTermsTimeOffChangeDocument,
+  CancelTermsTimeOffStopDocument,
   CancelTermsWorkingWeekChangeDocument,
 } from "@/__generated__/graphql";
 import { PayloadFailure, usePayloadMutation } from "@/apollo";
@@ -14,7 +15,7 @@ import { ruleSummary, versionBefore, weekSummary } from "@/features/termsDisplay
 import { addDays } from "@/lib/calendarDay";
 
 /** A planned change waiting for "Cancel change" to be confirmed, with what stays once it goes. */
-type PlannedChange = { kind: "week" | "rules"; assignmentId: string; body: string };
+type PlannedChange = { kind: "week" | "rules" | "stop"; assignmentId: string; body: string };
 
 /** Cancelling the terms' planned changes, each after a confirmation saying what stays. */
 export function usePlannedChanges(terms: Terms) {
@@ -22,11 +23,12 @@ export function usePlannedChanges(terms: Terms) {
   const options = { refetch: TERMS_REFETCH };
   const [cancelWeek, weekState] = usePayloadMutation(CancelTermsWorkingWeekChangeDocument, options);
   const [cancelRules, rulesState] = usePayloadMutation(CancelTermsTimeOffChangeDocument, options);
+  const [cancelStop, stopState] = usePayloadMutation(CancelTermsTimeOffStopDocument, options);
+  const cancels = { week: cancelWeek, rules: cancelRules, stop: cancelStop };
 
   const confirm = async ({ kind, assignmentId }: PlannedChange) => {
     try {
-      const cancel = kind === "week" ? cancelWeek : cancelRules;
-      await cancel({ variables: { input: { assignmentId } } });
+      await cancels[kind]({ variables: { input: { assignmentId } } });
       toast(t("terms.edit.cancelled"));
     } catch (error) {
       // The server says why the change stays: started meanwhile, or already gone.
@@ -42,10 +44,19 @@ export function usePlannedChanges(terms: Terms) {
   return {
     /** What stays once the asked change goes; null while none is asked. */
     body: planned?.body ?? null,
-    pending: weekState.loading || rulesState.loading,
+    pending: weekState.loading || rulesState.loading || stopState.loading,
     askWeek: (version: Terms["workingWeek"][number]) => setPlanned(weekChange(terms, version)),
     askRules: (timeOffTypeId: string, version: TimeOffRow["versions"][number]) =>
       setPlanned(rulesChange(terms, timeOffTypeId, version)),
+    /** Cancelling a planned stop goes by the rules it ends. */
+    askStop: (timeOffTypeId: string, version: TimeOffRow["versions"][number]) => {
+      const row = terms.timeOff.find(({ timeOffType }) => timeOffType.id === timeOffTypeId)!;
+      setPlanned({
+        kind: "stop",
+        assignmentId: version.id,
+        body: t("terms.edit.stopStays", { type: row.timeOffType.name, terms: terms.name }),
+      });
+    },
     close: () => setPlanned(null),
     confirm: () => planned && void confirm(planned),
   };

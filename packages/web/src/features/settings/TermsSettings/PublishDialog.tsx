@@ -22,7 +22,14 @@ import {
   versionOn,
 } from "@/features/termsDisplay";
 
-import { type ChangeBox, longDate, peopleText, rulesChangeBox, weekChangeBox } from "./termsDraft";
+import {
+  type ChangeBox,
+  longDate,
+  peopleText,
+  rulesChangeBox,
+  stopChangeBox,
+  weekChangeBox,
+} from "./termsDraft";
 import type { Terms } from "./termsQueries";
 import type { PublishChoice } from "./usePublishTerms";
 import { WhatChanges } from "./WhatChanges";
@@ -44,9 +51,12 @@ type DateOption = "THIS_LEAVE_YEAR" | "TODAY" | "NEXT_LEAVE_YEAR" | "ANOTHER_DAT
 export function PublishDialog({ terms, open, onClose, publish, publishing }: Props) {
   const earliest = terms.earliestChange;
   const countsChange = changesCounts(terms);
-  const [choice, setChoice] = useState<DateOption>(defaultDate(terms));
+  // Every change starts today unless picked otherwise; one that changes how a type counts starts a leave year.
+  const [choice, setChoice] = useState<DateOption>(countsChange ? "THIS_LEAVE_YEAR" : "TODAY");
   const [otherDate, setOtherDate] = useState("");
-  const [unticked, setUnticked] = useState<ReadonlySet<string>>(new Set());
+  // The admin's own ticks; any other owner sharing only stopped rules starts unticked, so a stop
+  // ends the type only where it was made, whichever date lists that owner.
+  const [choices, setChoices] = useState<ReadonlyMap<string, boolean>>(new Map());
   const startDate = dateOf(choice, earliest, otherDate);
   const read = useQuery(TermsPublishSuggestionsDocument, {
     variables: { id: terms.id, from: startDate },
@@ -55,7 +65,10 @@ export function PublishDialog({ terms, open, onClose, publish, publishing }: Pro
   });
   const suggestions = read.data?.terms?.publishSuggestions;
   const owners = suggestions?.owners ?? [];
-  const ticked = owners.filter((owner) => !unticked.has(ownerKey(owner)));
+  const stoppedOnly = onlyStoppedFor(terms, owners);
+  const isTicked = (owner: Owner) =>
+    choices.get(ownerKey(owner)) ?? !stoppedOnly.has(ownerKey(owner));
+  const ticked = owners.filter(isTicked);
   const people = suggestions ? reachedBy(ticked) : null;
 
   const confirm = async () => {
@@ -83,9 +96,9 @@ export function PublishDialog({ terms, open, onClose, publish, publishing }: Pro
               {owners.map((owner) => (
                 <label key={ownerKey(owner)} className="flex items-center gap-3 text-sm">
                   <Checkbox
-                    checked={!unticked.has(ownerKey(owner))}
+                    checked={isTicked(owner)}
                     onCheckedChange={(checked) =>
-                      setUnticked(toggled(unticked, ownerKey(owner), checked))
+                      setChoices(new Map(choices).set(ownerKey(owner), checked))
                     }
                   />
                   <span className="flex-1">{owner.name}</span>
@@ -173,15 +186,28 @@ function peopleCount(count: number): string {
     : t("terms.publish.reach", { count: String(count) });
 }
 
-function ownerKey({ termsId, employeeId }: Owner): string {
-  return termsId ? `terms:${termsId}` : `employee:${employeeId}`;
+/** Owners other than these terms that would only get stops. */
+function onlyStoppedFor(
+  terms: Terms,
+  owners: readonly (Owner & { versionIds: readonly string[] })[],
+): ReadonlySet<string> {
+  const stops = new Set(
+    terms.timeOff.flatMap(({ unpublished }) => (unpublished?.stops ? [unpublished.id] : [])),
+  );
+  return new Set(
+    owners
+      .filter(
+        (owner) =>
+          owner.termsId !== terms.id &&
+          owner.versionIds.length > 0 &&
+          owner.versionIds.every((id) => stops.has(id)),
+      )
+      .map(ownerKey),
+  );
 }
 
-function toggled(keys: ReadonlySet<string>, key: string, checked: boolean): ReadonlySet<string> {
-  const next = new Set(keys);
-  if (checked) next.delete(key);
-  else next.add(key);
-  return next;
+function ownerKey({ termsId, employeeId }: Owner): string {
+  return termsId ? `terms:${termsId}` : `employee:${employeeId}`;
 }
 
 /** Everyone the ticked owners reach, once each, by name. */
@@ -202,17 +228,11 @@ function changesCounts(terms: Terms): boolean {
   return terms.timeOff.some(
     ({ unpublished, versions }) =>
       unpublished !== null &&
+      !unpublished.stops &&
       versions.some(
         ({ startDate, balance }) => startDate <= today && balance !== unpublished.balance,
       ),
   );
-}
-
-/** Rules start a leave year, as offering a type did; a week alone starts today. */
-function defaultDate(terms: Terms): DateOption {
-  return terms.timeOff.some(({ unpublished }) => unpublished !== null)
-    ? "THIS_LEAVE_YEAR"
-    : "TODAY";
 }
 
 function dateOptions(earliest: string, countsChange: boolean) {
@@ -258,12 +278,14 @@ function changesOf(terms: Terms, startDate: string): ChangeBox[] {
     unpublished
       ? [
           withReplaced(
-            rulesChangeBox(
-              timeOffType.name,
-              unpublished,
-              versionOn(versions, startDate),
-              startDate,
-            ),
+            unpublished.stops
+              ? stopChangeBox(timeOffType.name, startDate)
+              : rulesChangeBox(
+                  timeOffType.name,
+                  unpublished,
+                  versionOn(versions, startDate),
+                  startDate,
+                ),
             versions,
             startDate,
           ),
