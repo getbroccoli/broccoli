@@ -43,7 +43,6 @@ export {
   isSameOwner,
   NEW_ROW,
   planOrRefusal,
-  planReplacement,
   rowsAfterPlan,
   type VersionStatus,
 } from "./assignment";

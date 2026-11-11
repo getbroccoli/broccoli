@@ -54,7 +54,6 @@ export {
   NEW_ROW,
   personVersionsFrom,
   planOrRefusal,
-  planReplacement,
   rowsAfterPlan,
   SETUP_START_DATE,
 } from "./domain";
