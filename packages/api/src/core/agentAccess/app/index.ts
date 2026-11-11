@@ -1,2 +1,2 @@
 export { createAgentConnectionService } from "./agentConnectionService";
-export type { AgentConnectionEnding, AgentConnectionService } from "./agentConnectionService";
+export type { AgentConnectionService } from "./agentConnectionService";

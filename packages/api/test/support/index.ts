@@ -16,6 +16,7 @@ export {
   authorizeAgent,
   callMcpTool,
   connectAgent,
+  exchangeAgentCode,
   refreshAgent,
   registerAgentClient,
 } from "./agentClient";

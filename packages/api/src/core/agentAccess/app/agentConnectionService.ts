@@ -56,15 +56,21 @@ export function createAgentConnectionService({
       const { allowed, ended } = await transact(async (tx) => {
         const connections = agentConnectionRepository(tx);
         await connections.lockPerson(userId);
+        // Another Allow at the same moment may have replaced this one already; that one stays.
+        if (!(await connections.findConnectionOf(userId, clientId))) {
+          return { ended: [], allowed: null };
+        }
         return {
           ended: await connections.deleteConnections(userId, clientId),
           allowed: await connections.findConnection(userId),
         };
       });
-      logger.info(
-        { userId, connectionId: allowed?.id, endedConnectionIds: ended },
-        "Agent connection allowed",
-      );
+      if (allowed) {
+        logger.info(
+          { userId, connectionId: allowed.id, endedConnectionIds: ended },
+          "Agent connection allowed",
+        );
+      }
     },
     async useAgentConnection(ctx, { userId, clientId }) {
       ctx.requireSystem();

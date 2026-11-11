@@ -28,7 +28,7 @@ type Props = {
 export function AllowAgentPage({ signedRequest }: Props) {
   const clientId = new URLSearchParams(signedRequest).get("client_id") ?? "";
   const clientName = useAgentClientName(clientId);
-  const { data } = useQuery(AllowAgentDocument);
+  const { data, error } = useQuery(AllowAgentDocument);
   const [answering, setAnswering] = useState(false);
   const [outcome, setOutcome] = useState<"expired" | "failed" | null>(null);
   const client = clientName ?? t("mcpAgents.allow.unnamedClient");
@@ -103,7 +103,7 @@ export function AllowAgentPage({ signedRequest }: Props) {
             })}
           </p>
         )}
-        {outcome === "failed" && (
+        {(outcome === "failed" || error) && (
           <p role="alert" className="text-sm text-destructive">
             {t("mcpAgents.allow.failed")}
           </p>
@@ -117,7 +117,12 @@ export function AllowAgentPage({ signedRequest }: Props) {
           >
             {t("mcpAgents.allow.cancel")}
           </Button>
-          <Button className="flex-1" disabled={answering} onClick={() => void answer(true)}>
+          {/* Only once the page shows who allows it and what it replaces. */}
+          <Button
+            className="flex-1"
+            disabled={answering || !data}
+            onClick={() => void answer(true)}
+          >
             {t("mcpAgents.allow.allow")}
           </Button>
         </div>

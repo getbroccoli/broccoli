@@ -27,17 +27,11 @@ export async function connectAgent(
   options: { clientId: string; scope?: string; resource?: string },
 ): Promise<{ accessToken: string; refreshToken: string; scope: string }> {
   const { code, verifier, resource } = await authorizeAgent(env, browser, options);
-  const response = await fetch(`${env.url}/api/auth/oauth2/token`, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "authorization_code",
-      code,
-      redirect_uri: "http://127.0.0.1:33418/callback",
-      client_id: options.clientId,
-      code_verifier: verifier,
-      resource,
-    }),
+  const response = await exchangeAgentCode(env, {
+    clientId: options.clientId,
+    code,
+    verifier,
+    resource,
   });
   assert.equal(response.status, 200);
   const tokens = (await response.json()) as {
@@ -90,6 +84,29 @@ export async function authorizeAgent(
   const code = callback.searchParams.get("code");
   assert(code);
   return { code, verifier, resource };
+}
+
+export function exchangeAgentCode(
+  env: TestEnv,
+  {
+    clientId,
+    code,
+    verifier,
+    resource,
+  }: { clientId: string; code: string; verifier: string; resource: string },
+): Promise<Response> {
+  return fetch(`${env.url}/api/auth/oauth2/token`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: "http://127.0.0.1:33418/callback",
+      client_id: clientId,
+      code_verifier: verifier,
+      resource,
+    }),
+  });
 }
 
 export function refreshAgent(

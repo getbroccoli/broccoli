@@ -8,9 +8,6 @@ import { mcpAgentRouter } from "./mcp";
 // Public values.
 export { createMcpAgentToolService } from "./app";
 
-// Public types.
-export type { McpAgentToolService, PeoplePage, Person, WhoAmI } from "./app";
-
 /**
  * A person's own agent, such as Claude, ChatGPT, Claude Code or Codex, connected over MCP: it
  * acts as that person, with their permissions, through the tools offered here.
