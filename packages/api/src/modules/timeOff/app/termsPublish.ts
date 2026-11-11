@@ -11,6 +11,7 @@ import {
   isSameOwner,
   parseChangeDate,
   parseDateField,
+  plannedRowsReplaced,
   type TermsOverview,
   type WorkingPatternPublish,
   type WorkingPatternService,
@@ -194,7 +195,7 @@ async function publishPolicy(
 ): Promise<string[]> {
   const repository = timeOffPolicyRepository(tx);
   const people = new Set<string>();
-  for (const { owner, plan, refusal, replaced } of plans) {
+  for (const { owner, lane, plan, refusal, replaced } of plans) {
     if (!owners.some((ticked) => isSameOwner(ticked, owner))) {
       continue;
     }
@@ -217,6 +218,12 @@ async function publishPolicy(
       },
       after: { ...version, startDate: plan.added[0]?.startDate ?? from },
     });
+    for (const planned of plannedRowsReplaced(lane, plan)) {
+      await appendRulesHistory(ctx, tx, owner, policy.timeOffType, {
+        before: { ...versionOf([policy], planned.versionId), startDate: planned.startDate },
+        after: null,
+      });
+    }
     for (const id of await employeesOf(employeeReads, tx, owner)) people.add(id);
   }
   await repository.publishVersion(version.id);

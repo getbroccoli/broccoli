@@ -97,6 +97,20 @@ export function rowsAfterPlan(
   ].toSorted((a, b) => a.startDate.localeCompare(b.startDate));
 }
 
+/**
+ * The planned rows `plan` deletes after the first row it adds: changes a publish from an earlier
+ * date replaces, which history records as cancelled.
+ */
+export function plannedRowsReplaced<R extends Assignment>(
+  rows: readonly R[],
+  plan: AssignmentPlan,
+): R[] {
+  const from = plan.added[0]?.startDate;
+  return rows.filter(
+    ({ id, startDate }) => plan.deletedIds.includes(id) && from !== undefined && startDate > from,
+  );
+}
+
 /** The id of a row a plan adds, before it is saved. */
 export const NEW_ROW = "new";
 

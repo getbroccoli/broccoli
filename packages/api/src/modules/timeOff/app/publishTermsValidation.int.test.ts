@@ -53,7 +53,7 @@ test("a draft saved again since review refuses the whole publish", async ({ orm,
     }),
   ).rejects.toMatchObject({
     code: "CONFLICT",
-    message: "These changes were saved again since you opened them.",
+    message: "The unpublished changes on these terms changed since you opened them.",
   });
   expect((await timeOffPolicyRepository(orm).findAll())[0]!.versions).toEqual([latest]);
   expect(await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).toEqual([]);
@@ -83,7 +83,7 @@ test("leaving out a newly saved section refuses the whole publish", async ({ orm
     }),
   ).rejects.toMatchObject({
     code: "CONFLICT",
-    message: "These changes were saved again since you opened them.",
+    message: "The unpublished changes on these terms changed since you opened them.",
   });
   expect(await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).toEqual([]);
 });
