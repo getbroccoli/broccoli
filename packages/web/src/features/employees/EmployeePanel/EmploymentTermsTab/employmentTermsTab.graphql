@@ -39,6 +39,11 @@ fragment EmploymentTermsTab_terms on EmployeeEmploymentTerms {
       name
       icon
       colour
+      defaultRules {
+        balance
+        entitlementDays
+        bankHolidays
+      }
     }
     versions {
       source
@@ -156,6 +161,66 @@ mutation CancelOwnWorkingWeekChange($input: EmployeeOwnWorkingWeekCancelChangeIn
 
 # The person's new week, for the tab and the panel.
 fragment OwnWorkingWeekPayload on EmployeeOwnWorkingWeekPayload {
+  employee {
+    ...EmployeePanel_employee @unmask
+    employmentTerms {
+      ...EmploymentTermsTab_terms @unmask
+    }
+  }
+  error {
+    __typename
+    ... on Error {
+      message
+    }
+    ... on InvalidInputError {
+      fields {
+        field
+        code
+      }
+    }
+  }
+}
+
+# Whether the terms offer a type on a date, for what a return to their rules does.
+query TermsTypeOffer($termsId: ID!, $timeOffTypeId: ID!) {
+  terms(id: $termsId) {
+    id
+    timeOff(timeOffTypeId: $timeOffTypeId) {
+      versions {
+        id
+        startDate
+        endDate
+      }
+    }
+  }
+}
+
+mutation SetOwnRules($input: TimeOffOwnRulesSetInput!) {
+  timeOff {
+    setOwnRules(input: $input) {
+      ...OwnRulesPayload @unmask
+    }
+  }
+}
+
+mutation UseTermsRules($input: TimeOffTermsRulesUseInput!) {
+  timeOff {
+    useTermsRules(input: $input) {
+      ...OwnRulesPayload @unmask
+    }
+  }
+}
+
+mutation CancelOwnRulesChange($input: TimeOffOwnRulesCancelChangeInput!) {
+  timeOff {
+    cancelOwnRulesChange(input: $input) {
+      ...OwnRulesPayload @unmask
+    }
+  }
+}
+
+# The person's new rules, for the tab and the panel.
+fragment OwnRulesPayload on TimeOffOwnRulesPayload {
   employee {
     ...EmployeePanel_employee @unmask
     employmentTerms {

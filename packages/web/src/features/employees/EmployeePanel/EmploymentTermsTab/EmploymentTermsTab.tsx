@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
 
 import { TermsCard } from "./TermsCard";
+import type { OwnRulesEdit } from "./useOwnRulesEdit";
 import type { OwnWeekEdit } from "./useOwnWeekEdit";
 import type { TermsChange } from "./useTermsChange";
 
@@ -20,6 +21,8 @@ type Props = {
   change: TermsChange | null;
   /** Admins edit the person's own week on the tab; null for everyone else. */
   weekEdit: OwnWeekEdit | null;
+  /** Admins edit the person's own rules on the tab; null for everyone else. */
+  rulesEdit: OwnRulesEdit | null;
 };
 
 /**

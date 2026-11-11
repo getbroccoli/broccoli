@@ -12,7 +12,12 @@ import { EmployeeDetails } from "./EmployeeDetails";
 import { EmployeeHeader } from "./EmployeeHeader";
 import { EmployeeHistory } from "./EmployeeHistory";
 import { TermsTabFooter } from "./TermsTabFooter";
-import { EmploymentTermsTab, useOwnWeekEdit, useTermsChange } from "./EmploymentTermsTab";
+import {
+  EmploymentTermsTab,
+  useOwnRulesEdit,
+  useOwnWeekEdit,
+  useTermsChange,
+} from "./EmploymentTermsTab";
 import { EMPLOYEE_DESCRIPTION } from "./employeeDescription";
 import { shownTab } from "./employeePanelSearch";
 import { type EmployeeFieldKey, INPUT_KEYS } from "./employeeDraft";
@@ -35,10 +40,14 @@ export function EmployeeRecord({ employee, onClose }: Props) {
   const person = { employeeId: employee.id, firstName: employee.firstName };
   const termsChange = useTermsChange(person);
   const weekEdit = useOwnWeekEdit(person);
-  const tabEdits = (termsChange.changed ? 1 : 0) + (weekEdit.changed ? 1 : 0);
+  const rulesEdit = useOwnRulesEdit(person);
+  const tabEdits = [termsChange.changed, weekEdit.changed, rulesEdit.changed].filter(
+    Boolean,
+  ).length;
   const closeTabEdits = () => {
     termsChange.close();
     weekEdit.close();
+    rulesEdit.close();
   };
   const unsaved = draft.changed.length > 0 || tabEdits > 0;
   const [removing, setRemoving] = useState(false);
@@ -147,6 +156,7 @@ export function EmployeeRecord({ employee, onClose }: Props) {
               linksToSettings={operations.includes("MANAGE_WORKSPACE")}
               change={operations.includes("MANAGE_WORKSPACE") ? termsChange : null}
               weekEdit={operations.includes("MANAGE_WORKSPACE") ? weekEdit : null}
+              rulesEdit={operations.includes("MANAGE_WORKSPACE") ? rulesEdit : null}
             />
           </TabsPanel>
         )}
@@ -158,9 +168,10 @@ export function EmployeeRecord({ employee, onClose }: Props) {
       <TermsTabFooter
         termsChange={termsChange}
         weekEdit={weekEdit}
+        rulesEdit={rulesEdit}
         firstName={employee.firstName}
       />
-      {!termsChange.open && !weekEdit.mode && draft.changed.length > 0 && (
+      {!termsChange.open && !weekEdit.mode && !rulesEdit.mode && draft.changed.length > 0 && (
         <div className="border-t border-border px-4 py-3">
           <EditBar
             changedLabels={changedLabels}

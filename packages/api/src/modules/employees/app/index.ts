@@ -55,3 +55,4 @@ export {
   type EmployeeInviteService,
   type InviteDetails,
 } from "./invites/employeeInviteService";
+export { employeeNotFound } from "./employeeNotFound";

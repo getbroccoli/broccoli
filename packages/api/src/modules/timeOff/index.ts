@@ -7,6 +7,7 @@ import {
   type TimeOffSetupService,
   type TimeOffService,
 } from "./app";
+import { createEmployeeReadService } from "../employees";
 import { createResolvers } from "./graphql";
 
 // Public values.
@@ -38,6 +39,7 @@ export function timeOffModule({
       timeOff,
       timeOffSetup,
       createTimeOffPolicyService({ ...dependencies, timeOff }),
+      createEmployeeReadService(dependencies),
     ),
     events: {
       ...allowanceEventHandlers({ timeOff, ...dependencies }),
