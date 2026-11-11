@@ -18,9 +18,10 @@ import type {
   WorkingPatternService,
 } from "../app";
 import type { BankHolidayCalendar } from "../../bankHolidays";
-import { parseUuid, todayInLondon } from "../../../utils";
-import { earliestChangeDate, type Employee, parseDateField } from "../domain";
+import { parseUuid } from "../../../utils";
+import { type Employee, parseDateField } from "../domain";
 import { avatarUrl } from "../http";
+import { WEEK_FIELDS } from "./weekFields";
 import { DEFAULT_TERMS, employeeLoaders } from "./loaders";
 
 export function createResolvers(
@@ -106,26 +107,8 @@ export function createResolvers(
       source: ({ source }) => toEnum(source),
       week: ({ startDate, endDate, version }) => ({ ...version, startDate, endDate }),
     },
-    UnpublishedWorkingWeek: {
-      mondayMinutes: ({ minutes }) => minutes[0],
-      tuesdayMinutes: ({ minutes }) => minutes[1],
-      wednesdayMinutes: ({ minutes }) => minutes[2],
-      thursdayMinutes: ({ minutes }) => minutes[3],
-      fridayMinutes: ({ minutes }) => minutes[4],
-      saturdayMinutes: ({ minutes }) => minutes[5],
-      sundayMinutes: ({ minutes }) => minutes[6],
-      bankHolidayCalendar: ({ bankHolidayCalendar }) => toEnum(bankHolidayCalendar),
-    },
-    WorkingWeekVersion: {
-      mondayMinutes: ({ minutes }) => minutes[0],
-      tuesdayMinutes: ({ minutes }) => minutes[1],
-      wednesdayMinutes: ({ minutes }) => minutes[2],
-      thursdayMinutes: ({ minutes }) => minutes[3],
-      fridayMinutes: ({ minutes }) => minutes[4],
-      saturdayMinutes: ({ minutes }) => minutes[5],
-      sundayMinutes: ({ minutes }) => minutes[6],
-      bankHolidayCalendar: ({ bankHolidayCalendar }) => toEnum(bankHolidayCalendar),
-    },
+    UnpublishedWorkingWeek: WEEK_FIELDS,
+    WorkingWeekVersion: WEEK_FIELDS,
     Mutation: {
       employees: () => ({}),
     },

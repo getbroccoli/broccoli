@@ -32,31 +32,24 @@ export function isSameOwner(a: AssignmentOwner, b: AssignmentOwner): boolean {
 
 /**
  * How one owner's rows (for patterns all of them, for policies those of one type) make room for a
- * version from `from`: each row of `sourceVersionId` that covers `from` or starts later gives the
- * new version the rest of its span, the row ending the day before or going. Without such a row,
- * the new one runs from `from` until the owner's next row; a row of another version covering
- * `from` refuses it as overlapping.
+ * version from `from`: each row `isReplaced` accepts, usually those of the same pattern or policy,
+ * that covers `from` or starts later gives the new version the rest of its span, the row ending
+ * the day before or going. Without such a row, the new one is open-ended from `from`; another row
+ * covering `from` or starting later refuses it as overlapping.
  */
-export function planReplacement(
-  rows: readonly Assignment[],
-  sourceVersionId: string | null,
+export function planReplacement<R extends Assignment>(
+  rows: readonly R[],
+  isReplaced: (row: R) => boolean,
   from: CalendarDate,
 ): AssignmentPlan {
   const replaced = rows.filter(
-    (row) => row.versionId === sourceVersionId && (coversDate(row, from) || row.startDate > from),
+    (row) => isReplaced(row) && (coversDate(row, from) || row.startDate > from),
   );
   if (replaced.length === 0) {
-    if (rows.some((row) => coversDate(row, from))) {
+    if (rows.some((row) => coversDate(row, from) || row.startDate > from)) {
       throw invalidInput([{ field: "endDate", code: "overlaps" }]);
     }
-    const next = rows
-      .filter(({ startDate }) => startDate > from)
-      .toSorted((a, b) => a.startDate.localeCompare(b.startDate))[0];
-    return {
-      ended: [],
-      deletedIds: [],
-      added: [{ startDate: from, endDate: next ? addDays(next.startDate, -1) : null }],
-    };
+    return { ended: [], deletedIds: [], added: [{ startDate: from, endDate: null }] };
   }
   const started = replaced.filter(({ startDate }) => startDate < from);
   return {

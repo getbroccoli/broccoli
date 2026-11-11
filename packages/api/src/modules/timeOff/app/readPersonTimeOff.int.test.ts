@@ -56,14 +56,21 @@ test("reads today's rules from the terms followed by a planned rule change", asy
     policies: [{ key: "uk_20_days_plus_bank_holidays" }],
   });
   const [policy] = await readTermsPolicies(orm, termsId);
-  await timeOffPolicyService(orm, { today: "2026-06-01" }).changePolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
-    startDate: "2026-09-01",
+  const service = timeOffPolicyService(orm);
+  const draft1 = await service.saveTimeOffPolicy(OWNER, {
+    termsId,
+    timeOffTypeId: policy!.timeOffTypeId,
     rules: {
       balance: "balance_from_allowance",
       entitlementDays: 25,
       bankHolidays: "bank_holidays_on_top_of_allowance",
     },
+  });
+  await service.publishTerms(OWNER, {
+    termsId,
+    versions: [draft1],
+    startDate: "2026-09-01",
+    owners: [{ termsId }],
   });
 
   const result = await timeOffService(orm, { today: "2026-06-01" }).readPersonTimeOff(OWNER, {
@@ -116,6 +123,7 @@ test("reads a person's own rules for one type ahead of their terms' rules", asyn
     employeeId: employee.id,
     timeOffTypeId: own.timeOffTypeId,
     timeOffPolicyId: own.id,
+    versionId: own.versionId,
   });
 
   const result = await service.readPersonTimeOff(OWNER, { employeeIds: [employee.id] });

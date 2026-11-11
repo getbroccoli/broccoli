@@ -8,8 +8,8 @@ import {
   type ResolversTypes,
   toEnum,
 } from "../../../core/graphql";
-import { type CalendarDate, todayInLondon } from "../../../utils";
-import { earliestChangeDate, type TermsMovePreview } from "../../employees";
+import type { CalendarDate } from "../../../utils";
+import type { TermsMovePreview } from "../../employees";
 import type {
   PersonTimeOff,
   TimeOffPolicyService,
@@ -147,8 +147,7 @@ export function createResolvers(
         }, ["NOT_FOUND", "CONFLICT"]),
       publishTerms: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["TermsPublishPayload"]>(async () => {
-          await policies.publishTerms(context.getActor(), input);
-          return { publishedTermsId: input.termsId };
+          return { terms: await policies.publishTerms(context.getActor(), input) };
         }, ["INVALID_INPUT", "CONFLICT"]),
     },
     Employee: {

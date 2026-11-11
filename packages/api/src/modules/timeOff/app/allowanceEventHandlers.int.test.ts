@@ -11,6 +11,7 @@ import {
   readAllowances,
   test,
   timeOffService,
+  timeOffPolicyService,
   transactWithTimeOffEvents,
   workingPatternService,
 } from "#test/support";
@@ -207,14 +208,17 @@ test("a September working pattern change reduces the grant and restores December
   const [before] = await readAllowances(orm, employee.id);
   expect(before!.total).toBe(20);
   const patterns = workingPatternService(orm, { transact: transactWithTimeOffEvents(orm) });
-  const standard = (await patterns.listPatterns(OWNER)).find(
-    (pattern) => pattern.termsId !== null,
-  )!;
 
-  await patterns.changePattern(OWNER, {
-    workingPatternId: standard.id,
-    startDate: "2026-09-01",
+  const draft = await patterns.saveWorkingPattern(OWNER, {
+    termsId,
+    bankHolidayCalendar: "england_and_wales",
     minutes: [0, 450, 450, 450, 0, 0, 0],
+  });
+  await timeOffPolicyService(orm).publishTerms(OWNER, {
+    termsId,
+    versions: [draft],
+    startDate: "2026-09-01",
+    owners: [{ termsId }],
   });
 
   const allowances = await readAllowances(orm, employee.id);

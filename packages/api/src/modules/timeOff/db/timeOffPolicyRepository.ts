@@ -2,11 +2,9 @@ import { asc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 
 import { isUniqueViolation, type Orm, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
-import type { Assignment, AssignmentOwner, VersionStatus } from "../../employees";
+import type { Assignment, VersionStatus } from "../../employees";
 import {
-  type AllowanceRule,
   type NewPolicyVersion,
-  type PolicyVersion,
   type TimeOffPolicy,
   type TimeOffType,
   STANDARD_TIME_OFF_TYPES,
@@ -22,6 +20,13 @@ import { timeOffPolicyAssignments } from "./timeOffPolicyAssignmentsTable";
 import { timeOffPolicyVersions } from "./timeOffPolicyVersionsTable";
 import { timeOff } from "./timeOffTable";
 import { timeOffTypeColumns, toTimeOffType } from "./timeOffTypeColumns";
+import {
+  insertRules,
+  ownerColumns,
+  toAssignment,
+  toVersion,
+  versionColumns,
+} from "./timeOffPolicyRows";
 import { TIME_OFF_TYPE_NAME_UNIQUE, timeOffTypes } from "./timeOffTypesTable";
 
 /** A policy version given to an employee or terms for one type from a date to a date. */
@@ -319,96 +324,6 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
       await orm().delete(timeOffPolicyAssignments).where(eq(timeOffPolicyAssignments.id, id));
     },
   };
-}
-
-async function insertRules(db: Orm | Tx, versionId: string, rules: NewPolicyVersion["rules"]) {
-  if (rules.length > 0) {
-    await ormOf(db)
-      .insert(timeOffAllowanceRules)
-      .values(rules.map((rule) => ruleRow(versionId, rule)));
-  }
-}
-
-function versionColumns({ balance, bankHolidays, leaveYear }: NewPolicyVersion) {
-  return {
-    balance,
-    bankHolidays,
-    leaveYearStart: leaveYear?.kind ?? null,
-    leaveYearStartMonth: leaveYear?.kind === "leave_year_from_fixed_date" ? leaveYear.month : null,
-    leaveYearStartDay: leaveYear?.kind === "leave_year_from_fixed_date" ? leaveYear.day : null,
-  };
-}
-
-function toAssignment(row: typeof timeOffPolicyAssignments.$inferSelect): PolicyAssignment {
-  return {
-    id: row.id,
-    versionId: row.timeOffPolicyVersionId,
-    timeOffTypeId: row.timeOffTypeId,
-    timeOffPolicyId: row.timeOffPolicyId,
-    owner: row.employeeId !== null ? { employeeId: row.employeeId } : { termsId: row.termsId! },
-    startDate: row.startDate,
-    endDate: row.endDate,
-  };
-}
-
-function ownerColumns(owner: AssignmentOwner) {
-  return "employeeId" in owner
-    ? { employeeId: owner.employeeId, termsId: null }
-    : { employeeId: null, termsId: owner.termsId };
-}
-
-function toVersion(
-  row: typeof timeOffPolicyVersions.$inferSelect,
-  rules: readonly (typeof timeOffAllowanceRules.$inferSelect)[],
-): PolicyVersion {
-  return {
-    id: row.id,
-    timeOffPolicyId: row.timeOffPolicyId,
-    status: row.status,
-    termsId: row.termsId,
-    revision: row.revision,
-    balance: row.balance,
-    bankHolidays: row.bankHolidays,
-    leaveYear:
-      row.leaveYearStart === "leave_year_from_fixed_date"
-        ? { kind: row.leaveYearStart, month: row.leaveYearStartMonth!, day: row.leaveYearStartDay! }
-        : row.leaveYearStart && { kind: row.leaveYearStart },
-    rules: rules.filter((rule) => rule.timeOffPolicyVersionId === row.id).map(toRule),
-  };
-}
-
-function toRule(row: typeof timeOffAllowanceRules.$inferSelect): AllowanceRule {
-  return row.kind === "yearly_entitlement"
-    ? {
-        id: row.id,
-        kind: row.kind,
-        entitlementDays: Number(row.entitlementDays),
-        entitlementDaysPerWeek: row.entitlementDaysPerWeek!,
-        maxDays: row.maxDays === null ? null : Number(row.maxDays),
-      }
-    : {
-        id: row.id,
-        kind: row.kind,
-        afterYears: row.afterYears!,
-        extraDays: Number(row.extraDays),
-      };
-}
-
-function ruleRow(timeOffPolicyVersionId: string, rule: NewPolicyVersion["rules"][number]) {
-  return rule.kind === "yearly_entitlement"
-    ? {
-        timeOffPolicyVersionId,
-        kind: rule.kind,
-        entitlementDays: String(rule.entitlementDays),
-        entitlementDaysPerWeek: rule.entitlementDaysPerWeek,
-        maxDays: rule.maxDays === null ? null : String(rule.maxDays),
-      }
-    : {
-        timeOffPolicyVersionId,
-        kind: rule.kind,
-        afterYears: rule.afterYears,
-        extraDays: String(rule.extraDays),
-      };
 }
 
 function nameTakenOr(error: unknown): unknown {

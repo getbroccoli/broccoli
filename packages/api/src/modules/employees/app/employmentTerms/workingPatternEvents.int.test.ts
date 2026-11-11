@@ -1,113 +1,96 @@
-import { expect, OWNER, test, workingPatternService, createStandardPattern } from "#test/support";
+import {
+  expect,
+  OWNER,
+  test,
+  workingPatternService,
+  timeOffPolicyService,
+  seedTermsWeek,
+} from "#test/support";
 import { type Orm, transactor } from "../../../../core/db";
 import { createEventBus, type DomainEvents } from "../../../../core/events";
 import { createLogger } from "../../../../core/logger";
 
-test("a Standard change publishes its affected employees and earliest changed date", async ({
+test("publishing a working week publishes its affected employees and earliest date", async ({
   orm,
   seed,
 }) => {
-  const first = await seed.employee();
-  const second = await seed.employee();
+  const first = await seed.employee({ startDate: "2025-01-01" });
+  const second = await seed.employee({ startDate: "2025-01-01" });
+  const termsId = await seed.defaultTermsId();
   const { events, transact } = workingPatternChangedEvents(orm);
-  const patterns = workingPatternService(orm, { transact, today: "2026-11-06" });
-  const standard = (await patterns.listPatterns(OWNER)).find(
-    (pattern) => pattern.termsId !== null,
-  )!;
+  const draft = await workingPatternService(orm, { transact }).saveWorkingPattern(OWNER, {
+    termsId,
+    minutes: [480, 480, 480, 480, 0, 0, 0],
+    bankHolidayCalendar: "england_and_wales",
+  });
 
-  await patterns.changePattern(OWNER, {
-    workingPatternId: standard.id,
-    startDate: "2026-09-01",
-    minutes: [480, 480, 480, 480, 480, 0, 0],
+  await timeOffPolicyService(orm, { transact }).publishTerms(OWNER, {
+    termsId,
+    versions: [{ id: draft.id, revision: draft.revision }],
+    startDate: "2026-07-01",
+    owners: [{ termsId }],
   });
 
   expect(events).toHaveLength(1);
-  expect(events[0]!.employeeIds).toEqual(expect.arrayContaining([first.id, second.id]));
-  expect(events[0]!.from).toBe("2026-09-01");
+  expect(events[0]!.employeeIds.toSorted()).toEqual([first.id, second.id].toSorted());
+  expect(events[0]!.from).toBe("2026-07-01");
 });
 
-test("creating, renaming and deleting an unused pattern publish no working pattern event", async ({
+test("saving and discarding an unpublished week publish no working pattern event", async ({
   orm,
+  seed,
 }) => {
   const { events, transact } = workingPatternChangedEvents(orm);
-  const patterns = workingPatternService(orm, { transact, today: "2026-11-06" });
-
-  const pattern = await patterns.createPattern(OWNER, {
-    name: "Monday",
-    minutes: [450, 0, 0, 0, 0, 0, 0],
+  const patterns = workingPatternService(orm, { transact });
+  const draft = await patterns.saveWorkingPattern(OWNER, {
+    termsId: await seed.defaultTermsId(),
+    minutes: [480, 480, 480, 480, 0, 0, 0],
+    bankHolidayCalendar: "scotland",
   });
-  await patterns.renamePattern(OWNER, { workingPatternId: pattern.id, name: "Monday only" });
-  await patterns.deletePattern(OWNER, { workingPatternId: pattern.id });
+
+  await patterns.discardWorkingPattern(OWNER, { versionId: draft.id });
 
   expect(events).toEqual([]);
 });
 
-test("assigning a pattern publishes the employee and assignment start date", async ({
-  orm,
-  seed,
-}) => {
-  const employee = await seed.employee();
-  await seed.leaveTerms(employee.id);
-  const { events, transact } = workingPatternChangedEvents(orm);
-  const patterns = workingPatternService(orm, { transact, today: "2026-11-06" });
-  const standard = await createStandardPattern(orm);
-
-  await patterns.assignPattern(OWNER, {
-    employeeId: employee.id,
-    workingPatternId: standard.id,
-    startDate: "2026-09-01",
-  });
-
-  expect(events).toHaveLength(1);
-  expect(events[0]!.employeeIds).toEqual(expect.arrayContaining([employee.id]));
-  expect(events[0]!.from).toBe("2026-09-01");
-});
-
-test("changing only a calendar publishes its affected employees and change date", async ({
-  orm,
-  seed,
-}) => {
-  const employee = await seed.employee();
-  const { events, transact } = workingPatternChangedEvents(orm);
-  const patterns = workingPatternService(orm, { transact, today: "2026-11-06" });
-  const standard = (await patterns.listPatterns(OWNER)).find(
-    (pattern) => pattern.termsId !== null,
-  )!;
-
-  await patterns.changePattern(OWNER, {
-    workingPatternId: standard.id,
-    startDate: "2026-07-01",
-    minutes: [450, 450, 450, 450, 450, 0, 0],
-    bankHolidayCalendar: "scotland",
-  });
-
-  expect(events).toHaveLength(1);
-  expect(events[0]!.employeeIds).toEqual(expect.arrayContaining([employee.id]));
-  expect(events[0]!.from).toBe("2026-07-01");
-});
-
-test("cancelling a planned week publishes its reached people and start date", async ({
+test("publishing only a calendar change publishes affected employees and its date", async ({
   orm,
   seed,
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
+  const termsId = await seed.defaultTermsId();
   const { events, transact } = workingPatternChangedEvents(orm);
-  const patterns = workingPatternService(orm, { transact, today: "2026-11-06" });
-  const [pattern] = await patterns.listPatterns(OWNER);
-  await patterns.changePattern(OWNER, {
-    workingPatternId: pattern!.id,
-    startDate: "2026-12-01",
-    minutes: [480, 480, 480, 480, 0, 0, 0],
-  });
-  events.length = 0;
-
-  await patterns.cancelPatternChange(OWNER, {
-    workingPatternId: pattern!.id,
-    startDate: "2026-12-01",
+  const draft = await workingPatternService(orm, { transact }).saveWorkingPattern(OWNER, {
+    termsId,
+    minutes: [450, 450, 450, 450, 450, 0, 0],
+    bankHolidayCalendar: "scotland",
   });
 
-  expect(events).toHaveLength(1);
-  expect(events[0]).toMatchObject({ employeeIds: [employee.id], from: "2026-12-01" });
+  await timeOffPolicyService(orm, { transact }).publishTerms(OWNER, {
+    termsId,
+    versions: [{ id: draft.id, revision: draft.revision }],
+    startDate: "2026-07-01",
+    owners: [{ termsId }],
+  });
+
+  expect(events).toEqual([{ employeeIds: [employee.id], from: "2026-07-01" }]);
+});
+
+test("cancelling a planned week publishes reached people and its start date", async ({
+  orm,
+  seed,
+}) => {
+  const termsId = await seed.terms("Scotland");
+  const employee = await seed.employee({ startDate: "2025-01-01" });
+  await seed.moveToTerms(employee.id, termsId);
+  const planned = await seedTermsWeek(orm, { termsId, startDate: "2026-12-01" });
+  const { events, transact } = workingPatternChangedEvents(orm);
+
+  await workingPatternService(orm, { transact }).cancelWorkingPatternChange(OWNER, {
+    assignmentId: planned.assignmentId,
+  });
+
+  expect(events).toEqual([{ employeeIds: [employee.id], from: "2026-12-01" }]);
 });
 
 function workingPatternChangedEvents(orm: Orm) {

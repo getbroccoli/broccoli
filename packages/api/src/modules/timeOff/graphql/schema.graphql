@@ -204,9 +204,9 @@ type TimeOffPolicyCancelChangePayload {
   error: TimeOffPolicyCancelChangeError
 }
 
-"The published terms' id, or why publishing was refused."
+"The terms as publishing left them, or why it was refused."
 type TermsPublishPayload {
-  publishedTermsId: ID
+  terms: Terms
   error: TermsPublishError
 }
 

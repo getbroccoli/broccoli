@@ -257,9 +257,11 @@ export function workingPatternRepository(db: Orm | Tx): WorkingPatternRepository
 
 /** The owner columns of an assignment row: one set, the other null. */
 export function ownerColumns(owner: AssignmentOwner) {
-  return "employeeId" in owner
-    ? { employeeId: owner.employeeId, termsId: null }
-    : { employeeId: null, termsId: owner.termsId };
+  // Both read as given, so the database refuses an owner that names both or neither.
+  return {
+    employeeId: "employeeId" in owner ? owner.employeeId : null,
+    termsId: "termsId" in owner ? owner.termsId : null,
+  };
 }
 
 /** The owner of an assignment row, which has exactly one. */

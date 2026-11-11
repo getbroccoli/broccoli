@@ -32,7 +32,15 @@ test("a managed owner completes setup with time off over GraphQL", async () => {
     expect(await response.json()).toEqual({
       data: { system: { completeSetup: { setup: { id: "instance", step: "DONE" }, error: null } } },
     });
-    expect(await readTermsPolicies(database.orm, await env.seed.defaultTermsId())).toEqual(
+    const termsId = await env.seed.defaultTermsId();
+    const termsResponse = await browser.graphql(
+      `query($id: ID!) { terms(id: $id) { earliestChange } }`,
+      { id: termsId },
+    );
+    const { data } = (await termsResponse.json()) as {
+      data: { terms: { earliestChange: string } };
+    };
+    expect(await readTermsPolicies(database.orm, termsId, data.terms.earliestChange)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ typeKey: "annual_leave", entitlementDays: 28 }),
       ]),

@@ -4,22 +4,19 @@ import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import type { SecurityContext } from "../../../../core/security";
 import { type CalendarDate, coversDate, parseUuid, todayInLondon } from "../../../../utils";
 import { parseBankHolidayCalendar } from "../../../bankHolidays";
-import { employmentRepository, termsRepository, workingPatternRepository } from "../../db";
+import { termsRepository, workingPatternRepository } from "../../db";
 import {
   type Assignment,
   type AssignmentOwner,
-  type AssignmentPlan,
   cancelPlannedVersion,
   isSameOwner,
   type PatternVersion,
   parseWeek,
-  planReplacement,
-  rowsAfterPlan,
   type WeekdayMinutes,
 } from "../../domain";
-import { readTimelines } from "./employeeWorkingPatternService";
 import { publishWorkingPatternChange } from "./publishWorkingPatternChange";
 import { appendWorkingWeekHistory } from "./workingWeekHistory";
+import { employeesOf, ownerIds, ownersOf, readReach } from "./workingWeekPublish";
 
 /**
  * The working weeks admins keep on terms: an unpublished week saved and discarded, a planned one
@@ -170,7 +167,7 @@ export function createWorkingPatternService({
       if (!draft) {
         return null;
       }
-      const owners = await ownersOf(tx, termsId, from);
+      const owners = await ownersOf(tx, termsId, draft, versions, from);
       const reached = [];
       // One after another: they share the transaction's connection.
       for (const { owner, lane, plan } of owners) {
@@ -184,7 +181,7 @@ export function createWorkingPatternService({
       await repository.lockForWrites();
       const versions = (await repository.findPatterns()).flatMap(({ versions: all }) => all);
       const draft = draftOf(versions, termsId)!;
-      const suggested = await ownersOf(tx, termsId, from);
+      const suggested = await ownersOf(tx, termsId, draft, versions, from);
       const employeeIds = new Set<string>();
       for (const { owner, plan, replaced } of suggested) {
         if (!owners.some((ticked) => isSameOwner(ticked, owner))) {
@@ -195,14 +192,11 @@ export function createWorkingPatternService({
         for (const span of plan.added) {
           await repository.insertAssignment({ ...span, versionId: draft.id, owner });
         }
-        const before = replaced && versions.find(({ id }) => id === replaced.versionId)!;
-        await appendWorkingWeekHistory(
-          ctx,
-          tx,
-          owner,
-          before && { ...before, startDate: replaced!.startDate },
-          { ...draft, startDate: from },
-        );
+        const before = replaced && {
+          ...versions.find(({ id }) => id === replaced.versionId)!,
+          startDate: replaced.startDate,
+        };
+        await appendWorkingWeekHistory(ctx, tx, owner, before, { ...draft, startDate: from });
         for (const id of await employeesOf(tx, owner)) employeeIds.add(id);
       }
       await repository.publishVersion(draft.id);
@@ -222,58 +216,6 @@ export function createWorkingPatternService({
   };
 }
 
-/**
- * The owners publishing `draft` from `from` reaches, these terms first: the terms, and every owner
- * with an assignment of the version the terms work on `from` that covers it or starts later; each
- * with how its rows would change and the row the draft takes over on `from`.
- */
-async function ownersOf(tx: Tx, termsId: string, from: CalendarDate) {
-  const repository = workingPatternRepository(tx);
-  const termsRows = await repository.findAssignments({ termsIds: [termsId] });
-  const source = termsRows.find((row) => coversDate(row, from))?.versionId ?? null;
-  const sharing = (source ? await repository.findAssignmentsOfVersions([source]) : []).filter(
-    (row) => coversDate(row, from) || row.startDate > from,
-  );
-  const owners: AssignmentOwner[] = [{ termsId }];
-  for (const { owner } of sharing) {
-    if (!owners.some((known) => isSameOwner(known, owner))) owners.push(owner);
-  }
-  const planned = [];
-  for (const owner of owners) {
-    const lane = await repository.findAssignments(ownerIds(owner));
-    planned.push({
-      owner,
-      lane,
-      plan: planReplacement(lane, source, from),
-      replaced: lane.find((row) => row.versionId === source && coversDate(row, from)) ?? null,
-    });
-  }
-  return planned;
-}
-
-/** The employees on whom the draft would apply on some day from `from` on that they are employed. */
-async function readReach(
-  tx: Tx,
-  owner: AssignmentOwner,
-  lane: readonly Assignment[],
-  plan: AssignmentPlan,
-  draftId: string,
-  from: CalendarDate,
-): Promise<string[]> {
-  const candidates = await employeesOf(tx, owner);
-  const after = rowsAfterPlan(lane, plan, { versionId: draftId, owner });
-  const { timelines } = await readTimelines(tx, candidates, undefined, (stored) => [
-    ...stored.filter((row) => !isSameOwner(row.owner, owner)),
-    ...after,
-  ]);
-  const periods = await employmentRepository(tx).findPeriods(candidates);
-  return candidates.filter((id) =>
-    timelines
-      .get(id)!
-      .appliesFrom((versionId) => versionId === draftId, from, periods.get(id) ?? []),
-  );
-}
-
 /** The terms' unpublished version, if any. */
 function draftOf(versions: readonly PatternVersion[], termsId: string): PatternVersion | null {
   return (
@@ -281,7 +223,7 @@ function draftOf(versions: readonly PatternVersion[], termsId: string): PatternV
   );
 }
 
-/** The pattern the terms work on `date`, else the one they work last; null when they have none. */
+/** The pattern the terms work on `date`; null when they work none that day. */
 async function patternWorkedBy(
   tx: Tx,
   versions: readonly PatternVersion[],
@@ -289,22 +231,8 @@ async function patternWorkedBy(
   date: CalendarDate,
 ): Promise<string | null> {
   const rows = await workingPatternRepository(tx).findAssignments({ termsIds: [termsId] });
-  const row = rows.find((candidate) => coversDate(candidate, date)) ?? rows.at(-1);
+  const row = rows.find((candidate) => coversDate(candidate, date));
   return row ? versions.find(({ id }) => id === row.versionId)!.workingPatternId : null;
-}
-
-/** The employees an owner's working week applies to: the person, or everyone ever on the terms. */
-async function employeesOf(tx: Tx, owner: AssignmentOwner): Promise<string[]> {
-  if ("employeeId" in owner) {
-    return [owner.employeeId];
-  }
-  return (await termsRepository(tx).findMemberIds([owner.termsId])).get(owner.termsId) ?? [];
-}
-
-function ownerIds(owner: AssignmentOwner) {
-  return "employeeId" in owner
-    ? { employeeIds: [owner.employeeId] }
-    : { termsIds: [owner.termsId] };
 }
 
 async function findAssignment(tx: Tx, assignmentId: string | null): Promise<Assignment> {

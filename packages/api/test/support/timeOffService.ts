@@ -27,7 +27,8 @@ import {
   type StandardLeavePolicyKey,
   type TimeOffTypeKey,
 } from "../../src/modules/timeOff/domain";
-import { type CalendarDate } from "../../src/utils";
+import { type CalendarDate, coversDate } from "../../src/utils";
+import { calendarDate } from "./calendarDate";
 import { bankHolidayService } from "./bankHolidayService";
 import { employeeSetup } from "./statelessServices";
 import { OWNER } from "./testSecurityContext";
@@ -46,10 +47,16 @@ export function timeOffService(orm: Orm, { today = "2026-06-01" }: { today?: str
 }
 
 /** The time off policy service on `orm`, with the engine of `timeOffService`; `today` is its date. */
-export function timeOffPolicyService(orm: Orm, { today = "2026-06-01" }: { today?: string } = {}) {
+export function timeOffPolicyService(
+  orm: Orm,
+  {
+    today = "2026-06-01",
+    transact = testTransactor(orm),
+  }: { today?: string; transact?: Transact } = {},
+) {
   return createTimeOffPolicyService({
     orm,
-    transact: testTransactor(orm),
+    transact,
     logger: createLogger("silent"),
     timeOff: timeOffService(orm, { today }),
     today: () => today as CalendarDate,
@@ -63,7 +70,7 @@ export type TermsPolicy =
   | { timeOffTypeId: string; version: NewPolicyVersion };
 
 /**
- * Gives terms copies of policies from the beginning and ensures their people's allowances, as
+ * Gives terms published policies from the current year's start and ensures their people's allowances, as
  * turning time off on does; `today` is the engine's date.
  */
 export async function giveTermsPolicies(
@@ -85,7 +92,20 @@ export async function giveTermsPolicies(
           : "recordOnly" in policy
             ? [typeId(policy.recordOnly), RECORD_ONLY_POLICY]
             : [policy.timeOffTypeId, policy.version];
-      await timeOffPolicyRepository(tx).insertPolicy({ timeOffTypeId, termsId }, version);
+      const repository = timeOffPolicyRepository(tx);
+      const timeOffPolicyId = await repository.insertPolicy({ timeOffTypeId });
+      const versionId = await repository.insertVersion(timeOffPolicyId, {
+        ...version,
+        status: "published",
+      });
+      await repository.insertAssignment({
+        timeOffTypeId,
+        timeOffPolicyId,
+        versionId,
+        owner: { termsId },
+        startDate: calendarDate(`${(today ?? "2026-06-01").slice(0, 4)}-01-01`),
+        endDate: null,
+      });
     }
     const members = await ormOf(tx)
       .select({ employeeId: employeeTerms.employeeId })
@@ -110,25 +130,38 @@ export async function giveDefaultTermsStatutoryMinimum(
   });
 }
 
-/** Terms' policies have no public read yet: each with its type and how its first version counts. */
-export async function readTermsPolicies(orm: Orm, termsId: string) {
-  const policies = await timeOffPolicyRepository(orm).findAll();
-  return policies
-    .filter((policy) => policy.termsId === termsId)
-    .map(({ id, timeOffType, versions: [version] }) => ({
-      id,
-      typeKey: timeOffType.typeKey,
-      balance: version!.balance,
-      bankHolidays: version!.bankHolidays,
-      entitlementDays:
-        version!.rules.find((rule) => rule.kind === "yearly_entitlement")?.entitlementDays ?? null,
-    }));
+/** The published policies these terms use on the fixed test date. */
+export async function readTermsPolicies(orm: Orm, termsId: string, today = "2026-06-01") {
+  const repository = timeOffPolicyRepository(orm);
+  const policies = await repository.findAll();
+  const assignments = await repository.findAssignments({ termsIds: [termsId] });
+  return assignments
+    .filter((row) => coversDate(row, calendarDate(today)))
+    .map((row) => {
+      const policy = policies.find(({ id }) => id === row.timeOffPolicyId)!;
+      const version = policy.versions.find(({ id }) => id === row.versionId)!;
+      return {
+        id: policy.id,
+        timeOffTypeId: policy.timeOffType.id,
+        versionId: version.id,
+        typeKey: policy.timeOffType.typeKey,
+        balance: version.balance,
+        bankHolidays: version.bankHolidays,
+        entitlementDays:
+          version.rules.find((rule) => rule.kind === "yearly_entitlement")?.entitlementDays ?? null,
+      };
+    });
 }
 
-/** A terms' policies with every version and allowance rule, including ended ones. */
+/** Policies assigned to these terms or holding their drafts, with every version. */
 export async function readTermsPolicyVersions(orm: Orm, termsId: string) {
-  return (await timeOffPolicyRepository(orm).findAll()).filter(
-    (policy) => policy.termsId === termsId,
+  const repository = timeOffPolicyRepository(orm);
+  const policies = await repository.findAll();
+  const assignments = await repository.findAssignments({ termsIds: [termsId] });
+  return policies.filter(
+    (policy) =>
+      assignments.some((row) => row.timeOffPolicyId === policy.id) ||
+      policy.versions.some((version) => version.termsId === termsId),
   );
 }
 

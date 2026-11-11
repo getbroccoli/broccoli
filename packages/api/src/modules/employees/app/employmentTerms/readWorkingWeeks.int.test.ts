@@ -24,3 +24,13 @@ test("a new employee works Standard throughout the requested period", async ({ o
     ]),
   );
 });
+
+test("refuses reading an unknown employee's working weeks", async ({ orm }) => {
+  await expect(
+    workingPatternService(orm).readWorkingWeeks(OWNER, {
+      employeeIds: ["00000000-0000-4000-8000-000000000001"],
+      from: "2026-06-01",
+      until: "2026-06-30",
+    }),
+  ).rejects.toMatchObject({ code: "NOT_FOUND" });
+});

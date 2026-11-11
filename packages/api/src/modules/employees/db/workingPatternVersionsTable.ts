@@ -2,7 +2,6 @@ import { sql } from "drizzle-orm";
 import { check, foreignKey, integer, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { BANK_HOLIDAY_CALENDARS } from "../../bankHolidays";
-import { VERSION_STATUSES } from "../domain/assignment";
 import { terms } from "./termsTable";
 import { workingPatterns } from "./workingPatternsTable";
 
@@ -17,7 +16,7 @@ export const workingPatternVersions = pgTable(
       .primaryKey()
       .default(sql`uuidv7()`),
     workingPatternId: uuid("working_pattern_id").notNull(),
-    status: text("status", { enum: VERSION_STATUSES }).notNull(),
+    status: text("status", { enum: ["draft", "published"] }).notNull(),
     /** Set only on a draft: the terms whose screen saved it; publishing clears it. */
     termsId: uuid("terms_id"),
     /** 1 on creation, plus 1 on every save of a draft, so Publish sees what the admin reviewed. */

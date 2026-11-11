@@ -37,6 +37,7 @@ export {
   createLocationService,
   createTermsService,
   employeeDirectory,
+  readTermsOverviews,
   termsRecordType,
 } from "./app";
 export {
@@ -74,6 +75,7 @@ export type {
   EmployeeWorkingPatternService,
   LocationService,
   TermsMovePreview,
+  TermsOverview,
 } from "./app";
 export type {
   Employee,

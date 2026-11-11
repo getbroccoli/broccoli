@@ -16,14 +16,13 @@ import {
   type NewEmployeeInput,
   parseLocationName,
   parseNewEmployee,
-  type PatternWeek,
-  SETUP_START_DATE,
   STANDARD_WEEKS,
   type StandardWorkingWeek,
   type TermsSetup,
   tryParseNewEmployee,
 } from "../domain";
 import { setNewEmployeeManagers } from "./employeeManagerService";
+import { changeWeek, giveWeek, resetDefaultPattern } from "./termsWeekSetup";
 import { recordCreatedEmployees } from "./recordCreatedEmployees";
 
 const owners = createOwnerService();
@@ -270,8 +269,8 @@ async function linkOwnerToDemoPerson(
 
 /**
  * A nation's terms on `week` and its bank holidays: the default terms, when `defaultTermsId` is
- * given, change to the week unless they work it already; otherwise new terms get it. Returns the
- * pattern it created, if any.
+ * given, keep their own pattern, on a new version unless they work the week already; otherwise new
+ * terms get a new pattern. Returns the pattern it created, if any.
  */
 async function termsOnWeek(
   tx: Tx,
@@ -281,28 +280,11 @@ async function termsOnWeek(
 ): Promise<{ termsId: string; patternId: string | null }> {
   const patternWeek = { ...STANDARD_WEEKS[week], bankHolidayCalendar: calendar };
   if (defaultTermsId) {
-    if (await worksOnlyWeek(tx, defaultTermsId, patternWeek)) {
-      return { termsId: defaultTermsId, patternId: null };
-    }
-    await workingPatternRepository(tx).deleteTermsAssignments(defaultTermsId);
-    return { termsId: defaultTermsId, patternId: await giveWeek(tx, defaultTermsId, patternWeek) };
+    await changeWeek(tx, defaultTermsId, patternWeek);
+    return { termsId: defaultTermsId, patternId: null };
   }
   const termsId = await termsRepository(tx).insert(TERMS_NAMES[calendar]);
   return { termsId, patternId: await giveWeek(tx, termsId, patternWeek) };
-}
-
-/** A new pattern on `week`, published and given to the terms from the setup start; returns its id. */
-async function giveWeek(tx: Tx, termsId: string, week: PatternWeek): Promise<string> {
-  const patterns = workingPatternRepository(tx);
-  const patternId = await patterns.insertPattern(null);
-  const versionId = await patterns.insertVersion(patternId, { ...week, status: "published" });
-  await patterns.insertAssignment({
-    versionId,
-    owner: { termsId },
-    startDate: SETUP_START_DATE,
-    endDate: null,
-  });
-  return patternId;
 }
 
 /** One "set up" history line per terms, naming them. */
@@ -317,38 +299,6 @@ async function recordTermsSetUp(ctx: SecurityContext, tx: Tx, termsIds: string[]
       changes: [{ field: "name", oldValue: null, newValue: names.get(termsId)! }],
     })),
   });
-}
-
-/**
- * Puts the default terms back on the seeded week, Monday to Friday, England and Wales, and deletes
- * every other pattern: nobody else may have one any more.
- */
-async function resetDefaultPattern(tx: Tx): Promise<void> {
-  const patterns = workingPatternRepository(tx);
-  const defaultTermsId = await termsRepository(tx).findDefaultTermsId();
-  await patterns.deleteTermsAssignments(defaultTermsId);
-  await patterns.deleteUnassignedPatterns();
-  await giveWeek(tx, defaultTermsId, {
-    ...STANDARD_WEEKS.monday_to_friday_7_5_hours,
-    bankHolidayCalendar: "england_and_wales",
-  });
-}
-
-/** Whether the terms work `week` from the setup start on, and nothing else. */
-async function worksOnlyWeek(tx: Tx, termsId: string, week: PatternWeek): Promise<boolean> {
-  const patterns = workingPatternRepository(tx);
-  const rows = await patterns.findAssignments({ termsIds: [termsId] });
-  const [only] = rows;
-  if (rows.length !== 1 || only!.startDate !== SETUP_START_DATE || only!.endDate !== null) {
-    return false;
-  }
-  const version = (await patterns.findPatterns())
-    .flatMap(({ versions }) => versions)
-    .find(({ id }) => id === only!.versionId)!;
-  return (
-    version.bankHolidayCalendar === week.bankHolidayCalendar &&
-    version.minutes.join() === week.minutes.join()
-  );
 }
 
 /** Each employee with the id of the location its name matches, adding the locations no one has yet. */
