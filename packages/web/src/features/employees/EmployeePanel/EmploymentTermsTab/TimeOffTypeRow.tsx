@@ -10,15 +10,14 @@ import { Button } from "@/components/ui/button";
 import {
   CancelChangeDialog,
   companyToday,
-  ruleSummary,
   splitVersions,
   TimeOffTypeIcon,
 } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
 import { forgetHistory } from "../../cache";
-import { rowOf } from "./employmentTermsView";
-import { cancellableStarts, weekToEditFrom } from "./ownWeekText";
+import { describeRules, rowOf } from "./employmentTermsView";
+import { cancellableStarts, versionToEditFrom } from "./ownWeekText";
 import { RulesRowEditor } from "./RulesRowEditor";
 import { TermsRuleRow } from "./TermsRuleRow";
 import type { OwnRulesEdit, TermsOn } from "./useOwnRulesEdit";
@@ -69,7 +68,7 @@ export function TimeOffTypeRow({
     t("people.panel.terms.notOfferedLower"),
   );
   const editing = edit?.timeOffTypeId === timeOffType.id ? edit.mode : null;
-  const base = weekToEditFrom(versions, today);
+  const base = versionToEditFrom(versions, today);
   const { planned } = splitVersions(versions, today);
   const hasOwn = [base, ...planned].some((version) => version?.source === "THEIR_OWN");
   const canAct = edit !== null && edit.mode === null && !locked;
@@ -148,13 +147,6 @@ export function TimeOffTypeRow({
       />
     </>
   );
-}
-
-/** A type's rules as its row reads them: "20 days a year, bank holidays on top", or recorded only. */
-export function describeRules({ rules }: Version) {
-  return {
-    text: rules.balance === "NO_BALANCE" ? t("terms.rule.recorded") : ruleSummary(rules),
-  };
 }
 
 /** A version's rules as the form and the API take them. */

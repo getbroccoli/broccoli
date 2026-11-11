@@ -1,6 +1,8 @@
 import { shortDate } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
+import { withAllowance } from "./ownWeekText";
+
 /** What saving own rules does: offers the type, gives or changes them, and the allowance follows. */
 export function ownRulesSaveLine({
   firstName,
@@ -73,8 +75,4 @@ export function termsRulesSavedToast({
     terms: termsName,
     date: shortDate(startDate),
   });
-}
-
-function withAllowance(line: string, firstName: string, startDate: string, today: string): string {
-  return startDate <= today ? `${line} ${t("changeTerms.reworked", { name: firstName })}` : line;
 }

@@ -63,6 +63,23 @@ export function ruleSummary(version: RuleText): string {
     : allowanceText(version);
 }
 
+/** Rules as history keeps them, with lower-case enum values, as `ruleSummary` reads them. */
+export function storedRuleText({
+  balance,
+  entitlementDays,
+  bankHolidays,
+}: {
+  balance: string;
+  entitlementDays: number | null;
+  bankHolidays: string | null;
+}): RuleText {
+  return {
+    balance: balance.toUpperCase() as RuleText["balance"],
+    bankHolidays: bankHolidays?.toUpperCase() as RuleText["bankHolidays"],
+    yearlyEntitlement: entitlementDays === null ? null : { days: entitlementDays, daysPerWeek: 5 },
+  };
+}
+
 /** What `ruleSummary` reads of a version. */
 export type RuleText = Pick<PolicyVersionText, "balance" | "bankHolidays" | "yearlyEntitlement">;
 

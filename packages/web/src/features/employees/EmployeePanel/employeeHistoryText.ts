@@ -3,8 +3,8 @@ import {
   calendarName,
   DAY_FIELDS,
   ruleSummary,
-  type RuleText,
   shortDate,
+  storedRuleText,
   type WeekMinutes,
   weekSummary,
 } from "@/features/termsDisplay";
@@ -89,7 +89,8 @@ function rulesSentence(
   }
   const date = shortDate(after.startDate);
   if (!after.rules) return t("ownRules.history.back", { type: typeName, date });
-  const rule = ruleSummary(ruleTextOf(after.rules));
+  // Mid-sentence: "to unlimited", not "to Unlimited".
+  const rule = ruleSummary(storedRuleText(after.rules)).toLowerCase();
   return t(before?.rules ? "ownRules.history.changed" : "ownRules.history.gave", {
     type: typeName,
     rule,
@@ -106,18 +107,6 @@ type RulesChange = {
 function parseRulesChange(value: string | null): RulesChange | null {
   const parsed = value === null ? null : (JSON.parse(value) as Partial<RulesChange>);
   return parsed && "rules" in parsed ? (parsed as RulesChange) : null;
-}
-
-function ruleTextOf({
-  balance,
-  entitlementDays,
-  bankHolidays,
-}: NonNullable<RulesChange["rules"]>): RuleText {
-  return {
-    balance: balance.toUpperCase() as RuleText["balance"],
-    bankHolidays: bankHolidays?.toUpperCase() as RuleText["bankHolidays"],
-    yearlyEntitlement: entitlementDays === null ? null : { days: entitlementDays, daysPerWeek: 5 },
-  };
 }
 
 /** An own-week change's stored value: the week, null for the terms', and the date it applies from. */

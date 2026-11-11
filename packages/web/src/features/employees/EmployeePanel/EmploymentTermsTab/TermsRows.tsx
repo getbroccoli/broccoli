@@ -1,8 +1,8 @@
 import type { EmploymentTermsTab_TermsFragment } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 
-import { changeLineOn, describeWeek, ruleSourceLabel } from "./employmentTermsView";
-import { describeRules, TimeOffTypeRow } from "./TimeOffTypeRow";
+import { changeLineOn, describeRules, describeWeek, ruleSourceLabel } from "./employmentTermsView";
+import { TimeOffTypeRow } from "./TimeOffTypeRow";
 import type { OwnRulesEdit, TermsOn } from "./useOwnRulesEdit";
 import type { OwnWeekEdit } from "./useOwnWeekEdit";
 import { WeekRow } from "./WeekRow";

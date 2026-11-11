@@ -23,6 +23,8 @@ import {
   type TimeOffTypeIdentityInput,
   type TimeOffTypeIcon,
 } from "../domain";
+import { ownRulesResolvers } from "./ownRulesResolvers";
+import { toStoredRules } from "./storedRules";
 import { previewTimeOffLoader } from "./previewTimeOffLoader";
 
 type TimeOffTypeRow = ResolversTypes["EmployeeTimeOffType"];
@@ -39,16 +41,6 @@ export function createResolvers(
   policies: TimeOffPolicyService,
   employees: Pick<EmployeeReadService, "readEmployee">,
 ): Resolvers {
-  /** An own-rules change's payload: the person afterwards, or why it was refused. */
-  const ownRulesPayload = (
-    context: GraphqlContext,
-    employeeId: string,
-    change: () => Promise<void>,
-  ) =>
-    mutationPayload<ResolversTypes["TimeOffOwnRulesPayload"]>(async () => {
-      await change();
-      return { employee: await employees.readEmployee(context.getActor(), employeeId) };
-    }, ["INVALID_INPUT", "NOT_FOUND", "CONFLICT"]);
   const loaders = perRequest((context) => ({
     timeOffTypes: new DataLoader<string, TimeOffTypeRow[] | null>(async (employeeIds) => {
       const read = await timeOff.readTimeOffTypes(context.getActor(), { employeeIds });
@@ -168,18 +160,7 @@ export function createResolvers(
         mutationPayload<ResolversTypes["TermsPublishPayload"]>(async () => {
           return { terms: await policies.publishTerms(context.getActor(), input) };
         }, ["INVALID_INPUT", "CONFLICT"]),
-      setOwnRules: (_parent, { input }, context) =>
-        ownRulesPayload(context, input.employeeId, () =>
-          policies.setOwnRules(context.getActor(), { ...input, rules: toStoredRules(input.rules) }),
-        ),
-      useTermsRules: (_parent, { input }, context) =>
-        ownRulesPayload(context, input.employeeId, () =>
-          policies.useTermsRules(context.getActor(), input),
-        ),
-      cancelOwnRulesChange: (_parent, { input }, context) =>
-        ownRulesPayload(context, input.employeeId, () =>
-          policies.cancelOwnRulesChange(context.getActor(), input),
-        ),
+      ...ownRulesResolvers(policies, employees),
     },
     Employee: {
       timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),
@@ -296,17 +277,6 @@ function toGraphqlRules(version: PolicyVersion) {
 }
 
 /** Rules sent through GraphQL as the service takes them: enum values in lower case. */
-function toStoredRules({
-  balance,
-  entitlementDays,
-  bankHolidays,
-}: ResolversTypes["TimeOffRulesInput"]) {
-  return {
-    balance: balance.toLowerCase(),
-    entitlementDays,
-    bankHolidays: bankHolidays?.toLowerCase(),
-  };
-}
 
 function toBalanceKind(balance: PolicyVersion["balance"] | null) {
   return balance && BALANCE_KINDS[balance];

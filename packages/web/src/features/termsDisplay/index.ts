@@ -14,6 +14,7 @@ export {
   type RuleText,
   shortDate,
   splitVersions,
+  storedRuleText,
   versionBefore,
   versionOn,
   type WeekMinutes,

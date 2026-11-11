@@ -6,10 +6,10 @@ test("the owner sets own rules, returns to the terms and cancels that return thr
   const { browser } = await env.signInAsOwner();
   const employee = await env.seed.employee({ startDate: "2024-03-01" });
   const types = await browser.graphql(TIME_OFF_TYPES);
-  const { data } = await types.json();
+  const { data } = (await types.json()) as TimeOffTypesResponse;
   const annual = data.timeOffSettings.timeOffTypes.find(
-    ({ timeOffType }: { timeOffType: { name: string } }) => timeOffType.name === "Annual leave",
-  ).timeOffType;
+    ({ timeOffType }) => timeOffType.name === "Annual leave",
+  )!.timeOffType;
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
   const year = Number(today.slice(0, 4));
   const input = { employeeId: employee.id, timeOffTypeId: annual.id };
@@ -45,10 +45,10 @@ test("the owner sets own rules, returns to the terms and cancels that return thr
 test("an employee cannot set own rules through GraphQL", async ({ env }) => {
   const owner = await env.signInAsOwner();
   const types = await owner.browser.graphql(TIME_OFF_TYPES);
-  const { data } = await types.json();
+  const { data } = (await types.json()) as TimeOffTypesResponse;
   const annual = data.timeOffSettings.timeOffTypes.find(
-    ({ timeOffType }: { timeOffType: { name: string } }) => timeOffType.name === "Annual leave",
-  ).timeOffType;
+    ({ timeOffType }) => timeOffType.name === "Annual leave",
+  )!.timeOffType;
   const credentials = { email: "sam@example.com", password: TEST_OWNER.password };
   const user = await env.seed.user(credentials);
   const employee = await env.seed.employee({ userId: user.id, startDate: "2024-03-01" });
@@ -75,4 +75,8 @@ const twentyFiveDays = {
   balance: "BALANCE_FROM_ALLOWANCE",
   entitlementDays: 25,
   bankHolidays: "BANK_HOLIDAYS_ON_TOP_OF_ALLOWANCE",
+};
+
+type TimeOffTypesResponse = {
+  data: { timeOffSettings: { timeOffTypes: { timeOffType: { id: string; name: string } }[] } };
 };

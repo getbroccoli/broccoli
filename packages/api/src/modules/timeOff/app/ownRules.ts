@@ -137,24 +137,20 @@ async function changeOwnRules(
   const employeeId = parseUuid(input.employeeId);
   if (!employeeId) throw employeeNotFound();
   return transact(async (tx) => {
-    const repository = timeOffPolicyRepository(tx);
-    await repository.lockPolicies();
-    if ((await employeeReads.readEmployeesByName(tx, [employeeId])).length === 0) {
-      throw employeeNotFound();
-    }
-    const timeOffType = existingType(await repository.findAllTypes(), input.timeOffTypeId);
-    const periods = (await employeeReads.readEmploymentPeriods(tx, [employeeId])).get(employeeId);
-    const from = cancel
-      ? parseDateField("startDate", input.startDate)
-      : parsePersonChangeDate(input.startDate, today(), periods ?? []);
-    const policies = await repository.findAll();
-    const rows = (await repository.findAssignments({ employeeIds: [employeeId] })).filter(
-      (row) => row.timeOffTypeId === timeOffType.id,
+    await timeOffPolicyRepository(tx).lockPolicies();
+    const { timeOffType, from } = await parseChange(
+      { employeeReads, today: today() },
+      tx,
+      { ...input, employeeId },
+      cancel,
     );
+    const policies = await timeOffPolicyRepository(tx).findAll();
+    const rows = (
+      await timeOffPolicyRepository(tx).findAssignments({ employeeIds: [employeeId] })
+    ).filter((row) => row.timeOffTypeId === timeOffType.id);
     const stretches = ownStretchesOf(rows, (id) => versionOf(policies, id));
-    const onDate = (await timelineOf(employeeReads, tx, employeeId, timeOffType)).getVersionOnDate(
-      from,
-    );
+    const timeline = await timelineOf(employeeReads, tx, employeeId, timeOffType);
+    const onDate = timeline.getVersionOnDate(from);
     const applied = apply({ stretches, from, onDate });
     const timeOffPolicyId = await saveOwnRules(tx, {
       employeeId,
@@ -177,6 +173,29 @@ async function changeOwnRules(
       ...ensured,
     };
   });
+}
+
+/**
+ * The type and date a change is for: refuses an unknown person or type, and a date before this
+ * leave year or the person's start, or after they leave; a cancel names any date.
+ */
+async function parseChange(
+  { employeeReads, today }: { employeeReads: EmployeeReadService; today: CalendarDate },
+  tx: Tx,
+  input: OwnRulesInput,
+  cancel: boolean,
+): Promise<{ timeOffType: TimeOffType; from: CalendarDate }> {
+  if ((await employeeReads.readEmployeesByName(tx, [input.employeeId])).length === 0) {
+    throw employeeNotFound();
+  }
+  const types = await timeOffPolicyRepository(tx).findAllTypes();
+  const timeOffType = existingType(types, input.timeOffTypeId);
+  if (cancel) return { timeOffType, from: parseDateField("startDate", input.startDate) };
+  const periods = await employeeReads.readEmploymentPeriods(tx, [input.employeeId]);
+  return {
+    timeOffType,
+    from: parsePersonChangeDate(input.startDate, today, periods.get(input.employeeId) ?? []),
+  };
 }
 
 /**
