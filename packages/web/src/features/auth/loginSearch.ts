@@ -64,9 +64,20 @@ const AGENT_AUTHORIZE_PATH = "/api/auth/oauth2/authorize";
 
 /**
  * The OAuth server's signature and expiry over the request, which the authorize endpoint does not
- * take back, and the prompt that asked for this sign-in, which would ask again.
+ * take back; the prompt that asked for this sign-in, which would ask again; and the login page's
+ * own parameters, which the router writes back beside the request.
  */
-const NOT_AUTHORIZE_PARAMETERS = new Set(["exp", "ba_iat", "ba_param", "ba_pl", "sig", "prompt"]);
+const NOT_AUTHORIZE_PARAMETERS = new Set([
+  "exp",
+  "ba_iat",
+  "ba_param",
+  "ba_pl",
+  "sig",
+  "prompt",
+  "redirect",
+  "error",
+  "reset",
+]);
 
 /**
  * An agent's authorize request that sent the person here to sign in becomes the redirect, so

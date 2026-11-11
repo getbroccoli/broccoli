@@ -12,7 +12,7 @@ it("drops an unknown error", () => {
   expect(loginSearch.parse({ error: "<script>" }).error).toBeUndefined();
 });
 
-it("resumes OAuth authorization in parameter order without the signature or login prompt", () => {
+it("resumes OAuth authorization in parameter order without the signature, login prompt or an earlier redirect", () => {
   const search = {
     response_type: "code",
     exp: "1800000000",
@@ -27,6 +27,7 @@ it("resumes OAuth authorization in parameter order without the signature or logi
     resource: "https://broccoli.example.com/api/mcp",
     sig: "signed-query",
     prompt: "login",
+    redirect: "/api/auth/oauth2/authorize?client_id=agent-client",
   };
 
   vi.stubGlobal("window", { location: { origin } });
