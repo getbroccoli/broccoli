@@ -53,6 +53,7 @@ export {
   isSameOwner,
   NEW_ROW,
   personVersionsFrom,
+  planEnd,
   planOrRefusal,
   rowsAfterPlan,
   SETUP_START_DATE,

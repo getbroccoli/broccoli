@@ -17,15 +17,11 @@ export function earliestChangeDate(today: CalendarDate): CalendarDate {
  */
 export const SETUP_START_DATE = "2000-01-01" as CalendarDate;
 
-/** The date a change applies from, sent in `field`; refuses one before the earliest date. */
-export function parseChangeDate(
-  value: string,
-  today: CalendarDate,
-  field: "startDate" | "stopDate" = "startDate",
-): CalendarDate {
-  const startDate = parseDateField(field, value);
+/** The date a change applies from, sent in `startDate`; refuses one before the earliest date. */
+export function parseChangeDate(value: string, today: CalendarDate): CalendarDate {
+  const startDate = parseDateField("startDate", value);
   if (startDate < earliestChangeDate(today)) {
-    throw invalidInput([{ field, code: "too_early" }]);
+    throw invalidInput([{ field: "startDate", code: "too_early" }]);
   }
   return startDate;
 }

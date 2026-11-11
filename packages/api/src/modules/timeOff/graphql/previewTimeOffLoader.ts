@@ -11,14 +11,6 @@ interface PreviewedPerson {
   from: CalendarDate;
 }
 
-function readKey({ move, from }: PreviewedPerson): string {
-  return `${move?.termsId ?? ""}:${move?.startDate ?? ""}:${from}`;
-}
-
-function personKey(person: PreviewedPerson): string {
-  return `${readKey(person)}:${person.employeeId}`;
-}
-
 /**
  * Each person's rules for a preview, from a date and maybe as if after a move: every person read
  * the same way is one read.
@@ -42,4 +34,12 @@ export function previewTimeOffLoader(timeOff: TimeOffService, context: GraphqlCo
     },
     { cacheKeyFn: personKey },
   );
+}
+
+function readKey({ move, from }: PreviewedPerson): string {
+  return `${move?.termsId ?? ""}:${move?.startDate ?? ""}:${from}`;
+}
+
+function personKey(person: PreviewedPerson): string {
+  return `${readKey(person)}:${person.employeeId}`;
 }

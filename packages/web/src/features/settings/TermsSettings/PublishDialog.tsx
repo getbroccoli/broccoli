@@ -50,8 +50,9 @@ export function PublishDialog({ terms, open, onClose, publish, publishing }: Pro
   // Every change starts today unless picked otherwise; one that changes how a type counts starts a leave year.
   const [choice, setChoice] = useState<DateOption>(countsChange ? "THIS_LEAVE_YEAR" : "TODAY");
   const [otherDate, setOtherDate] = useState("");
-  // Others sharing stopped rules are listed unticked: a stop ends the type only where it was made.
-  const [unticked, setUnticked] = useState<ReadonlySet<string> | null>(null);
+  // The admin's own ticks; any other owner sharing only stopped rules starts unticked, so a stop
+  // ends the type only where it was made, whichever date lists that owner.
+  const [choices, setChoices] = useState<ReadonlyMap<string, boolean>>(new Map());
   const startDate = dateOf(choice, earliest, otherDate);
   const read = useQuery(TermsPublishSuggestionsDocument, {
     variables: { id: terms.id, from: startDate },
@@ -60,8 +61,10 @@ export function PublishDialog({ terms, open, onClose, publish, publishing }: Pro
   });
   const suggestions = read.data?.terms?.publishSuggestions;
   const owners = suggestions?.owners ?? [];
-  const untickedKeys = unticked ?? onlyStoppedFor(terms, owners);
-  const ticked = owners.filter((owner) => !untickedKeys.has(ownerKey(owner)));
+  const stoppedOnly = onlyStoppedFor(terms, owners);
+  const isTicked = (owner: Owner) =>
+    choices.get(ownerKey(owner)) ?? !stoppedOnly.has(ownerKey(owner));
+  const ticked = owners.filter(isTicked);
   const people = suggestions ? reachedBy(ticked) : null;
 
   const confirm = async () => {
@@ -86,9 +89,9 @@ export function PublishDialog({ terms, open, onClose, publish, publishing }: Pro
               {owners.map((owner) => (
                 <label key={ownerKey(owner)} className="flex items-center gap-3 text-sm">
                   <Checkbox
-                    checked={!untickedKeys.has(ownerKey(owner))}
+                    checked={isTicked(owner)}
                     onCheckedChange={(checked) =>
-                      setUnticked(toggled(untickedKeys, ownerKey(owner), checked))
+                      setChoices(new Map(choices).set(ownerKey(owner), checked))
                     }
                   />
                   <span className="flex-1">{owner.name}</span>
@@ -198,13 +201,6 @@ function onlyStoppedFor(
 
 function ownerKey({ termsId, employeeId }: Owner): string {
   return termsId ? `terms:${termsId}` : `employee:${employeeId}`;
-}
-
-function toggled(keys: ReadonlySet<string>, key: string, checked: boolean): ReadonlySet<string> {
-  const next = new Set(keys);
-  if (checked) next.delete(key);
-  else next.add(key);
-  return next;
 }
 
 /** Everyone the ticked owners reach, once each, by name. */

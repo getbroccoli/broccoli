@@ -5,6 +5,7 @@ import {
   giveTermsPolicies,
   readAllowances,
   readTermsPolicies,
+  seedTimeOffAssignment,
   seedTimeOffType,
   termsService,
   test,
@@ -180,6 +181,37 @@ test("publish suggestions list the stop draft, these terms first and people reac
     },
     { owner: { termsId: otherTermsId }, versionIds: [draft.id], reached: [{ id: other.id }] },
   ]);
+});
+
+test("stop suggestions exclude people whose own assignment of the same version covers them from the chosen date", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const termsId = await seed.defaultTermsId();
+  const employee = await seed.employee({ startDate: "2025-01-01" });
+  const personal = await seed.employee({ startDate: "2025-01-01" });
+  await giveTermsPolicies(orm, transact, { termsId, policies: [{ recordOnly: "family_leave" }] });
+  const [policy] = await readTermsPolicies(orm, termsId);
+  await seedTimeOffAssignment(orm, {
+    employeeId: personal.id,
+    timeOffTypeId: policy!.timeOffTypeId,
+    timeOffPolicyId: policy!.id,
+    versionId: policy!.versionId,
+    startDate: "2026-11-06",
+  });
+  const service = timeOffPolicyService(orm, { today: "2026-11-06" });
+  await service.saveTimeOffStop(OWNER, {
+    termsId,
+    timeOffTypeId: policy!.timeOffTypeId,
+  });
+
+  const suggestions = await service.readPublishSuggestions(OWNER, { termsId, from: "2026-11-06" });
+
+  expect(suggestions.owners[0]).toMatchObject({
+    owner: { termsId },
+    reached: [{ id: employee.id }],
+  });
 });
 
 test("publishing a stop is refused when the selected owner no longer offers the policy from that date", async ({

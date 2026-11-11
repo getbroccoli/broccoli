@@ -1,6 +1,6 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import type { Tx } from "../../../core/db";
-import { addDays, type CalendarDate, coversDate } from "../../../utils";
+import { type CalendarDate, coversDate } from "../../../utils";
 import {
   type AssignmentOwner,
   type AssignmentPlan,
@@ -8,12 +8,13 @@ import {
   isSameOwner,
   NEW_ROW,
   firstReplaced,
+  planEnd,
   planOrRefusal,
   rowsAfterPlan,
 } from "../../employees";
 import { type PolicyAssignment, timeOffPolicyRepository } from "../db";
 import { type PolicyVersion, refuseCountsChangesMidYear, type TimeOffPolicy } from "../domain";
-import { laneKey, readPeople } from "./allowanceEngine";
+import { laneKey, type Person, readPeople } from "./allowanceEngine";
 import { ownerIds } from "./policyRules";
 
 /** What publishing one of a set of terms' unpublished policy versions from a date would do. */
@@ -121,19 +122,6 @@ export async function readPolicyReach(
       ? [owner.employeeId]
       : ((await employeeReads.readTermsMemberIds(tx, owner.termsId)) ?? []);
   const typeId = policy.timeOffType.id;
-  if (version.stops) {
-    // A stop reaches whoever the rules it ends apply to from the date.
-    const ended = new Set([...plan.ended.map(({ id }) => id), ...plan.deletedIds]);
-    const stopped = new Set(
-      lane.filter(({ id }) => ended.has(id)).map(({ versionId }) => versionId),
-    );
-    const { people } = await readPeople(employeeReads, tx, candidates);
-    return people
-      .filter((person) =>
-        person.timelineOf(typeId).appliesFrom((id) => stopped.has(id), from, person.periods),
-      )
-      .map(({ employeeId }) => employeeId);
-  }
   const after = rowsAfterPlan(lane, plan, { versionId: version.id, owner }).map((row) => ({
     ...row,
     timeOffTypeId: typeId,
@@ -144,6 +132,9 @@ export async function readPolicyReach(
     ...stored.filter((row) => laneKey(row) !== key),
     ...after,
   ]);
+  if (version.stops) {
+    return stopReach(employeeReads, tx, { candidates, typeId, from, after: people });
+  }
   return people
     .filter((person) =>
       person
@@ -152,6 +143,37 @@ export async function readPolicyReach(
     )
     .map(({ employeeId }) => employeeId);
 }
+
+/** The people whose rules for the type from `from`, while employed, a stop would change. */
+async function stopReach(
+  employeeReads: EmployeeReadService,
+  tx: Tx,
+  {
+    candidates,
+    typeId,
+    from,
+    after,
+  }: { candidates: string[]; typeId: string; from: CalendarDate; after: Person[] },
+): Promise<string[]> {
+  const { people: before } = await readPeople(employeeReads, tx, candidates);
+  const spans = (person: Person) =>
+    JSON.stringify(
+      person
+        .timelineOf(typeId)
+        .getVersions(from, LAST_DAY)
+        .map(({ versionId, startDate, endDate }) => [versionId, startDate, endDate]),
+    );
+  return before
+    .filter(
+      (person, i) =>
+        person.timelineOf(typeId).appliesFrom(() => true, from, person.periods) &&
+        spans(person) !== spans(after[i]!),
+    )
+    .map(({ employeeId }) => employeeId);
+}
+
+/** A day after any rules, for "from a date on". */
+const LAST_DAY = "9999-12-31" as CalendarDate;
 
 /**
  * How a stop from `from` ends one owner's rows of the policy: those covering `from` end the day
@@ -162,22 +184,10 @@ function stopOrRefusal(
   isOfPolicy: (row: PolicyAssignment) => boolean,
   from: CalendarDate,
 ): { plan: AssignmentPlan | null; refusal: unknown } {
-  const stopped = lane.filter(
-    (row) => isOfPolicy(row) && (coversDate(row, from) || row.startDate > from),
-  );
-  if (stopped.length === 0) {
-    return { plan: null, refusal: invalidInput([{ field: "startDate", code: "not_offered" }]) };
-  }
-  return {
-    plan: {
-      ended: stopped
-        .filter(({ startDate }) => startDate < from)
-        .map(({ id }) => ({ id, endDate: addDays(from, -1) })),
-      deletedIds: stopped.filter(({ startDate }) => startDate >= from).map(({ id }) => id),
-      added: [],
-    },
-    refusal: null,
-  };
+  const plan = planEnd(lane, isOfPolicy, from);
+  return plan
+    ? { plan, refusal: null }
+    : { plan: null, refusal: invalidInput([{ field: "startDate", code: "not_offered" }]) };
 }
 
 /** One owner's assignments for one type, oldest first. */
