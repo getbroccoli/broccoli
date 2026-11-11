@@ -1,4 +1,4 @@
-import { expect, test, setUpEmploymentTerms } from "#test/support";
+import { expect, test, setUpEmploymentTerms, readTermsSettings } from "#test/support";
 
 test("an admin can list and open the default terms with their week, time off and setup history", async ({
   env,
@@ -33,6 +33,30 @@ test("an admin can list and open the default terms with their week, time off and
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({
     data: { allTerms: [{ id, ...defaultTerms }], terms: { id, ...defaultTerms } },
+  });
+});
+
+test("an admin can save a stop draft through GraphQL", async ({ env }) => {
+  const browser = await setUpEmploymentTerms(env);
+  const termsId = await env.seed.defaultTermsId();
+  const before = await readTermsSettings(browser, termsId);
+  const family = before.timeOff.find(({ timeOffType }) => timeOffType.typeKey === "FAMILY_LEAVE")!;
+
+  const saved = await browser.graphql(
+    `mutation SaveTimeOffStop($input: TimeOffStopSaveInput!) {
+    timeOff { saveTimeOffStop(input: $input) {
+      rules { id stops }
+      error { __typename }
+    } }
+  }`,
+    { input: { termsId, timeOffTypeId: family.timeOffType.id } },
+  );
+
+  expect(saved.status).toBe(200);
+  expect(await saved.json()).toMatchObject({
+    data: {
+      timeOff: { saveTimeOffStop: { error: null, rules: { stops: true } } },
+    },
   });
 });
 

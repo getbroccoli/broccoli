@@ -79,6 +79,17 @@ Add terms "Scotland" in Settings › Employment terms first, and a location "Gla
 - [ ] Signed in as an employee, the tab has no "Change terms" and no "Cancel change".
 - [ ] At phone width the fields stack and the footer wraps its save line above Cancel and Save.
 
+## Own working week
+
+- [ ] As the owner, the Working week row has "Edit"; it opens the week editor in the row (hours each day prefilled, "32 hours a week, over 4 days. Was Mon–Fri, 7.5 hours.", Bank holidays, Applies from: Today, 1 Jan <next year>, Other date…). "Change terms" greys out while it is open.
+- [ ] Mon–Thu 8 hours from 1 Jan next year: the footer reads "Saving gives <first name> their own working week from 1 Jan <year>."; Save toasts "<first name>’s own working week saved." and the row gains "From 1 Jan <year>: Mon–Thu, 8 hours · England and Wales bank holidays · <first name>’s own" with "Cancel change".
+- [ ] From today: the row reads Mon–Thu, 8 hours with the "<first name>’s own" pill, and the footer had added "<first name>’s allowance is worked out again from that date."
+- [ ] With an own week, "Use England and Wales’s week" asks only for Applies from with "Earlier days keep <first name>’s working week as it is."; saving toasts "<first name> is back on England and Wales’s week from <date>." and a planned return shows under the row with "Cancel change".
+- [ ] "Cancel change" asks "Cancel this change?" "<first name>’s working week stays as it was." and removes the planned line; History shows "You gave them their own working week, …", "You put them back on their terms’ working week from …" and "You cancelled the change to their working week from …".
+- [ ] For a person who starts next month, Edit, "Use England and Wales’s week" and "Cancel change" show on the Working week row, and Applies from starts on their start date.
+- [ ] An own week stays through a move to other terms: Change terms marks no change on the Working week row and the footer adds "<first name> keeps their own working week."
+- [ ] With the week edited, switching tab asks "Discard 1 unsaved change?".
+
 ## Time off
 
 - [ ] A demo person who started before this year shows "Time off · <this year>" between the key facts and Details: an Annual leave card with Entitlement 28, Bank holidays 8, Used 0, Remaining 20, then Sickness, Family leave and Other, each "0 days recorded".

@@ -8,10 +8,12 @@ import { termsRepository, workingPatternRepository } from "../../db";
 import {
   type Assignment,
   type AssignmentOwner,
+  type AssignmentPlan,
   cancelPlannedVersion,
   isSameOwner,
   type PatternVersion,
   parseWeek,
+  plannedRowsReplaced,
   type WeekdayMinutes,
 } from "../../domain";
 import { publishWorkingPatternChange } from "./publishWorkingPatternChange";
@@ -194,7 +196,7 @@ export function createWorkingPatternService({
       const draft = draftOf(versions, termsId)!;
       const suggested = await ownersOf(tx, termsId, draft, versions, from);
       const employeeIds = new Set<string>();
-      for (const { owner, plan, refusal, replaced } of suggested) {
+      for (const { owner, lane, plan, refusal, replaced } of suggested) {
         if (!owners.some((ticked) => isSameOwner(ticked, owner))) {
           continue;
         }
@@ -204,14 +206,7 @@ export function createWorkingPatternService({
         await applyAssignmentPlan(repository, plan, (span) =>
           repository.insertAssignment({ ...span, versionId: draft.id, owner }),
         );
-        const before = replaced && {
-          ...versions.find(({ id }) => id === replaced.versionId)!,
-          startDate: replaced.startDate,
-        };
-        await appendWorkingWeekHistory(ctx, tx, owner, before, {
-          ...draft,
-          startDate: plan.added[0]?.startDate ?? from,
-        });
+        await appendPublishHistory(ctx, tx, { owner, lane, plan, replaced, draft, versions, from });
         for (const id of await employeesOf(tx, owner)) employeeIds.add(id);
       }
       await repository.publishVersion(draft.id);
@@ -268,4 +263,42 @@ async function findAssignment(tx: Tx, assignmentId: string | null): Promise<Assi
 async function findVersionIn(tx: Tx, versionId: string): Promise<PatternVersion> {
   const patterns = await workingPatternRepository(tx).findPatterns();
   return patterns.flatMap(({ versions }) => versions).find(({ id }) => id === versionId)!;
+}
+
+/**
+ * The owner's history for a publish: the week the draft takes over and the new one from where it
+ * starts, then each later planned week the publish replaced, as cancelled.
+ */
+async function appendPublishHistory(
+  ctx: SecurityContext,
+  tx: Tx,
+  {
+    owner,
+    lane,
+    plan,
+    replaced,
+    draft,
+    versions,
+    from,
+  }: {
+    owner: AssignmentOwner;
+    lane: readonly Assignment[];
+    plan: AssignmentPlan;
+    replaced: Assignment | null;
+    draft: PatternVersion;
+    versions: readonly PatternVersion[];
+    from: CalendarDate;
+  },
+) {
+  const weekOf = ({ versionId, startDate }: Assignment) => ({
+    ...versions.find(({ id }) => id === versionId)!,
+    startDate,
+  });
+  await appendWorkingWeekHistory(ctx, tx, owner, replaced && weekOf(replaced), {
+    ...draft,
+    startDate: plan.added[0]?.startDate ?? from,
+  });
+  for (const planned of plannedRowsReplaced(lane, plan)) {
+    await appendWorkingWeekHistory(ctx, tx, owner, weekOf(planned), null);
+  }
 }

@@ -122,6 +122,7 @@ const current: PolicyVersion = {
   status: "published",
   termsId: null,
   revision: 1,
+  stops: false,
   balance: "balance_from_allowance",
   bankHolidays: "bank_holidays_included_in_allowance",
   leaveYear: { kind: "leave_year_from_employee_start_date" },

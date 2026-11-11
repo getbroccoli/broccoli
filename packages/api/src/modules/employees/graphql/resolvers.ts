@@ -13,14 +13,13 @@ import type {
   EmployeeTermsService,
   EmployeeWorkingPatternService,
   LocationService,
-  TermsChange,
+  OwnWorkingWeekService,
   TermsService,
   WorkingPatternService,
 } from "../app";
 import type { BankHolidayCalendar } from "../../bankHolidays";
-import { parseUuid } from "../../../utils";
-import { type Employee, parseDateField } from "../domain";
 import { avatarUrl } from "../http";
+import { employmentTermsResolvers } from "./employmentTermsResolvers";
 import { WEEK_FIELDS } from "./weekFields";
 import { DEFAULT_TERMS, employeeLoaders } from "./loaders";
 
@@ -33,10 +32,12 @@ export function createResolvers(
     TermsService &
     WorkingPatternService &
     EmployeeWorkingPatternService &
-    EmployeeTermsService,
+    EmployeeTermsService &
+    OwnWorkingWeekService,
   invites: EmployeeInviteService,
 ): Resolvers {
   const loaders = employeeLoaders(services, invites);
+  const terms = employmentTermsResolvers(services);
   return {
     Query: {
       locations: (_parent, _args, context) => services.listLocations(context.getActor()),
@@ -50,30 +51,7 @@ export function createResolvers(
         }),
       allTerms: (_parent, _args, context) => services.listTerms(context.getActor()),
       terms: (_parent, { id }, context) => services.readTerms(context.getActor(), id),
-      async termsChangePreview(_parent, { input }, context) {
-        const actor = context.getActor();
-        const { moved, skipped } = await services.previewTermsChange(actor, input);
-        // Checked by the preview already; in their canonical form, as saving reads them.
-        const from = parseDateField("startDate", input.startDate);
-        const move = { termsId: parseUuid(input.termsId)!, startDate: from };
-        const ids = moved.map(({ employeeId }) => employeeId);
-        // Both read from the move's date, so a past one compares the rules on that date.
-        const after = await services.readEmploymentTerms(actor, { employeeIds: ids, move, from });
-        const now = await services.readEmploymentTerms(actor, { employeeIds: ids, from });
-        const employees = await services.readEmployees(actor, [
-          ...ids,
-          ...skipped.map(({ employeeId }) => employeeId),
-        ]);
-        return {
-          moves: moved.map(({ employeeId, startDate }) => ({
-            employee: employees.get(employeeId)!,
-            startDate,
-            employmentTerms: { ...after.get(employeeId)!, move, from },
-            currentTerms: { ...now.get(employeeId)!, from },
-          })),
-          skipped: skippedOf(skipped, employees),
-        };
-      },
+      ...terms.Query,
     },
     Location: {
       // Never null: deleting terms gives their locations none, which reads as the default terms.
@@ -113,6 +91,7 @@ export function createResolvers(
       employees: () => ({}),
     },
     EmployeesMutations: {
+      ...terms.EmployeesMutations,
       create: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["EmployeeCreatePayload"]>(
           async () => ({ employee: await services.createEmployee(context.getActor(), input) }),
@@ -217,24 +196,6 @@ export function createResolvers(
           await services.discardWorkingPattern(context.getActor(), input);
           return { discardedVersionId: input.versionId };
         }, ["NOT_FOUND"]),
-      changeTerms: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["EmployeeTermsChangePayload"]>(async () => {
-          const actor = context.getActor();
-          const { moved, skipped } = await services.changeTerms(actor, input);
-          const employees = await services.readEmployees(actor, input.employeeIds);
-          return {
-            moved: moved.map(({ employeeId, startDate }) => ({
-              employee: employees.get(employeeId)!,
-              startDate,
-            })),
-            skipped: skippedOf(skipped, employees),
-          };
-        }, ["INVALID_INPUT", "NOT_FOUND"]),
-      cancelTermsChange: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["EmployeeTermsCancelChangePayload"]>(async () => {
-          await services.cancelTermsChange(context.getActor(), input);
-          return { employee: await services.readEmployee(context.getActor(), input.employeeId) };
-        }, ["NOT_FOUND", "CONFLICT"]),
       cancelWorkingPatternChange: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["WorkingPatternCancelChangePayload"]>(async () => {
           await services.cancelWorkingPatternChange(context.getActor(), input);
@@ -290,14 +251,3 @@ const SIGN_IN_STATES = {
   pending: "PENDING",
   joined: "JOINED",
 } as const;
-
-/** Skipped people as GraphQL reads them, with their employee. */
-function skippedOf(
-  skipped: TermsChange["skipped"],
-  employees: Map<string, Employee>,
-): { employee: Employee; reason: Uppercase<TermsChange["skipped"][number]["reason"]> }[] {
-  return skipped.map(({ employeeId, reason }) => ({
-    employee: employees.get(employeeId)!,
-    reason: toEnum(reason),
-  }));
-}

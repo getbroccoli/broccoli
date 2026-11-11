@@ -1,20 +1,21 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import type { Tx } from "../../../core/db";
-import type { CalendarDate } from "../../../utils";
-import { coversDate } from "../../../utils";
+import { type CalendarDate, coversDate } from "../../../utils";
 import {
   type AssignmentOwner,
   type AssignmentPlan,
+  changesWithin,
   type EmployeeReadService,
   isSameOwner,
   NEW_ROW,
   firstReplaced,
+  planEnd,
   planOrRefusal,
   rowsAfterPlan,
 } from "../../employees";
 import { type PolicyAssignment, timeOffPolicyRepository } from "../db";
 import { type PolicyVersion, refuseCountsChangesMidYear, type TimeOffPolicy } from "../domain";
-import { laneKey, readPeople } from "./allowanceEngine";
+import { laneKey, type Person, readPeople } from "./allowanceEngine";
 import { ownerIds } from "./policyRules";
 
 /** What publishing one of a set of terms' unpublished policy versions from a date would do. */
@@ -65,7 +66,9 @@ export async function planPolicies(
       ownerPlans.push({
         owner,
         lane,
-        ...planOrRefusal(lane, isOfPolicy, from),
+        ...(version.stops
+          ? stopOrRefusal(lane, isOfPolicy, from)
+          : planOrRefusal(lane, isOfPolicy, from)),
         replaced: firstReplaced(lane, isOfPolicy, from),
       });
     }
@@ -130,6 +133,9 @@ export async function readPolicyReach(
     ...stored.filter((row) => laneKey(row) !== key),
     ...after,
   ]);
+  if (version.stops) {
+    return stopReach(employeeReads, tx, { candidates, typeId, from, after: people });
+  }
   return people
     .filter((person) =>
       person
@@ -137,6 +143,40 @@ export async function readPolicyReach(
         .appliesFrom((versionId) => versionId === version.id, from, person.periods),
     )
     .map(({ employeeId }) => employeeId);
+}
+
+/** The people whose rules for the type a stop would change on a day from `from` while they are employed. */
+async function stopReach(
+  employeeReads: EmployeeReadService,
+  tx: Tx,
+  {
+    candidates,
+    typeId,
+    from,
+    after,
+  }: { candidates: string[]; typeId: string; from: CalendarDate; after: Person[] },
+): Promise<string[]> {
+  const { people: before } = await readPeople(employeeReads, tx, candidates);
+  return before
+    .filter((person, i) =>
+      changesWithin(person.timelineOf(typeId), after[i]!.timelineOf(typeId), from, person.periods),
+    )
+    .map(({ employeeId }) => employeeId);
+}
+
+/**
+ * How a stop from `from` ends one owner's rows of the policy: those covering `from` end the day
+ * before and later ones go, adding none. Nothing to stop keeps a refusal, as `planOrRefusal` does.
+ */
+function stopOrRefusal(
+  lane: readonly PolicyAssignment[],
+  isOfPolicy: (row: PolicyAssignment) => boolean,
+  from: CalendarDate,
+): { plan: AssignmentPlan | null; refusal: unknown } {
+  const plan = planEnd(lane, isOfPolicy, from);
+  return plan
+    ? { plan, refusal: null }
+    : { plan: null, refusal: invalidInput([{ field: "startDate", code: "not_offered" }]) };
 }
 
 /** One owner's assignments for one type, oldest first. */
@@ -163,7 +203,10 @@ export function refuseChangedVersions(
       asked.some((version) => version.id === id && version.revision === revision),
     );
   if (!same) {
-    throw new ApplicationError("CONFLICT", "These changes were saved again since you opened them.");
+    throw new ApplicationError(
+      "CONFLICT",
+      "The unpublished changes on these terms changed since you opened them.",
+    );
   }
 }
 

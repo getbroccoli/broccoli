@@ -3,9 +3,10 @@ import { FieldError } from "@/components/form";
 import { Input } from "@/components/ui/input";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
-import { calendarName, DAY_NAMES } from "@/features/termsDisplay";
 
-import { type WeekDraft, weekErrors, weekHint, type WeekVersion } from "./termsDraft";
+import { calendarName } from "./calendarName";
+import { DAY_NAMES } from "./termsText";
+import { type WeekDraft, weekErrors, weekHint, type WeekVersion } from "./weekDraft";
 
 type Props = {
   draft: WeekDraft;

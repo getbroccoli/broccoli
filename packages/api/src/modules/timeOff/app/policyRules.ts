@@ -2,35 +2,34 @@ import { invalidInput } from "../../../core/applicationError";
 import type { Tx } from "../../../core/db";
 import { createRecordHistoryService } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
-import { type CalendarDate, parseUuid } from "../../../utils";
+import { type CalendarDate, coversDate, parseUuid } from "../../../utils";
 import type { AssignmentOwner, EmployeeReadService } from "../../employees";
+import { type PolicyAssignment, timeOffPolicyRepository } from "../db";
 import {
   type NewPolicyVersion,
   type PolicyVersion,
   rulesValue,
+  stopValue,
   type TimeOffPolicy,
   type TimeOffType,
 } from "../domain";
 
 const recordHistory = createRecordHistoryService();
 
+/** Rules with the date they apply from, or a stop with the first day the type is not offered. */
+type RulesLine = (NewPolicyVersion & { startDate: CalendarDate }) | { stopDate: CalendarDate };
+
 /**
- * The line in the owner's history for a change to a type's rules: the rules before and after, each
- * with the date it applies from; null before for an offer, null after when cancelled. Terms get it
- * in their history, a person in theirs.
+ * The line in the owner's history for a change to a type's rules: the rules or stop before and
+ * after; null before for an offer, null after when cancelled. Terms get it in their history, a
+ * person in theirs.
  */
 export async function appendRulesHistory(
   ctx: SecurityContext,
   tx: Tx,
   owner: AssignmentOwner,
   timeOffType: TimeOffType,
-  {
-    before,
-    after,
-  }: {
-    before: (NewPolicyVersion & { startDate: CalendarDate }) | null;
-    after: (NewPolicyVersion & { startDate: CalendarDate }) | null;
-  },
+  { before, after }: { before: RulesLine | null; after: RulesLine | null },
 ) {
   await recordHistory.append(ctx, tx, {
     recordType: "termsId" in owner ? "terms" : "employee",
@@ -42,8 +41,8 @@ export async function appendRulesHistory(
         changes: [
           {
             field: `timeOff.${timeOffType.id}`,
-            oldValue: before && rulesValue(before),
-            newValue: after && rulesValue(after),
+            oldValue: before && lineValue(before),
+            newValue: after && lineValue(after),
             newLabel: timeOffType.name,
           },
         ],
@@ -90,4 +89,84 @@ export async function existingTerms(
     throw invalidInput([{ field: "termsId", code: "not_found" }]);
   }
   return termsId;
+}
+
+/** The type acted on; refuses one that does not exist as invalid input. */
+export function existingType(types: readonly TimeOffType[], timeOffTypeId: string): TimeOffType {
+  const type = types.find(({ id }) => id === parseUuid(timeOffTypeId));
+  if (!type) {
+    throw invalidInput([{ field: "timeOffTypeId", code: "not_found" }]);
+  }
+  return type;
+}
+
+/** What a terms draft is saved from: the type's draft and the terms' rules for it today, if any. */
+export interface DraftBase {
+  policies: TimeOffPolicy[];
+  draft: PolicyVersion | null;
+  inForce: PolicyAssignment | null;
+}
+
+/**
+ * Saves the terms' draft for the type as `build` makes it: again, one revision later, or new under
+ * the policy they have for it today, or a new one for an offer.
+ */
+export async function saveTermsDraft(
+  employeeReads: Pick<EmployeeReadService, "readTermsMemberIds">,
+  tx: Tx,
+  input: { termsId: string; timeOffTypeId: string; today: CalendarDate },
+  build: (base: DraftBase) => { version: NewPolicyVersion; stops: boolean },
+): Promise<PolicyVersion> {
+  const repository = timeOffPolicyRepository(tx);
+  await repository.lockPolicies();
+  const termsId = await existingTerms(employeeReads, tx, input.termsId);
+  const timeOffType = existingType(await repository.findAllTypes(), input.timeOffTypeId);
+  const policies = await repository.findAll();
+  const draft = draftOf(policies, termsId, timeOffType.id);
+  const inForce = await termsRowOn(tx, termsId, timeOffType.id, input.today);
+  const { version, stops } = build({ policies, draft, inForce });
+  if (draft) {
+    await repository.updateDraft(draft.id, version, stops);
+    return versionOf(await repository.findAll(), draft.id);
+  }
+  const policyId =
+    inForce?.timeOffPolicyId ?? (await repository.insertPolicy({ timeOffTypeId: timeOffType.id }));
+  const id = await repository.insertVersion(policyId, {
+    ...version,
+    status: "draft",
+    termsId,
+    stops,
+  });
+  return versionOf(await repository.findAll(), id);
+}
+
+/** The terms' unpublished rules for the type, if any. */
+function draftOf(
+  policies: readonly TimeOffPolicy[],
+  termsId: string,
+  timeOffTypeId: string,
+): PolicyVersion | null {
+  return (
+    policies
+      .filter(({ timeOffType }) => timeOffType.id === timeOffTypeId)
+      .flatMap(({ versions }) => versions)
+      .find(({ status, termsId: owner }) => status === "draft" && owner === termsId) ?? null
+  );
+}
+
+/** The terms' assignment for the type covering `date`; null without one. */
+async function termsRowOn(
+  tx: Tx,
+  termsId: string,
+  timeOffTypeId: string,
+  date: CalendarDate,
+): Promise<PolicyAssignment | null> {
+  const rows = (await timeOffPolicyRepository(tx).findAssignments({ termsIds: [termsId] })).filter(
+    (row) => row.timeOffTypeId === timeOffTypeId,
+  );
+  return rows.find((row) => coversDate(row, date)) ?? null;
+}
+
+function lineValue(line: RulesLine): string {
+  return "stopDate" in line ? stopValue(line.stopDate) : rulesValue(line);
 }

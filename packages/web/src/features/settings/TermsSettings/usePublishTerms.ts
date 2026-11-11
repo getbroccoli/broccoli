@@ -92,5 +92,6 @@ function failureMessage(failure: Failure | null, earliest: string): string {
   if (code === "not_leave_year_start") return t("terms.publish.countsDate");
   if (code === "too_early") return t("terms.edit.tooEarly", { date: shortDate(earliest) });
   if (code === "overlaps") return t("terms.publish.overlaps");
+  if (code === "not_offered") return t("terms.publish.notOffered");
   return t("terms.publish.failed");
 }

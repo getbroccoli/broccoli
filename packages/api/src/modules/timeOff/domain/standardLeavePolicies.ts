@@ -5,7 +5,7 @@ import type { PolicyVersion } from "./timeOffPolicy";
 /** The rules of a policy version before it is saved: no ids, no dates. */
 export type NewPolicyVersion = Omit<
   PolicyVersion,
-  "id" | "timeOffPolicyId" | "status" | "termsId" | "revision" | "rules"
+  "id" | "timeOffPolicyId" | "status" | "termsId" | "revision" | "stops" | "rules"
 > & {
   rules: DistributiveOmit<AllowanceRule, "id">[];
 };

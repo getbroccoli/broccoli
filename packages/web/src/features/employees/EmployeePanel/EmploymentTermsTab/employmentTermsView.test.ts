@@ -169,7 +169,9 @@ it("shows a planned week's changed bank holiday calendar when the hours stay the
     "not offered",
   );
 
-  expect(row.planned).toEqual(["From 1 Dec 2026: Mon–Fri, 7.5 hours · Scotland bank holidays"]);
+  expect(row.planned.map(({ text }) => text)).toEqual([
+    "From 1 Dec 2026: Mon–Fri, 7.5 hours · Scotland bank holidays",
+  ]);
 });
 
 it("names the terms when a planned change returns from the person's own week", () => {
@@ -196,7 +198,9 @@ it("names the terms when a planned change returns from the person's own week", (
     "not offered",
   );
 
-  expect(row.planned).toEqual(["From 1 Jan 2027: Mon–Fri, 7.5 hours · from England and Wales"]);
+  expect(row.planned.map(({ text }) => text)).toEqual([
+    "From 1 Jan 2027: Mon–Fri, 7.5 hours · from England and Wales",
+  ]);
 });
 
 it("names the source of a planned return after a planned own week", () => {
@@ -229,7 +233,7 @@ it("names the source of a planned return after a planned own week", () => {
     "not offered",
   );
 
-  expect(row.planned).toEqual([
+  expect(row.planned.map(({ text }) => text)).toEqual([
     "From 1 Dec 2026: Mon–Thu, 8 hours · Sam’s own",
     "From 1 Jan 2027: Mon–Fri, 7.5 hours · from England and Wales",
   ]);
@@ -257,6 +261,6 @@ it("says a type stops when nothing follows its version", () => {
       source: "FROM_THEIR_TERMS",
       sourceLabel: "from England and Wales",
     },
-    planned: ["From 1 Dec 2026: not offered"],
+    planned: [{ text: "From 1 Dec 2026: not offered", startDate: "2026-12-01" }],
   });
 });

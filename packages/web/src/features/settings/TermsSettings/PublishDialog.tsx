@@ -14,15 +14,20 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
-import { companyToday, shortDate, versionOn } from "@/features/termsDisplay";
+import {
+  companyToday,
+  DateChoice,
+  nextLeaveYear,
+  shortDate,
+  versionOn,
+} from "@/features/termsDisplay";
 
-import { DateChoice } from "./DateChoice";
 import {
   type ChangeBox,
   longDate,
-  nextLeaveYear,
   peopleText,
   rulesChangeBox,
+  stopChangeBox,
   weekChangeBox,
 } from "./termsDraft";
 import type { Terms } from "./termsQueries";
@@ -46,9 +51,12 @@ type DateOption = "THIS_LEAVE_YEAR" | "TODAY" | "NEXT_LEAVE_YEAR" | "ANOTHER_DAT
 export function PublishDialog({ terms, open, onClose, publish, publishing }: Props) {
   const earliest = terms.earliestChange;
   const countsChange = changesCounts(terms);
-  const [choice, setChoice] = useState<DateOption>(defaultDate(terms));
+  // Every change starts today unless picked otherwise; one that changes how a type counts starts a leave year.
+  const [choice, setChoice] = useState<DateOption>(countsChange ? "THIS_LEAVE_YEAR" : "TODAY");
   const [otherDate, setOtherDate] = useState("");
-  const [unticked, setUnticked] = useState<ReadonlySet<string>>(new Set());
+  // The admin's own ticks; any other owner sharing only stopped rules starts unticked, so a stop
+  // ends the type only where it was made, whichever date lists that owner.
+  const [choices, setChoices] = useState<ReadonlyMap<string, boolean>>(new Map());
   const startDate = dateOf(choice, earliest, otherDate);
   const read = useQuery(TermsPublishSuggestionsDocument, {
     variables: { id: terms.id, from: startDate },
@@ -57,7 +65,10 @@ export function PublishDialog({ terms, open, onClose, publish, publishing }: Pro
   });
   const suggestions = read.data?.terms?.publishSuggestions;
   const owners = suggestions?.owners ?? [];
-  const ticked = owners.filter((owner) => !unticked.has(ownerKey(owner)));
+  const stoppedOnly = onlyStoppedFor(terms, owners);
+  const isTicked = (owner: Owner) =>
+    choices.get(ownerKey(owner)) ?? !stoppedOnly.has(ownerKey(owner));
+  const ticked = owners.filter(isTicked);
   const people = suggestions ? reachedBy(ticked) : null;
 
   const confirm = async () => {
@@ -71,20 +82,23 @@ export function PublishDialog({ terms, open, onClose, publish, publishing }: Pro
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && !publishing && onClose()}>
-      <DialogContent className="sm:max-w-xl" closeLabel={t("terms.close")}>
+      <DialogContent
+        className="flex max-h-[calc(100dvh-2rem)] flex-col sm:max-w-xl"
+        closeLabel={t("terms.close")}
+      >
         <DialogTitle className="text-lg">
           {t("terms.publish.title", { terms: terms.name })}
         </DialogTitle>
-        <div className="flex max-h-[70vh] flex-col gap-5 overflow-y-auto">
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto">
           {owners.length > 0 && (
             <fieldset className="flex flex-col gap-2">
               <legend className="mb-2 text-sm font-semibold">{t("terms.publish.applyTo")}</legend>
               {owners.map((owner) => (
                 <label key={ownerKey(owner)} className="flex items-center gap-3 text-sm">
                   <Checkbox
-                    checked={!unticked.has(ownerKey(owner))}
+                    checked={isTicked(owner)}
                     onCheckedChange={(checked) =>
-                      setUnticked(toggled(unticked, ownerKey(owner), checked))
+                      setChoices(new Map(choices).set(ownerKey(owner), checked))
                     }
                   />
                   <span className="flex-1">{owner.name}</span>
@@ -172,15 +186,28 @@ function peopleCount(count: number): string {
     : t("terms.publish.reach", { count: String(count) });
 }
 
-function ownerKey({ termsId, employeeId }: Owner): string {
-  return termsId ? `terms:${termsId}` : `employee:${employeeId}`;
+/** Owners other than these terms that would only get stops. */
+function onlyStoppedFor(
+  terms: Terms,
+  owners: readonly (Owner & { versionIds: readonly string[] })[],
+): ReadonlySet<string> {
+  const stops = new Set(
+    terms.timeOff.flatMap(({ unpublished }) => (unpublished?.stops ? [unpublished.id] : [])),
+  );
+  return new Set(
+    owners
+      .filter(
+        (owner) =>
+          owner.termsId !== terms.id &&
+          owner.versionIds.length > 0 &&
+          owner.versionIds.every((id) => stops.has(id)),
+      )
+      .map(ownerKey),
+  );
 }
 
-function toggled(keys: ReadonlySet<string>, key: string, checked: boolean): ReadonlySet<string> {
-  const next = new Set(keys);
-  if (checked) next.delete(key);
-  else next.add(key);
-  return next;
+function ownerKey({ termsId, employeeId }: Owner): string {
+  return termsId ? `terms:${termsId}` : `employee:${employeeId}`;
 }
 
 /** Everyone the ticked owners reach, once each, by name. */
@@ -195,20 +222,17 @@ function reachedBy(owners: readonly { reached: readonly Reached[] }[]): Reached[
 
 /** Whether an unpublished type's rules count it differently from today's, so they start a leave year. */
 function changesCounts(terms: Terms): boolean {
+  // Against the rules from this leave year's start to today, which stay before any date picked; a
+  // planned row Publish may replace is checked by the server against the date actually picked.
   const today = companyToday();
   return terms.timeOff.some(
     ({ unpublished, versions }) =>
       unpublished !== null &&
-      versionOn(versions, today) !== null &&
-      versionOn(versions, today)!.balance !== unpublished.balance,
+      !unpublished.stops &&
+      versions.some(
+        ({ startDate, balance }) => startDate <= today && balance !== unpublished.balance,
+      ),
   );
-}
-
-/** Rules start a leave year, as offering a type did; a week alone starts today. */
-function defaultDate(terms: Terms): DateOption {
-  return terms.timeOff.some(({ unpublished }) => unpublished !== null)
-    ? "THIS_LEAVE_YEAR"
-    : "TODAY";
 }
 
 function dateOptions(earliest: string, countsChange: boolean) {
@@ -242,12 +266,48 @@ function dateOf(choice: DateOption, earliest: string, otherDate: string): string
 /** What publishing from `startDate` changes on these terms: the week, then each type in list order. */
 function changesOf(terms: Terms, startDate: string): ChangeBox[] {
   const week = terms.unpublishedWorkingWeek
-    ? [weekChangeBox(terms.unpublishedWorkingWeek, startDate)]
+    ? [
+        withReplaced(
+          weekChangeBox(terms.unpublishedWorkingWeek, startDate),
+          terms.workingWeek,
+          startDate,
+        ),
+      ]
     : [];
   const rules = terms.timeOff.flatMap(({ timeOffType, unpublished, versions }) =>
     unpublished
-      ? [rulesChangeBox(timeOffType.name, unpublished, versionOn(versions, startDate), startDate)]
+      ? [
+          withReplaced(
+            unpublished.stops
+              ? stopChangeBox(timeOffType.name, startDate)
+              : rulesChangeBox(
+                  timeOffType.name,
+                  unpublished,
+                  versionOn(versions, startDate),
+                  startDate,
+                ),
+            versions,
+            startDate,
+          ),
+        ]
       : [],
   );
   return [...week, ...rules];
+}
+
+/** The box, saying which planned changes after `startDate` publishing replaces, if any. */
+function withReplaced(
+  box: ChangeBox,
+  rows: readonly { startDate: string }[],
+  startDate: string,
+): ChangeBox {
+  const planned = rows.filter((row) => row.startDate > startDate);
+  return planned.length === 0
+    ? box
+    : {
+        ...box,
+        detail: `${box.detail.replace(/\.?$/, ".")} ${t("terms.publish.replacesPlanned", {
+          dates: planned.map((row) => shortDate(row.startDate)).join(", "),
+        })}`,
+      };
 }

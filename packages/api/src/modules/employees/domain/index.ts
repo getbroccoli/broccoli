@@ -42,10 +42,20 @@ export {
   type AssignmentPlan,
   isSameOwner,
   NEW_ROW,
+  planEnd,
   planOrRefusal,
+  plannedRowsReplaced,
   rowsAfterPlan,
   type VersionStatus,
 } from "./assignment";
+export {
+  cancelOwnWeekChange,
+  type OwnWeek,
+  ownWeekOn,
+  ownWeeksOf,
+  withOwnWeek,
+  withoutOwnWeeks,
+} from "./ownWeeks";
 export {
   cancelTermsMove,
   planTermsMove,
@@ -53,6 +63,7 @@ export {
   type TermsMoveSkipReason,
 } from "./termsMove";
 export {
+  changesWithin,
   createPersonTimeline,
   type PersonTimeline,
   type PersonVersion,

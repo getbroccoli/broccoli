@@ -129,3 +129,49 @@ mutation CancelTermsChange($input: EmployeeTermsCancelChangeInput!) {
     }
   }
 }
+
+mutation SetOwnWorkingWeek($input: EmployeeOwnWorkingWeekSetInput!) {
+  employees {
+    setOwnWorkingWeek(input: $input) {
+      ...OwnWorkingWeekPayload @unmask
+    }
+  }
+}
+
+mutation UseTermsWorkingWeek($input: EmployeeTermsWorkingWeekUseInput!) {
+  employees {
+    useTermsWorkingWeek(input: $input) {
+      ...OwnWorkingWeekPayload @unmask
+    }
+  }
+}
+
+mutation CancelOwnWorkingWeekChange($input: EmployeeOwnWorkingWeekCancelChangeInput!) {
+  employees {
+    cancelOwnWorkingWeekChange(input: $input) {
+      ...OwnWorkingWeekPayload @unmask
+    }
+  }
+}
+
+# The person's new week, for the tab and the panel.
+fragment OwnWorkingWeekPayload on EmployeeOwnWorkingWeekPayload {
+  employee {
+    ...EmployeePanel_employee @unmask
+    employmentTerms {
+      ...EmploymentTermsTab_terms @unmask
+    }
+  }
+  error {
+    __typename
+    ... on Error {
+      message
+    }
+    ... on InvalidInputError {
+      fields {
+        field
+        code
+      }
+    }
+  }
+}

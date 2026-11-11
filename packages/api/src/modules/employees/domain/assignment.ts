@@ -64,6 +64,21 @@ export function planReplacement<R extends Assignment>(
 }
 
 /**
+ * How one owner's rows `isReplaced` accepts end from `from`, as `planReplacement` makes room but
+ * adding none; null when none covers `from` or starts later.
+ */
+export function planEnd<R extends Assignment>(
+  rows: readonly R[],
+  isReplaced: (row: R) => boolean,
+  from: CalendarDate,
+): AssignmentPlan | null {
+  if (!rows.some((row) => isReplaced(row) && (coversDate(row, from) || row.startDate > from))) {
+    return null;
+  }
+  return { ...planReplacement(rows, isReplaced, from), added: [] };
+}
+
+/**
  * `planReplacement`, keeping a refusal instead of throwing it, so an owner nobody publishes to
  * cannot refuse the others; publishing to that owner throws `refusal`.
  */
@@ -95,6 +110,20 @@ export function rowsAfterPlan(
       .map((row) => ({ ...row, endDate: ends.get(row.id) ?? row.endDate })),
     ...plan.added.map((span) => ({ ...span, id: NEW_ROW, versionId, owner })),
   ].toSorted((a, b) => a.startDate.localeCompare(b.startDate));
+}
+
+/**
+ * The planned rows `plan` deletes after the first row it adds: changes a publish from an earlier
+ * date replaces, which history records as cancelled.
+ */
+export function plannedRowsReplaced<R extends Assignment>(
+  rows: readonly R[],
+  plan: AssignmentPlan,
+): R[] {
+  const from = plan.added[0]?.startDate;
+  return rows.filter(
+    ({ id, startDate }) => plan.deletedIds.includes(id) && from !== undefined && startDate > from,
+  );
 }
 
 /** The id of a row a plan adds, before it is saved. */

@@ -15,7 +15,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { SheetClose, SheetTitle } from "@/components/ui/sheet";
 import { RecordHistory } from "@/features/records";
-import { CancelChangeDialog, companyToday, ruleLine, splitVersions } from "@/features/termsDisplay";
+import {
+  CancelChangeDialog,
+  companyToday,
+  ruleLine,
+  splitVersions,
+  WeekEditor,
+} from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
 import { DefaultPill } from "./DefaultPill";
@@ -30,7 +36,6 @@ import { useDiscardChanges } from "./useDiscardChanges";
 import { usePlannedChanges } from "./usePlannedChanges";
 import { usePublishTerms } from "./usePublishTerms";
 import { useTermsEditing } from "./useTermsEditing";
-import { WeekEditor } from "./WeekEditor";
 import { WorkingWeekSection } from "./WorkingWeekSection";
 
 type Props = {
@@ -110,8 +115,7 @@ export function TermsRecord({ terms }: Props) {
               }
             />
             <TermsTimeOffSection
-              termsName={terms.name}
-              timeOff={terms.timeOff}
+              terms={terms}
               open={
                 open?.kind === "rules"
                   ? {
@@ -135,7 +139,9 @@ export function TermsRecord({ terms }: Props) {
               }
               onEdit={editing.editRules}
               onCancelPlanned={planned.askRules}
+              onCancelStop={planned.askStop}
               onDiscard={discarding.discardRules}
+              onAdded={editing.offerType}
             />
           </fieldset>
           <RecordHistory recordType="TERMS" recordId={terms.id} description={TERMS_DESCRIPTION} />

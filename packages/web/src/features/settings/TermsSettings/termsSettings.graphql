@@ -98,6 +98,7 @@ query EmploymentTermsStack($id: ID!) {
       unpublished {
         id
         revision
+        stops
         balance
         bankHolidays
         leaveYearStart {
@@ -138,6 +139,7 @@ query TermsPublishSuggestions($id: ID!, $from: Date!) {
         termsId
         employeeId
         name
+        versionIds
         reached {
           id
           firstName
@@ -188,7 +190,10 @@ mutation CancelTermsWorkingWeekChange($input: WorkingPatternCancelChangeInput!) 
     cancelWorkingPatternChange(input: $input) {
       cancelledAssignmentId
       error {
-        ...TermsChangeError
+        __typename
+        ... on Error {
+          message
+        }
       }
     }
   }
@@ -218,12 +223,39 @@ mutation DiscardTermsTimeOffRules($input: TimeOffPolicyDiscardInput!) {
   }
 }
 
+mutation SaveTermsTimeOffStop($input: TimeOffStopSaveInput!) {
+  timeOff {
+    saveTimeOffStop(input: $input) {
+      rules {
+        id
+      }
+      error {
+        ...TermsChangeError
+      }
+    }
+  }
+}
+
+mutation CancelTermsTimeOffStop($input: TimeOffPolicyCancelStopInput!) {
+  timeOff {
+    cancelPolicyStop(input: $input) {
+      reopenedAssignmentId
+      error {
+        ...TermsChangeError
+      }
+    }
+  }
+}
+
 mutation CancelTermsTimeOffChange($input: TimeOffPolicyCancelChangeInput!) {
   timeOff {
     cancelPolicyChange(input: $input) {
       cancelledAssignmentId
       error {
-        ...TermsChangeError
+        __typename
+        ... on Error {
+          message
+        }
       }
     }
   }
