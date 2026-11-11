@@ -24,11 +24,14 @@ export function rulesDateError({
   return before && balance && before !== balance && !startsYear ? t("ownRules.countsDate") : null;
 }
 
-/** The person's rules on the day before `date`, from their versions from today on; days before today read today's. */
+/**
+ * The person's rules on the day before `date`, from their versions from today on; null for a date
+ * on or before today, whose rules before are not loaded, so the server checks it.
+ */
 export function rulesBefore<V extends { startDate: string; endDate?: string | null }>(
   versions: readonly V[],
   date: string,
   today: string,
 ): V | null {
-  return versionOn(versions, date > today ? addDays(date, -1) : today);
+  return date > today ? versionOn(versions, addDays(date, -1)) : null;
 }

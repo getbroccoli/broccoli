@@ -251,6 +251,7 @@ async function saveOwnRules(
 /**
  * Refuses, on `rules.balance` (CONFLICT for a cancel), rules that now count the type differently
  * from the day before partway through a leave year, where the person's own rules start or end.
+ * Days before the person starts are not rules before.
  */
 async function refuseCountsChangeFrom(
   employeeReads: EmployeeReadService,
@@ -262,8 +263,12 @@ async function refuseCountsChangeFrom(
     cancel,
   }: { employeeId: string; timeOffType: TimeOffType; from: CalendarDate; cancel: boolean },
 ) {
-  const rows = (await timelineOf(employeeReads, tx, employeeId, timeOffType))
-    .getVersions(addDays(from, -1), LAST_DATE)
+  const [person] = (await readPeople(employeeReads, tx, [employeeId])).people;
+  const dayBefore = addDays(from, -1);
+  const start = person!.serviceStart;
+  const rows = person!
+    .timelineOf(timeOffType.id)
+    .getVersions(start && start > dayBefore ? start : dayBefore, LAST_DATE)
     .map(({ version, source, startDate, endDate }) => ({
       balance: version.balance,
       source,

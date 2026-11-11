@@ -168,6 +168,40 @@ test("refuses changing how a type counts partway through the leave year", async 
   ]);
 });
 
+test("gives a person Unlimited own rules from their mid-year first day", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const employee = await seed.employee({ startDate: "2026-05-04" });
+  const termsId = await seed.defaultTermsId();
+  await giveTermsPolicies(orm, transact, {
+    termsId,
+    policies: [{ key: "uk_20_days_plus_bank_holidays" }],
+    today: "2026-11-09",
+  });
+  const [annual] = await readTermsPolicies(orm, termsId);
+
+  await timeOffPolicyService(orm, { today: "2026-11-09" }).setOwnRules(OWNER, {
+    employeeId: employee.id,
+    timeOffTypeId: annual!.timeOffTypeId,
+    startDate: "2026-05-04",
+    rules: { balance: "unlimited_balance" },
+  });
+
+  const result = await timeOffService(orm, { today: "2026-11-09" }).readPersonTimeOff(OWNER, {
+    employeeIds: [employee.id],
+  });
+  expect(result.get(employee.id)?.[0]?.versions).toMatchObject([
+    {
+      source: "their_own",
+      startDate: "2026-11-09",
+      endDate: null,
+      version: { balance: "unlimited_balance" },
+    },
+  ]);
+});
+
 test("refuses returning to terms that count differently partway through the leave year", async ({
   orm,
   seed,

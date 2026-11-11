@@ -107,10 +107,10 @@ it("reads the previous rules on the exact day a planned change starts", () => {
 it.each([
   { when: "today", date: "2026-11-09" },
   { when: "in the past", date: "2026-03-01" },
-])("reads today's rules for a date $when", ({ date }) => {
+])("leaves the preceding rules unknown for a date $when", ({ date }) => {
   const current = { startDate: "2026-11-09", endDate: null, balance: "BALANCE_FROM_ALLOWANCE" };
 
-  expect(rulesBefore([current], date, "2026-11-09")).toBe(current);
+  expect(rulesBefore([current], date, "2026-11-09")).toBeNull();
 });
 
 it("reads no rules when the preceding day is in a gap", () => {
