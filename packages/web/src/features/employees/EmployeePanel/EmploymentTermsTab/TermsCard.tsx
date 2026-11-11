@@ -11,6 +11,7 @@ import { PlannedMove } from "./PlannedMove";
 import { TermsLastChange } from "./TermsLastChange";
 import { TermsName } from "./TermsName";
 import { TermsRows } from "./TermsRows";
+import type { OwnWeekEdit } from "./useOwnWeekEdit";
 import type { TermsChange } from "./useTermsChange";
 
 type Props = {
@@ -23,6 +24,8 @@ type Props = {
   linksToSettings: boolean;
   /** Admins move the person to other terms here; null for everyone else. */
   change: TermsChange | null;
+  /** Admins edit the person's own week here; null for everyone else. */
+  weekEdit: OwnWeekEdit | null;
 };
 
 /**
@@ -36,6 +39,7 @@ export function TermsCard({
   viewerIsPerson,
   linksToSettings,
   change,
+  weekEdit,
 }: Props) {
   const { periods, timeOff } = employmentTerms;
   const today = companyToday();
@@ -62,7 +66,7 @@ export function TermsCard({
           <Button
             variant="ghost"
             size="sm"
-            disabled={editing}
+            disabled={editing || Boolean(weekEdit?.mode)}
             onClick={() => change.start(employmentTerms.earliestChange)}
           >
             {t("people.panel.terms.change")}
@@ -115,7 +119,7 @@ export function TermsCard({
             period={{ ...period, startDate: period.startDate! }}
             staysOn={(index === 0 ? current : planned[index - 1])?.termsName ?? ""}
             linksToSettings={linksToSettings}
-            canCancel={Boolean(change) && !editing}
+            canCancel={Boolean(change) && !editing && !weekEdit?.mode}
           />
         ))}
         <TermsRows
@@ -124,6 +128,10 @@ export function TermsCard({
           currentTermsName={current?.termsName ?? ""}
           firstName={firstName}
           viewerIsPerson={viewerIsPerson}
+          employeeId={employeeId}
+          weekEdit={weekEdit}
+          locked={editing}
+          earliest={employmentTerms.earliestChange}
           change={
             change?.before && change.after
               ? { before: change.before, after: change.after, date: changeDate }

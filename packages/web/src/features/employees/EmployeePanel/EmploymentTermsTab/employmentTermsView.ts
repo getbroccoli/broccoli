@@ -1,6 +1,14 @@
 import type { RuleSource } from "@/__generated__/graphql";
 import { t } from "@/i18n";
-import { shortDate, splitVersions, versionOn } from "@/features/termsDisplay";
+import {
+  calendarName,
+  shortDate,
+  splitVersions,
+  versionOn,
+  type WeekMinutes,
+  weekSummary,
+} from "@/features/termsDisplay";
+import type { BankHolidayCalendar } from "@/__generated__/graphql";
 import { calendarDayParts } from "@/lib/calendarDay";
 
 /** One stretch of a person on one set of terms, as the panel reads it. */
@@ -75,8 +83,10 @@ export function rowOf<V extends DatedVersion>(
     planned: shown.flatMap((version, index) => {
       const before = index === 0 ? null : shown[index - 1]!;
       const next = shown[index + 1];
-      const line = (date: string, change: string) =>
-        t("people.panel.terms.planned", { date: shortDate(date), change });
+      const line = (date: string, change: string) => ({
+        text: t("people.panel.terms.planned", { date: shortDate(date), change }),
+        startDate: date,
+      });
       const starts =
         version === current
           ? []
@@ -133,4 +143,18 @@ function dayAfter(day: string): string {
 
 function covers({ startDate, endDate }: TermsPeriod, date: string): boolean {
   return (startDate ?? "") <= date && (endDate == null || endDate >= date);
+}
+
+/** A week as its row reads it: "Mon–Fri, 7.5 hours", then its bank holidays. */
+export function describeWeek({
+  week,
+}: {
+  week: WeekMinutes & { bankHolidayCalendar: BankHolidayCalendar };
+}) {
+  return {
+    text: weekSummary(week),
+    detail: t("people.panel.terms.bankHolidays", {
+      calendar: calendarName(week.bankHolidayCalendar),
+    }),
+  };
 }

@@ -2,6 +2,8 @@ import { CalendarBlank } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 
 import type { RuleSource } from "@/__generated__/graphql";
+import { Button } from "@/components/ui/button";
+import { t } from "@/i18n";
 
 type Props = {
   /** The row's name, with its icon for a time off type. */
@@ -10,14 +12,29 @@ type Props = {
   value: { text: string; detail?: string; source: RuleSource; sourceLabel: string } | null;
   /** Shown, muted, when nothing applies today, such as "Not offered on England and Wales". */
   missing: string;
-  /** Each later change, as "From 1 Jan 2027: …". */
-  planned: string[];
+  /** Each later change, as "From 1 Jan 2027: …", with the date it starts. */
+  planned: { text: string; startDate: string }[];
+  /** Planned changes Cancel change can remove, by start date, and what it does. */
+  onCancel?: { startDates: readonly string[]; cancel: (startDate: string) => void };
+  /** Actions on the row, such as Edit, beside its source. */
+  actions?: ReactNode;
+  /** The row's editor, open in place of its value. */
+  editor?: ReactNode;
   /** What a move being edited changes here, as "From 1 Dec 2026: …"; none when it changes nothing. */
   change?: string | null;
 };
 
 /** One row of a person's employment terms: the working week or a time off type. */
-export function TermsRuleRow({ label, value, missing, planned, change }: Props) {
+export function TermsRuleRow({
+  label,
+  value,
+  missing,
+  planned,
+  change,
+  onCancel,
+  actions,
+  editor,
+}: Props) {
   return (
     <li className="flex flex-col gap-1 border-b border-border/60 px-3 py-2.5 last:border-b-0">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -41,11 +58,18 @@ export function TermsRuleRow({ label, value, missing, planned, change }: Props) 
           ) : (
             <span className="text-[13px] text-muted-foreground">{value.sourceLabel}</span>
           ))}
+        {actions}
       </div>
-      {planned.map((line) => (
-        <p key={line} className="flex items-center gap-2 text-[13px] text-muted-foreground">
+      {editor}
+      {planned.map(({ text, startDate }) => (
+        <p key={text} className="flex items-center gap-2 text-[13px] text-muted-foreground">
           <CalendarBlank aria-hidden className="shrink-0" />
-          {line}
+          <span className="flex-1">{text}</span>
+          {onCancel?.startDates.includes(startDate) && (
+            <Button variant="ghost" size="sm" onClick={() => onCancel.cancel(startDate)}>
+              {t("people.panel.terms.cancelChange")}
+            </Button>
+          )}
         </p>
       ))}
     </li>

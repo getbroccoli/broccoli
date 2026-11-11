@@ -14,17 +14,15 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
-import { companyToday, shortDate, versionOn } from "@/features/termsDisplay";
-
-import { DateChoice } from "./DateChoice";
 import {
-  type ChangeBox,
-  longDate,
+  companyToday,
+  DateChoice,
   nextLeaveYear,
-  peopleText,
-  rulesChangeBox,
-  weekChangeBox,
-} from "./termsDraft";
+  shortDate,
+  versionOn,
+} from "@/features/termsDisplay";
+
+import { type ChangeBox, longDate, peopleText, rulesChangeBox, weekChangeBox } from "./termsDraft";
 import type { Terms } from "./termsQueries";
 import type { PublishChoice } from "./usePublishTerms";
 import { WhatChanges } from "./WhatChanges";

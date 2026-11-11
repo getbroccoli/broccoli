@@ -37,6 +37,10 @@ export {
   type TermsChange,
 } from "./employmentTerms/employeeTermsService";
 export type { TermsMovePreview } from "./employmentTerms/membershipsAfterMove";
+export {
+  createOwnWorkingWeekService,
+  type OwnWorkingWeekService,
+} from "./employmentTerms/ownWorkingWeekService";
 export { employeeRecordType } from "./employeeRecordType";
 export {
   type CopyTermsParts,

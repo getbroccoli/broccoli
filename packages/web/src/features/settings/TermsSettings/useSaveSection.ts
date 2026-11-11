@@ -5,10 +5,10 @@ import {
   SaveTermsWorkingWeekDocument,
 } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
+import { weekOfDraft } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
 import { rulesInputOf } from "../TimeOffSettings";
-import { weekOfDraft } from "./termsDraft";
 import { TERMS_REFETCH, type Terms } from "./termsQueries";
 import type { OpenSection } from "./useTermsEditing";
 

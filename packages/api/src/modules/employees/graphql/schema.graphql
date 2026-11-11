@@ -194,7 +194,49 @@ type EmployeesMutations {
   changeTerms(input: EmployeeTermsChangeInput!): EmployeeTermsChangePayload!
   "Removes a person's move to other terms that has not started; the terms before it run on. Refused with a ConflictError once it has started. Admins only."
   cancelTermsChange(input: EmployeeTermsCancelChangeInput!): EmployeeTermsCancelChangePayload!
+  "Gives a person their own working week from a date no earlier than this leave year's start or their start, over their terms', until their next own week change if one is planned; changes it when they have one then. Admins only."
+  setOwnWorkingWeek(input: EmployeeOwnWorkingWeekSetInput!): EmployeeOwnWorkingWeekPayload!
+  "Puts a person back on their terms' working week from a date: their own week covering it ends the day before, later ones go. Admins only."
+  useTermsWorkingWeek(input: EmployeeTermsWorkingWeekUseInput!): EmployeeOwnWorkingWeekPayload!
+  "Removes a change to a person's own working week that has not started: a new own week, a change to it, or a return to their terms. Refused with a ConflictError once it has started. Admins only."
+  cancelOwnWorkingWeekChange(
+    input: EmployeeOwnWorkingWeekCancelChangeInput!
+  ): EmployeeOwnWorkingWeekPayload!
 }
+
+"A person's own week from a date: minutes worked each day and whose bank holidays apply."
+input EmployeeOwnWorkingWeekSetInput {
+  employeeId: ID!
+  startDate: Date!
+  "0 to 1,440 each day; at least one day above 0."
+  mondayMinutes: Int!
+  tuesdayMinutes: Int!
+  wednesdayMinutes: Int!
+  thursdayMinutes: Int!
+  fridayMinutes: Int!
+  saturdayMinutes: Int!
+  sundayMinutes: Int!
+  bankHolidayCalendar: BankHolidayCalendar!
+}
+
+input EmployeeTermsWorkingWeekUseInput {
+  employeeId: ID!
+  startDate: Date!
+}
+
+input EmployeeOwnWorkingWeekCancelChangeInput {
+  employeeId: ID!
+  "The start of the change to remove."
+  startDate: Date!
+}
+
+"The person whose working week changed, or why it was refused."
+type EmployeeOwnWorkingWeekPayload {
+  employee: Employee
+  error: EmployeeOwnWorkingWeekError
+}
+
+union EmployeeOwnWorkingWeekError = InvalidInputError | NotFoundError | ConflictError
 
 "People to move to terms from a date."
 input EmployeeTermsChangeInput {

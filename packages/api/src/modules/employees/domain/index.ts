@@ -48,6 +48,14 @@ export {
   type VersionStatus,
 } from "./assignment";
 export {
+  cancelOwnWeekChange,
+  type OwnWeek,
+  ownWeekOn,
+  ownWeeksOf,
+  withOwnWeek,
+  withoutOwnWeeks,
+} from "./ownWeeks";
+export {
   cancelTermsMove,
   planTermsMove,
   type TermsMove,

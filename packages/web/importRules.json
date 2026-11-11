@@ -144,9 +144,11 @@
     ],
     "src/features/termsDisplay": [
       "src/__generated__",
+      "src/components/form",
       "src/components/ui",
       "src/i18n",
-      "src/lib/calendarDay"
+      "src/lib/calendarDay",
+      "src/lib/class-names"
     ],
     "src/features/setup": [
       "src/__generated__",
