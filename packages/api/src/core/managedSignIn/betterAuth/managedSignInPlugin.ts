@@ -53,7 +53,14 @@ export function callbackOnlyTrust({ websiteOrigin }: ManagedAssignment) {
 // eslint-disable-next-line broccoli/max-lines-per-function -- an endpoint table; each handler is checked on its own.
 export function managedSignInPlugin(options: ManagedSignInOptions) {
   const { companyId, publicOrigin, websiteOrigin } = options.assignment;
-  const signInFailed = (error: SignInError) => redirect(`${publicOrigin}/login?error=${error}`);
+  // A retry from the login page still returns where the sign-in was going.
+  const signInFailed = (error: SignInError, returnPath: string) => {
+    const query = new URLSearchParams({ error });
+    if (returnPath !== "/") {
+      query.set("redirect", returnPath);
+    }
+    return redirect(`${publicOrigin}/login?${query.toString()}`);
+  };
 
   return {
     id: "managed-sign-in",
@@ -102,17 +109,17 @@ export function managedSignInPlugin(options: ManagedSignInOptions) {
           try {
             const ticket = await readTicket(ctx, ctx.body.ticket, options);
             if (!ticket) {
-              return signInFailed("sign_in_required");
+              return signInFailed("sign_in_required", returnPath);
             }
             await setSessionCookie(ctx, await signIn(ctx, ticket, options.transact));
             return redirect(`${publicOrigin}${returnPath}`);
           } catch (error) {
             if (error instanceof InvalidTokenError || error instanceof SignInRefusedError) {
-              return signInFailed("sign_in_required");
+              return signInFailed("sign_in_required", returnPath);
             }
             // Never log the ticket, the cookie or the request body.
             ctx.context.logger.error("Managed sign-in failed", { error: (error as Error).name });
-            return signInFailed("sign_in_unavailable");
+            return signInFailed("sign_in_unavailable", returnPath);
           }
         },
       ),

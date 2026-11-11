@@ -24,12 +24,45 @@ export async function registerAgentClient(env: TestEnv, name: string): Promise<s
 export async function connectAgent(
   env: TestEnv,
   browser: Browser,
+  options: { clientId: string; scope?: string; resource?: string },
+): Promise<{ accessToken: string; refreshToken: string; scope: string }> {
+  const { code, verifier, resource } = await authorizeAgent(env, browser, options);
+  const response = await fetch(`${env.url}/api/auth/oauth2/token`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: "http://127.0.0.1:33418/callback",
+      client_id: options.clientId,
+      code_verifier: verifier,
+      resource,
+    }),
+  });
+  assert.equal(response.status, 200);
+  const tokens = (await response.json()) as {
+    access_token: string;
+    refresh_token: string;
+    scope: string;
+  };
+  assert(tokens.access_token);
+  assert(tokens.refresh_token);
+  return {
+    accessToken: tokens.access_token,
+    refreshToken: tokens.refresh_token,
+    scope: tokens.scope,
+  };
+}
+
+export async function authorizeAgent(
+  env: TestEnv,
+  browser: Browser,
   {
     clientId,
     scope = "broccoli:read offline_access",
     resource = `${env.url}/api/mcp`,
   }: { clientId: string; scope?: string; resource?: string },
-): Promise<{ accessToken: string; refreshToken: string }> {
+): Promise<{ code: string; verifier: string; resource: string }> {
   const verifier = randomBytes(32).toString("base64url");
   const state = randomBytes(16).toString("hex");
   const params = new URLSearchParams({
@@ -56,23 +89,7 @@ export async function connectAgent(
   assert.equal(callback.searchParams.get("state"), state);
   const code = callback.searchParams.get("code");
   assert(code);
-  const response = await fetch(`${env.url}/api/auth/oauth2/token`, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "authorization_code",
-      code,
-      redirect_uri: "http://127.0.0.1:33418/callback",
-      client_id: clientId,
-      code_verifier: verifier,
-      resource,
-    }),
-  });
-  assert.equal(response.status, 200);
-  const tokens = (await response.json()) as { access_token: string; refresh_token: string };
-  assert(tokens.access_token);
-  assert(tokens.refresh_token);
-  return { accessToken: tokens.access_token, refreshToken: tokens.refresh_token };
+  return { code, verifier, resource };
 }
 
 export function refreshAgent(

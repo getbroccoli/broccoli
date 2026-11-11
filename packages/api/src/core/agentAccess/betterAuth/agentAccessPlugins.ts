@@ -7,12 +7,13 @@ import type { BetterAuthPlugin } from "better-auth";
 
 import { PrincipalSecurityContext } from "../../security";
 import type { AgentConnectionService } from "../app";
-import { AGENT_SCOPES, agentResourceOf, ALLOW_AGENT_PAGE } from "../domain";
+import { AGENT_SCOPES, agentResourceOf, ALLOW_AGENT_PAGE, type AgentScope } from "../domain";
+
+/** Allowed only once a tool changes something. */
+const WRITE_SCOPE: AgentScope = "broccoli:write";
 
 /** Long enough for an agent's sign-in and Allow; the OAuth default. */
 const ACCESS_TOKEN_SECONDS = 60 * 60;
-/** A connection unused this long ends: its agent can no longer renew its token. */
-const UNUSED_CONNECTION_SECONDS = 30 * 24 * 60 * 60;
 /** A retried refresh within this window gets the same answer instead of ending the connection. */
 const REFRESH_REUSE_SECONDS = 30;
 
@@ -35,10 +36,10 @@ export function agentAccessPlugins(connections: AgentConnectionService): BetterA
       allowDynamicClientRegistration: true,
       allowUnauthenticatedClientRegistration: true,
       accessTokenExpiresIn: ACCESS_TOKEN_SECONDS,
-      refreshTokenExpiresIn: UNUSED_CONNECTION_SECONDS,
       refreshTokenReuseInterval: REFRESH_REUSE_SECONDS,
-      // Nobody manages OAuth clients from the browser.
+      // Nobody manages OAuth clients or resources from the browser.
       clientPrivileges: () => false,
+      resourcePrivileges: () => false,
     }),
     cimd({ fetchClientMetadataResource, metadataProfile: "mcp-2026-07-28" }),
     agentConnectionPolicy(connections),
@@ -67,6 +68,12 @@ function agentConnectionPolicy(connections: AgentConnectionService): BetterAuthP
           matcher: (ctx) => ctx.path === "/oauth2/register",
           handler: createAuthMiddleware((ctx) =>
             Promise.resolve({ context: { body: publicClientRegistration(ctx.body) } }),
+          ),
+        },
+        {
+          matcher: (ctx) => ctx.path === "/oauth2/consent",
+          handler: createAuthMiddleware((ctx) =>
+            Promise.resolve({ context: { body: readOnlyConsent(ctx.body) } }),
           ),
         },
         {
@@ -140,6 +147,24 @@ function isLoopback(uri: unknown): boolean {
   return (
     protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(hostname.toLowerCase())
   );
+}
+
+/**
+ * The consent narrowed to reading: no tool changes anything yet, so a person is never asked to allow
+ * that, and an agent asks again once one does.
+ */
+function readOnlyConsent(body: unknown): Record<string, unknown> {
+  const consent = (body ?? {}) as ConsentBody & { scope?: unknown };
+  const query = typeof consent.oauth_query === "string" ? consent.oauth_query : "";
+  const requested =
+    typeof consent.scope === "string"
+      ? consent.scope
+      : (new URLSearchParams(query).get("scope") ?? "");
+  const scope = requested
+    .split(" ")
+    .filter((each) => each !== WRITE_SCOPE)
+    .join(" ");
+  return { ...consent, scope };
 }
 
 /** Whether consent ended in a code for the client, not a denial or an error. */

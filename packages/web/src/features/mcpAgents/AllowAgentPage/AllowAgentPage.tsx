@@ -74,7 +74,9 @@ export function AllowAgentPage() {
           <button
             type="button"
             className="text-xs underline-offset-2 hover:underline"
-            onClick={() => void signInAsSomeoneElse()}
+            onClick={() =>
+              void signInAsSomeoneElse().then((signedOut) => signedOut || setOutcome("failed"))
+            }
           >
             {t("mcpAgents.allow.notYou")}
           </button>
@@ -134,10 +136,14 @@ function useAgentClientName(clientId: string): string | null {
   return name;
 }
 
-/** Signs out and shows sign-in with the agent's request, so the right person allows it. */
-async function signInAsSomeoneElse(): Promise<void> {
-  await signOut();
+/**
+ * Signs out and shows sign-in with the agent's request, so the right person allows it; false when
+ * signing out failed, leaving the page as it is.
+ */
+async function signInAsSomeoneElse(): Promise<boolean> {
+  if (!(await signOut())) return false;
   window.location.assign(`/login${window.location.search}`);
+  return true;
 }
 
 function dayAndMonthOf(dateTime: string): string {

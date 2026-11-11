@@ -251,6 +251,28 @@ test("refuses a ticket without the state cookie", async () => {
   expect(response.headers.get("location")).toBe(SIGN_IN_REQUIRED);
 });
 
+test("a failed callback keeps the OAuth return path for the next sign-in", async () => {
+  const { env, accounts } = await assignedManagedEnv();
+  const { state, returnCookie } = await startManagedSignIn(
+    env,
+    "?method=email&redirect=%2Fapi%2Fauth%2Foauth2%2Fauthorize%3Fclient_id%3Dx",
+  );
+  expect(returnCookie).toBeDefined();
+
+  const response = await postManagedTicket(
+    env,
+    await accounts.signTicket(managedTicketClaims(state)),
+    null,
+    websiteOrigin,
+    [returnCookie!],
+  );
+
+  expect(response.status).toBe(303);
+  expect(response.headers.get("location")).toBe(
+    `${SIGN_IN_REQUIRED}&redirect=%2Fapi%2Fauth%2Foauth2%2Fauthorize%3Fclient_id%3Dx`,
+  );
+});
+
 test.each(["https://evil.example.com", "https://www.example.com.evil.example.com", "null", null])(
   "refuses a ticket posted from origin %s",
   async (origin) => {

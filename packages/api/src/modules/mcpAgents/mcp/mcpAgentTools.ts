@@ -78,7 +78,9 @@ async function resultOf<T extends object>(
       structuredContent: value as Record<string, unknown>,
     };
   } catch (error) {
-    if (!(error instanceof ApplicationError)) {
+    if (error instanceof ApplicationError) {
+      logger.warn({ tool, userId, code: error.code }, "MCP tool refused");
+    } else {
       // Only the name: a message may carry the data the tool read.
       logger.error({ error: (error as Error).name, tool, userId }, "MCP tool failed");
     }

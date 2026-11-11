@@ -1,12 +1,16 @@
 import type { GenericEndpointContext } from "@better-auth/core";
 import { getOAuthProviderApi, type OAuthOptions, type Scope } from "@better-auth/oauth-provider";
-import { eq } from "drizzle-orm";
 import type { IncomingHttpHeaders } from "node:http";
 
-import { type Auth, type AuthSource, user } from "../../auth";
+import { type Auth, type AuthSource } from "../../auth";
 import type { Orm } from "../../db";
 import { resolveUserSecurity } from "../../instance";
-import type { EmployeeDirectory, SecurityContext } from "../../security";
+import {
+  type EmployeeDirectory,
+  PrincipalSecurityContext,
+  type SecurityContext,
+} from "../../security";
+import type { AgentConnectionService } from "../app";
 import { agentResourceOf } from "../domain";
 
 /** Who an agent's call acts as, and what it was allowed; or why it was refused. */
@@ -17,6 +21,7 @@ export type AgentSecurity =
 export type AgentRefusal =
   | "NO_TOKEN"
   | "INVALID_TOKEN"
+  | "CONNECTION_ENDED"
   | "TOKEN_FOR_OTHER_RESOURCE"
   | "SENDER_CONSTRAINED_TOKEN"
   | "DEMO_ENDED";
@@ -35,6 +40,7 @@ export function agentSecurityResolver(
   authSource: AuthSource,
   orm: Orm,
   directory: EmployeeDirectory,
+  connections: Pick<AgentConnectionService, "useAgentConnection">,
 ): AgentSecurityResolver {
   return async (headers, origin) => {
     const token = bearerTokenOf(headers);
@@ -53,13 +59,17 @@ export function agentSecurityResolver(
     if (claims.cnf !== undefined) {
       return { refusal: "SENDER_CONSTRAINED_TOKEN" };
     }
-    const [person] = await orm
-      .select({ id: user.id, email: user.email })
-      .from(user)
-      .where(eq(user.id, String(claims.sub)));
-    const security = person ? await resolveUserSecurity(orm, directory, person) : null;
+    // A token outlives its connection when the person allowed another agent, or left it unused.
+    const person = await connections.useAgentConnection(PrincipalSecurityContext.system(), {
+      userId: String(claims.sub),
+      clientId: String(claims.client_id),
+    });
+    if (!person) {
+      return { refusal: "CONNECTION_ENDED" };
+    }
+    const security = await resolveUserSecurity(orm, directory, person);
     if (!security) {
-      return { refusal: person ? "DEMO_ENDED" : "INVALID_TOKEN" };
+      return { refusal: "DEMO_ENDED" };
     }
     const scope = typeof claims.scope === "string" ? claims.scope : "";
     return { security, scopes: new Set(scope.split(" ")) };

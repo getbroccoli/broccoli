@@ -42,6 +42,7 @@ export function mcpAgentRouter(
     .post(
       "/mcp",
       express.json({ limit: MAX_BODY_BYTES }),
+      refuseBatches,
       asAgent(publicOrigin, resolveAgentSecurity, logger),
       perPerson,
       async (request, response) => {
@@ -60,6 +61,19 @@ export function mcpAgentRouter(
       },
     );
 }
+
+/** One request at a time, so each tool call is checked for its scope; MCP has no batches. */
+const refuseBatches: express.RequestHandler = (request, response, next) => {
+  if (Array.isArray(request.body)) {
+    response.status(400).json({
+      jsonrpc: "2.0",
+      error: { code: -32600, message: "Batches are not supported" },
+      id: null,
+    });
+    return;
+  }
+  next();
+};
 
 /**
  * Lets the call through as the person its token acts for, when the token holds the tool's scope;

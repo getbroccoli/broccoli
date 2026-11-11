@@ -3,6 +3,10 @@ import type { Logger } from "../../logger";
 import type { SecurityContext } from "../../security";
 import { agentConnectionRepository, type StoredAgentConnection } from "../db";
 
+/** A connection unused this long ends. */
+const UNUSED_CONNECTION_DAYS = 30;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 /** A person's agent connections: allowing one, ending them, and reading the current one. */
 export interface AgentConnectionService {
   /** Ends the person's connections of every client but the one they just allowed. */
@@ -10,6 +14,14 @@ export interface AgentConnectionService {
     ctx: SecurityContext,
     input: { userId: string; clientId: string },
   ) => Promise<void>;
+  /**
+   * The person an agent's call acts for, through their connection of this client, noting the use;
+   * null when the connection has ended, or ending it now when it went unused for 30 days.
+   */
+  useAgentConnection: (
+    ctx: SecurityContext,
+    input: { userId: string; clientId: string },
+  ) => Promise<{ id: string; email: string } | null>;
   /** Ends every connection of the person, for `reason`. */
   endConnections: (
     ctx: SecurityContext,
@@ -27,7 +39,7 @@ export interface AgentConnectionService {
 }
 
 /** Why Broccoli ended a person's agent connections. */
-export type AgentConnectionEnding = "PASSWORD_RESET";
+export type AgentConnectionEnding = "PASSWORD_RESET" | "UNUSED";
 
 export function createAgentConnectionService({
   orm,
@@ -38,6 +50,18 @@ export function createAgentConnectionService({
   transact: Transact;
   logger: Logger;
 }): AgentConnectionService {
+  const endConnections: AgentConnectionService["endConnections"] = async (
+    ctx,
+    { userId, reason },
+  ) => {
+    ctx.requireSystem();
+    const ended = await transact((tx) =>
+      agentConnectionRepository(tx).deleteConnections(userId, null),
+    );
+    if (ended.length > 0) {
+      logger.info({ userId, endedConnectionIds: ended, reason }, "Agent connections ended");
+    }
+  };
   return {
     async keepOnlyConnection(ctx, { userId, clientId }) {
       ctx.requireSystem();
@@ -53,15 +77,22 @@ export function createAgentConnectionService({
         "Agent connection allowed",
       );
     },
-    async endConnections(ctx, { userId, reason }) {
+    async useAgentConnection(ctx, { userId, clientId }) {
       ctx.requireSystem();
-      const ended = await transact((tx) =>
-        agentConnectionRepository(tx).deleteConnections(userId, null),
-      );
-      if (ended.length > 0) {
-        logger.info({ userId, endedConnectionIds: ended, reason }, "Agent connections ended");
+      const connections = agentConnectionRepository(orm);
+      const connection = await connections.findConnectionOf(userId, clientId);
+      if (!connection) {
+        return null;
       }
+      const now = new Date();
+      if (now.getTime() - connection.lastUsedAt.getTime() > UNUSED_CONNECTION_DAYS * DAY_MS) {
+        await endConnections(ctx, { userId, reason: "UNUSED" });
+        return null;
+      }
+      await connections.touchConnection(connection.id, now);
+      return { id: userId, email: connection.email };
     },
+    endConnections,
     async ensureAgentResource(ctx, resource) {
       ctx.requireSystem();
       await agentConnectionRepository(orm).ensureResource(resource);

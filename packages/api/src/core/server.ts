@@ -105,7 +105,12 @@ export async function startServer(
     const auth = deployment.auth;
     resolveSecurity = (headers) =>
       resolveSecurityContext(auth, database.orm, employeeDirectory, headers);
-    resolveAgentSecurity = agentSecurityResolver(auth, database.orm, employeeDirectory);
+    resolveAgentSecurity = agentSecurityResolver(
+      auth,
+      database.orm,
+      employeeDirectory,
+      agentConnections,
+    );
     graphql = await startGraphqlApi(
       modules,
       httpServer,

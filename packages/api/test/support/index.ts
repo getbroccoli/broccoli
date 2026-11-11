@@ -13,6 +13,7 @@ export { createExternalAgentCode, exchangeExternalAgentCode } from "./createExte
 export { createBrowser, type Browser } from "./browser";
 export {
   authorize,
+  authorizeAgent,
   callMcpTool,
   connectAgent,
   refreshAgent,
