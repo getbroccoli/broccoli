@@ -1,15 +1,12 @@
 import DataLoader from "dataloader";
 
 import {
-  type GraphqlContext,
   mutationPayload,
   perRequest,
   type Resolvers,
   type ResolversTypes,
   toEnum,
 } from "../../../core/graphql";
-import { type CalendarDate, todayInLondon } from "../../../utils";
-import { earliestChangeDate, type TermsMovePreview } from "../../employees";
 import type {
   PersonTimeOff,
   TimeOffPolicyService,
@@ -25,6 +22,7 @@ import {
   type TimeOffTypeIdentityInput,
   type TimeOffTypeIcon,
 } from "../domain";
+import { previewTimeOffLoader } from "./previewTimeOffLoader";
 
 type TimeOffTypeRow = ResolversTypes["EmployeeTimeOffType"];
 
@@ -125,38 +123,35 @@ export function createResolvers(
           await timeOff.deleteType(context.getActor(), { id: input.timeOffTypeId });
           return { deletedTimeOffTypeId: input.timeOffTypeId };
         }, ["NOT_FOUND", "CONFLICT"]),
-      createPolicy: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["TimeOffPolicyCreatePayload"]>(
+      saveTimeOffPolicy: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TimeOffPolicySavePayload"]>(
           async () => ({
-            timeOffPolicy: await policies.createPolicy(context.getActor(), {
+            rules: await policies.saveTimeOffPolicy(context.getActor(), {
               ...input,
               rules: toStoredRules(input.rules),
             }),
           }),
-          ["INVALID_INPUT", "CONFLICT"],
+          ["INVALID_INPUT"],
         ),
-      changePolicy: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["TimeOffPolicyChangePayload"]>(
-          async () => ({
-            timeOffPolicy: await policies.changePolicy(context.getActor(), {
-              ...input,
-              rules: toStoredRules(input.rules),
-            }),
-          }),
-          ["INVALID_INPUT", "NOT_FOUND"],
-        ),
+      discardTimeOffPolicy: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TimeOffPolicyDiscardPayload"]>(async () => {
+          await policies.discardTimeOffPolicy(context.getActor(), input);
+          return { discardedVersionId: input.versionId };
+        }, ["NOT_FOUND"]),
       stopPolicy: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["TimeOffPolicyStopPayload"]>(
-          async () => ({ timeOffPolicy: await policies.stopPolicy(context.getActor(), input) }),
-          ["INVALID_INPUT", "NOT_FOUND", "CONFLICT"],
-        ),
+        mutationPayload<ResolversTypes["TimeOffPolicyStopPayload"]>(async () => {
+          const stopped = await policies.stopPolicy(context.getActor(), input);
+          return { stoppedAssignmentId: stopped.id };
+        }, ["INVALID_INPUT", "CONFLICT"]),
       cancelPolicyChange: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["TimeOffPolicyCancelChangePayload"]>(
-          async () => ({
-            timeOffPolicy: await policies.cancelPolicyChange(context.getActor(), input),
-          }),
-          ["NOT_FOUND", "CONFLICT"],
-        ),
+        mutationPayload<ResolversTypes["TimeOffPolicyCancelChangePayload"]>(async () => {
+          await policies.cancelPolicyChange(context.getActor(), input);
+          return { cancelledAssignmentId: input.assignmentId };
+        }, ["NOT_FOUND", "CONFLICT"]),
+      publishTerms: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TermsPublishPayload"]>(async () => {
+          return { terms: await policies.publishTerms(context.getActor(), input) };
+        }, ["INVALID_INPUT", "CONFLICT"]),
     },
     Employee: {
       timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),
@@ -174,7 +169,7 @@ export function createResolvers(
           source: toEnum(source),
           startDate,
           endDate,
-          rules: toGraphqlVersion(version),
+          rules: { ...toGraphqlRules(version), id: version.id, startDate, endDate },
         })),
     },
     Terms: {
@@ -184,29 +179,42 @@ export function createResolvers(
           ? rows.filter(({ timeOffType }) => timeOffType.id === timeOffTypeId)
           : rows;
       },
+      hasUnpublishedChanges: async (terms, _args, context) =>
+        terms.unpublishedWorkingWeek !== null ||
+        (await loaders(context).termsTimeOff.load(terms.id)).some(
+          ({ unpublished }) => unpublished !== null,
+        ),
+      publishSuggestions: async (terms, { from }, context) => {
+        const suggestions = await policies.readPublishSuggestions(context.getActor(), {
+          termsId: terms.id,
+          from,
+        });
+        return {
+          versions: suggestions.versions,
+          owners: suggestions.owners.map(({ owner, ...rest }) => ({
+            ...rest,
+            termsId: "termsId" in owner ? owner.termsId : null,
+            employeeId: "employeeId" in owner ? owner.employeeId : null,
+          })),
+        };
+      },
     },
     TimeOffWithPolicies: {
       timeOffType: ({ timeOffType }) => toGraphqlType(timeOffType),
-      versions: ({ versions }) => versions.map(toGraphqlVersion),
-      offerReach: ({ termsId, timeOffType }, { from }, context) =>
-        policies.readOfferReach(context.getActor(), {
-          termsId,
-          timeOffTypeId: timeOffType.id,
-          from,
-        }),
-      earliestOffer: () => earliestChangeDate(todayInLondon()),
+      versions: ({ versions }) =>
+        versions.map(({ id, startDate, endDate, version }) => ({
+          ...toGraphqlRules(version),
+          id,
+          startDate,
+          endDate,
+        })),
+      unpublished: ({ unpublished }) => unpublished,
     },
-    TimeOffPolicy: {
-      timeOffType: ({ timeOffType }) => toGraphqlType(timeOffType),
-      versions: ({ versions }) => {
-        const today = todayInLondon();
-        return versions
-          .filter(({ endDate }) => endDate === null || endDate >= today)
-          .map(toGraphqlVersion);
-      },
-      reach: ({ id }, { from }, context) =>
-        policies.readPolicyReach(context.getActor(), { timeOffPolicyId: id, from }),
-      earliestChange: () => earliestChangeDate(todayInLondon()),
+    UnpublishedTimeOffRules: {
+      balance: ({ balance }) => BALANCE_KINDS[balance],
+      bankHolidays: ({ bankHolidays }) => bankHolidays && toEnum(bankHolidays),
+      leaveYearStart: (version) => toGraphqlRules(version).leaveYearStart,
+      yearlyEntitlement: (version) => toGraphqlRules(version).yearlyEntitlement,
     },
   };
 }
@@ -241,13 +249,10 @@ function toIdentity(
   };
 }
 
-/** A policy version as GraphQL shows it: its yearly allowance from its rules, enums in capitals. */
-function toGraphqlVersion(version: PolicyVersion) {
+/** A policy version's rules as GraphQL shows them: its yearly allowance from its rules, enums in capitals. */
+function toGraphqlRules(version: PolicyVersion) {
   const yearly = version.rules.find((rule) => rule.kind === "yearly_entitlement");
   return {
-    id: version.id,
-    startDate: version.startDate,
-    endDate: version.endDate,
     balance: BALANCE_KINDS[version.balance],
     bankHolidays: version.bankHolidays && toEnum(version.bankHolidays),
     leaveYearStart: version.leaveYear && {
@@ -256,10 +261,9 @@ function toGraphqlVersion(version: PolicyVersion) {
         version.leaveYear.kind === "leave_year_from_fixed_date" ? version.leaveYear.month : null,
       day: version.leaveYear.kind === "leave_year_from_fixed_date" ? version.leaveYear.day : null,
     },
-    yearlyEntitlement: yearly && {
-      days: yearly.entitlementDays,
-      daysPerWeek: yearly.entitlementDaysPerWeek,
-    },
+    yearlyEntitlement: yearly
+      ? { days: yearly.entitlementDays, daysPerWeek: yearly.entitlementDaysPerWeek }
+      : null,
   };
 }
 
@@ -281,41 +285,3 @@ function toBalanceKind(balance: PolicyVersion["balance"] | null) {
 }
 
 /** A person as a preview reads them: from a date, and maybe as if after a move. */
-interface PreviewedPerson {
-  employeeId: string;
-  move?: TermsMovePreview;
-  from: CalendarDate;
-}
-
-function readKey({ move, from }: PreviewedPerson): string {
-  return `${move?.termsId ?? ""}:${move?.startDate ?? ""}:${from}`;
-}
-
-function personKey(person: PreviewedPerson): string {
-  return `${readKey(person)}:${person.employeeId}`;
-}
-
-/**
- * Each person's rules for a preview, from a date and maybe as if after a move: every person read
- * the same way is one read.
- */
-function previewTimeOffLoader(timeOff: TimeOffService, context: GraphqlContext) {
-  return new DataLoader<PreviewedPerson, PersonTimeOff[] | null, string>(
-    async (keys) => {
-      const read = new Map<string, PersonTimeOff[]>();
-      for (const people of Map.groupBy(keys, readKey).values()) {
-        const { move, from } = people[0]!;
-        const employeeIds = people.map(({ employeeId }) => employeeId);
-        const rules = await timeOff.readPersonTimeOff(context.getActor(), {
-          employeeIds,
-          move,
-          from,
-        });
-        for (const [employeeId, rows] of rules)
-          read.set(personKey({ employeeId, move, from }), rows);
-      }
-      return keys.map((key) => read.get(personKey(key)) ?? null);
-    },
-    { cacheKeyFn: personKey },
-  );
-}

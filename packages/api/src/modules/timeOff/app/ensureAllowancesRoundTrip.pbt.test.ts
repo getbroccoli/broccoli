@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import fc from "fast-check";
 
 import {
@@ -9,8 +10,9 @@ import {
   giveTermsPolicies,
   OWNER,
   test,
-  transactWithTimeOffEvents,
-  workingPatternService,
+  seedWorkingPattern,
+  seedOwnWeek,
+  timeOffService,
 } from "#test/support";
 
 import { addDays } from "../../../utils";
@@ -23,18 +25,17 @@ for (const policyKey of STANDARD_LEAVE_POLICY_KEYS) {
     transact,
   }) => {
     const employees = employeeServices(orm);
-    const patterns = workingPatternService(orm, { transact: transactWithTimeOffEvents(orm) });
     const termsId = await seed.defaultTermsId();
     await giveTermsPolicies(orm, transact, { termsId, policies: [{ key: policyKey }] });
 
     await fc.assert(
       fc.asyncProperty(employmentAndPattern(), employmentAndPattern(), async (a, b) => {
         const employee = await seed.employee({ startDate: a.startDate });
-        const patternA = await patterns.createPattern(OWNER, {
+        const patternA = await seedWorkingPattern(orm, {
           name: `${employee.id}-A`,
           ...a.week,
         });
-        const patternB = await patterns.createPattern(OWNER, {
+        const patternB = await seedWorkingPattern(orm, {
           name: `${employee.id}-B`,
           ...b.week,
         });
@@ -43,17 +44,26 @@ for (const policyKey of STANDARD_LEAVE_POLICY_KEYS) {
 
         // Same-date corrections restore exactly A's input timeline, even across leave years.
         for (const [index, state] of [
-          { startDate: a.startDate, patternId: patternA.id },
-          { startDate: b.startDate, patternId: patternB.id },
-          { startDate: a.startDate, patternId: patternA.id },
+          { startDate: a.startDate, versionId: patternA.versionId },
+          { startDate: b.startDate, versionId: patternB.versionId },
+          { startDate: a.startDate, versionId: patternA.versionId },
         ].entries()) {
           await employees.updateEmployee(OWNER, { id: employee.id, startDate: state.startDate });
-          await patterns.assignPattern(OWNER, {
+          await orm.execute(
+            sql`delete from working_pattern_assignments where employee_id = ${employee.id}`,
+          );
+          await seedOwnWeek(orm, {
             employeeId: employee.id,
-            workingPatternId: state.patternId,
+            versionId: state.versionId,
             startDate: calendarDate("2025-01-01"),
             endDate: null,
           });
+          await transact((tx) =>
+            timeOffService(orm).ensureAllowances(OWNER, tx, {
+              employeeIds: [employee.id],
+              cause: { kind: "WORKING_PATTERN_CHANGED", ref: "2025-01-01" },
+            }),
+          );
           const current = await allowanceSnapshot(orm, employee.id);
           expect(current.length).toBeGreaterThan(0);
           if (index === 0) {
@@ -72,12 +82,18 @@ for (const policyKey of STANDARD_LEAVE_POLICY_KEYS) {
           if (index === 1) {
             // B must actually apply: compare its anchor year with a fresh employee at B.
             const fresh = await seed.employee({ startDate: b.startDate });
-            await patterns.assignPattern(OWNER, {
+            await seedOwnWeek(orm, {
               employeeId: fresh.id,
-              workingPatternId: patternB.id,
+              versionId: patternB.versionId,
               startDate: calendarDate("2025-01-01"),
               endDate: null,
             });
+            await transact((tx) =>
+              timeOffService(orm).ensureAllowances(OWNER, tx, {
+                employeeIds: [fresh.id],
+                cause: { kind: "WORKING_PATTERN_CHANGED", ref: "2025-01-01" },
+              }),
+            );
             const freshB = await allowanceSnapshot(orm, fresh.id);
             expect(freshB).toHaveLength(1);
             expect(freshB[0]!.lines.length).toBeGreaterThan(0);

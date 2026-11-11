@@ -1,7 +1,7 @@
 import type { RuleSource } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 import { shortDate, splitVersions, versionOn } from "@/features/termsDisplay";
-import { dayAfter } from "@/lib/calendarDay";
+import { addDays } from "@/lib/calendarDay";
 
 /** One stretch of a person on one set of terms, as the panel reads it. */
 export type TermsPeriod = {
@@ -81,7 +81,7 @@ export function rowOf<V extends DatedVersion>(
         version === current
           ? []
           : [line(version.startDate, changeOf(version, before, describe, sourceOf))];
-      const gapStart = version.endDate ? dayAfter(version.endDate) : null;
+      const gapStart = version.endDate ? addDays(version.endDate, 1) : null;
       // Nothing follows until a later version, if any: the type stops being offered.
       const stops = gapStart && next?.startDate !== gapStart ? [line(gapStart, missing)] : [];
       return [...starts, ...stops];

@@ -3,210 +3,292 @@ import { expect, it } from "vitest";
 import type { CalendarDate, CalendarDateRange } from "../../../utils";
 import { createPersonTimeline } from "./personTimeline";
 
-it("uses a direct row over the terms on a date it covers", () => {
-  const personal = { startDate: null, endDate: null, days: 25 };
-  const standard = { startDate: null, endDate: null, days: 20 };
-  const timeline = createPersonTimeline<CalendarDateRange & { days: number }>({
-    direct: [
-      {
-        id: "personal",
-        startDate: "2026-06-01" as CalendarDate,
-        endDate: "2026-06-30" as CalendarDate,
-      },
-    ],
+it("uses a direct assignment over the terms on a date it covers", () => {
+  const timeline = createPersonTimeline({
+    direct: [assignment("personal", "2026-06-10", "2026-06-20")],
     terms: [{ termsId: "terms", startDate: null, endDate: null }],
-    idOfTerms: (termsId) => (termsId === "terms" ? "standard" : null),
-    versions: (id) => (id === "personal" ? [personal] : id === "standard" ? [standard] : []),
+    version: (versionId: string) => versionId,
+    termsAssignments: () => [assignment("standard")],
   });
 
-  const version = timeline.getVersionOnDate("2026-06-15" as CalendarDate);
-
-  expect(version).toBe(personal);
+  expect(timeline.getVersionOnDate(date("2026-06-15"))).toBe("personal");
 });
 
-it("uses the terms' version without a direct row", () => {
-  const standard = { startDate: null, endDate: null, days: 20 };
-  const timeline = createPersonTimeline<CalendarDateRange & { days: number }>({
-    direct: [],
-    terms: [{ termsId: "terms", startDate: "2026-01-01" as CalendarDate, endDate: null }],
-    idOfTerms: (termsId) => (termsId === "terms" ? "standard" : null),
-    versions: (id) => (id === "standard" ? [standard] : []),
-  });
-
-  const version = timeline.getVersionOnDate("2026-06-15" as CalendarDate);
-
-  expect(version).toBe(standard);
-});
-
-it("returns null after the terms' policy ends", () => {
-  const standard = { startDate: null, endDate: "2026-12-31" as CalendarDate, days: 20 };
-  const timeline = createPersonTimeline<CalendarDateRange & { days: number }>({
+it("uses the terms' assignment without a direct assignment", () => {
+  const timeline = createPersonTimeline({
     direct: [],
     terms: [{ termsId: "terms", startDate: null, endDate: null }],
-    idOfTerms: (termsId) => (termsId === "terms" ? "standard" : null),
-    versions: (id) => (id === "standard" ? [standard] : []),
+    version: (versionId: string) => versionId,
+    termsAssignments: () => [assignment("standard")],
   });
 
-  const version = timeline.getVersionOnDate("2027-01-01" as CalendarDate);
-
-  expect(version).toBeNull();
+  expect(timeline.getVersionOnDate(date("2026-06-15"))).toBe("standard");
 });
 
-it("returns null for a person with no terms or direct row", () => {
-  const standard = { startDate: null, endDate: null, days: 20 };
-  const timeline = createPersonTimeline<CalendarDateRange & { days: number }>({
+it("returns null after the terms' assignment ends", () => {
+  const timeline = createPersonTimeline({
+    direct: [],
+    terms: [{ termsId: "terms", startDate: null, endDate: null }],
+    version: (versionId: string) => versionId,
+    termsAssignments: () => [assignment("standard", "2026-01-01", "2026-12-31")],
+  });
+
+  expect(timeline.getVersionOnDate(date("2027-01-01"))).toBeNull();
+});
+
+it("returns null for a person with no terms or direct assignment", () => {
+  const timeline = createPersonTimeline({
     direct: [],
     terms: [],
-    idOfTerms: (termsId) => (termsId === "terms" ? "standard" : null),
-    versions: (id) => (id === "standard" ? [standard] : []),
+    version: (versionId: string) => versionId,
+    termsAssignments: () => [],
   });
 
-  const version = timeline.getVersionOnDate("2026-06-15" as CalendarDate);
-
-  expect(version).toBeNull();
+  expect(timeline.getVersionOnDate(date("2026-06-15"))).toBeNull();
 });
 
-it("splits stretches where one version ends and the next starts", () => {
-  const previous = { startDate: null, endDate: "2026-12-31" as CalendarDate, days: 20 };
-  const next = { startDate: "2027-01-01" as CalendarDate, endDate: null, days: 22 };
-  const timeline = createPersonTimeline<CalendarDateRange & { days: number }>({
+it("splits stretches at a terms assignment change", () => {
+  const timeline = createPersonTimeline({
     direct: [],
     terms: [{ termsId: "terms", startDate: null, endDate: null }],
-    idOfTerms: (termsId) => (termsId === "terms" ? "standard" : null),
-    versions: (id) => (id === "standard" ? [previous, next] : []),
-  });
-
-  const stretches = timeline.getVersions(
-    "2026-12-01" as CalendarDate,
-    "2027-01-31" as CalendarDate,
-  );
-
-  expect(stretches).toEqual([
-    { id: "standard", version: previous, startDate: "2026-12-01", endDate: "2026-12-31" },
-    { id: "standard", version: next, startDate: "2027-01-01", endDate: "2027-01-31" },
-  ]);
-});
-
-it("returns to the terms' version after a direct row ends", () => {
-  const personal = { startDate: null, endDate: null, days: 25 };
-  const standard = { startDate: null, endDate: null, days: 20 };
-  const timeline = createPersonTimeline<CalendarDateRange & { days: number }>({
-    direct: [
-      {
-        id: "personal",
-        startDate: "2026-06-10" as CalendarDate,
-        endDate: "2026-06-20" as CalendarDate,
-      },
+    version: (versionId: string) => versionId,
+    termsAssignments: () => [
+      assignment("previous", "2026-01-01", "2026-12-31"),
+      assignment("next", "2027-01-01"),
     ],
-    terms: [{ termsId: "terms", startDate: null, endDate: null }],
-    idOfTerms: (termsId) => (termsId === "terms" ? "standard" : null),
-    versions: (id) => (id === "personal" ? [personal] : id === "standard" ? [standard] : []),
   });
 
-  const stretches = timeline.getVersions(
-    "2026-06-01" as CalendarDate,
-    "2026-06-30" as CalendarDate,
-  );
-
-  expect(stretches).toEqual([
-    { id: "standard", version: standard, startDate: "2026-06-01", endDate: "2026-06-09" },
-    { id: "personal", version: personal, startDate: "2026-06-10", endDate: "2026-06-20" },
-    { id: "standard", version: standard, startDate: "2026-06-21", endDate: "2026-06-30" },
+  expect(timeline.getVersions(date("2026-12-01"), date("2027-01-31"))).toEqual([
+    {
+      versionId: "previous",
+      version: "previous",
+      source: "from_their_terms",
+      startDate: "2026-12-01",
+      endDate: "2026-12-31",
+    },
+    {
+      versionId: "next",
+      version: "next",
+      source: "from_their_terms",
+      startDate: "2027-01-01",
+      endDate: "2027-01-31",
+    },
   ]);
 });
 
-it("merges consecutive rows of the same terms into one stretch", () => {
-  const standard = { startDate: null, endDate: null, days: 20 };
-  const timeline = createPersonTimeline<CalendarDateRange & { days: number }>({
+it("returns to the terms' assignment after a direct assignment ends", () => {
+  const timeline = createPersonTimeline({
+    direct: [assignment("personal", "2026-06-10", "2026-06-20")],
+    terms: [{ termsId: "terms", startDate: null, endDate: null }],
+    version: (versionId: string) => versionId,
+    termsAssignments: () => [assignment("standard")],
+  });
+
+  expect(timeline.getVersions(date("2026-06-01"), date("2026-06-30"))).toEqual([
+    {
+      versionId: "standard",
+      version: "standard",
+      source: "from_their_terms",
+      startDate: "2026-06-01",
+      endDate: "2026-06-09",
+    },
+    {
+      versionId: "personal",
+      version: "personal",
+      source: "their_own",
+      startDate: "2026-06-10",
+      endDate: "2026-06-20",
+    },
+    {
+      versionId: "standard",
+      version: "standard",
+      source: "from_their_terms",
+      startDate: "2026-06-21",
+      endDate: "2026-06-30",
+    },
+  ]);
+});
+
+it("uses the new terms' assignment after a membership change", () => {
+  const timeline = createPersonTimeline({
     direct: [],
     terms: [
-      { termsId: "terms", startDate: null, endDate: "2026-06-15" as CalendarDate },
-      { termsId: "terms", startDate: "2026-06-16" as CalendarDate, endDate: null },
+      { termsId: "england", startDate: null, endDate: date("2026-06-15") },
+      { termsId: "scotland", startDate: date("2026-06-16"), endDate: null },
     ],
-    idOfTerms: (termsId) => (termsId === "terms" ? "standard" : null),
-    versions: (id) => (id === "standard" ? [standard] : []),
+    version: (versionId: string) => versionId,
+    termsAssignments: (termsId) => [assignment(termsId)],
   });
 
-  const stretches = timeline.getVersions(
-    "2026-06-01" as CalendarDate,
-    "2026-06-30" as CalendarDate,
-  );
+  expect(timeline.getVersions(date("2026-06-01"), date("2026-06-30"))).toEqual([
+    {
+      versionId: "england",
+      version: "england",
+      source: "from_their_terms",
+      startDate: "2026-06-01",
+      endDate: "2026-06-15",
+    },
+    {
+      versionId: "scotland",
+      version: "scotland",
+      source: "from_their_terms",
+      startDate: "2026-06-16",
+      endDate: "2026-06-30",
+    },
+  ]);
+});
 
-  expect(stretches).toEqual([
-    { id: "standard", version: standard, startDate: "2026-06-01", endDate: "2026-06-30" },
+it("merges neighbouring stretches with the same version and source", () => {
+  const timeline = createPersonTimeline({
+    direct: [],
+    terms: [
+      { termsId: "first", startDate: null, endDate: date("2026-06-15") },
+      { termsId: "second", startDate: date("2026-06-16"), endDate: null },
+    ],
+    version: (versionId: string) => versionId,
+    termsAssignments: () => [assignment("shared")],
+  });
+
+  expect(timeline.getVersions(date("2026-06-01"), date("2026-06-30"))).toEqual([
+    {
+      versionId: "shared",
+      version: "shared",
+      source: "from_their_terms",
+      startDate: "2026-06-01",
+      endDate: "2026-06-30",
+    },
+  ]);
+});
+
+it("keeps a source change visible even when the version stays the same", () => {
+  const timeline = createPersonTimeline({
+    direct: [assignment("shared", "2026-06-01", "2026-06-15")],
+    terms: [{ termsId: "terms", startDate: null, endDate: null }],
+    version: (versionId: string) => versionId,
+    termsAssignments: () => [assignment("shared")],
+  });
+
+  expect(timeline.getVersions(date("2026-06-01"), date("2026-06-30"))).toEqual([
+    {
+      versionId: "shared",
+      version: "shared",
+      source: "their_own",
+      startDate: "2026-06-01",
+      endDate: "2026-06-15",
+    },
+    {
+      versionId: "shared",
+      version: "shared",
+      source: "from_their_terms",
+      startDate: "2026-06-16",
+      endDate: "2026-06-30",
+    },
   ]);
 });
 
 it("leaves days without a version out of the stretches", () => {
-  const previous = {
-    startDate: "2026-06-05" as CalendarDate,
-    endDate: "2026-06-10" as CalendarDate,
-    days: 20,
-  };
-  const next = {
-    startDate: "2026-06-20" as CalendarDate,
-    endDate: "2026-06-25" as CalendarDate,
-    days: 22,
-  };
-  const timeline = createPersonTimeline<CalendarDateRange & { days: number }>({
+  const timeline = createPersonTimeline({
     direct: [],
     terms: [{ termsId: "terms", startDate: null, endDate: null }],
-    idOfTerms: (termsId) => (termsId === "terms" ? "standard" : null),
-    versions: (id) => (id === "standard" ? [previous, next] : []),
+    version: (versionId: string) => versionId,
+    termsAssignments: () => [
+      assignment("previous", "2026-06-05", "2026-06-10"),
+      assignment("next", "2026-06-20", "2026-06-25"),
+    ],
   });
 
-  const stretches = timeline.getVersions(
-    "2026-06-01" as CalendarDate,
-    "2026-06-30" as CalendarDate,
-  );
-
-  expect(stretches).toEqual([
-    { id: "standard", version: previous, startDate: "2026-06-05", endDate: "2026-06-10" },
-    { id: "standard", version: next, startDate: "2026-06-20", endDate: "2026-06-25" },
+  expect(timeline.getVersions(date("2026-06-01"), date("2026-06-30"))).toEqual([
+    {
+      versionId: "previous",
+      version: "previous",
+      source: "from_their_terms",
+      startDate: "2026-06-05",
+      endDate: "2026-06-10",
+    },
+    {
+      versionId: "next",
+      version: "next",
+      source: "from_their_terms",
+      startDate: "2026-06-20",
+      endDate: "2026-06-25",
+    },
   ]);
+});
+
+it("resolves each time off type independently", () => {
+  const terms = [{ termsId: "terms", startDate: null, endDate: null }];
+  const annual = createPersonTimeline({
+    direct: [assignment("own-annual")],
+    terms,
+    version: (versionId: string) => versionId,
+    termsAssignments: () => [assignment("terms-annual")],
+  });
+  const sickness = createPersonTimeline({
+    direct: [],
+    terms,
+    version: (versionId: string) => versionId,
+    termsAssignments: () => [assignment("terms-sickness")],
+  });
+
+  expect(annual.getVersionOnDate(date("2026-06-01"))).toBe("own-annual");
+  expect(sickness.getVersionOnDate(date("2026-06-01"))).toBe("terms-sickness");
 });
 
 it("reaches a person who joins the terms after the change date while employed", () => {
   const timeline = createPersonTimeline({
     direct: [],
-    terms: [{ termsId: "terms", startDate: "2026-12-01" as CalendarDate, endDate: null }],
-    idOfTerms: (termsId) => (termsId === "terms" ? "standard" : null),
-    versions: () => [{ startDate: null, endDate: null }],
+    terms: [{ termsId: "terms", startDate: date("2026-12-01"), endDate: null }],
+    version: (versionId: string) => versionId,
+    termsAssignments: () => [assignment("standard")],
   });
 
-  const reached = timeline.appliesFrom("standard", "2026-11-01" as CalendarDate, [
-    { startDate: "2026-01-01" as CalendarDate, endDate: null },
-  ]);
-
-  expect(reached).toBe(true);
+  expect(
+    timeline.appliesFrom((versionId) => versionId === "standard", date("2026-11-01"), [
+      period("2026-01-01"),
+    ]),
+  ).toBe(true);
 });
 
 it("does not reach a person whose employment ended before the change date", () => {
   const timeline = createPersonTimeline({
     direct: [],
     terms: [{ termsId: "terms", startDate: null, endDate: null }],
-    idOfTerms: (termsId) => (termsId === "terms" ? "standard" : null),
-    versions: () => [{ startDate: null, endDate: null }],
+    version: (versionId: string) => versionId,
+    termsAssignments: () => [assignment("standard")],
   });
 
-  const reached = timeline.appliesFrom("standard", "2026-11-01" as CalendarDate, [
-    { startDate: "2026-01-01" as CalendarDate, endDate: "2026-10-31" as CalendarDate },
-  ]);
-
-  expect(reached).toBe(false);
+  expect(
+    timeline.appliesFrom((versionId) => versionId === "standard", date("2026-11-01"), [
+      period("2026-01-01", "2026-10-31"),
+    ]),
+  ).toBe(false);
 });
 
-it("does not reach a person whose own row covers every day from the change date on", () => {
+it("does not reach a person whose own assignment covers every later day", () => {
   const timeline = createPersonTimeline({
-    direct: [{ id: "personal", startDate: "2026-11-01" as CalendarDate, endDate: null }],
+    direct: [assignment("personal", "2026-11-01")],
     terms: [{ termsId: "terms", startDate: null, endDate: null }],
-    idOfTerms: (termsId) => (termsId === "terms" ? "standard" : null),
-    versions: () => [{ startDate: null, endDate: null }],
+    version: (versionId: string) => versionId,
+    termsAssignments: () => [assignment("standard")],
   });
 
-  const reached = timeline.appliesFrom("standard", "2026-11-01" as CalendarDate, [
-    { startDate: "2026-01-01" as CalendarDate, endDate: null },
-  ]);
-
-  expect(reached).toBe(false);
+  expect(
+    timeline.appliesFrom((versionId) => versionId === "standard", date("2026-11-01"), [
+      period("2026-01-01"),
+    ]),
+  ).toBe(false);
 });
+
+function date(value: string): CalendarDate {
+  return value as CalendarDate;
+}
+function period(startDate: string, endDate: string | null = null): CalendarDateRange {
+  return { startDate: date(startDate), endDate: endDate === null ? null : date(endDate) };
+}
+function assignment(versionId: string, startDate = "2026-01-01", endDate: string | null = null) {
+  return {
+    versionId,
+    startDate: date(startDate),
+    endDate: endDate === null ? null : date(endDate),
+  };
+}

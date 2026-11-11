@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
-import { dayAfter } from "@/lib/calendarDay";
+import { addDays } from "@/lib/calendarDay";
 import { cn } from "@/lib/class-names";
 import {
   companyToday,
@@ -14,6 +14,7 @@ import {
   TimeOffTypeIcon,
 } from "@/features/termsDisplay";
 
+import { DraftPill } from "./DraftPill";
 import type { TimeOffRow } from "./termsQueries";
 
 type Props = {
@@ -24,12 +25,13 @@ type Props = {
   onEdit: () => void;
   onStop: () => void;
   onCancelPlanned: (version: TimeOffRow["versions"][number]) => void;
-  onCancelStop: (stopDate: string) => void;
+  onCancelStop: (version: TimeOffRow["versions"][number]) => void;
+  onDiscard: () => void;
 };
 
 /**
- * One time off type on the terms: its rules today or "Not offered here", planned rules and a
- * planned stop, or its form.
+ * One time off type on the terms: its rules today or "Not offered here", planned and unpublished
+ * rules and a planned stop, or its form.
  */
 export function TimeOffRuleRow({
   row,
@@ -39,12 +41,13 @@ export function TimeOffRuleRow({
   onStop,
   onCancelPlanned,
   onCancelStop,
+  onDiscard,
 }: Props) {
-  const { timeOffType } = row;
+  const { timeOffType, unpublished } = row;
   const { current, planned } = splitVersions(row.versions, companyToday());
-  // The last version ending is a planned stop: the type is not offered from the day after.
-  const lastEnd = (planned.at(-1) ?? current)?.endDate;
-  const stopDate = lastEnd ? dayAfter(lastEnd) : null;
+  // The last rules ending is a planned stop: the type is not offered from the day after.
+  const stopped = planned.at(-1) ?? current;
+  const stopDate = stopped?.endDate ? addDays(stopped.endDate, 1) : null;
   return (
     <li
       className={cn(
@@ -78,14 +81,23 @@ export function TimeOffRuleRow({
                 </Button>
               </div>
             ))}
-          {!open && stopDate && (
+          {!open && stopped && stopDate && (
             <div className="mt-1.5 flex items-center gap-2 text-[13px] text-muted-foreground">
               <CalendarBlank aria-hidden className="shrink-0" />
               <span className="flex-1">
                 {t("terms.timeOff.stops", { date: shortDate(stopDate) })}
               </span>
-              <Button variant="ghost" size="sm" onClick={() => onCancelStop(stopDate)}>
+              <Button variant="ghost" size="sm" onClick={() => onCancelStop(stopped)}>
                 {t("terms.edit.cancelChange")}
+              </Button>
+            </div>
+          )}
+          {!open && unpublished && (
+            <div className="mt-1.5 flex items-center gap-2 text-[13px] text-muted-foreground">
+              <DraftPill />
+              <span className="flex-1">{ruleLine(unpublished)}</span>
+              <Button variant="ghost" size="sm" onClick={onDiscard}>
+                {t("terms.edit.discard")}
               </Button>
             </div>
           )}
@@ -96,14 +108,14 @@ export function TimeOffRuleRow({
           </span>
         )}
         {/* A type with a planned offer or stop shows its plan, and no Offer, Edit or Stop until that is cancelled. */}
-        {!open && !stopDate && current && planned.length === 0 && (
+        {!open && !stopDate && current && planned.length === 0 && !unpublished && (
           <Button variant="ghost" size="sm" onClick={onStop}>
             {t("terms.edit.stop")}
           </Button>
         )}
-        {!open && !stopDate && (current || planned.length === 0) && (
-          <Button variant={current ? "ghost" : "outline"} size="sm" onClick={onEdit}>
-            {t(current ? "terms.edit.edit" : "terms.edit.offer")}
+        {!open && !stopDate && (current || unpublished || planned.length === 0) && (
+          <Button variant={current || unpublished ? "ghost" : "outline"} size="sm" onClick={onEdit}>
+            {t(current || unpublished ? "terms.edit.edit" : "terms.edit.offer")}
           </Button>
         )}
       </div>

@@ -1,17 +1,15 @@
-import { eq } from "drizzle-orm";
-
 import {
   ADMIN,
-  calendarDate,
   EMPLOYEE,
   expect,
-  giveTermsPolicies,
+  seedTermsPolicy,
   seedTimeOffType,
   test,
   timeOffService,
 } from "#test/support";
 
-import { timeOffPolicyVersions } from "../db";
+import { timeOffPolicyRepository } from "../db";
+import { RECORD_ONLY_POLICY, STANDARD_LEAVE_POLICIES } from "../domain";
 
 test("lists every type in order with no versions for each terms without policies", async ({
   orm,
@@ -38,35 +36,47 @@ test("lists every type in order with no versions for each terms without policies
   }
 });
 
-test("reads a terms' current and planned policy versions in date order, leaving past versions out", async ({
+test("reads policy assignments ending this leave year and planned ones in date order, leaving last year's out", async ({
   orm,
   seed,
-  transact,
 }) => {
   const termsId = await seed.defaultTermsId();
   const otherId = await seed.terms("Scotland");
-  await giveTermsPolicies(orm, transact, { termsId, policies: [{ key: "uk_statutory_minimum" }] });
-  const [past] = await orm.select().from(timeOffPolicyVersions);
-  await orm
-    .update(timeOffPolicyVersions)
-    .set({ endDate: calendarDate("2026-11-05") })
-    .where(eq(timeOffPolicyVersions.id, past!.id));
-  await orm.insert(timeOffPolicyVersions).values([
-    {
-      timeOffPolicyId: past!.timeOffPolicyId,
-      startDate: calendarDate("2027-01-01"),
-      balance: "no_balance",
-    },
-    {
-      timeOffPolicyId: past!.timeOffPolicyId,
-      startDate: calendarDate("2026-11-06"),
-      endDate: calendarDate("2026-12-31"),
+  const [type] = (await timeOffPolicyRepository(orm).findAllTypes()).filter(
+    ({ typeKey }) => typeKey === "annual_leave",
+  );
+  await seedTermsPolicy(orm, {
+    termsId,
+    timeOffTypeId: type!.id,
+    version: STANDARD_LEAVE_POLICIES.uk_statutory_minimum,
+    startDate: "2025-01-01",
+    endDate: "2025-12-31",
+  });
+  const earlier = await seedTermsPolicy(orm, {
+    termsId,
+    timeOffTypeId: type!.id,
+    version: STANDARD_LEAVE_POLICIES.uk_statutory_minimum,
+    startDate: "2026-01-01",
+    endDate: "2026-11-05",
+  });
+  const planned = await seedTermsPolicy(orm, {
+    termsId,
+    timeOffTypeId: type!.id,
+    version: RECORD_ONLY_POLICY,
+    startDate: "2027-01-01",
+  });
+  const current = await seedTermsPolicy(orm, {
+    termsId,
+    timeOffTypeId: type!.id,
+    version: {
       balance: "unlimited_balance",
-      leaveYearStart: "leave_year_from_fixed_date",
-      leaveYearStartMonth: 1,
-      leaveYearStartDay: 1,
+      bankHolidays: null,
+      leaveYear: { kind: "leave_year_from_fixed_date", month: 1, day: 1 },
+      rules: [],
     },
-  ]);
+    startDate: "2026-11-06",
+    endDate: "2026-12-31",
+  });
   const service = timeOffService(orm, { today: "2026-11-06" });
 
   const result = await service.readTermsTimeOff(ADMIN, [termsId, otherId]);
@@ -75,8 +85,24 @@ test("reads a terms' current and planned policy versions in date order, leaving 
     result.get(termsId)!.find(({ timeOffType }) => timeOffType.typeKey === "annual_leave")!
       .versions,
   ).toMatchObject([
-    { startDate: "2026-11-06", endDate: "2026-12-31", balance: "unlimited_balance" },
-    { startDate: "2027-01-01", endDate: null, balance: "no_balance" },
+    {
+      id: earlier.assignmentId,
+      startDate: "2026-01-01",
+      endDate: "2026-11-05",
+      version: { id: earlier.versionId, balance: "balance_from_allowance" },
+    },
+    {
+      id: current.assignmentId,
+      startDate: "2026-11-06",
+      endDate: "2026-12-31",
+      version: { id: current.versionId, balance: "unlimited_balance" },
+    },
+    {
+      id: planned.assignmentId,
+      startDate: "2027-01-01",
+      endDate: null,
+      version: { id: planned.versionId, balance: "no_balance" },
+    },
   ]);
   expect(result.get(otherId)!.map(({ versions }) => versions)).toEqual([[], [], [], []]);
 });

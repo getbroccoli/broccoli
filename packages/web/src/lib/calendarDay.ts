@@ -9,8 +9,8 @@ export function calendarDayParts(day: string): [number, number, number] {
   return [year!, month! - 1, date!];
 }
 
-/** The `YYYY-MM-DD` day after `day`. */
-export function dayAfter(day: string): string {
+/** The `YYYY-MM-DD` day `days` after `day`; negative goes back. */
+export function addDays(day: string, days: number): string {
   const [year, month, date] = calendarDayParts(day);
-  return new Date(Date.UTC(year, month, date + 1)).toISOString().slice(0, 10);
+  return calendarDayOf(new Date(Date.UTC(year, month, date + days)), "UTC");
 }

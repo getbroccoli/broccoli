@@ -22,12 +22,12 @@ export interface TimeOffRepository {
     from: CalendarDate;
     until: CalendarDate;
   }): Promise<{ timeOffTypeId: string; days: number }[]>;
-  /** Of `employeeIds`, those with approved or pending time off of the type on a day from `from` on. */
-  findPeopleWithTimeOffFrom(input: {
+  /** The days from `from` on that `employeeIds` have approved or pending time off of the type. */
+  findDaysFrom(input: {
     employeeIds: readonly string[];
     timeOffTypeId: string;
     from: CalendarDate;
-  }): Promise<string[]>;
+  }): Promise<{ employeeId: string; date: CalendarDate }[]>;
 }
 
 export function timeOffRepository(tx: Tx): TimeOffRepository {
@@ -56,9 +56,9 @@ export function timeOffRepository(tx: Tx): TimeOffRepository {
         .groupBy(timeOff.timeOffTypeId);
       return rows.map((row) => ({ ...row, days: Number(row.days) }));
     },
-    async findPeopleWithTimeOffFrom({ employeeIds, timeOffTypeId, from }) {
-      const rows = await ormOf(tx)
-        .selectDistinct({ employeeId: timeOff.employeeId })
+    async findDaysFrom({ employeeIds, timeOffTypeId, from }) {
+      return ormOf(tx)
+        .selectDistinct({ employeeId: timeOff.employeeId, date: timeOffDays.date })
         .from(timeOffDays)
         .innerJoin(timeOff, eq(timeOff.id, timeOffDays.timeOffId))
         .where(
@@ -68,7 +68,6 @@ export function timeOffRepository(tx: Tx): TimeOffRepository {
             counted(from, LAST_DAY),
           ),
         );
-      return rows.map(({ employeeId }) => employeeId);
     },
   };
 }

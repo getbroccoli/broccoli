@@ -6,7 +6,7 @@ import { testTransactor } from "./testTransactor";
 import { timeOffService } from "./timeOffService";
 
 /** Employment terms as they stand on the supplied date; cloning copies time off rules on it too. */
-export function termsService(orm: Orm, { today }: { today: string }) {
+export function termsService(orm: Orm, { today = "2026-06-01" }: { today?: string } = {}) {
   return createTermsService({
     orm,
     transact: testTransactor(orm),

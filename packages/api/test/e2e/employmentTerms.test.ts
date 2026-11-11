@@ -1,10 +1,9 @@
-import { approveReviewedImport, expect, test, TEST_OWNER } from "#test/support";
-import type { Browser, TestEnv } from "#test/support";
+import { expect, test, setUpEmploymentTerms, readTermsSettings } from "#test/support";
 
 test("an admin can list and open the default terms with their week, time off and setup history", async ({
   env,
 }) => {
-  const browser = await setUpTerms(env);
+  const browser = await setUpEmploymentTerms(env);
   const id = await env.seed.defaultTermsId();
 
   const response = await browser.graphql(
@@ -37,230 +36,31 @@ test("an admin can list and open the default terms with their week, time off and
   });
 });
 
-test("an admin can plan Annual leave rules, read them on terms with history, and cancel them", async ({
-  env,
-}) => {
-  const browser = await setUpTerms(env);
-  const id = await env.seed.defaultTermsId();
-  const nextYearStart = `${new Date().getUTCFullYear() + 1}-01-01`;
-  const annual = await readTermsPolicy(browser, id, "ANNUAL_LEAVE");
-
-  const changed = await browser.graphql(
-    `mutation ChangePolicy($input: TimeOffPolicyChangeInput!) {
-    timeOff { changePolicy(input: $input) { timeOffPolicy { id } error { __typename } } }
-  }`,
-    {
-      input: {
-        timeOffPolicyId: annual.policy!.id,
-        startDate: nextYearStart,
-        rules: {
-          balance: "BALANCE_FROM_ALLOWANCE",
-          entitlementDays: 22,
-          bankHolidays: "BANK_HOLIDAYS_ON_TOP_OF_ALLOWANCE",
-        },
-      },
-    },
-  );
-
-  expect(await changed.json()).toEqual({
-    data: { timeOff: { changePolicy: { error: null, timeOffPolicy: { id: annual.policy!.id } } } },
-  });
-  const planned = await browser.graphql(termsPolicyQuery, { id });
-  expect(await planned.json()).toMatchObject({
-    data: {
-      terms: {
-        timeOff: expect.arrayContaining([
-          {
-            timeOffType: { id: annual.timeOffType.id },
-            policy: {
-              id: annual.policy!.id,
-              versions: [
-                { startDate: null, yearlyEntitlement: { days: 20 } },
-                { startDate: nextYearStart, yearlyEntitlement: { days: 22 } },
-              ],
-            },
-          },
-        ]) as unknown,
-        history: {
-          edges: expect.arrayContaining([
-            {
-              node: {
-                operation: "UPDATED",
-                changes: [{ field: `timeOff.${annual.timeOffType.id}` }],
-              },
-            },
-          ]) as unknown,
-        },
-      },
-    },
-  });
-
-  const cancelled = await browser.graphql(
-    `mutation CancelPolicy($input: TimeOffPolicyCancelChangeInput!) {
-    timeOff { cancelPolicyChange(input: $input) { timeOffPolicy { id } error { __typename } } }
-  }`,
-    { input: { timeOffPolicyId: annual.policy!.id, startDate: nextYearStart } },
-  );
-
-  expect(await cancelled.json()).toMatchObject({
-    data: {
-      timeOff: { cancelPolicyChange: { error: null, timeOffPolicy: { id: annual.policy!.id } } },
-    },
-  });
-  const restored = await browser.graphql(termsPolicyQuery, { id });
-  expect(await restored.json()).toMatchObject({
-    data: {
-      terms: {
-        timeOff: expect.arrayContaining([
-          {
-            timeOffType: { id: annual.timeOffType.id },
-            policy: {
-              id: annual.policy!.id,
-              versions: [{ startDate: null, yearlyEntitlement: { days: 20 } }],
-            },
-          },
-        ]) as unknown,
-      },
-    },
-  });
-});
-
 test("an admin can stop a policy through GraphQL", async ({ env }) => {
-  const browser = await setUpTerms(env);
-  const id = await env.seed.defaultTermsId();
-  const year = new Date().getUTCFullYear();
-  const family = await readTermsPolicy(browser, id, "FAMILY_LEAVE");
+  const browser = await setUpEmploymentTerms(env);
+  const termsId = await env.seed.defaultTermsId();
+  const before = await readTermsSettings(browser, termsId);
+  const year = Number(before.earliestChange.slice(0, 4));
+  const family = before.timeOff.find(({ timeOffType }) => timeOffType.typeKey === "FAMILY_LEAVE")!;
 
   const stopped = await browser.graphql(
     `mutation StopPolicy($input: TimeOffPolicyStopInput!) {
     timeOff { stopPolicy(input: $input) {
-      timeOffPolicy { id versions { startDate endDate } }
+      stoppedAssignmentId
       error { __typename }
     } }
   }`,
-    { input: { timeOffPolicyId: family.policy!.id, stopDate: `${year + 1}-01-01` } },
+    { input: { termsId, timeOffTypeId: family.timeOffType.id, stopDate: `${year + 1}-01-01` } },
   );
 
-  const timeOffPolicy = {
-    id: family.policy!.id,
-    versions: [{ startDate: null, endDate: `${year}-12-31` }],
-  };
   expect(await stopped.json()).toEqual({
-    data: { timeOff: { stopPolicy: { error: null, timeOffPolicy } } },
+    data: { timeOff: { stopPolicy: { error: null, stoppedAssignmentId: family.versions[0]!.id } } },
   });
+  const after = await readTermsSettings(browser, termsId);
+  expect(
+    after.timeOff.find(({ timeOffType }) => timeOffType.id === family.timeOffType.id)!.versions,
+  ).toEqual([{ ...family.versions[0], endDate: `${year}-12-31` }]);
 });
-
-test("an admin can change the terms' working week from today through GraphQL", async ({ env }) => {
-  const browser = await setUpTerms(env);
-  const id = await env.seed.defaultTermsId();
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
-  const week = {
-    mondayMinutes: 480,
-    tuesdayMinutes: 480,
-    wednesdayMinutes: 480,
-    thursdayMinutes: 480,
-    fridayMinutes: 0,
-    saturdayMinutes: 0,
-    sundayMinutes: 0,
-    bankHolidayCalendar: "ENGLAND_AND_WALES",
-  };
-  const overview = await browser.graphql(
-    `query Terms($id: ID!) { terms(id: $id) { workingPattern { id } } }`,
-    { id },
-  );
-  const { data } = (await overview.json()) as {
-    data: { terms: { workingPattern: { id: string } } };
-  };
-  const workingPatternId = data.terms.workingPattern.id;
-
-  const changed = await browser.graphql(
-    `mutation ChangeWeek($input: WorkingPatternChangeInput!) {
-    employees { changeWorkingPattern(input: $input) { workingPattern { id } error { __typename } } }
-  }`,
-    {
-      input: {
-        workingPatternId,
-        startDate: today,
-        ...week,
-      },
-    },
-  );
-
-  expect(await changed.json()).toEqual({
-    data: {
-      employees: {
-        changeWorkingPattern: { error: null, workingPattern: { id: workingPatternId } },
-      },
-    },
-  });
-  const response = await browser.graphql(
-    `query Terms($id: ID!) { terms(id: $id) { workingPattern { id versions {
-    startDate mondayMinutes tuesdayMinutes wednesdayMinutes thursdayMinutes fridayMinutes saturdayMinutes sundayMinutes bankHolidayCalendar
-  } } } }`,
-    { id },
-  );
-  expect(await response.json()).toEqual({
-    data: {
-      terms: {
-        workingPattern: {
-          id: workingPatternId,
-          versions: [
-            {
-              startDate: today,
-              ...week,
-            },
-          ],
-        },
-      },
-    },
-  });
-});
-
-async function readTermsPolicy(browser: Browser, id: string, typeKey: string) {
-  const response = await browser.graphql(
-    `query Terms($id: ID!) {
-      terms(id: $id) { timeOff { timeOffType { id typeKey } policy { id } } }
-    }`,
-    { id },
-  );
-  const { data } = (await response.json()) as {
-    data: {
-      terms: {
-        timeOff: { timeOffType: { id: string; typeKey: string }; policy: { id: string } | null }[];
-      };
-    };
-  };
-  return data.terms.timeOff.find(({ timeOffType }) => timeOffType.typeKey === typeKey)!;
-}
-
-async function setUpTerms(env: TestEnv) {
-  const browser = await env.startSetupAtImport();
-  expect(await (await approveReviewedImport(browser)).json()).toMatchObject({
-    data: { imports: { approve: { error: null } } },
-  });
-  const setup = await browser.post("/api/auth/setup", {
-    ...TEST_OWNER,
-    timeOff: {
-      terms: [
-        {
-          bankHolidayCalendar: "england_and_wales",
-          workingWeek: "monday_to_friday_7_5_hours",
-          annualLeavePolicyKey: "uk_20_days_plus_bank_holidays",
-        },
-      ],
-      locationTerms: [],
-    },
-  });
-  expect(setup.status).toBe(200);
-  return browser;
-}
-
-const termsPolicyQuery = `query Terms($id: ID!) {
-  terms(id: $id) {
-    timeOff { timeOffType { id } policy { id versions { startDate yearlyEntitlement { days } } } }
-    history { edges { node { operation changes { field } } } }
-  }
-}`;
 
 const defaultTerms = {
   name: "England and Wales",
@@ -289,9 +89,39 @@ const defaultTerms = {
         },
       ],
     },
-    recordOnlyType("Sickness", "SICKNESS"),
-    recordOnlyType("Family leave", "FAMILY_LEAVE"),
-    recordOnlyType("Other", "OTHER"),
+    {
+      timeOffType: { name: "Sickness", typeKey: "SICKNESS" },
+      versions: [
+        {
+          balance: "NO_BALANCE",
+          bankHolidays: null,
+          leaveYearStart: null,
+          yearlyEntitlement: null,
+        },
+      ],
+    },
+    {
+      timeOffType: { name: "Family leave", typeKey: "FAMILY_LEAVE" },
+      versions: [
+        {
+          balance: "NO_BALANCE",
+          bankHolidays: null,
+          leaveYearStart: null,
+          yearlyEntitlement: null,
+        },
+      ],
+    },
+    {
+      timeOffType: { name: "Other", typeKey: "OTHER" },
+      versions: [
+        {
+          balance: "NO_BALANCE",
+          bankHolidays: null,
+          leaveYearStart: null,
+          yearlyEntitlement: null,
+        },
+      ],
+    },
   ],
   history: {
     edges: [
@@ -305,12 +135,3 @@ const defaultTerms = {
     ],
   },
 };
-
-function recordOnlyType(name: string, typeKey: string) {
-  return {
-    timeOffType: { name, typeKey },
-    versions: [
-      { balance: "NO_BALANCE", bankHolidays: null, leaveYearStart: null, yearlyEntitlement: null },
-    ],
-  };
-}

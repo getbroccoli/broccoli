@@ -12,14 +12,11 @@ import {
   timeOffPolicyService,
   timeOffService,
 } from "#test/support";
-import { ApplicationError } from "../../../core/applicationError";
 import { timeOffPolicyRepository } from "../db";
+import type { TimeOffRulesInput } from "../domain";
+import type { TimeOffPolicyService } from "./timeOffPolicyService";
 
-test("stopping from a future date ends today's version the day before and deletes later planned versions", async ({
-  orm,
-  seed,
-  transact,
-}) => {
+test("a stop ends rules and deletes later rows", async ({ orm, seed, transact }) => {
   const termsId = await seed.defaultTermsId();
   await giveTermsPolicies(orm, transact, {
     termsId,
@@ -28,8 +25,9 @@ test("stopping from a future date ends today's version the day before and delete
   });
   const [policy] = await readTermsPolicies(orm, termsId);
   const service = timeOffPolicyService(orm, { today: "2026-11-06" });
-  await service.changePolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
+  await publishRules(service, {
+    termsId,
+    timeOffTypeId: policy!.timeOffTypeId,
     startDate: "2027-02-01",
     rules: {
       balance: "balance_from_allowance",
@@ -39,44 +37,47 @@ test("stopping from a future date ends today's version the day before and delete
   });
 
   const result = await service.stopPolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
+    termsId,
+    timeOffTypeId: policy!.timeOffTypeId,
     stopDate: "2027-01-01",
   });
 
   expect(result).toMatchObject({
-    id: policy!.id,
-    versions: [{ startDate: null, endDate: "2026-12-31", rules: [{ entitlementDays: 20 }] }],
+    owner: { termsId },
+    timeOffTypeId: policy!.timeOffTypeId,
+    versionId: policy!.versionId,
+    startDate: "2026-01-01",
+    endDate: "2026-12-31",
   });
-  expect(await timeOffPolicyRepository(orm).findAll()).toEqual([result]);
+  expect(await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).toEqual([
+    result,
+  ]);
 });
 
-test("stopping from today ends the version yesterday and leaves the type not offered", async ({
+test("stopping from today ends the assignment yesterday and leaves the type not offered", async ({
   orm,
   seed,
   transact,
 }) => {
   const termsId = await seed.defaultTermsId();
-  await giveTermsPolicies(orm, transact, {
-    termsId,
-    policies: [{ recordOnly: "family_leave" }],
-    today: "2026-11-06",
-  });
+  await giveTermsPolicies(orm, transact, { termsId, policies: [{ recordOnly: "family_leave" }] });
   const [policy] = await readTermsPolicies(orm, termsId);
   const service = timeOffPolicyService(orm, { today: "2026-11-06" });
 
   const result = await service.stopPolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
+    termsId,
+    timeOffTypeId: policy!.timeOffTypeId,
     stopDate: "2026-11-06",
   });
 
-  expect(result.versions).toMatchObject([{ startDate: null, endDate: "2026-11-05" }]);
+  expect(result).toMatchObject({ startDate: "2026-01-01", endDate: "2026-11-05" });
   const timeOff = await timeOffService(orm, { today: "2026-11-06" }).readTermsTimeOff(OWNER, [
     termsId,
   ]);
   expect(
-    timeOff.get(termsId)!.find(({ timeOffType }) => timeOffType.id === result.timeOffType.id)!
+    timeOff.get(termsId)!.find(({ timeOffType }) => timeOffType.id === result.timeOffTypeId)!
       .versions,
-  ).toEqual([]);
+  ).toMatchObject([{ endDate: "2026-11-05" }]);
 });
 
 test.for(["approved", "pending_approval"] as const)(
@@ -84,31 +85,30 @@ test.for(["approved", "pending_approval"] as const)(
   async (status, { orm, seed, transact }) => {
     const employee = await seed.employee({ startDate: "2025-01-01" });
     const termsId = await seed.defaultTermsId();
-    await giveTermsPolicies(orm, transact, {
-      termsId,
-      policies: [{ recordOnly: "family_leave" }],
-      today: "2026-11-06",
-    });
-    const [policy] = await timeOffPolicyRepository(orm).findAll();
+    await giveTermsPolicies(orm, transact, { termsId, policies: [{ recordOnly: "family_leave" }] });
+    const [policy] = await readTermsPolicies(orm, termsId);
     await seedTimeOff(orm, {
       employeeId: employee.id,
-      timeOffTypeId: policy!.timeOffType.id,
+      timeOffTypeId: policy!.timeOffTypeId,
       status,
       days: [{ date: "2027-01-01", dayPart: "full_day" }],
     });
     const service = timeOffPolicyService(orm, { today: "2026-11-06" });
+    const before = await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] });
 
     const stopping = service.stopPolicy(OWNER, {
-      timeOffPolicyId: policy!.id,
+      termsId,
+      timeOffTypeId: policy!.timeOffTypeId,
       stopDate: "2027-01-01",
     });
 
-    await expect(stopping).rejects.toBeInstanceOf(ApplicationError);
     await expect(stopping).rejects.toMatchObject({
       code: "CONFLICT",
       message: "1 person has this time off type booked from that date.",
     });
-    expect(await timeOffPolicyRepository(orm).findAll()).toEqual([policy]);
+    expect(await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).toEqual(
+      before,
+    );
   },
 );
 
@@ -119,26 +119,23 @@ test("declined time off after the stop date does not prevent stopping the type",
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const termsId = await seed.defaultTermsId();
-  await giveTermsPolicies(orm, transact, {
-    termsId,
-    policies: [{ recordOnly: "family_leave" }],
-    today: "2026-11-06",
-  });
-  const [policy] = await timeOffPolicyRepository(orm).findAll();
+  await giveTermsPolicies(orm, transact, { termsId, policies: [{ recordOnly: "family_leave" }] });
+  const [policy] = await readTermsPolicies(orm, termsId);
   await seedTimeOff(orm, {
     employeeId: employee.id,
-    timeOffTypeId: policy!.timeOffType.id,
+    timeOffTypeId: policy!.timeOffTypeId,
     status: "declined",
     days: [{ date: "2027-01-04", dayPart: "full_day" }],
   });
   const service = timeOffPolicyService(orm, { today: "2026-11-06" });
 
   const result = await service.stopPolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
+    termsId,
+    timeOffTypeId: policy!.timeOffTypeId,
     stopDate: "2027-01-01",
   });
 
-  expect(result.versions).toMatchObject([{ startDate: null, endDate: "2026-12-31" }]);
+  expect(result).toMatchObject({ startDate: "2026-01-01", endDate: "2026-12-31" });
 });
 
 test.for(["2026-12-31", "2027-01-01"])(
@@ -147,21 +144,24 @@ test.for(["2026-12-31", "2027-01-01"])(
     const termsId = await seed.defaultTermsId();
     const type = await seedTimeOffType(orm, "Study leave");
     const service = timeOffPolicyService(orm, { today: "2026-11-06" });
-    const policy = await service.createPolicy(OWNER, {
+    await publishRules(service, {
       termsId,
       timeOffTypeId: type.id,
       startDate: "2027-01-01",
       rules: { balance: "no_balance" },
     });
 
-    const stopping = service.stopPolicy(OWNER, { timeOffPolicyId: policy.id, stopDate });
+    const before = await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] });
 
-    await expect(stopping).rejects.toBeInstanceOf(ApplicationError);
+    const stopping = service.stopPolicy(OWNER, { termsId, timeOffTypeId: type.id, stopDate });
+
     await expect(stopping).rejects.toMatchObject({
       code: "INVALID_INPUT",
-      fieldErrors: [{ field: "stopDate", code: "before_offer" }],
+      fieldErrors: [{ field: "stopDate", code: "not_offered" }],
     });
-    expect(await timeOffPolicyRepository(orm).findAll()).toEqual([policy]);
+    expect(await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).toEqual(
+      before,
+    );
   },
 );
 
@@ -172,40 +172,38 @@ test("a person with their own rules keeps them and their booked time off does no
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const termsId = await seed.defaultTermsId();
-  await giveTermsPolicies(orm, transact, {
-    termsId,
-    policies: [{ recordOnly: "family_leave" }],
-    today: "2026-11-06",
-  });
-  const [policy] = await timeOffPolicyRepository(orm).findAll();
+  await giveTermsPolicies(orm, transact, { termsId, policies: [{ recordOnly: "family_leave" }] });
+  const [policy] = await readTermsPolicies(orm, termsId);
   const personal = await seedTimeOffPolicy(orm, {
     name: "Personal family leave",
-    timeOffTypeId: policy!.timeOffType.id,
+    timeOffTypeId: policy!.timeOffTypeId,
     balance: "unlimited_balance",
   });
   await seedTimeOffAssignment(orm, {
     employeeId: employee.id,
-    timeOffTypeId: policy!.timeOffType.id,
+    timeOffTypeId: policy!.timeOffTypeId,
     timeOffPolicyId: personal.id,
+    versionId: personal.versionId,
   });
   await seedTimeOff(orm, {
     employeeId: employee.id,
-    timeOffTypeId: policy!.timeOffType.id,
+    timeOffTypeId: policy!.timeOffTypeId,
     status: "approved",
     days: [{ date: "2027-01-04", dayPart: "full_day" }],
   });
-  const before = (await timeOffPolicyRepository(orm).findAll()).find(
-    ({ id }) => id === personal.id,
-  );
+  const before = await timeOffPolicyRepository(orm).findAssignments({ employeeIds: [employee.id] });
   const service = timeOffPolicyService(orm, { today: "2026-11-06" });
 
   const result = await service.stopPolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
+    termsId,
+    timeOffTypeId: policy!.timeOffTypeId,
     stopDate: "2027-01-01",
   });
 
-  expect(result.versions).toMatchObject([{ startDate: null, endDate: "2026-12-31" }]);
-  expect(await timeOffPolicyRepository(orm).findAll()).toContainEqual(before);
+  expect(result).toMatchObject({ startDate: "2026-01-01", endDate: "2026-12-31" });
+  expect(
+    await timeOffPolicyRepository(orm).findAssignments({ employeeIds: [employee.id] }),
+  ).toEqual(before);
 });
 
 test("stopping in December takes December's share of a reached person's yearly entitlement", async ({
@@ -224,7 +222,8 @@ test("stopping in December takes December's share of a reached person's yearly e
   const service = timeOffPolicyService(orm, { today: "2026-11-06" });
 
   await service.stopPolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
+    termsId,
+    timeOffTypeId: policy!.timeOffTypeId,
     stopDate: "2026-12-01",
   });
 
@@ -240,81 +239,47 @@ test("stopping in December takes December's share of a reached person's yearly e
   });
 });
 
-test("offering a stopped type again from before the stop offers it from then on", async ({
+test("offering a stopped type again from its stop date offers it open-ended", async ({
   orm,
   seed,
   transact,
 }) => {
   const termsId = await seed.defaultTermsId();
-  await giveTermsPolicies(orm, transact, {
-    termsId,
-    policies: [{ recordOnly: "family_leave" }],
-    today: "2026-11-09",
-  });
+  await giveTermsPolicies(orm, transact, { termsId, policies: [{ recordOnly: "family_leave" }] });
   const [policy] = await readTermsPolicies(orm, termsId);
   const service = timeOffPolicyService(orm, { today: "2026-11-09" });
-  await service.stopPolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
+  const stopped = await service.stopPolicy(OWNER, {
+    termsId,
+    timeOffTypeId: policy!.timeOffTypeId,
     stopDate: "2026-11-09",
   });
 
-  const result = await service.changePolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
-    startDate: "2026-01-01",
+  const offer = await publishRules(service, {
+    termsId,
+    timeOffTypeId: policy!.timeOffTypeId,
+    startDate: "2026-11-09",
     rules: { balance: "no_balance" },
   });
 
-  expect(result.versions.at(-1)).toMatchObject({
-    startDate: "2026-01-01",
-    endDate: null,
-    balance: "no_balance",
-  });
+  expect(await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).toMatchObject(
+    [
+      { id: stopped.id, endDate: "2026-11-08" },
+      { versionId: offer.id, startDate: "2026-11-09", endDate: null },
+    ],
+  );
 });
 
-test("offering a stopped type again from before an earlier rules change keeps that change and drops the stop", async ({
-  orm,
-  seed,
-  transact,
-}) => {
-  const termsId = await seed.defaultTermsId();
-  await giveTermsPolicies(orm, transact, {
+async function publishRules(
+  service: TimeOffPolicyService,
+  input: { termsId: string; timeOffTypeId: string; startDate: string; rules: TimeOffRulesInput },
+) {
+  const { termsId, timeOffTypeId, startDate, rules } = input;
+  const draft = await service.saveTimeOffPolicy(OWNER, { termsId, timeOffTypeId, rules });
+  await service.publishTerms(OWNER, {
     termsId,
-    policies: [{ key: "uk_20_days_plus_bank_holidays" }],
-    today: "2026-11-09",
+    versions: [draft],
+    startDate,
+    owners: [{ termsId }],
   });
-  const [policy] = await readTermsPolicies(orm, termsId);
-  const service = timeOffPolicyService(orm, { today: "2026-11-09" });
-  await service.changePolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
-    startDate: "2026-07-01",
-    rules: {
-      balance: "balance_from_allowance",
-      entitlementDays: 25,
-      bankHolidays: "bank_holidays_on_top_of_allowance",
-    },
-  });
-  await service.stopPolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
-    stopDate: "2026-11-09",
-  });
-
-  const result = await service.changePolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
-    startDate: "2026-01-01",
-    rules: {
-      balance: "balance_from_allowance",
-      entitlementDays: 22,
-      bankHolidays: "bank_holidays_on_top_of_allowance",
-    },
-  });
-
-  expect(result.versions).toMatchObject([
-    { startDate: null, endDate: "2025-12-31" },
-    {
-      startDate: "2026-01-01",
-      endDate: "2026-06-30",
-      rules: [{ entitlementDays: 22 }],
-    },
-    { startDate: "2026-07-01", endDate: null, rules: [{ entitlementDays: 25 }] },
-  ]);
-});
+  return draft;
+}

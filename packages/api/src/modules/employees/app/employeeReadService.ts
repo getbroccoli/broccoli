@@ -21,6 +21,7 @@ import {
 import type { Employee, EmployeeOrder, EmployeeOrderField, TermsMembership } from "../domain";
 import { employeeRecordType } from "./employeeRecordType";
 import { readMemberships, type TermsMovePreview } from "./employmentTerms/membershipsAfterMove";
+import { readTermsOverviews, type TermsOverview } from "./employmentTerms/readTermsOverviews";
 
 const fileStorage = createFileStorageService();
 
@@ -75,6 +76,10 @@ export interface EmployeeReadService {
    * have this id.
    */
   readTermsMemberIds: (tx: Tx, termsId: string) => Promise<string[] | null>;
+  /** Each of the terms' names, by id; ids that name no terms are left out. */
+  readTermsNames: (tx: Tx, termsIds: readonly string[]) => Promise<Map<string, string>>;
+  /** Trusted, for time off: one set of terms as Settings shows it on `date`; undefined when none has the id. */
+  readTermsOverview: (termsId: string, date: CalendarDate) => Promise<TermsOverview | undefined>;
   /** An employee's history, newest first, also after the employee is deleted; read as `recordHistory` reads it. */
   readEmployeeHistory: (
     ctx: SecurityContext,
@@ -145,6 +150,8 @@ export function createEmployeeReadService({
         ? ((await repository.findMemberIds([termsId])).get(termsId) ?? [])
         : null;
     },
+    readTermsNames: (tx, termsIds) => termsRepository(tx).findNames(termsIds),
+    readTermsOverview: async (termsId, date) => (await readTermsOverviews(orm, date, [termsId]))[0],
     readEmployeeHistory: (ctx, employeeId, args) =>
       history.readHistory(ctx, "employee", employeeId, args),
     async readAvatar(ctx, fileId) {

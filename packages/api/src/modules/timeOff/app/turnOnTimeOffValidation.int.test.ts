@@ -1,6 +1,7 @@
 import {
   EMPLOYEE,
   expect,
+  readWorkingPatterns,
   giveTermsPolicies,
   OWNER,
   readTermsPolicies,
@@ -8,7 +9,6 @@ import {
   scotlandTimeOffSetup,
   test,
   timeOffService,
-  workingPatternService,
 } from "#test/support";
 
 test("requires terms for the chosen default nation without changing terms", async ({
@@ -56,7 +56,7 @@ test.for([
     const input = scotlandTimeOffSetup();
     input.terms[1]![field] = value;
     const termsBefore = await readTimeOffTerms(orm);
-    const patternsBefore = await workingPatternService(orm).listPatterns(OWNER);
+    const patternsBefore = await readWorkingPatterns(orm);
 
     await expect(
       transact((tx) => timeOffService(orm).turnOnTimeOff(OWNER, tx, input)),
@@ -66,7 +66,7 @@ test.for([
     });
 
     expect(await readTimeOffTerms(orm)).toEqual(termsBefore);
-    expect(await workingPatternService(orm).listPatterns(OWNER)).toEqual(patternsBefore);
+    expect(await readWorkingPatterns(orm)).toEqual(patternsBefore);
   },
 );
 

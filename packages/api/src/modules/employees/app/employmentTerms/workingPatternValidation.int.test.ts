@@ -1,9 +1,9 @@
-import { expect, OWNER, test, workingPatternService, createStandardPattern } from "#test/support";
+import { EMPLOYEE, expect, OWNER, test, workingPatternService } from "#test/support";
 
-test("creating a pattern refuses an unknown bank holiday calendar", async ({ orm }) => {
+test("saving refuses an unknown bank holiday calendar", async ({ orm, seed }) => {
   await expect(
-    workingPatternService(orm).createPattern(OWNER, {
-      name: "Unknown calendar",
+    workingPatternService(orm).saveWorkingPattern(OWNER, {
+      termsId: await seed.defaultTermsId(),
       minutes: [450, 450, 450, 450, 450, 0, 0],
       bankHolidayCalendar: "unknown",
     }),
@@ -13,29 +13,62 @@ test("creating a pattern refuses an unknown bank holiday calendar", async ({ orm
   });
 });
 
-test("creating a pattern refuses a name already taken", async ({ orm }) => {
-  const patterns = workingPatternService(orm);
-  const input = { name: "Monday", minutes: [450, 0, 0, 0, 0, 0, 0] as const };
-  await patterns.createPattern(OWNER, input);
-
-  await expect(patterns.createPattern(OWNER, input)).rejects.toMatchObject({
+test("saving refuses unknown terms", async ({ orm }) => {
+  await expect(
+    workingPatternService(orm).saveWorkingPattern(OWNER, {
+      termsId: "00000000-0000-4000-8000-000000000001",
+      minutes: [450, 450, 450, 450, 450, 0, 0],
+      bankHolidayCalendar: "england_and_wales",
+    }),
+  ).rejects.toMatchObject({
     code: "INVALID_INPUT",
-    fieldErrors: [{ field: "name", code: "taken" }],
+    fieldErrors: [{ field: "termsId", code: "not_found" }],
   });
 });
 
-test("renaming a pattern refuses a name already taken", async ({ orm }) => {
-  const patterns = workingPatternService(orm);
-  await createStandardPattern(orm);
-  const pattern = await patterns.createPattern(OWNER, {
-    name: "Monday",
-    minutes: [450, 0, 0, 0, 0, 0, 0],
+test.for([
+  { minutes: [-1, 450, 0, 0, 0, 0, 0], code: "out_of_range" },
+  { minutes: [0, 0, 0, 0, 0, 0, 0], code: "no_working_day" },
+] as const)(
+  "saving refuses invalid minutes with $code",
+  async ({ minutes, code }, { orm, seed }) => {
+    await expect(
+      workingPatternService(orm).saveWorkingPattern(OWNER, {
+        termsId: await seed.defaultTermsId(),
+        minutes,
+        bankHolidayCalendar: "england_and_wales",
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_INPUT", fieldErrors: [{ field: "minutes", code }] });
+  },
+);
+
+test("an employee cannot save an unpublished week", async ({ orm, seed }) => {
+  await expect(
+    workingPatternService(orm).saveWorkingPattern(EMPLOYEE, {
+      termsId: await seed.defaultTermsId(),
+      minutes: [450, 450, 450, 450, 450, 0, 0],
+      bankHolidayCalendar: "england_and_wales",
+    }),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" });
+});
+
+test("an employee cannot discard an unpublished week", async ({ orm, seed }) => {
+  const service = workingPatternService(orm);
+  const draft = await service.saveWorkingPattern(OWNER, {
+    termsId: await seed.defaultTermsId(),
+    minutes: [450, 450, 450, 450, 450, 0, 0],
+    bankHolidayCalendar: "england_and_wales",
   });
 
   await expect(
-    patterns.renamePattern(OWNER, { workingPatternId: pattern.id, name: "Standard" }),
-  ).rejects.toMatchObject({
-    code: "INVALID_INPUT",
-    fieldErrors: [{ field: "name", code: "taken" }],
-  });
+    service.discardWorkingPattern(EMPLOYEE, { versionId: draft.id }),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" });
+});
+
+test("an employee cannot cancel a planned week", async ({ orm }) => {
+  await expect(
+    workingPatternService(orm).cancelWorkingPatternChange(EMPLOYEE, {
+      assignmentId: "00000000-0000-4000-8000-000000000001",
+    }),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" });
 });
