@@ -11,6 +11,8 @@ import { AGENT_SCOPES, agentResourceOf, ALLOW_AGENT_PAGE } from "../domain";
 
 /** Long enough for an agent's sign-in and Allow; the OAuth default. */
 const ACCESS_TOKEN_SECONDS = 60 * 60;
+/** A connection unused this long ends: its agent can no longer renew its token. */
+const UNUSED_CONNECTION_SECONDS = 30 * 24 * 60 * 60;
 /** A retried refresh within this window gets the same answer instead of ending the connection. */
 const REFRESH_REUSE_SECONDS = 30;
 
@@ -33,6 +35,7 @@ export function agentAccessPlugins(connections: AgentConnectionService): BetterA
       allowDynamicClientRegistration: true,
       allowUnauthenticatedClientRegistration: true,
       accessTokenExpiresIn: ACCESS_TOKEN_SECONDS,
+      refreshTokenExpiresIn: UNUSED_CONNECTION_SECONDS,
       refreshTokenReuseInterval: REFRESH_REUSE_SECONDS,
       // Nobody manages OAuth clients from the browser.
       clientPrivileges: () => false,

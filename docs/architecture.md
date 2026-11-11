@@ -57,12 +57,13 @@ For example, a domain rule decides whether an import source may retry. The appli
 
 ## 3. MCP
 
-[Model Context Protocol](https://modelcontextprotocol.io) is the planned API for an owner's agent to read and act on company data.
+[Model Context Protocol](https://modelcontextprotocol.io) is the API a person's own agent, such as Claude, ChatGPT, Claude Code or Codex, uses to read and act on company data as that person.
 
 - **Shared application layer.** MCP tools are thin adapters over the same use cases as GraphQL, with the same permissions, field visibility and audit. A small, purpose-built tool catalogue avoids exposing the entire schema as tools.
 - **Browser approval.** Consequential writes require approval of an exact draft revision in the web app. Edits invalidate approval, and committing re-checks permissions and is idempotent. An agent's claim that a user confirmed is not approval.
-- **Existing setup access.** External agents already answer import mapping questions through dedicated HTTP routes. MCP will reuse those use cases; OAuth will replace the setup-specific code exchange.
-- **Transport and authority.** The chosen transport is stateless Streamable HTTP with OAuth 2.1 and PKCE. Read-only or read/write grants are intersected with the user's permissions, with an active-grant check for immediate revocation. Resources and prompts remain outside the initial scope.
+- **Setup access stays separate.** The owner's coding agent during setup keeps its one-time code and dedicated HTTP routes; its session is limited to setup and never becomes a person's agent connection.
+- **Transport and authority.** Stateless Streamable HTTP at `/api/mcp`, authorized by OAuth 2.1 with PKCE. Better Auth's OAuth provider is the authorization server at `/api/auth`, for public clients registered dynamically or through a client metadata document. Tokens are opaque and checked in the database on every call, so an ended connection is refused at once; each call resolves the person's security context afresh, as for their browser, and a token must name this instance's MCP address as its resource. Two scopes, read and write, are intersected with the person's permissions; each tool declares the scope it needs. Resources and prompts remain outside the initial scope.
+- **One connection per person.** Allowing an agent ends the person's other agents' tokens and consents; a password reset ends them all. A token is issued within the browser session that allowed it, so the server detaches tokens from expired browser sessions before issuing new ones, and the connection outlives the browser's sign-in.
 
 ## 4. Data access
 
