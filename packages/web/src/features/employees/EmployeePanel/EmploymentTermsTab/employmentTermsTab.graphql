@@ -181,7 +181,7 @@ fragment OwnWorkingWeekPayload on EmployeeOwnWorkingWeekPayload {
   }
 }
 
-# Whether the terms offer a type on a date, for what a return to their rules does.
+# The terms' rules for a type over time, for what a return to them does.
 query TermsTypeOffer($termsId: ID!, $timeOffTypeId: ID!) {
   terms(id: $termsId) {
     id
@@ -190,6 +190,7 @@ query TermsTypeOffer($termsId: ID!, $timeOffTypeId: ID!) {
         id
         startDate
         endDate
+        balance
       }
     }
   }

@@ -4,6 +4,8 @@ import { toast } from "sonner";
 
 import {
   SetOwnRulesDocument,
+  type RuleSource,
+  type TimeOffBalanceKind,
   type TimeOffRulesInput,
   TermsTypeOfferDocument,
   UseTermsRulesDocument,
@@ -15,8 +17,7 @@ import {
   rulesInputOf,
   type RulesValues,
   rulesValuesOf,
-  shortDate,
-  splitVersions,
+  versionOn,
 } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
@@ -27,12 +28,21 @@ import {
   termsRulesSavedToast,
   termsRulesSaveLine,
 } from "./ownRulesText";
+import { rulesBefore, rulesDateError } from "./ownRulesForm";
 
 /** What a type row edits: the person's own rules, or a return to their terms' rules. */
 export type OwnRulesMode = "own" | "terms";
 
 /** The rules form with the date it applies from. */
 export type OwnRulesDraft = RulesValues & { startDate: string };
+
+/** A person's rules for a type from a date, and where they come from. */
+export type PersonRules = {
+  source: RuleSource;
+  startDate: string;
+  endDate?: string | null;
+  rules: { balance: TimeOffBalanceKind };
+};
 
 /** The terms a person is on on a date. */
 export type TermsOn = (date: string) => { termsId: string; termsName: string } | null;
@@ -54,8 +64,9 @@ export interface OwnRulesEdit {
     timeOffType: { id: string; name: string; defaultRules: TimeOffRulesInput };
     /** The rules the form starts from; null to start from the type's default rules. */
     current: TimeOffRulesInput | null;
+    /** The person's rules for the type from today on, as the row shows them. */
+    versions: readonly PersonRules[];
     earliest: string;
-    alreadyOwn: boolean;
     termsOn: TermsOn;
   }) => void;
   edit: (draft: OwnRulesDraft) => void;
@@ -85,8 +96,10 @@ export function useOwnRulesEdit({
     onTop: true,
     startDate: today,
   };
-  const { terms, termsOffer } = useTermsOffer(opened, shown.startDate);
-  const formError = opened && formErrorOf(opened, shown);
+  const { terms, termsRules } = useTermsRules(opened, shown.startDate);
+  const termsOffer = termsRules === undefined ? null : termsRules !== null;
+  const formError =
+    opened && formErrorOf(opened, shown, { today, termsBalance: termsRules?.balance ?? null });
   const close = () => {
     setOpened(null);
     setDraft(null);
@@ -125,7 +138,14 @@ export function useOwnRulesEdit({
         await (opened.mode === "own"
           ? setOwn({ variables: { input: { ...input, rules: rulesInputOf(shown) } } })
           : returnToTerms({ variables: { input } }));
-        toast(savedToastOf(opened, { firstName, startDate: shown.startDate, terms }));
+        toast(
+          savedToastOf(opened, {
+            firstName,
+            startDate: shown.startDate,
+            terms,
+            termsOffer: termsOffer ?? true,
+          }),
+        );
         close();
       } catch (error) {
         setFailure(failureOf(error));
@@ -136,14 +156,18 @@ export function useOwnRulesEdit({
 
 type Opened = Parameters<OwnRulesEdit["open"]>[0];
 
-/** The terms a return gives the person back to on `startDate`, and whether they offer the type then. */
-function useTermsOffer(opened: Opened | null, startDate: string) {
+/**
+ * The terms a return gives the person back to on `startDate`, and their rules for the type then:
+ * null when they don't offer it, undefined while loading.
+ */
+function useTermsRules(opened: Opened | null, startDate: string) {
   const terms = opened?.termsOn(startDate) ?? null;
   const read = useQuery(TermsTypeOfferDocument, {
     variables: { termsId: terms?.termsId ?? "", timeOffTypeId: opened?.timeOffType.id ?? "" },
     skip: opened?.mode !== "terms" || !terms,
   });
-  return { terms, termsOffer: offeredOn(read.data?.terms?.timeOff[0]?.versions, startDate) };
+  const versions = read.data?.terms?.timeOff[0]?.versions;
+  return { terms, termsRules: versions && versionOn(versions, startDate) };
 }
 
 /** What saving does; null while whether the terms offer the type is loading. */
@@ -165,10 +189,11 @@ function saveLineOf(
 ): string | null {
   const values = { firstName, typeName: start.timeOffType.name, startDate, today };
   if (start.mode === "own") {
+    const onDate = versionOn(start.versions, startDate > today ? startDate : today);
     return ownRulesSaveLine({
       ...values,
-      alreadyOwn: start.alreadyOwn,
-      offer: !start.alreadyOwn && start.current === null,
+      alreadyOwn: onDate?.source === "THEIR_OWN",
+      offer: onDate === null,
     });
   }
   return termsOffer === null
@@ -183,12 +208,24 @@ function savedToastOf(
     firstName,
     startDate,
     terms,
-  }: { firstName: string; startDate: string; terms: { termsName: string } | null },
+    termsOffer,
+  }: {
+    firstName: string;
+    startDate: string;
+    terms: { termsName: string } | null;
+    termsOffer: boolean;
+  },
 ): string {
   const typeName = start.timeOffType.name;
   return start.mode === "own"
     ? ownRulesSavedToast(firstName, typeName)
-    : termsRulesSavedToast({ firstName, typeName, termsName: terms?.termsName ?? "", startDate });
+    : termsRulesSavedToast({
+        firstName,
+        typeName,
+        termsName: terms?.termsName ?? "",
+        termsOffer,
+        startDate,
+      });
 }
 
 /** The form as it opens: the rules it starts from, from the start of this leave year. */
@@ -200,31 +237,25 @@ function startDraftOf(start: Opened): OwnRulesDraft {
 }
 
 /**
- * Why the form can't be saved: no date or one before the earliest, invalid days, or a change of
- * how the type counts off the start of a leave year; null when it can.
+ * Why the form can't be saved: the date, invalid days, or a change of how the type counts from
+ * the day before off the start of a leave year; null when it can.
  */
-function formErrorOf(start: Opened, draft: OwnRulesDraft): string | null {
-  const currentBalance = start.current?.balance ?? null;
-  if (!draft.startDate || draft.startDate < start.earliest) {
-    return t("terms.edit.tooEarly", { date: shortDate(start.earliest) });
-  }
-  if (start.mode === "terms") return null;
-  const days = daysError(draft);
-  if (days) return days;
-  // The person's first day has nothing before it to count differently from.
-  const startsYear = draft.startDate.endsWith("-01-01") || draft.startDate === start.earliest;
-  return currentBalance && draft.balance !== currentBalance && !startsYear
-    ? t("ownRules.countsDate")
-    : null;
-}
-
-/** Whether the terms' versions cover `date`; null while they load. */
-function offeredOn(
-  versions: readonly { startDate: string; endDate?: string | null }[] | undefined,
-  date: string,
-): boolean | null {
-  if (!versions) return null;
-  return splitVersions(versions, date).current !== null;
+function formErrorOf(
+  start: Opened,
+  draft: OwnRulesDraft,
+  { today, termsBalance }: { today: string; termsBalance: TimeOffBalanceKind | null },
+): string | null {
+  const days = start.mode === "own" ? daysError(draft) : undefined;
+  return (
+    rulesDateError({
+      startDate: draft.startDate,
+      earliest: start.earliest,
+      before: rulesBefore(start.versions, draft.startDate, today)?.rules.balance ?? null,
+      balance: start.mode === "own" ? draft.balance : termsBalance,
+    }) ??
+    days ??
+    null
+  );
 }
 
 /** What the form says when the server refuses the save. */

@@ -103,6 +103,7 @@ export const peopleEn = {
     "Saving takes {type} away from {name} from {date}, as {terms} doesn’t offer it.",
   "ownRules.saved": "{name}’s own {type} saved.",
   "ownRules.back": "{name} is back on {terms}’s {type} from {date}.",
+  "ownRules.noLongerOffered": "{type} is no longer offered to {name} from {date}.",
   "ownRules.failed": "The rules could not be saved. Try again.",
   "ownRules.countsDate": "How it counts changes only from the start of a leave year.",
   "ownRules.backHint": "Earlier days keep {name}’s {type} as it is.",

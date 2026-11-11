@@ -1,6 +1,7 @@
 import type { RuleSource } from "@/__generated__/graphql";
 import { shortDate, splitVersions } from "@/features/termsDisplay";
 import { t } from "@/i18n";
+import { addDays } from "@/lib/calendarDay";
 
 /** What saving an own week does: gives or changes it, and the allowance follows from a date that has come. */
 export function ownWeekSaveLine({
@@ -59,19 +60,29 @@ export function termsWeekSavedToast({
 }
 
 /**
- * The start dates of planned week changes the person's own week makes, which Cancel change can
- * remove: a planned own week, and a planned return after one. A change the terms plan is theirs.
+ * The start dates of planned changes the person's own week or rules make, which Cancel change can
+ * remove: a planned own version, and a planned return after one, also to nothing where the terms
+ * offer no rules. A change the terms plan is theirs.
  */
 export function cancellableStarts(
   versions: readonly { source: RuleSource; startDate: string; endDate?: string | null }[],
   today: string,
 ): string[] {
   const { current, planned } = splitVersions(versions, today);
-  return planned.flatMap((version, index) => {
-    const before = index === 0 ? current : planned[index - 1];
-    return version.source === "THEIR_OWN" || before?.source === "THEIR_OWN"
-      ? [version.startDate]
-      : [];
+  const shown = current ? [current, ...planned] : planned;
+  return shown.flatMap((version, index) => {
+    const before = shown[index - 1];
+    const next = shown[index + 1];
+    const followsOwn = before?.source === "THEIR_OWN" && endsDayBefore(before, version.startDate);
+    const starts =
+      version !== current && (version.source === "THEIR_OWN" || followsOwn)
+        ? [version.startDate]
+        : [];
+    const returnsToNothing =
+      version.source === "THEIR_OWN" &&
+      version.endDate != null &&
+      !(next && endsDayBefore(version, next.startDate));
+    return returnsToNothing ? [...starts, addDays(version.endDate!, 1)] : starts;
   });
 }
 
@@ -92,4 +103,8 @@ export function withAllowance(
   today: string,
 ): string {
   return startDate <= today ? `${line} ${t("changeTerms.reworked", { name: firstName })}` : line;
+}
+
+function endsDayBefore(version: { endDate?: string | null }, date: string): boolean {
+  return version.endDate != null && addDays(version.endDate, 1) === date;
 }

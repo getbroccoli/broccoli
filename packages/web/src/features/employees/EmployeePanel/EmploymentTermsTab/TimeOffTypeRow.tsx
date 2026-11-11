@@ -78,8 +78,8 @@ export function TimeOffTypeRow({
       mode,
       timeOffType,
       current: base && rulesInputOf(base.rules),
+      versions,
       earliest,
-      alreadyOwn: base?.source === "THEIR_OWN",
       termsOn,
     });
   const cancel = async (startDate: string) => {

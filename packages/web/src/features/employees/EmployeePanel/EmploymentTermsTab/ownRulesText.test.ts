@@ -128,7 +128,20 @@ it("names the person, terms, type and date after returning to the terms' rules",
       firstName: "Sam",
       typeName: "Annual leave",
       termsName: "England and Wales",
+      termsOffer: true,
       startDate: "2027-01-01",
     }),
   ).toBe("Sam is back on England and Wales’s Annual leave from 1 Jan 2027.");
+});
+
+it("says the type is no longer offered after returning to terms that do not offer it", () => {
+  expect(
+    termsRulesSavedToast({
+      firstName: "Sam",
+      typeName: "Family leave",
+      termsName: "England and Wales",
+      termsOffer: false,
+      startDate: "2027-01-01",
+    }),
+  ).toBe("Family leave is no longer offered to Sam from 1 Jan 2027.");
 });

@@ -117,6 +117,21 @@ it("describes changing a person's own time off rules", () => {
   );
 });
 
+it("describes changing a person's own time off rules to unlimited in lower case", () => {
+  const sentence = employeeChangeSentence({
+    field: "timeOff.annual-leave",
+    oldValue: JSON.stringify({ startDate: "2027-01-01", rules: twentyFiveDays }),
+    newValue: JSON.stringify({
+      startDate: "2027-01-01",
+      rules: { balance: "unlimited_balance", entitlementDays: null, bankHolidays: null },
+    }),
+    oldLabel: "Annual leave",
+    newLabel: "Annual leave",
+  });
+
+  expect(sentence).toBe("changed their own Annual leave to unlimited, from 1 Jan 2027");
+});
+
 it("describes returning a person to their terms' time off rules", () => {
   const sentence = employeeChangeSentence({
     field: "timeOff.annual-leave",

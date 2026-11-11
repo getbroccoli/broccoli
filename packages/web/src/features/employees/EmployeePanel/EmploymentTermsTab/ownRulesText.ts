@@ -57,22 +57,23 @@ export function ownRulesSavedToast(firstName: string, typeName: string): string 
   return t("ownRules.saved", { name: firstName, type: typeName });
 }
 
-/** "Sam is back on England and Wales’s Annual leave from 1 Jan 2027." */
+/**
+ * "Sam is back on England and Wales’s Annual leave from 1 Jan 2027.", or "Family leave is no
+ * longer offered to Sam from …" where the terms don't offer it.
+ */
 export function termsRulesSavedToast({
   firstName,
   typeName,
   termsName,
+  termsOffer,
   startDate,
 }: {
   firstName: string;
   typeName: string;
   termsName: string;
+  termsOffer: boolean;
   startDate: string;
 }): string {
-  return t("ownRules.back", {
-    name: firstName,
-    type: typeName,
-    terms: termsName,
-    date: shortDate(startDate),
-  });
+  const values = { name: firstName, type: typeName, terms: termsName, date: shortDate(startDate) };
+  return t(termsOffer ? "ownRules.back" : "ownRules.noLongerOffered", values);
 }

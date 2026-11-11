@@ -125,6 +125,30 @@ it("does not offer cancellation for a planned change from the terms", () => {
   ).toEqual([]);
 });
 
+it("allows cancelling a planned return when the terms do not offer the type", () => {
+  expect(
+    cancellableStarts(
+      [
+        { source: "FROM_THEIR_TERMS", startDate: "2026-11-09", endDate: "2026-12-31" },
+        { source: "THEIR_OWN", startDate: "2027-01-01", endDate: "2027-06-30" },
+      ],
+      "2026-11-09",
+    ),
+  ).toEqual(["2027-01-01", "2027-07-01"]);
+});
+
+it("allows cancelling the return but not a later terms offer after a gap", () => {
+  expect(
+    cancellableStarts(
+      [
+        { source: "THEIR_OWN", startDate: "2026-01-01", endDate: "2026-12-31" },
+        { source: "FROM_THEIR_TERMS", startDate: "2027-03-01", endDate: null },
+      ],
+      "2026-11-09",
+    ),
+  ).toEqual(["2027-01-01"]);
+});
+
 it("edits a person who has not started yet from their first week", () => {
   const first = { source: "FROM_THEIR_TERMS" as const, startDate: "2027-01-04", endDate: null };
   expect(versionToEditFrom([first], "2026-11-09")).toBe(first);

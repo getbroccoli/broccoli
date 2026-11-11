@@ -129,6 +129,44 @@ test("cancels a planned return and runs the own rules to the next own rules", as
   ]);
 });
 
+test("refuses a cancellation that exposes a mid-year counts change and keeps the rules", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const employee = await seed.employee({ startDate: "2024-03-01" });
+  const termsId = await seed.defaultTermsId();
+  await giveTermsPolicies(orm, transact, {
+    termsId,
+    policies: [{ key: "uk_20_days_plus_bank_holidays" }],
+  });
+  const [annual] = await readTermsPolicies(orm, termsId);
+  const service = timeOffPolicyService(orm, { today: "2026-11-09" });
+  const input = { employeeId: employee.id, timeOffTypeId: annual!.timeOffTypeId };
+  await service.setOwnRules(OWNER, {
+    ...input,
+    startDate: "2027-01-01",
+    rules: { balance: "unlimited_balance" },
+  });
+  await service.setOwnRules(OWNER, {
+    ...input,
+    startDate: "2027-07-01",
+    rules: { balance: "unlimited_balance" },
+  });
+  const timeOff = timeOffService(orm, { today: "2026-11-09" });
+  const before = await timeOff.readPersonTimeOff(OWNER, { employeeIds: [employee.id] });
+
+  await expect(
+    service.cancelOwnRulesChange(OWNER, { ...input, startDate: "2027-01-01" }),
+  ).rejects.toMatchObject({
+    code: "CONFLICT",
+    message:
+      "Cancelling this change would change how the type counts partway through a leave year.",
+  });
+
+  expect(await timeOff.readPersonTimeOff(OWNER, { employeeIds: [employee.id] })).toEqual(before);
+});
+
 test.for([
   { reason: "started in the past", ownStart: "2026-01-01", startDate: "2026-01-01" },
   { reason: "starts today", ownStart: "2026-11-09", startDate: "2026-11-09" },

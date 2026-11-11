@@ -221,7 +221,9 @@ async function saveOwnRules(
 ): Promise<string> {
   const repository = timeOffPolicyRepository(tx);
   for (const { id } of rows) await repository.deleteAssignment(id);
-  const saved = rows.map(({ versionId }) => versionOf(policies, versionId));
+  const saved: (Rules & { id: string; timeOffPolicyId: string })[] = rows.map(({ versionId }) =>
+    versionOf(policies, versionId),
+  );
   let timeOffPolicyId = saved[0]?.timeOffPolicyId;
   for (const { startDate, endDate, value } of stretches) {
     let version = saved.find((candidate) => isSameRules(candidate, value));
@@ -231,7 +233,7 @@ async function saveOwnRules(
         ...value,
         status: "published",
       });
-      version = versionOf(await repository.findAll(), id);
+      version = { ...value, id, timeOffPolicyId };
       saved.push(version);
     }
     await repository.insertAssignment({
