@@ -25,7 +25,15 @@ test("the self-hosted setup request turns time off on", async ({ env }) => {
     });
 
     expect(response.status).toBe(200);
-    expect(await readTermsPolicies(database.orm, await env.seed.defaultTermsId())).toEqual(
+    const termsId = await env.seed.defaultTermsId();
+    const termsResponse = await browser.graphql(
+      `query($id: ID!) { terms(id: $id) { earliestChange } }`,
+      { id: termsId },
+    );
+    const { data } = (await termsResponse.json()) as {
+      data: { terms: { earliestChange: string } };
+    };
+    expect(await readTermsPolicies(database.orm, termsId, data.terms.earliestChange)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ typeKey: "annual_leave", entitlementDays: 28 }),
       ]),

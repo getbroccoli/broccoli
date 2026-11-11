@@ -5,30 +5,14 @@ import { employments } from "../../src/modules/employees/db";
 import {
   timeOff,
   timeOffDays,
-  timeOffPolicyAssignments,
   timeOffPolicyRepository,
   timeOffTypes,
 } from "../../src/modules/timeOff/db";
 import type { NewPolicyVersion } from "../../src/modules/timeOff/domain";
 import type { CalendarDate } from "../../src/utils";
+import { calendarDate } from "./calendarDate";
 
-/** Ends a seeded policy's past version and adds its current and planned versions without history. */
-export async function seedTimeOffPolicyVersions(
-  orm: Orm,
-  input: {
-    policyId: string;
-    past: { id: string; endDate: CalendarDate };
-    versions: (NewPolicyVersion & { startDate: CalendarDate; endDate: CalendarDate | null })[];
-  },
-): Promise<void> {
-  const repository = timeOffPolicyRepository(orm);
-  await repository.endVersion(input.past.id, input.past.endDate);
-  for (const version of input.versions) {
-    await repository.insertVersion(input.policyId, version);
-  }
-}
-
-/** A named policy on a new or existing type, from the beginning, its leave year from 1 January. */
+/** A published policy without an assignment, its leave year from 1 January. */
 export async function seedTimeOffPolicy(
   orm: Orm,
   input: {
@@ -37,29 +21,29 @@ export async function seedTimeOffPolicy(
     balance: "balance_from_allowance" | "unlimited_balance";
     entitlementDays?: number;
   },
-): Promise<{ id: string; timeOffTypeId: string }> {
+): Promise<{ id: string; timeOffTypeId: string; versionId: string }> {
   const timeOffTypeId = input.timeOffTypeId ?? (await seedTimeOffType(orm, input.name)).id;
-  const id = await timeOffPolicyRepository(orm).insertPolicy(
-    { timeOffTypeId, name: input.name },
-    {
-      balance: input.balance,
-      bankHolidays:
-        input.balance === "balance_from_allowance" ? "bank_holidays_on_top_of_allowance" : null,
-      leaveYear: { kind: "leave_year_from_fixed_date", month: 1, day: 1 },
-      rules:
-        input.entitlementDays === undefined
-          ? []
-          : [
-              {
-                kind: "yearly_entitlement",
-                entitlementDays: input.entitlementDays,
-                entitlementDaysPerWeek: 5,
-                maxDays: null,
-              },
-            ],
-    },
-  );
-  return { id, timeOffTypeId };
+  const repository = timeOffPolicyRepository(orm);
+  const id = await repository.insertPolicy({ timeOffTypeId, name: input.name });
+  const versionId = await repository.insertVersion(id, {
+    status: "published",
+    balance: input.balance,
+    bankHolidays:
+      input.balance === "balance_from_allowance" ? "bank_holidays_on_top_of_allowance" : null,
+    leaveYear: { kind: "leave_year_from_fixed_date", month: 1, day: 1 },
+    rules:
+      input.entitlementDays === undefined
+        ? []
+        : [
+            {
+              kind: "yearly_entitlement",
+              entitlementDays: input.entitlementDays,
+              entitlementDaysPerWeek: 5,
+              maxDays: null,
+            },
+          ],
+  });
+  return { id, timeOffTypeId, versionId };
 }
 
 /** A company's own time off type without a policy. */
@@ -71,14 +55,51 @@ export async function seedTimeOffType(orm: Orm, name: string): Promise<{ id: str
   return type!;
 }
 
-/** Puts one person on a policy from 1 January 2025, open-ended. */
-export async function seedTimeOffAssignment(
+/** A person's own assignment of a published policy. */
+export function seedTimeOffAssignment(
   orm: Orm,
-  input: { employeeId: string; timeOffTypeId: string; timeOffPolicyId: string },
-): Promise<void> {
-  await orm
-    .insert(timeOffPolicyAssignments)
-    .values({ ...input, startDate: "2025-01-01" as CalendarDate });
+  input: {
+    employeeId: string;
+    timeOffTypeId: string;
+    timeOffPolicyId: string;
+    versionId: string;
+    startDate?: string;
+    endDate?: string | null;
+  },
+): Promise<string> {
+  return timeOffPolicyRepository(orm).insertAssignment({
+    owner: { employeeId: input.employeeId },
+    timeOffTypeId: input.timeOffTypeId,
+    timeOffPolicyId: input.timeOffPolicyId,
+    versionId: input.versionId,
+    startDate: calendarDate(input.startDate ?? "2025-01-01"),
+    endDate: input.endDate ? calendarDate(input.endDate) : null,
+  });
+}
+
+/** A new published policy assigned to these terms for the given dates. */
+export async function seedTermsPolicy(
+  orm: Orm,
+  input: {
+    termsId: string;
+    timeOffTypeId: string;
+    version: NewPolicyVersion;
+    startDate: string;
+    endDate?: string | null;
+  },
+) {
+  const repository = timeOffPolicyRepository(orm);
+  const id = await repository.insertPolicy({ timeOffTypeId: input.timeOffTypeId });
+  const versionId = await repository.insertVersion(id, { ...input.version, status: "published" });
+  const assignmentId = await repository.insertAssignment({
+    owner: { termsId: input.termsId },
+    timeOffTypeId: input.timeOffTypeId,
+    timeOffPolicyId: id,
+    versionId,
+    startDate: calendarDate(input.startDate),
+    endDate: input.endDate ? calendarDate(input.endDate) : null,
+  });
+  return { id, timeOffTypeId: input.timeOffTypeId, versionId, assignmentId };
 }
 
 /** Ends the person's employment on `endDate`. */

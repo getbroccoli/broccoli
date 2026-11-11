@@ -11,6 +11,7 @@ import {
 } from "@/features/termsDisplay";
 
 import { DefaultPill } from "./DefaultPill";
+import { DraftPill } from "./DraftPill";
 
 type Props = {
   terms: EmploymentTermsQuery["allTerms"][number];
@@ -35,6 +36,7 @@ export function TermsRowCells({ terms }: Props) {
             {terms.name}
           </Link>
           {terms.isDefault && <DefaultPill />}
+          {terms.hasUnpublishedChanges && <DraftPill />}
         </span>
         {week && (
           <span className="block text-[13px] text-muted-foreground">
@@ -42,7 +44,7 @@ export function TermsRowCells({ terms }: Props) {
           </span>
         )}
       </th>
-      <td className="px-4 py-3">{week ? weekSummary(week) : t("terms.week.none")}</td>
+      <td className="px-4 py-3">{week ? weekSummary(week) : t("terms.week.notSet")}</td>
       <td className="px-4 py-3">
         {annualLeaveSummary(splitVersions(annualLeave?.versions ?? [], companyToday()).current)}
       </td>

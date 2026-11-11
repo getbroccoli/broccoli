@@ -11,6 +11,8 @@ import {
   PNG,
   readTermsPolicies,
   readTimeOffTerms,
+  readWorkingPatterns,
+  termsService,
   scotlandTimeOffSetup,
   seedTimeOffAssignment,
   seedTimeOffPolicy,
@@ -20,7 +22,6 @@ import {
   test,
   TEST_OWNER,
   timeOffService,
-  workingPatternService,
 } from "#test/support";
 
 import { user } from "../../../core/auth";
@@ -36,9 +37,6 @@ test("resetting setup restores only the default terms on their seeded week with 
   await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
   const termsId = await seed.defaultTermsId();
-  const standard = (await workingPatternService(orm).listPatterns(OWNER)).find(
-    (pattern) => pattern.termsId === termsId,
-  )!;
   const input = scotlandTimeOffSetup();
   input.defaultBankHolidayCalendar = "scotland";
   input.terms[0]!.workingWeek = "monday_to_friday_8_hours";
@@ -47,7 +45,7 @@ test("resetting setup restores only the default terms on their seeded week with 
     { name: "England and Wales" },
     { id: termsId, name: "Scotland" },
   ]);
-  expect(await workingPatternService(orm).listPatterns(OWNER)).toHaveLength(2);
+  expect(await readWorkingPatterns(orm)).toHaveLength(2);
 
   await systemService(orm).resetSetup(owner);
 
@@ -56,24 +54,24 @@ test("resetting setup restores only the default terms on their seeded week with 
       id: termsId,
       key: "default_terms",
       name: "England and Wales",
-      pattern: { id: standard.id },
     },
   ]);
-  expect(await workingPatternService(orm).listPatterns(OWNER)).toMatchObject([
+  expect(await readWorkingPatterns(orm)).toMatchObject([
     {
-      id: standard.id,
-      termsId,
       name: null,
       versions: [
         {
-          startDate: null,
-          endDate: null,
+          status: "published",
+          termsId: null,
           minutes: [450, 450, 450, 450, 450, 0, 0],
           bankHolidayCalendar: "england_and_wales",
         },
       ],
     },
   ]);
+  expect(await termsService(orm, { today: "2026-06-01" }).readTerms(OWNER, termsId)).toMatchObject({
+    workingWeek: [{ endDate: null, version: { minutes: [450, 450, 450, 450, 450, 0, 0] } }],
+  });
   expect(await readTermsPolicies(orm, termsId)).toEqual([]);
 });
 
@@ -102,6 +100,7 @@ test("resetting setup clears time off when a person has a named policy assignmen
     employeeId: employee.id,
     timeOffTypeId: policy.timeOffTypeId,
     timeOffPolicyId: policy.id,
+    versionId: policy.versionId,
   });
 
   await systemService(orm).resetSetup(owner);

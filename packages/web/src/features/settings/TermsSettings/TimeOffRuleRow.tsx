@@ -12,6 +12,7 @@ import {
   TimeOffTypeIcon,
 } from "@/features/termsDisplay";
 
+import { DraftPill } from "./DraftPill";
 import type { TimeOffRow } from "./termsQueries";
 
 type Props = {
@@ -21,11 +22,22 @@ type Props = {
   open: { editor: ReactNode; summary: string; dirty: boolean } | null;
   onEdit: () => void;
   onCancelPlanned: (version: TimeOffRow["versions"][number]) => void;
+  onDiscard: () => void;
 };
 
-/** One time off type on the terms: its rules today or "Not offered here", planned rules, or its form. */
-export function TimeOffRuleRow({ row, termsName, open, onEdit, onCancelPlanned }: Props) {
-  const { timeOffType } = row;
+/**
+ * One time off type on the terms: its rules today or "Not offered here", planned and unpublished
+ * rules, or its form.
+ */
+export function TimeOffRuleRow({
+  row,
+  termsName,
+  open,
+  onEdit,
+  onCancelPlanned,
+  onDiscard,
+}: Props) {
+  const { timeOffType, unpublished } = row;
   const { current, planned } = splitVersions(row.versions, companyToday());
   return (
     <li
@@ -60,6 +72,15 @@ export function TimeOffRuleRow({ row, termsName, open, onEdit, onCancelPlanned }
                 </Button>
               </div>
             ))}
+          {!open && unpublished && (
+            <div className="mt-1.5 flex items-center gap-2 text-[13px] text-muted-foreground">
+              <DraftPill />
+              <span className="flex-1">{ruleLine(unpublished)}</span>
+              <Button variant="ghost" size="sm" onClick={onDiscard}>
+                {t("terms.edit.discard")}
+              </Button>
+            </div>
+          )}
         </div>
         {open?.dirty && (
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
@@ -67,9 +88,9 @@ export function TimeOffRuleRow({ row, termsName, open, onEdit, onCancelPlanned }
           </span>
         )}
         {/* A type with a planned offer shows its plan, and no Offer until that is cancelled. */}
-        {!open && (current || planned.length === 0) && (
-          <Button variant={current ? "ghost" : "outline"} size="sm" onClick={onEdit}>
-            {t(current ? "terms.edit.edit" : "terms.edit.offer")}
+        {!open && (current || unpublished || planned.length === 0) && (
+          <Button variant={current || unpublished ? "ghost" : "outline"} size="sm" onClick={onEdit}>
+            {t(current || unpublished ? "terms.edit.edit" : "terms.edit.offer")}
           </Button>
         )}
       </div>

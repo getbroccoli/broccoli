@@ -12,7 +12,7 @@ import {
   timeOffService,
 } from "#test/support";
 
-import { timeOffPolicyVersions, timeOffTypes } from "../db";
+import { timeOffPolicyAssignments, timeOffTypes } from "../db";
 
 test("lists the four seeded types in order with their icons and colours", async ({ orm }) => {
   const service = timeOffService(orm, { today: "2026-11-05" });
@@ -83,7 +83,7 @@ test("uses the latest version's balance kind when a terms' policy has ended", as
       },
     ],
   });
-  await orm.update(timeOffPolicyVersions).set({ endDate: calendarDate("2026-10-31") });
+  await orm.update(timeOffPolicyAssignments).set({ endDate: calendarDate("2026-10-31") });
   const service = timeOffService(orm, { today: "2026-11-05" });
 
   const result = await service.listTimeOffTypes(ADMIN);

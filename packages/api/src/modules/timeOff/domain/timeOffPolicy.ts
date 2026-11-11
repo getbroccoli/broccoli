@@ -1,5 +1,6 @@
 import { addDays, addYears, type CalendarDate } from "../../../utils";
 import type { AllowanceRule, DatedPolicy } from "./allowanceCalculator";
+import type { VersionStatus } from "../../employees";
 import type { TimeOffRules } from "./policyChange";
 import type { TimeOffTypeColour, TimeOffTypeIcon } from "./timeOffTypeLook";
 
@@ -24,25 +25,25 @@ export interface TimeOffType {
   defaultRules: TimeOffRules;
 }
 
-/** A policy for one type: one set of terms' own, or a named one people are put on one by one. */
+/** A policy for one type: what its versions share. */
 export interface TimeOffPolicy {
   id: string;
   timeOffType: TimeOffType;
-  /** Null: a named policy for one person at a time. */
-  termsId: string | null;
-  /** Null on a terms' policy. */
+  /** Null on a policy made on the terms screen. */
   name: string | null;
-  /** Oldest first, never overlapping. */
+  /** Oldest first, drafts among them. */
   versions: PolicyVersion[];
 }
 
-/** A policy's rules from a date to a date; never edited, only ended. */
+/** A policy's rules, with no dates: assignments say when they apply. */
 export interface PolicyVersion {
   id: string;
-  /** Null: from the beginning. */
-  startDate: CalendarDate | null;
-  /** The last day it applies; null: open-ended. */
-  endDate: CalendarDate | null;
+  timeOffPolicyId: string;
+  status: VersionStatus;
+  /** Set only on a draft: the terms whose screen saved it. */
+  termsId: string | null;
+  /** 1 on creation, plus 1 on every save of a draft. */
+  revision: number;
   balance: DatedPolicy["balance"];
   bankHolidays: DatedPolicy["bankHolidays"];
   /** Null for a `no_balance` policy. */

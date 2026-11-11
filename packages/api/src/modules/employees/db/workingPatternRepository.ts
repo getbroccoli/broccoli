@@ -1,56 +1,62 @@
-import { asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
-import { union } from "drizzle-orm/pg-core";
+import { and, asc, eq, inArray, notInArray, or, sql } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
 import type {
-  DatedPattern,
+  Assignment,
+  AssignmentOwner,
   PatternVersion,
   PatternWeek,
+  VersionStatus,
   WeekdayMinutes,
   WorkingPattern,
 } from "../domain";
-import { employeeTerms } from "./employeeTermsTable";
-import { employeeWorkingPatternAssignments } from "./employeeWorkingPatternAssignmentsTable";
+import { workingPatternAssignments } from "./workingPatternAssignmentsTable";
 import { workingPatterns } from "./workingPatternsTable";
 import { workingPatternVersions } from "./workingPatternVersionsTable";
 
-/** Working patterns, their versions, and the dated rows that put people on them. */
+/** Working patterns, their versions, and the dated assignments that give them to people and terms. */
 export interface WorkingPatternRepository {
   /** Holds back other working pattern writes until the transaction ends. */
   lockForWrites(): Promise<void>;
   /** Holds back working pattern writes, not reads, so several reads see one state. */
   lockForReads(): Promise<void>;
-  /** Every pattern with its versions, oldest first: named ones by name, then the terms'. */
+  /** Every pattern with its versions, oldest first, drafts among them. */
   findPatterns(): Promise<WorkingPattern[]>;
-  /** A new pattern, named or one set of terms', with one version from the beginning, open unless `week` ends. */
-  insertPattern(
-    owner: { name: string } | { termsId: string },
-    week: PatternWeek & { endDate?: CalendarDate | null },
-  ): Promise<string>;
-  renamePattern(id: string, name: string): Promise<void>;
-  /** Deletes a pattern with its versions. */
+  /** A new pattern without versions; returns its id. */
+  insertPattern(name: string | null): Promise<string>;
+  /** Deletes a pattern with its versions; none may be assigned. */
   deletePattern(id: string): Promise<void>;
-  /** Deletes every named pattern; no one may be on one. */
-  deleteNamedPatterns(): Promise<void>;
-  insertVersion(workingPatternId: string, version: Omit<PatternVersion, "id">): Promise<void>;
-  /** Sets the last day of a version; null makes it open-ended. */
-  endVersion(id: string, endDate: CalendarDate | null): Promise<void>;
-  deleteVersion(id: string): Promise<void>;
-  /** Replaces all of a pattern's versions with one open version from the beginning. */
-  replaceVersions(workingPatternId: string, week: PatternWeek): Promise<void>;
-  /** Whether a person is on the pattern on any date. */
-  isPatternAssigned(workingPatternId: string): Promise<boolean>;
-  /** The employees on the pattern on any date, themselves or through their terms. */
-  findEmployeesOnPattern(workingPatternId: string): Promise<string[]>;
-  /** Each employee's own dated patterns, by employee id. */
-  findAssignments(employeeIds: readonly string[]): Promise<Map<string, DatedPattern[]>>;
-  insertAssignment(
-    employeeId: string,
-    row: Omit<DatedPattern, "id" | "startDate"> & { startDate: CalendarDate },
-  ): Promise<void>;
-  endAssignment(id: string, endDate: CalendarDate): Promise<void>;
+  /** A new version, revision 1; returns its id. */
+  insertVersion(
+    workingPatternId: string,
+    version: PatternWeek & { status: VersionStatus; termsId?: string | null },
+  ): Promise<string>;
+  /** New minutes and calendar on a draft, one revision later. */
+  updateDraft(versionId: string, week: PatternWeek): Promise<void>;
+  /** Makes a draft published, no longer any terms' draft. */
+  publishVersion(versionId: string): Promise<void>;
+  /** Deletes a version; none of its assignments may remain. */
+  deleteVersion(versionId: string): Promise<void>;
+  /** The assignments of these employees and terms, oldest first. */
+  findAssignments(owners: {
+    employeeIds?: readonly string[];
+    termsIds?: readonly string[];
+  }): Promise<Assignment[]>;
+  /** The assignments of any of these versions, oldest first. */
+  findAssignmentsOfVersions(versionIds: readonly string[]): Promise<Assignment[]>;
+  /** The assignments with these ids. */
+  findAssignmentsById(ids: readonly string[]): Promise<Assignment[]>;
+  insertAssignment(row: Omit<Assignment, "id">): Promise<string>;
+  /** Sets an assignment's last day; null makes it open-ended. */
+  endAssignment(id: string, endDate: CalendarDate | null): Promise<void>;
   deleteAssignment(id: string): Promise<void>;
+  /** Deletes the assignments of these terms. */
+  deleteTermsAssignments(termsId: string): Promise<void>;
+  /** Deletes the terms' unpublished versions, and the patterns they leave without versions. */
+  deleteTermsDrafts(termsId: string): Promise<void>;
+  /** Deletes every pattern no assignment uses, with its versions. */
+  deleteUnassignedPatterns(): Promise<void>;
 }
 
 export function workingPatternRepository(db: Orm | Tx): WorkingPatternRepository {
@@ -59,157 +65,202 @@ export function workingPatternRepository(db: Orm | Tx): WorkingPatternRepository
     async lockForWrites() {
       await orm().execute(
         sql`lock table ${workingPatterns}, ${workingPatternVersions},
-          ${employeeWorkingPatternAssignments} in share row exclusive mode`,
+          ${workingPatternAssignments} in share row exclusive mode`,
       );
     },
 
     async lockForReads() {
       await orm().execute(
         sql`lock table ${workingPatterns}, ${workingPatternVersions},
-          ${employeeWorkingPatternAssignments} in share mode`,
+          ${workingPatternAssignments} in share mode`,
       );
     },
 
     async findPatterns() {
-      const rows = await orm()
+      const patterns = await orm().select().from(workingPatterns).orderBy(asc(workingPatterns.id));
+      const versions = await orm()
         .select()
-        .from(workingPatterns)
-        .leftJoin(
-          workingPatternVersions,
-          eq(workingPatternVersions.workingPatternId, workingPatterns.id),
-        )
-        .orderBy(
-          sql`${workingPatterns.name} asc nulls last`,
-          asc(workingPatterns.id),
-          sql`${workingPatternVersions.startDate} asc nulls first`,
-        );
-      const patterns = new Map<string, WorkingPattern>();
-      for (const { working_patterns: pattern, working_pattern_versions: version } of rows) {
-        const found = patterns.get(pattern.id) ?? { ...pattern, versions: [] };
-        patterns.set(pattern.id, {
-          ...found,
-          versions: version ? [...found.versions, patternVersionOf(version)] : found.versions,
-        });
-      }
-      return [...patterns.values()];
+        .from(workingPatternVersions)
+        .orderBy(asc(workingPatternVersions.id));
+      return patterns.map(({ id, name }) => ({
+        id,
+        name,
+        versions: versions.filter((version) => version.workingPatternId === id).map(versionOf),
+      }));
     },
 
-    async insertPattern(owner, { endDate = null, ...week }) {
+    async insertPattern(name) {
       const [pattern] = await orm()
         .insert(workingPatterns)
-        .values(owner)
+        .values({ name })
         .returning({ id: workingPatterns.id });
-      await orm()
-        .insert(workingPatternVersions)
-        .values(versionRow(pattern!.id, { ...week, startDate: null, endDate }));
       return pattern!.id;
-    },
-
-    async renamePattern(id, name) {
-      await orm().update(workingPatterns).set({ name }).where(eq(workingPatterns.id, id));
     },
 
     async deletePattern(id) {
       await orm().delete(workingPatterns).where(eq(workingPatterns.id, id));
     },
 
-    async deleteNamedPatterns() {
-      await orm().delete(workingPatterns).where(isNotNull(workingPatterns.name));
+    async insertVersion(workingPatternId, { status, termsId = null, ...week }) {
+      const [version] = await orm()
+        .insert(workingPatternVersions)
+        .values({ workingPatternId, status, termsId, ...weekColumns(week) })
+        .returning({ id: workingPatternVersions.id });
+      return version!.id;
     },
 
-    async insertVersion(workingPatternId, version) {
-      await orm().insert(workingPatternVersions).values(versionRow(workingPatternId, version));
-    },
-
-    async endVersion(id, endDate) {
+    async updateDraft(versionId, week) {
       await orm()
         .update(workingPatternVersions)
-        .set({ endDate })
-        .where(eq(workingPatternVersions.id, id));
+        .set({ ...weekColumns(week), revision: sql`${workingPatternVersions.revision} + 1` })
+        .where(eq(workingPatternVersions.id, versionId));
     },
 
-    async deleteVersion(id) {
-      await orm().delete(workingPatternVersions).where(eq(workingPatternVersions.id, id));
-    },
-
-    async replaceVersions(workingPatternId, week) {
+    async publishVersion(versionId) {
       await orm()
-        .delete(workingPatternVersions)
-        .where(eq(workingPatternVersions.workingPatternId, workingPatternId));
-      await orm()
-        .insert(workingPatternVersions)
-        .values(versionRow(workingPatternId, { ...week, startDate: null, endDate: null }));
+        .update(workingPatternVersions)
+        .set({ status: "published", termsId: null })
+        .where(eq(workingPatternVersions.id, versionId));
     },
 
-    async isPatternAssigned(workingPatternId) {
-      const [assigned] = await orm()
-        .select({ id: employeeWorkingPatternAssignments.id })
-        .from(employeeWorkingPatternAssignments)
-        .where(eq(employeeWorkingPatternAssignments.workingPatternId, workingPatternId))
-        .limit(1);
-      return assigned !== undefined;
+    async deleteVersion(versionId) {
+      await orm().delete(workingPatternVersions).where(eq(workingPatternVersions.id, versionId));
     },
 
-    async findEmployeesOnPattern(workingPatternId) {
-      const rows = await union(
-        orm()
-          .select({ employeeId: employeeWorkingPatternAssignments.employeeId })
-          .from(employeeWorkingPatternAssignments)
-          .where(eq(employeeWorkingPatternAssignments.workingPatternId, workingPatternId)),
-        orm()
-          .select({ employeeId: employeeTerms.employeeId })
-          .from(employeeTerms)
-          .innerJoin(workingPatterns, eq(workingPatterns.termsId, employeeTerms.termsId))
-          .where(eq(workingPatterns.id, workingPatternId)),
-      );
-      return rows.map(({ employeeId }) => employeeId);
-    },
-
-    async findAssignments(employeeIds) {
+    async findAssignments({ employeeIds = [], termsIds = [] }) {
+      if (employeeIds.length === 0 && termsIds.length === 0) {
+        return [];
+      }
       const rows = await orm()
         .select()
-        .from(employeeWorkingPatternAssignments)
-        .where(inArray(employeeWorkingPatternAssignments.employeeId, [...employeeIds]));
-      const grouped = Map.groupBy(rows, ({ employeeId }) => employeeId);
-      return new Map(
-        [...grouped].map(([employeeId, assignments]) => [
-          employeeId,
-          assignments.map(({ id, workingPatternId, startDate, endDate }) => ({
-            id,
-            workingPatternId,
-            startDate,
-            endDate,
-          })),
-        ]),
-      );
+        .from(workingPatternAssignments)
+        .where(
+          or(
+            employeeIds.length > 0
+              ? inArray(workingPatternAssignments.employeeId, [...employeeIds])
+              : undefined,
+            termsIds.length > 0
+              ? inArray(workingPatternAssignments.termsId, [...termsIds])
+              : undefined,
+          ),
+        )
+        .orderBy(asc(workingPatternAssignments.startDate));
+      return rows.map(assignmentOf);
     },
 
-    async insertAssignment(employeeId, { workingPatternId, startDate, endDate }) {
-      await orm()
-        .insert(employeeWorkingPatternAssignments)
-        .values({ employeeId, workingPatternId, startDate, endDate });
+    async findAssignmentsOfVersions(versionIds) {
+      if (versionIds.length === 0) {
+        return [];
+      }
+      const rows = await orm()
+        .select()
+        .from(workingPatternAssignments)
+        .where(inArray(workingPatternAssignments.workingPatternVersionId, [...versionIds]))
+        .orderBy(asc(workingPatternAssignments.startDate));
+      return rows.map(assignmentOf);
+    },
+
+    async findAssignmentsById(ids) {
+      const rows = await orm()
+        .select()
+        .from(workingPatternAssignments)
+        .where(inArray(workingPatternAssignments.id, [...ids]));
+      return rows.map(assignmentOf);
+    },
+
+    async insertAssignment({ versionId, owner, startDate, endDate }) {
+      const [row] = await orm()
+        .insert(workingPatternAssignments)
+        .values({ workingPatternVersionId: versionId, ...ownerColumns(owner), startDate, endDate })
+        .returning({ id: workingPatternAssignments.id });
+      return row!.id;
     },
 
     async endAssignment(id, endDate) {
       await orm()
-        .update(employeeWorkingPatternAssignments)
+        .update(workingPatternAssignments)
         .set({ endDate })
-        .where(eq(employeeWorkingPatternAssignments.id, id));
+        .where(eq(workingPatternAssignments.id, id));
     },
 
     async deleteAssignment(id) {
+      await orm().delete(workingPatternAssignments).where(eq(workingPatternAssignments.id, id));
+    },
+
+    async deleteTermsAssignments(termsId) {
       await orm()
-        .delete(employeeWorkingPatternAssignments)
-        .where(eq(employeeWorkingPatternAssignments.id, id));
+        .delete(workingPatternAssignments)
+        .where(eq(workingPatternAssignments.termsId, termsId));
+    },
+
+    async deleteTermsDrafts(termsId) {
+      const deleted = await orm()
+        .delete(workingPatternVersions)
+        .where(eq(workingPatternVersions.termsId, termsId))
+        .returning({ patternId: workingPatternVersions.workingPatternId });
+      if (deleted.length === 0) {
+        return;
+      }
+      const kept = orm()
+        .select({ id: workingPatternVersions.workingPatternId })
+        .from(workingPatternVersions);
+      await orm()
+        .delete(workingPatterns)
+        .where(
+          and(
+            inArray(
+              workingPatterns.id,
+              deleted.map(({ patternId }) => patternId),
+            ),
+            notInArray(workingPatterns.id, kept),
+          ),
+        );
+    },
+
+    async deleteUnassignedPatterns() {
+      const assigned = orm()
+        .select({ id: workingPatternVersions.workingPatternId })
+        .from(workingPatternAssignments)
+        .innerJoin(
+          workingPatternVersions,
+          eq(workingPatternVersions.id, workingPatternAssignments.workingPatternVersionId),
+        );
+      await orm().delete(workingPatterns).where(notInArray(workingPatterns.id, assigned));
     },
   };
 }
 
-function patternVersionOf(row: typeof workingPatternVersions.$inferSelect): PatternVersion {
+/** The owner columns of an assignment row: one set, the other null. */
+function ownerColumns(owner: AssignmentOwner) {
+  // Both read as given, so the database refuses an owner that names both or neither.
+  return {
+    employeeId: "employeeId" in owner ? owner.employeeId : null,
+    termsId: "termsId" in owner ? owner.termsId : null,
+  };
+}
+
+/** The owner of an assignment row, which has exactly one. */
+function ownerOf(row: { employeeId: string | null; termsId: string | null }): AssignmentOwner {
+  return row.employeeId !== null ? { employeeId: row.employeeId } : { termsId: row.termsId! };
+}
+
+function assignmentOf(row: typeof workingPatternAssignments.$inferSelect): Assignment {
   return {
     id: row.id,
+    versionId: row.workingPatternVersionId,
+    owner: ownerOf(row),
     startDate: row.startDate,
     endDate: row.endDate,
+  };
+}
+
+function versionOf(row: typeof workingPatternVersions.$inferSelect): PatternVersion {
+  return {
+    id: row.id,
+    workingPatternId: row.workingPatternId,
+    status: row.status,
+    termsId: row.termsId,
+    revision: row.revision,
     minutes: [
       row.mondayMinutes,
       row.tuesdayMinutes,
@@ -223,12 +274,9 @@ function patternVersionOf(row: typeof workingPatternVersions.$inferSelect): Patt
   };
 }
 
-function versionRow(workingPatternId: string, version: Omit<PatternVersion, "id">) {
-  const [monday, tuesday, wednesday, thursday, friday, saturday, sunday] = version.minutes;
+function weekColumns({ minutes, bankHolidayCalendar }: PatternWeek) {
+  const [monday, tuesday, wednesday, thursday, friday, saturday, sunday] = minutes;
   return {
-    workingPatternId,
-    startDate: version.startDate,
-    endDate: version.endDate,
     mondayMinutes: monday,
     tuesdayMinutes: tuesday,
     wednesdayMinutes: wednesday,
@@ -236,6 +284,6 @@ function versionRow(workingPatternId: string, version: Omit<PatternVersion, "id"
     fridayMinutes: friday,
     saturdayMinutes: saturday,
     sundayMinutes: sunday,
-    bankHolidayCalendar: version.bankHolidayCalendar,
+    bankHolidayCalendar,
   };
 }

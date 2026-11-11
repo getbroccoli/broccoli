@@ -10,14 +10,40 @@ test("the owner previews a person's new terms, moves them and cancels the move t
   const startDate = `${month === 12 ? year! + 1 : year}-${String(month === 12 ? 1 : month! + 1).padStart(2, "0")}-01`;
   const created = await browser.graphql(`mutation {
     employees { createTerms(input: { name: "Scotland", bankHolidayCalendar: SCOTLAND }) {
-      terms { id } error { __typename }
+      terms { id earliestChange unpublishedWorkingWeek { id revision } } error { __typename }
     } }
   }`);
   const createdBody = (await created.json()) as {
-    data: { employees: { createTerms: { terms: { id: string }; error: unknown } } };
+    data: {
+      employees: {
+        createTerms: {
+          terms: {
+            id: string;
+            earliestChange: string;
+            unpublishedWorkingWeek: { id: string; revision: number };
+          };
+          error: unknown;
+        };
+      };
+    };
   };
   expect(createdBody.data.employees.createTerms.error).toBeNull();
-  const termsId = createdBody.data.employees.createTerms.terms.id;
+  const terms = createdBody.data.employees.createTerms.terms;
+  const termsId = terms.id;
+  const published = await browser.graphql(
+    `mutation($id: ID!, $versionId: ID!, $revision: Int!, $from: Date!) {
+    timeOff { publishTerms(input: {
+      termsId: $id, versions: [{ id: $versionId, revision: $revision }], startDate: $from, owners: [{ termsId: $id }]
+    }) { error { __typename } } }
+  }`,
+    {
+      id: termsId,
+      versionId: terms.unpublishedWorkingWeek.id,
+      revision: terms.unpublishedWorkingWeek.revision,
+      from: terms.earliestChange,
+    },
+  );
+  expect(await published.json()).toEqual({ data: { timeOff: { publishTerms: { error: null } } } });
   const input = { employeeIds: [employee.id], termsId, startDate };
 
   const preview = await browser.graphql(

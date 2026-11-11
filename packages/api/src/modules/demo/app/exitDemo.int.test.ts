@@ -10,12 +10,15 @@ import {
   recordHistory,
   readTermsPolicies,
   readTimeOffTerms,
+  readWorkingPatterns,
   setupSteps,
   signedIn,
   storedFileIds,
   taskService,
   test,
   workingPatternService,
+  seedWorkingPattern,
+  timeOffPolicyService,
 } from "#test/support";
 
 import { parseCalendarDate } from "../../../utils";
@@ -33,35 +36,32 @@ test("exiting the demo restores only the default terms on their seeded week with
   const termsId = await seed.defaultTermsId();
   expect(await readTermsPolicies(orm, termsId)).toHaveLength(4);
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPatterns(owner)).find(
-    (pattern) => pattern.termsId === termsId,
-  )!;
-  await patterns.changePattern(owner, {
-    workingPatternId: standard.id,
-    startDate: "2026-11-01",
+  const draft = await patterns.saveWorkingPattern(owner, {
+    termsId,
     minutes: [480, 480, 480, 480, 480, 0, 0],
+    bankHolidayCalendar: "england_and_wales",
   });
-  await patterns.createPattern(owner, {
-    name: "Part-time",
-    minutes: [0, 450, 450, 450, 0, 0, 0],
+  await timeOffPolicyService(orm).publishTerms(owner, {
+    termsId,
+    versions: [draft],
+    startDate: "2026-11-01",
+    owners: [{ termsId }],
   });
+  await seedWorkingPattern(orm, { name: "Part-time", minutes: [0, 450, 450, 450, 0, 0, 0] });
   await seed.terms("Scotland");
 
   await demoService(orm).exitDemo(owner);
 
   expect(await readTermsPolicies(orm, termsId)).toEqual([]);
   expect(await readTimeOffTerms(orm)).toMatchObject([
-    { id: termsId, key: "default_terms", pattern: { id: standard.id } },
+    { id: termsId, key: "default_terms", pattern: { name: null } },
   ]);
-  expect(await workingPatternService(orm).listPatterns(owner)).toMatchObject([
+  expect(await readWorkingPatterns(orm)).toMatchObject([
     {
-      id: standard.id,
-      termsId,
       name: null,
       versions: [
         {
-          startDate: null,
-          endDate: null,
+          status: "published",
           minutes: [450, 450, 450, 450, 450, 0, 0],
           bankHolidayCalendar: "england_and_wales",
         },

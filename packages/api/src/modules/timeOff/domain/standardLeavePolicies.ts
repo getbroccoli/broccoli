@@ -3,7 +3,10 @@ import type { AllowanceRule } from "./allowanceCalculator";
 import type { PolicyVersion } from "./timeOffPolicy";
 
 /** The rules of a policy version before it is saved: no ids, no dates. */
-export type NewPolicyVersion = Omit<PolicyVersion, "id" | "startDate" | "endDate" | "rules"> & {
+export type NewPolicyVersion = Omit<
+  PolicyVersion,
+  "id" | "timeOffPolicyId" | "status" | "termsId" | "revision" | "rules"
+> & {
   rules: DistributiveOmit<AllowanceRule, "id">[];
 };
 

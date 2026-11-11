@@ -12,10 +12,18 @@ type Props = {
   open: { timeOffTypeId: string; editor: ReactNode; summary: string; dirty: boolean } | null;
   onEdit: (timeOffTypeId: string) => void;
   onCancelPlanned: (timeOffTypeId: string, version: TimeOffRow["versions"][number]) => void;
+  onDiscard: (versionId: string) => void;
 };
 
-/** Each time off type's rules on the terms today, or "Not offered here", with planned rules under them. */
-export function TermsTimeOffSection({ termsName, timeOff, open, onEdit, onCancelPlanned }: Props) {
+/** Each time off type's rules on the terms today, or "Not offered here", with planned and unpublished rules under them. */
+export function TermsTimeOffSection({
+  termsName,
+  timeOff,
+  open,
+  onEdit,
+  onCancelPlanned,
+  onDiscard,
+}: Props) {
   return (
     <section aria-labelledby="terms-time-off" className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
@@ -33,6 +41,7 @@ export function TermsTimeOffSection({ termsName, timeOff, open, onEdit, onCancel
             open={open?.timeOffTypeId === row.timeOffType.id ? open : null}
             onEdit={() => onEdit(row.timeOffType.id)}
             onCancelPlanned={(version) => onCancelPlanned(row.timeOffType.id, version)}
+            onDiscard={() => row.unpublished && onDiscard(row.unpublished.id)}
           />
         ))}
       </ul>

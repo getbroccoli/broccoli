@@ -176,15 +176,17 @@ type EmployeesMutations {
   updateLocation(input: LocationUpdateInput!): LocationUpdatePayload!
   "Deletes a location nobody is in; refused with a conflict while someone is. Admins only."
   deleteLocation(input: LocationDeleteInput!): LocationDeletePayload!
-  "Adds terms on a Mon–Fri week, 7.5 hours a day, with these bank holidays and no time off offered. Admins only."
+  "Adds terms with an unpublished Mon–Fri week, 7.5 hours a day, on these bank holidays and no time off offered. Admins only."
   createTerms(input: TermsCreateInput!): TermsCreatePayload!
   "Changes terms' fields and records the change in their history; renaming is always allowed. Admins only."
   updateTerms(input: TermsUpdateInput!): TermsUpdatePayload!
   "Deletes terms nobody was ever on and no location starts people on, never the default terms; refused with a conflict saying why otherwise. Admins only."
   deleteTerms(input: TermsDeleteInput!): TermsDeletePayload!
-  "Applies a new week from a date no earlier than the start of the current leave year; a later planned version stays. On terms, adds a line to their history. Admins only."
-  changeWorkingPattern(input: WorkingPatternChangeInput!): WorkingPatternChangePayload!
-  "Removes a version that has not started; the one before it runs on. Refused with a ConflictError once it has started. Admins only."
+  "Saves the terms' unpublished working week: created from the week they work today, or saved again. Nobody's week changes until the terms are published. Admins only."
+  saveWorkingPattern(input: WorkingPatternSaveInput!): WorkingPatternSavePayload!
+  "Deletes an unpublished working week. Admins only."
+  discardWorkingPattern(input: WorkingPatternDiscardInput!): WorkingPatternDiscardPayload!
+  "Removes a working week change that has not started; the week before it runs on. Refused with a ConflictError once it has started. Admins only."
   cancelWorkingPatternChange(
     input: WorkingPatternCancelChangeInput!
   ): WorkingPatternCancelChangePayload!
@@ -261,10 +263,9 @@ type EmployeeTermsMovePreview {
   currentTerms: EmployeeEmploymentTerms!
 }
 
-"A week from a date: minutes worked each day and whose bank holidays apply."
-input WorkingPatternChangeInput {
-  workingPatternId: ID!
-  startDate: Date!
+"A set of terms' unpublished week: minutes worked each day and whose bank holidays apply."
+input WorkingPatternSaveInput {
+  termsId: ID!
   "0 to 1,440 each day; at least one day above 0."
   mondayMinutes: Int!
   tuesdayMinutes: Int!
@@ -276,23 +277,35 @@ input WorkingPatternChangeInput {
   bankHolidayCalendar: BankHolidayCalendar!
 }
 
+input WorkingPatternDiscardInput {
+  "The unpublished week's id."
+  versionId: ID!
+}
+
 input WorkingPatternCancelChangeInput {
-  workingPatternId: ID!
-  "The start of the version to remove."
-  startDate: Date!
+  "The planned week's id, as `Terms.workingWeek` gives it."
+  assignmentId: ID!
 }
 
-"The changed working pattern, or why it was refused."
-type WorkingPatternChangePayload {
-  workingPattern: WorkingPattern
-  error: WorkingPatternChangeError
+"The saved unpublished week, or why it was refused."
+type WorkingPatternSavePayload {
+  workingWeek: UnpublishedWorkingWeek
+  error: WorkingPatternSaveError
 }
 
-union WorkingPatternChangeError = InvalidInputError | NotFoundError
+union WorkingPatternSaveError = InvalidInputError
 
-"The working pattern without the cancelled version, or why it was refused."
+"The discarded week's id, or why it was refused."
+type WorkingPatternDiscardPayload {
+  discardedVersionId: ID
+  error: WorkingPatternDiscardError
+}
+
+union WorkingPatternDiscardError = NotFoundError
+
+"The cancelled change's id, or why it was refused."
 type WorkingPatternCancelChangePayload {
-  workingPattern: WorkingPattern
+  cancelledAssignmentId: ID
   error: WorkingPatternCancelChangeError
 }
 
@@ -424,10 +437,12 @@ type Terms implements AnyRecord {
   peopleCount: Int!
   "Locations whose new people start here, by name; the default terms also take locations without terms."
   locations: [Location!]!
-  "The version covering today first, if any, then planned ones; past versions stay out."
+  "Weeks from the start of the current leave year on, oldest first: earlier ones, today's, then planned ones."
   workingWeek: [WorkingWeekVersion!]!
-  "The terms' own working pattern."
-  workingPattern: WorkingPattern!
+  "The week saved and not published yet; null: none."
+  unpublishedWorkingWeek: UnpublishedWorkingWeek
+  "The earliest date a change may apply from: the start of the current leave year."
+  earliestChange: Date!
   "Whether anyone was ever on these terms, even only in the past. While nobody was, a change reaches nobody."
   hadPeople: Boolean!
   "Changes to these terms, newest first."
@@ -488,24 +503,28 @@ type TermsDeletePayload {
 
 union TermsDeleteError = NotFoundError | ConflictError
 
-"A way of working over time: one set of terms' own, or a named one people are put on one by one."
-type WorkingPattern {
-  id: ID!
-  "The version covering today first, if any, then planned ones; past versions stay out."
-  versions: [WorkingWeekVersion!]!
-  "People this pattern applies to on some day from `from` on, by name. Admins only."
-  reach(from: Date!): [Employee!]!
-  "The earliest date a change may apply from: the start of the current leave year."
-  earliestChange: Date!
-}
-
 "A working week from a date to a date: minutes worked each day and whose bank holidays apply."
 type WorkingWeekVersion {
+  "On terms, the id a planned week is cancelled by."
   id: ID!
-  "Null: from the beginning."
-  startDate: Date
+  startDate: Date!
   "The last day; null: open-ended."
   endDate: Date
+  mondayMinutes: Int!
+  tuesdayMinutes: Int!
+  wednesdayMinutes: Int!
+  thursdayMinutes: Int!
+  fridayMinutes: Int!
+  saturdayMinutes: Int!
+  sundayMinutes: Int!
+  bankHolidayCalendar: BankHolidayCalendar!
+}
+
+"A working week saved on terms and not published yet."
+type UnpublishedWorkingWeek {
+  id: ID!
+  "Goes up by one each time it is saved; publishing names the revision it saw."
+  revision: Int!
   mondayMinutes: Int!
   tuesdayMinutes: Int!
   wednesdayMinutes: Int!

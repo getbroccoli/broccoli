@@ -7,18 +7,14 @@ import {
   expect,
   expectBlockedBy,
   seedEmploymentEnd,
+  seedTermsWeek,
   termsService,
   test,
   timeOffService,
 } from "#test/support";
 
 import { ormOf } from "../../../../core/db";
-import {
-  employeeTerms,
-  locationRepository,
-  termsRepository,
-  workingPatternRepository,
-} from "../../db";
+import { employeeTerms, locationRepository, termsRepository } from "../../db";
 
 test("lists the default terms first, then others by name ignoring case", async ({ orm, seed }) => {
   const defaultId = await seed.defaultTermsId();
@@ -81,33 +77,49 @@ test("does not count a person whose employment ended before today", async ({ orm
   expect(result).toMatchObject([{ id, peopleCount: 0 }]);
 });
 
-test("shows today's working week followed by planned versions, leaving past versions out", async ({
+test("shows working week assignments ending this leave year and planned ones, leaving last year's out", async ({
   orm,
   seed,
 }) => {
-  const defaultId = await seed.defaultTermsId();
-  const patterns = workingPatternRepository(orm);
-  const pattern = (await patterns.findPatterns()).find(({ termsId }) => termsId === defaultId)!;
-  const { id: pastId, ...week } = pattern.versions[0]!;
-  await patterns.endVersion(pastId, calendarDate("2026-11-05"));
-  await patterns.insertVersion(pattern.id, {
-    ...week,
-    startDate: calendarDate("2027-01-01"),
-    endDate: null,
+  const termsId = await seed.terms("Scotland");
+  await seedTermsWeek(orm, { termsId, startDate: "2025-01-01", endDate: "2025-12-31" });
+  const earlier = await seedTermsWeek(orm, {
+    termsId,
+    startDate: "2026-01-01",
+    endDate: "2026-05-31",
+  });
+  const current = await seedTermsWeek(orm, {
+    termsId,
+    startDate: "2026-06-01",
+    endDate: "2026-12-31",
+  });
+  const planned = await seedTermsWeek(orm, {
+    termsId,
+    startDate: "2027-01-01",
     minutes: [480, 480, 480, 480, 0, 0, 0],
   });
-  await patterns.insertVersion(pattern.id, {
-    ...week,
-    startDate: calendarDate("2026-11-06"),
-    endDate: calendarDate("2026-12-31"),
-  });
-  const service = termsService(orm, { today: "2026-11-06" });
 
-  const result = await service.listTerms(ADMIN);
+  const result = await termsService(orm).listTerms(ADMIN);
 
-  expect(result.find(({ id }) => id === defaultId)!.workingWeek).toMatchObject([
-    { startDate: "2026-11-06", endDate: "2026-12-31", minutes: [450, 450, 450, 450, 450, 0, 0] },
-    { startDate: "2027-01-01", endDate: null, minutes: [480, 480, 480, 480, 0, 0, 0] },
+  expect(result.find(({ id }) => id === termsId)!.workingWeek).toMatchObject([
+    {
+      id: earlier.assignmentId,
+      startDate: "2026-01-01",
+      endDate: "2026-05-31",
+      version: { id: earlier.versionId, minutes: [450, 450, 450, 450, 450, 0, 0] },
+    },
+    {
+      id: current.assignmentId,
+      startDate: "2026-06-01",
+      endDate: "2026-12-31",
+      version: { minutes: [450, 450, 450, 450, 450, 0, 0] },
+    },
+    {
+      id: planned.assignmentId,
+      startDate: "2027-01-01",
+      endDate: null,
+      version: { minutes: [480, 480, 480, 480, 0, 0, 0] },
+    },
   ]);
 });
 

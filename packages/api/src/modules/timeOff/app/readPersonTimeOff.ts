@@ -40,17 +40,14 @@ export async function readPersonTimeOff(
       readTermsMemberships: (_tx: typeof tx, employeeIds: readonly string[]) =>
         employeeReads.readTermsMemberships(tx, employeeIds, input.move),
     };
-    const { people, policies } = await readPeople(reads, tx, ids);
-    const termsPolicyIds = new Set(policies.filter((p) => p.termsId).map(({ id }) => id));
+    const { people } = await readPeople(reads, tx, ids);
     const date: CalendarDate = input.from ?? today();
     return new Map(
       people.map((person) => [
         person.employeeId,
         types.map((timeOffType) => ({
           timeOffType,
-          versions: personVersionsFrom(person.timelineOf(timeOffType.id), date, (policyId) =>
-            termsPolicyIds.has(policyId),
-          ),
+          versions: personVersionsFrom(person.timelineOf(timeOffType.id), date),
         })),
       ]),
     );

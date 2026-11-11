@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import fc from "fast-check";
 
 import {
@@ -9,8 +10,8 @@ import {
   readAllowances,
   test,
   timeOffService,
-  workingPatternService,
-  transactWithTimeOffEvents,
+  seedWorkingPattern,
+  seedOwnWeek,
 } from "#test/support";
 
 import { addDays } from "../../../utils";
@@ -71,7 +72,6 @@ test("invariant: corrected starts and patterns converge with a fresh person's fi
 }) => {
   await giveDefaultTermsStatutoryMinimum(orm, seed, transact);
   const employees = employeeServices(orm);
-  const patterns = workingPatternService(orm, { transact: transactWithTimeOffEvents(orm) });
   await fc.assert(
     // Correct the same assignment date, so the final dated pattern really is identical.
     fc.asyncProperty(
@@ -81,9 +81,9 @@ test("invariant: corrected starts and patterns converge with a fresh person's fi
       }),
       async (changes) => {
         const employee = await seed.employee({ startDate: changes[0]!.startDate });
-        let finalPatternId = "";
+        let finalVersionId = "";
         for (const [index, change] of changes.entries()) {
-          const pattern = await patterns.createPattern(OWNER, {
+          const pattern = await seedWorkingPattern(orm, {
             name: `${employee.id}-${index}`,
             minutes: [0, 1, 2, 3, 4, 5, 6].map((day) => (day < change.workingDays ? 450 : 0)) as [
               number,
@@ -96,23 +96,38 @@ test("invariant: corrected starts and patterns converge with a fresh person's fi
             ],
             bankHolidayCalendar: "england_and_wales",
           });
-          finalPatternId = pattern.id;
+          finalVersionId = pattern.versionId;
           await employees.updateEmployee(OWNER, { id: employee.id, startDate: change.startDate });
-          await patterns.assignPattern(OWNER, {
+          await orm.execute(
+            sql`delete from working_pattern_assignments where employee_id = ${employee.id}`,
+          );
+          await seedOwnWeek(orm, {
             employeeId: employee.id,
-            workingPatternId: pattern.id,
+            versionId: pattern.versionId,
             startDate: calendarDate("2025-01-01"),
             endDate: null,
           });
+          await transact((tx) =>
+            timeOffService(orm).ensureAllowances(OWNER, tx, {
+              employeeIds: [employee.id],
+              cause: { kind: "WORKING_PATTERN_CHANGED", ref: "2025-01-01" },
+            }),
+          );
         }
         const final = changes.at(-1)!;
         const fresh = await seed.employee({ startDate: final.startDate });
-        await patterns.assignPattern(OWNER, {
+        await seedOwnWeek(orm, {
           employeeId: fresh.id,
-          workingPatternId: finalPatternId,
+          versionId: finalVersionId,
           startDate: calendarDate("2025-01-01"),
           endDate: null,
         });
+        await transact((tx) =>
+          timeOffService(orm).ensureAllowances(OWNER, tx, {
+            employeeIds: [fresh.id],
+            cause: { kind: "WORKING_PATTERN_CHANGED", ref: "2025-01-01" },
+          }),
+        );
         const expected = await readAllowances(orm, fresh.id);
         const actual = await readAllowances(orm, employee.id);
         expect(expected).toHaveLength(1);

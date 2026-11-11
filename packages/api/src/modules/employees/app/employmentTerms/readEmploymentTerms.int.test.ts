@@ -5,6 +5,9 @@ import {
   seedTermsPeriods,
   signedIn,
   termsService,
+  seedTermsWeek,
+  seedWorkingPattern,
+  seedOwnWeek,
   test,
   workingPatternService,
 } from "#test/support";
@@ -43,6 +46,11 @@ test("reads today's week from the terms followed by the week after a planned mov
     name: "Scotland",
     bankHolidayCalendar: "scotland",
   });
+  await seedTermsWeek(orm, {
+    termsId: scotland.id,
+    bankHolidayCalendar: "scotland",
+    startDate: "2026-01-01",
+  });
   await seedTermsPeriods(orm, employee.id, [
     { termsId: await seed.defaultTermsId(), startDate: null, endDate: "2026-08-31" },
     { termsId: scotland.id, startDate: "2026-09-01", endDate: null },
@@ -77,13 +85,13 @@ test("reads today's week from the terms followed by the week after a planned mov
 test("reads an own week until it ends, then the terms' week", async ({ orm, seed }) => {
   const employee = await seed.employee();
   const service = workingPatternService(orm, { today: "2026-06-01" });
-  const pattern = await service.createPattern(OWNER, {
+  const pattern = await seedWorkingPattern(orm, {
     name: "Four days",
     minutes: [480, 480, 480, 480, 0, 0, 0],
   });
-  await service.assignPattern(OWNER, {
+  await seedOwnWeek(orm, {
     employeeId: employee.id,
-    workingPatternId: pattern.id,
+    versionId: pattern.versionId,
     startDate: "2026-06-01",
     endDate: "2026-08-31",
   });
@@ -139,6 +147,11 @@ test("reads the working week after a previewed move without writing the move", a
     name: "Scotland",
     bankHolidayCalendar: "scotland",
   });
+  await seedTermsWeek(orm, {
+    termsId: scotland.id,
+    bankHolidayCalendar: "scotland",
+    startDate: "2026-01-01",
+  });
   const service = workingPatternService(orm, { today: "2026-11-09" });
   const before = await service.readEmploymentTerms(OWNER, { employeeIds: [employee.id] });
 
@@ -175,13 +188,13 @@ test("keeps a person's own week across a previewed move", async ({ orm, seed }) 
     bankHolidayCalendar: "scotland",
   });
   const service = workingPatternService(orm, { today: "2026-11-09" });
-  const own = await service.createPattern(OWNER, {
+  const own = await seedWorkingPattern(orm, {
     name: "Four days",
     minutes: [480, 480, 480, 480, 0, 0, 0],
   });
-  await service.assignPattern(OWNER, {
+  await seedOwnWeek(orm, {
     employeeId: employee.id,
-    workingPatternId: own.id,
+    versionId: own.versionId,
     startDate: "2026-03-01",
   });
 
@@ -230,4 +243,19 @@ test("reads the week from a past date when asked", async ({ orm, seed }) => {
     startDate: "2026-03-01",
     source: "from_their_terms",
   });
+});
+
+test("a person moved onto unpublished terms has no working week there", async ({ orm, seed }) => {
+  const employee = await seed.employee({ startDate: "2025-01-01" });
+  const created = await termsService(orm).createTerms(OWNER, {
+    name: "New terms",
+    bankHolidayCalendar: "scotland",
+  });
+  await seed.moveToTerms(employee.id, created.id, "2026-01-01");
+
+  const result = await workingPatternService(orm).readEmploymentTerms(OWNER, {
+    employeeIds: [employee.id],
+  });
+
+  expect(result.get(employee.id)?.workingWeek).toEqual([]);
 });
