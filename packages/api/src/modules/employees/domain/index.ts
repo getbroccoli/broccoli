@@ -54,6 +54,7 @@ export {
   type TermsMoveSkipReason,
 } from "./termsMove";
 export {
+  changesWithin,
   createPersonTimeline,
   type PersonTimeline,
   type PersonVersion,

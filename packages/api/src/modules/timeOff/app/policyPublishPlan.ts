@@ -4,6 +4,7 @@ import { type CalendarDate, coversDate } from "../../../utils";
 import {
   type AssignmentOwner,
   type AssignmentPlan,
+  changesWithin,
   type EmployeeReadService,
   isSameOwner,
   NEW_ROW,
@@ -144,7 +145,7 @@ export async function readPolicyReach(
     .map(({ employeeId }) => employeeId);
 }
 
-/** The people whose rules for the type from `from`, while employed, a stop would change. */
+/** The people whose rules for the type a stop would change on a day from `from` while they are employed. */
 async function stopReach(
   employeeReads: EmployeeReadService,
   tx: Tx,
@@ -156,24 +157,12 @@ async function stopReach(
   }: { candidates: string[]; typeId: string; from: CalendarDate; after: Person[] },
 ): Promise<string[]> {
   const { people: before } = await readPeople(employeeReads, tx, candidates);
-  const spans = (person: Person) =>
-    JSON.stringify(
-      person
-        .timelineOf(typeId)
-        .getVersions(from, LAST_DAY)
-        .map(({ versionId, startDate, endDate }) => [versionId, startDate, endDate]),
-    );
   return before
-    .filter(
-      (person, i) =>
-        person.timelineOf(typeId).appliesFrom(() => true, from, person.periods) &&
-        spans(person) !== spans(after[i]!),
+    .filter((person, i) =>
+      changesWithin(person.timelineOf(typeId), after[i]!.timelineOf(typeId), from, person.periods),
     )
     .map(({ employeeId }) => employeeId);
 }
-
-/** A day after any rules, for "from a date on". */
-const LAST_DAY = "9999-12-31" as CalendarDate;
 
 /**
  * How a stop from `from` ends one owner's rows of the policy: those covering `from` end the day

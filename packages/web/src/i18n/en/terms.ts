@@ -57,7 +57,7 @@ export const termsEn = {
   "terms.edit.stop": "Stop",
   "terms.timeOff.add": "Add time off type",
   "terms.timeOff.stops": "Not offered from {date}",
-  "terms.timeOff.stopDraft": "Not offered from the date you publish",
+  "terms.timeOff.stopDraft": "Not offered from the date you choose in Publish",
   "terms.edit.stop.change": "{type}: not offered",
   "terms.edit.stopStays": "{type} stays offered on {terms}.",
   "terms.edit.cancel": "Cancel",

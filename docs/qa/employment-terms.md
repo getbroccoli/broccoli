@@ -81,7 +81,7 @@ Use terms where a type is not offered, such as new terms.
 
 ## Stop offering a type
 
-- [ ] An offered row without a planned change or draft has "Stop" beside "Edit". Stop saves a draft: the row keeps today's rules with a "Draft" line "Not offered from the date you publish" and "Discard", no "Edit" or "Stop", and the header shows "Publish".
+- [ ] An offered row without a planned change or draft has "Stop" beside "Edit". Stop saves a draft: the row keeps today's rules with a "Draft" line "Not offered from the date you choose in Publish" and "Discard", no "Edit" or "Stop", and the header shows "Publish".
 - [ ] "Discard" removes the draft line and brings "Edit" and "Stop" back.
 - [ ] Publish opens on "Today" and offers 1 Jan this year, 1 Jan next year and "Other date…"; "What changes" shows "Family leave: not offered" with "From <date>." and the people it reaches.
 - [ ] Publishing from 1 Jan <next year> shows the row's line "Not offered from 1 Jan <next year>" with "Cancel change", and the History line "You stopped offering Family leave from 1 Jan <next year>".

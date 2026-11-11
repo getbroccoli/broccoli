@@ -43,6 +43,7 @@ export {
 } from "./app";
 export {
   cancelPlannedVersion,
+  changesWithin,
   createPersonTimeline,
   earliestChangeDate,
   employeeFieldErrors,
