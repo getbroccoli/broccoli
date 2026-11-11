@@ -50,10 +50,6 @@ export async function appendRulesHistory(
   });
 }
 
-function lineValue(line: RulesLine): string {
-  return "stopDate" in line ? stopValue(line.stopDate) : rulesValue(line);
-}
-
 /** Why allowances change when a policy's rules change from a date. */
 export function rulesChanged(timeOffPolicyId: string, from: CalendarDate) {
   return { kind: "TIME_OFF_RULES_CHANGED" as const, ref: `${timeOffPolicyId}:${from}`, from };
@@ -101,4 +97,8 @@ export function existingType(types: readonly TimeOffType[], timeOffTypeId: strin
     throw invalidInput([{ field: "timeOffTypeId", code: "not_found" }]);
   }
   return type;
+}
+
+function lineValue(line: RulesLine): string {
+  return "stopDate" in line ? stopValue(line.stopDate) : rulesValue(line);
 }
