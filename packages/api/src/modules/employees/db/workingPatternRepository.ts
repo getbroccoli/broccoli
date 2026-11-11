@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, notInArray, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, notInArray, or, sql } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
@@ -11,7 +11,6 @@ import type {
   WeekdayMinutes,
   WorkingPattern,
 } from "../domain";
-import { employeeTerms } from "./employeeTermsTable";
 import { workingPatternAssignments } from "./workingPatternAssignmentsTable";
 import { workingPatterns } from "./workingPatternsTable";
 import { workingPatternVersions } from "./workingPatternVersionsTable";
@@ -58,8 +57,6 @@ export interface WorkingPatternRepository {
   deleteTermsDrafts(termsId: string): Promise<void>;
   /** Deletes every pattern no assignment uses, with its versions. */
   deleteUnassignedPatterns(): Promise<void>;
-  /** The employees who may work one of the versions: theirs, or their terms' on some date. */
-  findEmployeesOnVersions(versionIds: readonly string[]): Promise<string[]>;
 }
 
 export function workingPatternRepository(db: Orm | Tx): WorkingPatternRepository {
@@ -230,33 +227,11 @@ export function workingPatternRepository(db: Orm | Tx): WorkingPatternRepository
         );
       await orm().delete(workingPatterns).where(notInArray(workingPatterns.id, assigned));
     },
-
-    async findEmployeesOnVersions(versionIds) {
-      if (versionIds.length === 0) {
-        return [];
-      }
-      const ofVersions = inArray(workingPatternAssignments.workingPatternVersionId, [
-        ...versionIds,
-      ]);
-      const direct = await orm()
-        .select({ employeeId: workingPatternAssignments.employeeId })
-        .from(workingPatternAssignments)
-        .where(and(ofVersions, isNotNull(workingPatternAssignments.employeeId)));
-      const throughTerms = await orm()
-        .select({ employeeId: employeeTerms.employeeId })
-        .from(employeeTerms)
-        .innerJoin(
-          workingPatternAssignments,
-          eq(workingPatternAssignments.termsId, employeeTerms.termsId),
-        )
-        .where(ofVersions);
-      return [...new Set([...direct, ...throughTerms].map(({ employeeId }) => employeeId!))];
-    },
   };
 }
 
 /** The owner columns of an assignment row: one set, the other null. */
-export function ownerColumns(owner: AssignmentOwner) {
+function ownerColumns(owner: AssignmentOwner) {
   // Both read as given, so the database refuses an owner that names both or neither.
   return {
     employeeId: "employeeId" in owner ? owner.employeeId : null,
@@ -265,10 +240,7 @@ export function ownerColumns(owner: AssignmentOwner) {
 }
 
 /** The owner of an assignment row, which has exactly one. */
-export function ownerOf(row: {
-  employeeId: string | null;
-  termsId: string | null;
-}): AssignmentOwner {
+function ownerOf(row: { employeeId: string | null; termsId: string | null }): AssignmentOwner {
   return row.employeeId !== null ? { employeeId: row.employeeId } : { termsId: row.termsId! };
 }
 

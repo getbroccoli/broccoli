@@ -31,7 +31,7 @@ export interface DatedVersion<V> {
 }
 
 /** A version given to its owner from a date to a date, as a timeline reads it. */
-export type DatedVersionId = CalendarDateRange & { versionId: string };
+type DatedVersionId = CalendarDateRange & { versionId: string };
 
 /** What a person's timeline is read from. */
 export interface TimelineCreateInputArgs<V> {

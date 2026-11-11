@@ -4,6 +4,7 @@ import type { Logger } from "../../../core/logger";
 import type { SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseUuid } from "../../../utils";
 import {
+  applyAssignmentPlan,
   type AssignmentOwner,
   type Employee,
   type EmployeeReadService,
@@ -196,17 +197,15 @@ async function publishPolicy(
     if (!owners.some((ticked) => isSameOwner(ticked, owner))) {
       continue;
     }
-    for (const id of plan.deletedIds) await repository.deleteAssignment(id);
-    for (const { id, endDate } of plan.ended) await repository.endAssignment(id, endDate);
-    for (const span of plan.added) {
-      await repository.insertAssignment({
+    await applyAssignmentPlan(repository, plan, (span) =>
+      repository.insertAssignment({
         ...span,
         owner,
         versionId: version.id,
         timeOffPolicyId: policy.id,
         timeOffTypeId: policy.timeOffType.id,
-      });
-    }
+      }),
+    );
     await appendRulesHistory(ctx, tx, owner, policy.timeOffType, {
       before: replaced && {
         ...versionOf([policy], replaced.versionId),

@@ -20,6 +20,7 @@ export {
   type LocationWithPeopleCount,
 } from "./locationService";
 export { employeeDirectory } from "./employeeDirectory";
+export { applyAssignmentPlan } from "./employmentTerms/workingWeekPublish";
 export {
   createWorkingPatternService,
   type WorkingPatternPublish,

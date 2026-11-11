@@ -16,7 +16,13 @@ import {
 } from "../../domain";
 import { publishWorkingPatternChange } from "./publishWorkingPatternChange";
 import { appendWorkingWeekHistory } from "./workingWeekHistory";
-import { employeesOf, ownerIds, ownersOf, readReach } from "./workingWeekPublish";
+import {
+  applyAssignmentPlan,
+  employeesOf,
+  ownerIds,
+  ownersOf,
+  readReach,
+} from "./workingWeekPublish";
 
 /**
  * The working weeks admins keep on terms: an unpublished week saved and discarded, a planned one
@@ -187,11 +193,9 @@ export function createWorkingPatternService({
         if (!owners.some((ticked) => isSameOwner(ticked, owner))) {
           continue;
         }
-        for (const id of plan.deletedIds) await repository.deleteAssignment(id);
-        for (const { id, endDate } of plan.ended) await repository.endAssignment(id, endDate);
-        for (const span of plan.added) {
-          await repository.insertAssignment({ ...span, versionId: draft.id, owner });
-        }
+        await applyAssignmentPlan(repository, plan, (span) =>
+          repository.insertAssignment({ ...span, versionId: draft.id, owner }),
+        );
         const before = replaced && {
           ...versions.find(({ id }) => id === replaced.versionId)!,
           startDate: replaced.startDate,

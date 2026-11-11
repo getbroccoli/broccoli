@@ -90,3 +90,17 @@ export function ownerIds(owner: AssignmentOwner) {
     ? { employeeIds: [owner.employeeId] }
     : { termsIds: [owner.termsId] };
 }
+
+/** Writes one owner's plan through `repository`, adding each new span with `insert`. */
+export async function applyAssignmentPlan(
+  repository: {
+    deleteAssignment: (id: string) => Promise<void>;
+    endAssignment: (id: string, endDate: CalendarDate) => Promise<void>;
+  },
+  plan: AssignmentPlan,
+  insert: (span: AssignmentPlan["added"][number]) => Promise<unknown>,
+): Promise<void> {
+  for (const id of plan.deletedIds) await repository.deleteAssignment(id);
+  for (const { id, endDate } of plan.ended) await repository.endAssignment(id, endDate);
+  for (const span of plan.added) await insert(span);
+}

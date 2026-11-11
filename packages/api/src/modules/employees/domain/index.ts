@@ -44,7 +44,6 @@ export {
   NEW_ROW,
   planReplacement,
   rowsAfterPlan,
-  VERSION_STATUSES,
   type VersionStatus,
 } from "./assignment";
 export {
@@ -55,8 +54,6 @@ export {
 } from "./termsMove";
 export {
   createPersonTimeline,
-  type DatedVersion,
-  type DatedVersionId,
   type PersonTimeline,
   type PersonVersion,
   type RuleSource,

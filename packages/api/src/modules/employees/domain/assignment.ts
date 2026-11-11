@@ -2,8 +2,7 @@ import { invalidInput } from "../../../core/applicationError";
 import { addDays, type CalendarDate, type CalendarDateRange, coversDate } from "../../../utils";
 
 /** A working pattern's or time off policy's version: edited while a draft, never once published. */
-export const VERSION_STATUSES = ["draft", "published"] as const;
-export type VersionStatus = (typeof VERSION_STATUSES)[number];
+export type VersionStatus = "draft" | "published";
 
 /** Who an assignment belongs to: one employee, ahead of their terms, or one set of terms. */
 export type AssignmentOwner = { employeeId: string } | { termsId: string };
