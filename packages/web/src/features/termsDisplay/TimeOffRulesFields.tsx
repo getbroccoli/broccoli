@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { type MessageKey, t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
-import { daysError, type RulesValues } from "./timeOffRules";
+import { daysError, type RulesValues } from "./rulesValues";
 
 type Props<Values extends RulesValues> = {
   values: Values;

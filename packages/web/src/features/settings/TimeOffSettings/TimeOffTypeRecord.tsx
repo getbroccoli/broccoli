@@ -20,7 +20,8 @@ import { t } from "@/i18n";
 
 import { DeleteTimeOffTypeDialog } from "./DeleteTimeOffTypeDialog";
 import { nameErrorOf } from "./nameError";
-import { daysError, rulesValuesOf, typeInputOf } from "./timeOffRules";
+import { daysError, rulesValuesOf } from "@/features/termsDisplay";
+import { typeInputOf } from "./timeOffRules";
 import { TimeOffTypeFields, type TimeOffTypeValues } from "./TimeOffTypeFields";
 import { TimeOffTypeIcon } from "@/features/termsDisplay";
 

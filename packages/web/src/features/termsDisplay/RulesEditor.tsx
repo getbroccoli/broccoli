@@ -1,15 +1,15 @@
 import { t } from "@/i18n";
 
-import { TimeOffRulesFields } from "../TimeOffSettings";
-import type { RulesDraft } from "./termsDraft";
+import type { RulesValues } from "./rulesValues";
+import { TimeOffRulesFields } from "./TimeOffRulesFields";
 
-type Props = {
-  draft: RulesDraft;
-  onChange: (draft: RulesDraft) => void;
+type Props<Values extends RulesValues> = {
+  draft: Values;
+  onChange: (draft: Values) => void;
 };
 
 /** A time off type's rules opened in place: how it counts, the allowance and the leave year. */
-export function RulesEditor({ draft, onChange }: Props) {
+export function RulesEditor<Values extends RulesValues>({ draft, onChange }: Props<Values>) {
   return (
     <div className="flex flex-col gap-5">
       <TimeOffRulesFields values={draft} onChange={onChange} />

@@ -8,7 +8,7 @@ import { usePayloadMutation } from "@/apollo";
 import { weekOfDraft } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
-import { rulesInputOf } from "../TimeOffSettings";
+import { rulesInputOf } from "@/features/termsDisplay";
 import { TERMS_REFETCH, type Terms } from "./termsQueries";
 import type { OpenSection } from "./useTermsEditing";
 

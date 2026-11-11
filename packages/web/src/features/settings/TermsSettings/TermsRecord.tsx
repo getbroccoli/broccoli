@@ -19,6 +19,7 @@ import {
   CancelChangeDialog,
   companyToday,
   ruleLine,
+  RulesEditor,
   splitVersions,
   WeekEditor,
 } from "@/features/termsDisplay";
@@ -27,7 +28,6 @@ import { t } from "@/i18n";
 import { DefaultPill } from "./DefaultPill";
 import { DraftPill } from "./DraftPill";
 import { PublishDialog } from "./PublishDialog";
-import { RulesEditor } from "./RulesEditor";
 import { TermsMenu } from "./TermsMenu";
 import { TermsTimeOffSection } from "./TermsTimeOffSection";
 import { TERMS_DESCRIPTION } from "./termsDescription";

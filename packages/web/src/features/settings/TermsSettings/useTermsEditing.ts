@@ -1,8 +1,8 @@
 import { useState } from "react";
 
 import type { TimeOffRulesInput } from "@/__generated__/graphql";
+import { rulesInputOf } from "@/features/termsDisplay";
 
-import { rulesInputOf } from "../TimeOffSettings";
 import { type RulesDraft, rulesDraftOf, rulesErrors } from "./termsDraft";
 import type { Terms, TimeOffRow } from "./termsQueries";
 import {
