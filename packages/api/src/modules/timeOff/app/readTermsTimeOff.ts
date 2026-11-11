@@ -10,7 +10,10 @@ import { byTypeOrder } from "./readTimeOffTypes";
 export interface TimeOffWithPolicies {
   termsId: string;
   timeOffType: TimeOffType;
-  /** The terms' assignments covering today or later, oldest first, with their versions; none: not offered. */
+  /**
+   * The terms' assignments from the start of the current leave year on, oldest first, with their
+   * versions: what a change from any date it may start on replaces. None from today: not offered.
+   */
   versions: TermsTimeOffRules[];
   /** The terms' unpublished rules for the type; null when there are none. */
   unpublished: PolicyVersion | null;
@@ -49,7 +52,7 @@ export async function readTermsTimeOff(
               "termsId" in row.owner &&
               row.owner.termsId === termsId &&
               row.timeOffTypeId === timeOffType.id &&
-              (row.endDate === null || row.endDate >= date),
+              (row.endDate === null || row.endDate >= earliestChangeDate(date)),
           )
           .map((row) => ({ ...row, version: versions.find(({ id }) => id === row.versionId)! })),
         unpublished:

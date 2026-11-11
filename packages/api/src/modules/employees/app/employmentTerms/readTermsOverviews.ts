@@ -18,7 +18,10 @@ export interface TermsOverview extends Terms {
   peopleCount: number;
   /** Locations whose new people start here, by name; the default terms also take locations without terms. */
   locations: Location[];
-  /** The terms' working week assignments covering that day or later, oldest first, with their versions. */
+  /**
+   * The terms' working week assignments from the start of that day's leave year on, oldest first,
+   * with their versions: what a change from any date it may start on replaces.
+   */
   workingWeek: TermsWorkingWeek[];
   /** The terms' unpublished working week; null when there is none. */
   unpublishedWorkingWeek: PatternVersion | null;
@@ -66,7 +69,10 @@ export async function readTermsOverviews(
       peopleCount: peopleCounts.get(terms.id) ?? 0,
       locations: termsLocations,
       workingWeek: assignments
-        .filter(({ owner, endDate }) => isOfTerms(owner, terms.id) && (!endDate || endDate >= date))
+        .filter(
+          ({ owner, endDate }) =>
+            isOfTerms(owner, terms.id) && (!endDate || endDate >= earliestChangeDate(date)),
+        )
         .map((row) => ({ ...row, version: versions.find(({ id }) => id === row.versionId)! })),
       unpublishedWorkingWeek:
         versions.find(({ status, termsId }) => status === "draft" && termsId === terms.id) ?? null,

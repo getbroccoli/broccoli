@@ -63,8 +63,8 @@ export function TermsRecord({ terms }: Props) {
           <Briefcase size={20} />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <SheetTitle className="truncate">{terms.name}</SheetTitle>
+          <div className="flex flex-wrap items-center gap-x-2">
+            <SheetTitle className="max-w-full truncate">{terms.name}</SheetTitle>
             {terms.isDefault && <DefaultPill />}
             {terms.hasUnpublishedChanges && <DraftPill />}
           </div>

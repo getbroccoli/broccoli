@@ -219,7 +219,7 @@ test("publishing twice on the same date corrects allowances without editing publ
   );
 });
 
-test("publishing replaces later assignments of the same policy as well as the covering assignment", async ({
+test("publishing replaces later assignments of the same policy as well as the covering assignment, as one row", async ({
   orm,
   seed,
   transact,
@@ -267,8 +267,7 @@ test("publishing replaces later assignments of the same policy as well as the co
   expect(await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).toMatchObject(
     [
       { startDate: "2026-01-01", endDate: "2026-06-30" },
-      { versionId: draft7.id, startDate: "2026-07-01", endDate: "2026-12-31" },
-      { versionId: draft7.id, startDate: "2027-01-01", endDate: null },
+      { versionId: draft7.id, startDate: "2026-07-01", endDate: null },
     ],
   );
 });

@@ -62,7 +62,6 @@ export function WhatChanges({ changes, people }: Props) {
           )}
         </>
       )}
-      <p className="text-[13px] text-muted-foreground">{t("terms.edit.soon")}</p>
     </section>
   );
 }

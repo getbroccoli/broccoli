@@ -83,7 +83,7 @@ extend type Terms {
 "A time off type with a set of terms' rules for it."
 type TimeOffWithPolicies {
   timeOffType: TimeOffType!
-  "The rules covering today first, if any, then planned ones; empty: not offered on these terms."
+  "Rules from the start of the current leave year on, oldest first: earlier ones, today's, then planned ones; none from today: not offered on these terms."
   versions: [TimeOffPolicyVersion!]!
   "The rules saved and not published yet; null: none."
   unpublished: UnpublishedTimeOffRules

@@ -311,6 +311,9 @@ function refuseChangedVersions(
   asked: readonly { id: string; revision: number }[],
   current: readonly { id: string; revision: number }[],
 ) {
+  if (current.length === 0) {
+    throw new ApplicationError("CONFLICT", "These terms have nothing to publish.");
+  }
   const same =
     asked.length === current.length &&
     current.every(({ id, revision }) =>

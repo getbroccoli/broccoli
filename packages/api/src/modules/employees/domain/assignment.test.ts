@@ -23,6 +23,19 @@ it("replaces a same-date assignment without leaving an empty row", () => {
   });
 });
 
+it("merges contiguous replacement spans into one assignment", () => {
+  const rows = [
+    row("current", "source", "2026-01-01", "2026-12-31"),
+    row("later", "source", "2027-01-01"),
+  ];
+
+  expect(planReplacement(rows, (row) => row.versionId === "source", date("2026-07-01"))).toEqual({
+    ended: [{ id: "current", endDate: "2026-06-30" }],
+    deletedIds: ["later"],
+    added: [{ startDate: "2026-07-01", endDate: null }],
+  });
+});
+
 it("replaces later matching assignments from their own starts and keeps unrelated rows", () => {
   const rows = [
     row("past", "old", "2026-01-01", "2026-04-30"),

@@ -89,7 +89,7 @@ export function PublishDialog({ terms, open, onClose, publish, publishing }: Pro
                   <span className="flex-1">{owner.name}</span>
                   <span className="text-[13px] text-muted-foreground">
                     {owner.termsId
-                      ? t("terms.publish.termsOwner", { people: String(owner.reached.length) })
+                      ? t("terms.publish.termsOwner", { people: peopleCount(owner.reached.length) })
                       : t("terms.publish.personOwner")}
                   </span>
                 </label>
@@ -130,16 +130,21 @@ export function PublishDialog({ terms, open, onClose, publish, publishing }: Pro
             {startDate &&
               (ticked.length === 0
                 ? t("terms.publish.footerNobody")
-                : t("terms.publish.footer", {
-                    people: peopleText(people?.length ?? null),
-                    date: longDate(startDate),
-                  }))}
+                : people?.length === 0
+                  ? t("terms.publish.footerNoPeople", { date: longDate(startDate) })
+                  : t("terms.publish.footer", {
+                      people: peopleText(people?.length ?? null),
+                      date: longDate(startDate),
+                    }))}
           </p>
           <div className="flex gap-2">
             <DialogClose render={<Button type="button" variant="outline" disabled={publishing} />}>
               {t("terms.edit.cancel")}
             </DialogClose>
-            <Button onClick={() => void confirm()} disabled={!suggestions || publishing}>
+            <Button
+              onClick={() => void confirm()}
+              disabled={!suggestions || ticked.length === 0 || publishing}
+            >
               {t("terms.publish.publish")}
             </Button>
           </div>
@@ -151,6 +156,13 @@ export function PublishDialog({ terms, open, onClose, publish, publishing }: Pro
 
 type Owner = { termsId?: string | null; employeeId?: string | null };
 type Reached = { id: string; firstName: string; lastName: string };
+
+/** "1 person", "6 people". */
+function peopleCount(count: number): string {
+  return count === 1
+    ? t("terms.publish.reachOne")
+    : t("terms.publish.reach", { count: String(count) });
+}
 
 function ownerKey({ termsId, employeeId }: Owner): string {
   return termsId ? `terms:${termsId}` : `employee:${employeeId}`;

@@ -98,12 +98,11 @@ export const termsEn = {
   "terms.edit.rules.fromDateIncluded": "From {date}, bank holidays still included",
   "terms.edit.whatChanges": "What changes",
   "terms.edit.showAll": "Show all {count}",
-  "terms.edit.soon": "Soon: each person's allowance before and after.",
   "terms.edit.cancelChange": "Cancel change",
   "terms.publish.publish": "Publish",
   "terms.publish.title": "Publish changes to {terms}",
   "terms.publish.applyTo": "Apply to",
-  "terms.publish.termsOwner": "Terms · {people} people",
+  "terms.publish.termsOwner": "Terms · {people}",
   "terms.publish.personOwner": "Directly",
   "terms.publish.dateHint": "Earlier days keep what applied before.",
   "terms.publish.countsHint": "How a type counts changes only from the start of a leave year.",
@@ -111,8 +110,9 @@ export const termsEn = {
   "terms.publish.reachOne": "1 person",
   "terms.publish.footer":
     "Publishing changes these for {people} from {date}. Their allowances are worked out again from that date. Unticked ones keep their current settings.",
-  "terms.publish.footerNobody":
-    "Publishing keeps the changes for later and applies them to nobody.",
+  "terms.publish.footerNobody": "Tick who gets the changes to publish them.",
+  "terms.publish.footerNoPeople":
+    "Publishing changes these from {date}. Nobody is on them on that day or later yet.",
   "terms.publish.done": "Changes published for {terms}.",
   "terms.publish.failed": "The changes could not be published. Try again.",
   "terms.publish.countsDate":

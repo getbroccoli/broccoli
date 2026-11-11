@@ -14,6 +14,22 @@ import {
 import { timeOffPolicyRepository } from "../db";
 import { RECORD_ONLY_POLICY } from "../domain";
 
+test("publishing terms without unpublished versions is refused", async ({ orm, seed }) => {
+  const termsId = await seed.defaultTermsId();
+
+  await expect(
+    timeOffPolicyService(orm).publishTerms(OWNER, {
+      termsId,
+      versions: [],
+      startDate: "2026-01-01",
+      owners: [{ termsId }],
+    }),
+  ).rejects.toMatchObject({
+    code: "CONFLICT",
+    message: "These terms have nothing to publish.",
+  });
+});
+
 test("a draft saved again since review refuses the whole publish", async ({ orm, seed }) => {
   const termsId = await seed.defaultTermsId();
   const type = await seedTimeOffType(orm, "Study leave");

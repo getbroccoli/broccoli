@@ -77,12 +77,17 @@ test("does not count a person whose employment ended before today", async ({ orm
   expect(result).toMatchObject([{ id, peopleCount: 0 }]);
 });
 
-test("shows today's working week followed by planned assignments, leaving past assignments out", async ({
+test("shows working week assignments ending this leave year and planned ones, leaving last year's out", async ({
   orm,
   seed,
 }) => {
   const termsId = await seed.terms("Scotland");
-  await seedTermsWeek(orm, { termsId, startDate: "2026-01-01", endDate: "2026-05-31" });
+  await seedTermsWeek(orm, { termsId, startDate: "2025-01-01", endDate: "2025-12-31" });
+  const earlier = await seedTermsWeek(orm, {
+    termsId,
+    startDate: "2026-01-01",
+    endDate: "2026-05-31",
+  });
   const current = await seedTermsWeek(orm, {
     termsId,
     startDate: "2026-06-01",
@@ -97,6 +102,12 @@ test("shows today's working week followed by planned assignments, leaving past a
   const result = await termsService(orm).listTerms(ADMIN);
 
   expect(result.find(({ id }) => id === termsId)!.workingWeek).toMatchObject([
+    {
+      id: earlier.assignmentId,
+      startDate: "2026-01-01",
+      endDate: "2026-05-31",
+      version: { id: earlier.versionId, minutes: [450, 450, 450, 450, 450, 0, 0] },
+    },
     {
       id: current.assignmentId,
       startDate: "2026-06-01",

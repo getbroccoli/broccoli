@@ -437,7 +437,7 @@ type Terms implements AnyRecord {
   peopleCount: Int!
   "Locations whose new people start here, by name; the default terms also take locations without terms."
   locations: [Location!]!
-  "The week covering today first, if any, then planned ones; past weeks stay out."
+  "Weeks from the start of the current leave year on, oldest first: earlier ones, today's, then planned ones."
   workingWeek: [WorkingWeekVersion!]!
   "The week saved and not published yet; null: none."
   unpublishedWorkingWeek: UnpublishedWorkingWeek

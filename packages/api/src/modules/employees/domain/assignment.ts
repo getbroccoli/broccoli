@@ -54,10 +54,12 @@ export function planReplacement<R extends Assignment>(
   return {
     ended: started.map(({ id }) => ({ id, endDate: addDays(from, -1) })),
     deletedIds: replaced.filter(({ startDate }) => startDate >= from).map(({ id }) => id),
-    added: replaced.map(({ startDate, endDate }) => ({
-      startDate: startDate < from ? from : startDate,
-      endDate,
-    })),
+    added: joinContiguous(
+      replaced.map(({ startDate, endDate }) => ({
+        startDate: startDate < from ? from : startDate,
+        endDate,
+      })),
+    ),
   };
 }
 
@@ -81,3 +83,17 @@ export function rowsAfterPlan(
 
 /** The id of a row a plan adds, before it is saved. */
 export const NEW_ROW = "new";
+
+/** Spans oldest first, each one that follows on from the one before joined to it. */
+function joinContiguous(spans: AssignmentPlan["added"]): AssignmentPlan["added"] {
+  const joined: AssignmentPlan["added"] = [];
+  for (const span of spans.toSorted((a, b) => a.startDate.localeCompare(b.startDate))) {
+    const last = joined.at(-1);
+    if (last?.endDate && addDays(last.endDate, 1) === span.startDate) {
+      joined[joined.length - 1] = { ...last, endDate: span.endDate };
+    } else {
+      joined.push(span);
+    }
+  }
+  return joined;
+}

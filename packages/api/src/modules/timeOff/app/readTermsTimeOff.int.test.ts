@@ -36,7 +36,7 @@ test("lists every type in order with no versions for each terms without policies
   }
 });
 
-test("reads a terms' current and planned policy versions in date order, leaving past versions out", async ({
+test("reads policy assignments ending this leave year and planned ones in date order, leaving last year's out", async ({
   orm,
   seed,
 }) => {
@@ -46,6 +46,13 @@ test("reads a terms' current and planned policy versions in date order, leaving 
     ({ typeKey }) => typeKey === "annual_leave",
   );
   await seedTermsPolicy(orm, {
+    termsId,
+    timeOffTypeId: type!.id,
+    version: STANDARD_LEAVE_POLICIES.uk_statutory_minimum,
+    startDate: "2025-01-01",
+    endDate: "2025-12-31",
+  });
+  const earlier = await seedTermsPolicy(orm, {
     termsId,
     timeOffTypeId: type!.id,
     version: STANDARD_LEAVE_POLICIES.uk_statutory_minimum,
@@ -78,6 +85,12 @@ test("reads a terms' current and planned policy versions in date order, leaving 
     result.get(termsId)!.find(({ timeOffType }) => timeOffType.typeKey === "annual_leave")!
       .versions,
   ).toMatchObject([
+    {
+      id: earlier.assignmentId,
+      startDate: "2026-01-01",
+      endDate: "2026-11-05",
+      version: { id: earlier.versionId, balance: "balance_from_allowance" },
+    },
     {
       id: current.assignmentId,
       startDate: "2026-11-06",
