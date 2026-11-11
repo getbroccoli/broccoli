@@ -27,6 +27,27 @@ export function parseChangeDate(value: string, today: CalendarDate): CalendarDat
 }
 
 /**
+ * The date a change for one person applies from, sent in `startDate`: not before the earliest date
+ * or their start (`too_early`), nor after their employment ends (`after_leaving`).
+ */
+export function parsePersonChangeDate(
+  value: string,
+  today: CalendarDate,
+  periods: readonly CalendarDateRange[],
+): CalendarDate {
+  const from = parseChangeDate(value, today);
+  const start = periods[0]?.startDate ?? null;
+  if (start && from < start) {
+    throw invalidInput([{ field: "startDate", code: "too_early" }]);
+  }
+  const ends = periods.map(({ endDate }) => endDate);
+  if (ends.length > 0 && ends.every((end) => end !== null && end < from)) {
+    throw invalidInput([{ field: "startDate", code: "after_leaving" }]);
+  }
+  return from;
+}
+
+/**
  * What cancelling the version from `startDate` does: it goes, and the one that ends the day before
  * runs to its end; null when it was the first. CONFLICT unless it starts after today.
  */

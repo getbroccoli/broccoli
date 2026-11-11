@@ -1,5 +1,3 @@
-import { invalidInput } from "../../../../core/applicationError";
-import type { Tx } from "../../../../core/db";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import { createRecordHistoryService } from "../../../../core/records";
 import type { SecurityContext } from "../../../../core/security";
@@ -7,16 +5,16 @@ import { type CalendarDate, parseUuid, todayInLondon } from "../../../../utils";
 import { parseBankHolidayCalendar } from "../../../bankHolidays";
 import { employeeRepository, employmentRepository, workingPatternRepository } from "../../db";
 import {
-  cancelOwnWeekChange,
-  type OwnWeek,
-  ownWeekOn,
-  parseChangeDate,
+  cancelOwnChange,
+  type OwnStretch,
+  ownStretchOn,
   parseDateField,
+  parsePersonChangeDate,
   parseWeek,
   type PatternWeek,
   type WeekdayMinutes,
-  withOwnWeek,
-  withoutOwnWeeks,
+  withOwnStretch,
+  withoutOwnStretches,
 } from "../../domain";
 import { employeeNotFound } from "../employeeNotFound";
 import { readOwnWeeks, saveOwnWeeks } from "./ownWeeksStore";
@@ -64,7 +62,7 @@ export function createOwnWorkingWeekService({
   const change = (
     ctx: SecurityContext,
     input: { employeeId: string; startDate: string },
-    apply: (weeks: OwnWeek[], from: CalendarDate) => Applied,
+    apply: (weeks: OwnStretch<PatternWeek>[], from: CalendarDate) => Applied,
     // A cancel names a change already made, whatever has happened to the dates since.
     { cancel = false } = {},
   ) => changeOwnWeeks({ transact, today: today(), cancel }, ctx, input, apply);
@@ -76,8 +74,8 @@ export function createOwnWorkingWeekService({
         bankHolidayCalendar: parseBankHolidayCalendar(input.bankHolidayCalendar),
       };
       const changed = await change(ctx, input, (weeks, from) => ({
-        weeks: withOwnWeek(weeks, from, week),
-        before: ownWeekOn(weeks, from)?.week ?? null,
+        weeks: withOwnStretch(weeks, from, week),
+        before: ownStretchOn(weeks, from)?.value ?? null,
         after: week,
       }));
       logger.info(changed, "Set an own working week");
@@ -86,10 +84,10 @@ export function createOwnWorkingWeekService({
     async useTermsWorkingWeek(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
       const changed = await change(ctx, input, (weeks, from) => ({
-        weeks: withoutOwnWeeks(weeks, from),
+        weeks: withoutOwnStretches(weeks, from),
         before:
-          (ownWeekOn(weeks, from) ?? weeks.find(({ startDate }) => (startDate ?? "") > from))
-            ?.week ?? null,
+          (ownStretchOn(weeks, from) ?? weeks.find(({ startDate }) => startDate > from))?.value ??
+          null,
         after: null,
       }));
       logger.info(changed, "Put a person back on the terms' week");
@@ -101,7 +99,7 @@ export function createOwnWorkingWeekService({
         ctx,
         input,
         (weeks, from) => {
-          const { weeks: kept, cancelled } = cancelOwnWeekChange(weeks, from, today());
+          const { stretches: kept, cancelled } = cancelOwnChange(weeks, from, today());
           return { weeks: kept, before: cancelled, cancelled: true };
         },
         { cancel: true },
@@ -113,7 +111,7 @@ export function createOwnWorkingWeekService({
 
 /** A change to a person's own weeks, and what the history line says it changed. */
 interface Applied {
-  weeks: OwnWeek[];
+  weeks: OwnStretch<PatternWeek>[];
   /** The week on the date before the change; null: the terms'. */
   before: PatternWeek | null;
   after?: PatternWeek | null;
@@ -133,7 +131,7 @@ async function changeOwnWeeks(
   }: { transact: ModuleDependencies["transact"]; today: CalendarDate; cancel: boolean },
   ctx: SecurityContext,
   input: { employeeId: string; startDate: string },
-  apply: (weeks: OwnWeek[], from: CalendarDate) => Applied,
+  apply: (weeks: OwnStretch<PatternWeek>[], from: CalendarDate) => Applied,
 ) {
   const employeeId = parseUuid(input.employeeId);
   if (!employeeId) throw employeeNotFound();
@@ -144,7 +142,11 @@ async function changeOwnWeeks(
     if (!(await employeeRepository(tx).findById(employeeId))) throw employeeNotFound();
     const from = cancel
       ? parseDateField("startDate", input.startDate)
-      : await parseFrom(tx, employeeId, input.startDate, today);
+      : parsePersonChangeDate(
+          input.startDate,
+          today,
+          (await employmentRepository(tx).findPeriods([employeeId])).get(employeeId) ?? [],
+        );
     const { weeks, versions } = await readOwnWeeks(tx, employeeId);
     const applied = apply(weeks, from);
     await saveOwnWeeks(tx, employeeId, versions, applied.weeks);
@@ -168,29 +170,6 @@ async function changeOwnWeeks(
     publishWorkingPatternChange(tx, [employeeId], from);
     return { employeeId, startDate: from };
   });
-}
-
-/**
- * The date a change applies from: not before this leave year or the person's start, nor after
- * their employment ends.
- */
-async function parseFrom(
-  tx: Tx,
-  employeeId: string,
-  value: string,
-  today: CalendarDate,
-): Promise<CalendarDate> {
-  const from = parseChangeDate(value, today);
-  const periods = (await employmentRepository(tx).findPeriods([employeeId])).get(employeeId) ?? [];
-  const start = periods[0]?.startDate ?? null;
-  if (start && from < start) {
-    throw invalidInput([{ field: "startDate", code: "too_early" }]);
-  }
-  const ends = periods.map(({ endDate }) => endDate);
-  if (ends.length > 0 && ends.every((end) => end !== null && end < from)) {
-    throw invalidInput([{ field: "startDate", code: "after_leaving" }]);
-  }
-  return from;
 }
 
 /** A week as the line in history keeps it, with the date it applies from; a null week is the terms'. */

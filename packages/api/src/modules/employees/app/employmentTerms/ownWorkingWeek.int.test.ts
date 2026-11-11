@@ -137,7 +137,7 @@ test("refuses going back to the terms without an own week", async ({ orm, seed }
     service.useTermsWorkingWeek(OWNER, { employeeId: employee.id, startDate: "2026-12-01" }),
   ).rejects.toMatchObject({
     code: "INVALID_INPUT",
-    fieldErrors: [{ field: "startDate", code: "no_own_week" }],
+    fieldErrors: [{ field: "startDate", code: "none_of_their_own" }],
   });
 });
 

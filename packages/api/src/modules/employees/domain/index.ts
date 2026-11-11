@@ -34,6 +34,7 @@ export {
   cancelPlannedVersion,
   earliestChangeDate,
   parseChangeDate,
+  parsePersonChangeDate,
   SETUP_START_DATE,
 } from "./datedChange";
 export {
@@ -49,13 +50,13 @@ export {
   type VersionStatus,
 } from "./assignment";
 export {
-  cancelOwnWeekChange,
-  type OwnWeek,
-  ownWeekOn,
-  ownWeeksOf,
-  withOwnWeek,
-  withoutOwnWeeks,
-} from "./ownWeeks";
+  cancelOwnChange,
+  type OwnStretch,
+  ownStretchOn,
+  ownStretchesOf,
+  withOwnStretch,
+  withoutOwnStretches,
+} from "./ownStretches";
 export {
   cancelTermsMove,
   planTermsMove,
