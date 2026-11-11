@@ -7,7 +7,8 @@ import type { BetterAuthPlugin } from "better-auth";
 
 import { PrincipalSecurityContext } from "../../security";
 import type { AgentConnectionService } from "../app";
-import { AGENT_SCOPES, agentResourceOf, ALLOW_AGENT_PAGE, type AgentScope } from "../domain";
+import { AGENT_SCOPES, agentResourceOf, type AgentScope } from "../domain";
+import { AGENT_ALLOW_PATH, AGENT_SIGN_IN_PATH, agentPagesPlugin } from "./agentPagesPlugin";
 
 /** Allowed only once a tool changes something. */
 const WRITE_SCOPE: AgentScope = "broccoli:write";
@@ -25,8 +26,8 @@ const REFRESH_REUSE_SECONDS = 30;
 export function agentAccessPlugins(connections: AgentConnectionService): BetterAuthPlugin[] {
   return [
     oauthProvider({
-      loginPage: "/login",
-      consentPage: ALLOW_AGENT_PAGE,
+      loginPage: `/api/auth${AGENT_SIGN_IN_PATH}`,
+      consentPage: `/api/auth${AGENT_ALLOW_PATH}`,
       disableJwtPlugin: true,
       scopes: [...AGENT_SCOPES, "offline_access"],
       grantTypes: ["authorization_code", "refresh_token"],
@@ -43,6 +44,7 @@ export function agentAccessPlugins(connections: AgentConnectionService): BetterA
     }),
     cimd({ fetchClientMetadataResource, metadataProfile: "mcp-2026-07-28" }),
     agentConnectionPolicy(connections),
+    agentPagesPlugin(),
   ];
 }
 

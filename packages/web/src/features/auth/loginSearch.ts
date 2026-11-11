@@ -44,56 +44,14 @@ export type SignInError = (typeof SIGN_IN_ERRORS)[number];
  * The search params of `/login`: where to go after signing in, always a local path, and
  * why a managed sign-in failed, if it did.
  */
-export const loginSearch = z.preprocess(
-  withAgentAuthorizeRedirect,
-  z.object({
-    redirect: z
-      .string()
-      .transform((raw) => toLocalPath(raw, window.location.origin))
-      .catch(DEFAULT_REDIRECT),
-    error: z.enum(SIGN_IN_ERRORS).optional().catch(undefined),
-    /** Set after a password reset, so the page says the new password works. */
-    reset: z.literal("done").optional().catch(undefined),
-  }),
-);
+export const loginSearch = z.object({
+  redirect: z
+    .string()
+    .transform((raw) => toLocalPath(raw, window.location.origin))
+    .catch(DEFAULT_REDIRECT),
+  error: z.enum(SIGN_IN_ERRORS).optional().catch(undefined),
+  /** Set after a password reset, so the page says the new password works. */
+  reset: z.literal("done").optional().catch(undefined),
+});
 
 export type LoginSearch = z.infer<typeof loginSearch>;
-
-/** Where the API's agent authorization sends a signed-out browser: `/login` with the request. */
-const AGENT_AUTHORIZE_PATH = "/api/auth/oauth2/authorize";
-
-/**
- * The OAuth server's signature and expiry over the request, which the authorize endpoint does not
- * take back; the prompt that asked for this sign-in, which would ask again; and the login page's
- * own parameters, which the router writes back beside the request.
- */
-const NOT_AUTHORIZE_PARAMETERS = new Set([
-  "exp",
-  "ba_iat",
-  "ba_param",
-  "ba_pl",
-  "sig",
-  "prompt",
-  "redirect",
-  "error",
-  "reset",
-]);
-
-/**
- * An agent's authorize request that sent the person here to sign in becomes the redirect, so
- * signing in resumes it: the authorize endpoint then asks them to allow the agent. Its parameters
- * come from the page's query as sent, since the router reads values such as `1e3` as JSON.
- */
-function withAgentAuthorizeRedirect(search: unknown): unknown {
-  const raw = (search ?? {}) as Record<string, unknown>;
-  if (raw.response_type === undefined || raw.client_id === undefined) {
-    return search;
-  }
-  const query = new URLSearchParams(window.location.search);
-  for (const name of [...query.keys()]) {
-    if (NOT_AUTHORIZE_PARAMETERS.has(name)) {
-      query.delete(name);
-    }
-  }
-  return { redirect: `${AGENT_AUTHORIZE_PATH}?${query.toString()}` };
-}

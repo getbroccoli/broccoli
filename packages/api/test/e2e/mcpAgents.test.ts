@@ -132,7 +132,7 @@ test("malformed JSON with a valid read token returns a JSON-RPC parse error", as
   });
 });
 
-test("authorization sends a signed-out browser to login with the client ID", async ({ env }) => {
+test("authorization preserves a signed-out browser's request through login", async ({ env }) => {
   await env.seed.owner(TEST_OWNER);
   const clientId = await registerAgentClient(env, "Claude Code");
   const params = new URLSearchParams({
@@ -140,16 +140,61 @@ test("authorization sends a signed-out browser to login with the client ID", asy
     client_id: clientId,
     redirect_uri: "http://127.0.0.1:33418/callback",
     scope: "broccoli:read offline_access",
-    state: "login-state",
+    state: "1e3",
+    code_challenge: createHash("sha256").update("v".repeat(43)).digest("base64url"),
+    code_challenge_method: "S256",
+    resource: `${env.url}/api/mcp`,
+  });
+  params.set("prompt", "login");
+
+  const location = await authorize(env, env.browser(), params);
+
+  expect(location.pathname).toBe("/api/auth/agent/sign-in");
+  const response = await fetch(location, { redirect: "manual" });
+  expect(response.status).toBe(302);
+  const login = new URL(response.headers.get("location")!, env.url);
+  expect(login.pathname).toBe("/login");
+  const redirect = new URL(login.searchParams.get("redirect")!, env.url);
+  expect(redirect.pathname).toBe("/api/auth/oauth2/authorize");
+  params.delete("prompt");
+  expect(Object.fromEntries(redirect.searchParams)).toEqual(Object.fromEntries(params));
+});
+
+test("authorization preserves the signed request and state through consent", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const clientId = await registerAgentClient(env, "Claude Code");
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id: clientId,
+    redirect_uri: "http://127.0.0.1:33418/callback",
+    scope: "broccoli:read offline_access",
+    state: "12345678901234567890",
     code_challenge: createHash("sha256").update("v".repeat(43)).digest("base64url"),
     code_challenge_method: "S256",
     resource: `${env.url}/api/mcp`,
   });
 
-  const location = await authorize(env, env.browser(), params);
+  const location = await authorize(env, browser, params);
 
-  expect(location.pathname).toBe("/login");
-  expect(location.searchParams.get("client_id")).toBe(clientId);
+  expect(location.pathname).toBe("/api/auth/agent/allow");
+  const response = await fetch(location, { redirect: "manual" });
+  expect(response.status).toBe(302);
+  const allow = new URL(response.headers.get("location")!, env.url);
+  expect(allow.pathname).toBe("/agent/allow");
+  expect([...allow.searchParams]).toEqual([["request", location.search.slice(1)]]);
+
+  const consent = await browser.post("/api/auth/oauth2/consent", {
+    accept: true,
+    oauth_query: allow.searchParams.get("request"),
+  });
+
+  expect(consent.status).toBe(200);
+  const approved = (await consent.json()) as { redirect: boolean; url: string };
+  expect(approved.redirect).toBe(true);
+  const callback = new URL(approved.url);
+  expect(callback.origin + callback.pathname).toBe("http://127.0.0.1:33418/callback");
+  expect(callback.searchParams.get("code")).toBeTruthy();
+  expect(callback.searchParams.get("state")).toBe("12345678901234567890");
 });
 
 test("an agent cannot ask for a token for another resource", async ({ env }) => {

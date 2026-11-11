@@ -76,7 +76,7 @@ export async function authorizeAgent(
     resource,
   });
   const location = await authorize(env, browser, params);
-  assert.equal(location.pathname, "/agent/allow");
+  assert.equal(location.pathname, "/api/auth/agent/allow");
   const consent = await browser.post("/api/auth/oauth2/consent", {
     accept: true,
     oauth_query: location.search.slice(1),

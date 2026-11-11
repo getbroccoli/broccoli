@@ -16,12 +16,16 @@ const PROMISES: readonly MessageKey[] = [
   "mcpAgents.allow.disconnect",
 ];
 
+type Props = {
+  /** The agent's request, as Broccoli's OAuth server signed it. */
+  signedRequest: string;
+};
+
 /**
  * Where a person allows their own agent to act as them, opened by Broccoli's OAuth server with the
  * agent's request signed in the query. Either answer sends the browser back to the agent.
  */
-export function AllowAgentPage() {
-  const signedRequest = window.location.search.slice(1);
+export function AllowAgentPage({ signedRequest }: Props) {
   const clientId = new URLSearchParams(signedRequest).get("client_id") ?? "";
   const clientName = useAgentClientName(clientId);
   const { data } = useQuery(AllowAgentDocument);
@@ -75,7 +79,9 @@ export function AllowAgentPage() {
             type="button"
             className="text-xs underline-offset-2 hover:underline"
             onClick={() =>
-              void signInAsSomeoneElse().then((signedOut) => signedOut || setOutcome("failed"))
+              void signInAsSomeoneElse(signedRequest).then(
+                (signedOut) => signedOut || setOutcome("failed"),
+              )
             }
           >
             {t("mcpAgents.allow.notYou")}
@@ -140,9 +146,9 @@ function useAgentClientName(clientId: string): string | null {
  * Signs out and shows sign-in with the agent's request, so the right person allows it; false when
  * signing out failed, leaving the page as it is.
  */
-async function signInAsSomeoneElse(): Promise<boolean> {
+async function signInAsSomeoneElse(signedRequest: string): Promise<boolean> {
   if (!(await signOut())) return false;
-  window.location.assign(`/login${window.location.search}`);
+  window.location.assign(`/api/auth/agent/sign-in?${signedRequest}`);
   return true;
 }
 
