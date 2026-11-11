@@ -6,7 +6,7 @@ import {
   CancelTermsTimeOffStopDocument,
   CancelTermsWorkingWeekChangeDocument,
 } from "@/__generated__/graphql";
-import { usePayloadMutation } from "@/apollo";
+import { PayloadFailure, usePayloadMutation } from "@/apollo";
 import { t } from "@/i18n";
 
 import { peopleText } from "./termsDraft";
@@ -30,8 +30,13 @@ export function usePlannedChanges(terms: Terms) {
     try {
       await cancels[kind]({ variables: { input: { assignmentId } } });
       toast(t("terms.edit.cancelled"));
-    } catch {
-      toast.error(t("terms.edit.cancelFailed"));
+    } catch (error) {
+      // The server says why the change stays: started meanwhile, or already gone.
+      const failure =
+        error instanceof PayloadFailure
+          ? (error.payloadError as { __typename: string; message: string })
+          : null;
+      toast.error(failure?.message ?? t("terms.edit.cancelFailed"));
     }
     setPlanned(null);
   };

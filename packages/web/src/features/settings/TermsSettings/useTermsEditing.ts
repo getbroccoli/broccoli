@@ -3,17 +3,16 @@ import { useState } from "react";
 import type { TimeOffRulesInput } from "@/__generated__/graphql";
 
 import { rulesInputOf } from "../TimeOffSettings";
+import { type RulesDraft, rulesDraftOf, rulesErrors } from "./termsDraft";
+import type { Terms, TimeOffRow } from "./termsQueries";
 import {
+  companyToday,
   DEFAULT_WEEK,
-  type RulesDraft,
-  rulesDraftOf,
-  rulesErrors,
+  splitVersions,
   type WeekDraft,
   weekDraftOf,
   weekErrors,
-} from "./termsDraft";
-import type { Terms, TimeOffRow } from "./termsQueries";
-import { companyToday, splitVersions } from "@/features/termsDisplay";
+} from "@/features/termsDisplay";
 import { useSaveSection } from "./useSaveSection";
 
 /** The section open for editing, with its form. */

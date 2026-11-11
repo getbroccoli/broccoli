@@ -190,7 +190,10 @@ mutation CancelTermsWorkingWeekChange($input: WorkingPatternCancelChangeInput!) 
     cancelWorkingPatternChange(input: $input) {
       cancelledAssignmentId
       error {
-        ...TermsChangeError
+        __typename
+        ... on Error {
+          message
+        }
       }
     }
   }
@@ -249,7 +252,10 @@ mutation CancelTermsTimeOffChange($input: TimeOffPolicyCancelChangeInput!) {
     cancelPolicyChange(input: $input) {
       cancelledAssignmentId
       error {
-        ...TermsChangeError
+        __typename
+        ... on Error {
+          message
+        }
       }
     }
   }

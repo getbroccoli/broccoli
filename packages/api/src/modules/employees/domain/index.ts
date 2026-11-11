@@ -44,9 +44,18 @@ export {
   NEW_ROW,
   planEnd,
   planOrRefusal,
+  plannedRowsReplaced,
   rowsAfterPlan,
   type VersionStatus,
 } from "./assignment";
+export {
+  cancelOwnWeekChange,
+  type OwnWeek,
+  ownWeekOn,
+  ownWeeksOf,
+  withOwnWeek,
+  withoutOwnWeeks,
+} from "./ownWeeks";
 export {
   cancelTermsMove,
   planTermsMove,

@@ -96,7 +96,11 @@ export function TimeOffRuleRow({
             <div className="mt-1.5 flex items-center gap-2 text-[13px] text-muted-foreground">
               <DraftPill />
               <span className="flex-1">
-                {unpublished.stops ? t("terms.timeOff.stopDraft") : ruleLine(unpublished)}
+                {unpublished.stops
+                  ? t("terms.timeOff.stopDraft")
+                  : [ruleLine(unpublished), timeOffType.private && t("terms.timeOff.private")]
+                      .filter(Boolean)
+                      .join(" · ")}
               </span>
               <Button variant="ghost" size="sm" onClick={onDiscard}>
                 {t("terms.edit.discard")}

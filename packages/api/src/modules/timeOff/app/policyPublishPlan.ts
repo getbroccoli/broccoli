@@ -203,7 +203,10 @@ export function refuseChangedVersions(
       asked.some((version) => version.id === id && version.revision === revision),
     );
   if (!same) {
-    throw new ApplicationError("CONFLICT", "These changes were saved again since you opened them.");
+    throw new ApplicationError(
+      "CONFLICT",
+      "The unpublished changes on these terms changed since you opened them.",
+    );
   }
 }
 

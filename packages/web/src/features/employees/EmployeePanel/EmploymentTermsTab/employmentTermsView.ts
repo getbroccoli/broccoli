@@ -1,7 +1,15 @@
 import type { RuleSource } from "@/__generated__/graphql";
 import { t } from "@/i18n";
-import { shortDate, splitVersions, versionOn } from "@/features/termsDisplay";
-import { addDays } from "@/lib/calendarDay";
+import {
+  calendarName,
+  shortDate,
+  splitVersions,
+  versionOn,
+  type WeekMinutes,
+  weekSummary,
+} from "@/features/termsDisplay";
+import type { BankHolidayCalendar } from "@/__generated__/graphql";
+import { calendarDayParts } from "@/lib/calendarDay";
 
 /** One stretch of a person on one set of terms, as the panel reads it. */
 export type TermsPeriod = {
@@ -75,13 +83,15 @@ export function rowOf<V extends DatedVersion>(
     planned: shown.flatMap((version, index) => {
       const before = index === 0 ? null : shown[index - 1]!;
       const next = shown[index + 1];
-      const line = (date: string, change: string) =>
-        t("people.panel.terms.planned", { date: shortDate(date), change });
+      const line = (date: string, change: string) => ({
+        text: t("people.panel.terms.planned", { date: shortDate(date), change }),
+        startDate: date,
+      });
       const starts =
         version === current
           ? []
           : [line(version.startDate, changeOf(version, before, describe, sourceOf))];
-      const gapStart = version.endDate ? addDays(version.endDate, 1) : null;
+      const gapStart = version.endDate ? dayAfter(version.endDate) : null;
       // Nothing follows until a later version, if any: the type stops being offered.
       const stops = gapStart && next?.startDate !== gapStart ? [line(gapStart, missing)] : [];
       return [...starts, ...stops];
@@ -126,6 +136,25 @@ function changeOf<V extends DatedVersion>(
   return [text, detail, source && sourceOf(version)].filter(Boolean).join(" · ");
 }
 
+function dayAfter(day: string): string {
+  const [year, month, date] = calendarDayParts(day);
+  return new Date(Date.UTC(year, month, date + 1)).toISOString().slice(0, 10);
+}
+
 function covers({ startDate, endDate }: TermsPeriod, date: string): boolean {
   return (startDate ?? "") <= date && (endDate == null || endDate >= date);
+}
+
+/** A week as its row reads it: "Mon–Fri, 7.5 hours", then its bank holidays. */
+export function describeWeek({
+  week,
+}: {
+  week: WeekMinutes & { bankHolidayCalendar: BankHolidayCalendar };
+}) {
+  return {
+    text: weekSummary(week),
+    detail: t("people.panel.terms.bankHolidays", {
+      calendar: calendarName(week.bankHolidayCalendar),
+    }),
+  };
 }

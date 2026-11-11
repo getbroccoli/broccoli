@@ -104,7 +104,7 @@ test("a stale revision is refused before checking the newer draft's mid-year cou
     }),
   ).rejects.toMatchObject({
     code: "CONFLICT",
-    message: "These changes were saved again since you opened them.",
+    message: "The unpublished changes on these terms changed since you opened them.",
   });
 
   expect(await repository.findAssignments({ termsIds: [termsId] })).toEqual(before);

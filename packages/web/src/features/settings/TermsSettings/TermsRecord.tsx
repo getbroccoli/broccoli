@@ -15,7 +15,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { SheetClose, SheetTitle } from "@/components/ui/sheet";
 import { RecordHistory } from "@/features/records";
-import { CancelChangeDialog, companyToday, ruleLine, splitVersions } from "@/features/termsDisplay";
+import {
+  CancelChangeDialog,
+  companyToday,
+  ruleLine,
+  splitVersions,
+  WeekEditor,
+} from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
 import { DefaultPill } from "./DefaultPill";
@@ -30,7 +36,6 @@ import { useDiscardChanges } from "./useDiscardChanges";
 import { usePlannedChanges } from "./usePlannedChanges";
 import { usePublishTerms } from "./usePublishTerms";
 import { useTermsEditing } from "./useTermsEditing";
-import { WeekEditor } from "./WeekEditor";
 import { WorkingWeekSection } from "./WorkingWeekSection";
 
 type Props = {
