@@ -198,10 +198,15 @@ function reachedBy(owners: readonly { reached: readonly Reached[] }[]): Reached[
 
 /** Whether an unpublished type's rules count it differently from today's, so they start a leave year. */
 function changesCounts(terms: Terms): boolean {
-  // Against every row from this leave year on: Publish can start on any of them, or replace it.
+  // Against the rules from this leave year's start to today, which stay before any date picked; a
+  // planned row Publish may replace is checked by the server against the date actually picked.
+  const today = companyToday();
   return terms.timeOff.some(
     ({ unpublished, versions }) =>
-      unpublished !== null && versions.some(({ balance }) => balance !== unpublished.balance),
+      unpublished !== null &&
+      versions.some(
+        ({ startDate, balance }) => startDate <= today && balance !== unpublished.balance,
+      ),
   );
 }
 

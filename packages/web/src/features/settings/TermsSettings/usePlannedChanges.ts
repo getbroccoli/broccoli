@@ -29,14 +29,12 @@ export function usePlannedChanges(terms: Terms) {
       await cancel({ variables: { input: { assignmentId } } });
       toast(t("terms.edit.cancelled"));
     } catch (error) {
-      // A conflict says why the change stays, such as having started meanwhile.
+      // The server says why the change stays: started meanwhile, or already gone.
       const failure =
         error instanceof PayloadFailure
           ? (error.payloadError as { __typename: string; message: string })
           : null;
-      toast.error(
-        failure?.__typename === "ConflictError" ? failure.message : t("terms.edit.cancelFailed"),
-      );
+      toast.error(failure?.message ?? t("terms.edit.cancelFailed"));
     }
     setPlanned(null);
   };
