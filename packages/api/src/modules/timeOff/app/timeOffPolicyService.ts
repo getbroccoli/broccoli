@@ -108,18 +108,23 @@ export function createTimeOffPolicyService({
         const version = versionFromRules(rules, base);
         if (draft) {
           await repository.updateDraft(draft.id, version);
-          return draft.id;
+          return versionOf(await repository.findAll(), draft.id);
         }
         const policyId =
           inForce?.timeOffPolicyId ??
           (await repository.insertPolicy({ timeOffTypeId: timeOffType.id }));
-        return repository.insertVersion(policyId, { ...version, status: "draft", termsId });
+        const id = await repository.insertVersion(policyId, {
+          ...version,
+          status: "draft",
+          termsId,
+        });
+        return versionOf(await repository.findAll(), id);
       });
       logger.info(
-        { termsId: input.termsId, timeOffPolicyVersionId: saved },
+        { termsId: input.termsId, timeOffPolicyVersionId: saved.id, revision: saved.revision },
         "Saved unpublished time off rules",
       );
-      return versionOf(await timeOffPolicyRepository(orm).findAll(), saved);
+      return saved;
     },
 
     async discardTimeOffPolicy(ctx, input) {

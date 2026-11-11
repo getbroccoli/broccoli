@@ -45,11 +45,7 @@ export {
   type TermsService,
 } from "./employmentTerms/termsService";
 export { termsRecordType } from "./employmentTerms/termsRecordType";
-export type {
-  DatedWorkingWeek,
-  TermsOverview,
-  TermsWorkingWeek,
-} from "./employmentTerms/readTermsOverviews";
+export type { DatedWorkingWeek, TermsOverview } from "./employmentTerms/readTermsOverviews";
 export {
   createEmployeeInviteService,
   type EmployeeInviteService,

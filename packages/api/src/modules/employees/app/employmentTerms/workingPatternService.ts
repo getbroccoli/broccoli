@@ -99,15 +99,19 @@ export function createWorkingPatternService({
         const draft = draftOf(versions, termsId);
         if (draft) {
           await repository.updateDraft(draft.id, week);
-          return draft.id;
+          return findVersionIn(tx, draft.id);
         }
         const patternId =
           (await patternWorkedBy(tx, versions, termsId, today())) ??
           (await repository.insertPattern(null));
-        return repository.insertVersion(patternId, { ...week, status: "draft", termsId });
+        const id = await repository.insertVersion(patternId, { ...week, status: "draft", termsId });
+        return findVersionIn(tx, id);
       });
-      logger.info({ termsId, workingPatternVersionId: saved }, "Saved an unpublished working week");
-      return findVersion(transact, saved);
+      logger.info(
+        { termsId, workingPatternVersionId: saved.id, revision: saved.revision },
+        "Saved an unpublished working week",
+      );
+      return saved;
     },
 
     async discardWorkingPattern(ctx, input) {
@@ -264,11 +268,4 @@ async function findAssignment(tx: Tx, assignmentId: string | null): Promise<Assi
 async function findVersionIn(tx: Tx, versionId: string): Promise<PatternVersion> {
   const patterns = await workingPatternRepository(tx).findPatterns();
   return patterns.flatMap(({ versions }) => versions).find(({ id }) => id === versionId)!;
-}
-
-async function findVersion(
-  transact: ModuleDependencies["transact"],
-  versionId: string,
-): Promise<PatternVersion> {
-  return transact((tx) => findVersionIn(tx, versionId));
 }

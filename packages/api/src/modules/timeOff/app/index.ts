@@ -4,7 +4,6 @@ export type { PersonTimeOff } from "./readPersonTimeOff";
 export type { TimeOffWithPolicies } from "./readTermsTimeOff";
 export { createTimeOffService, type TimeOffService, type TurnedOnTimeOff } from "./timeOffService";
 export { createTimeOffPolicyService, type TimeOffPolicyService } from "./timeOffPolicyService";
-export type { PublishSuggestions } from "./termsPublish";
 export { allowanceEventHandlers } from "./allowanceEventHandlers";
 export { ensureAllowancesJob } from "./ensureAllowancesJob";
 export {

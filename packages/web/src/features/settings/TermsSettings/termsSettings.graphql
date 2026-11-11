@@ -95,7 +95,6 @@ query EmploymentTermsStack($id: ID!) {
           bankHolidays
         }
       }
-      earliestChange
       unpublished {
         id
         revision
