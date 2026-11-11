@@ -89,6 +89,7 @@ CREATE TABLE "time_off_policy_versions" (
 	"status" text NOT NULL,
 	"terms_id" uuid,
 	"revision" integer DEFAULT 1 NOT NULL,
+	"stops" boolean DEFAULT false NOT NULL,
 	"balance" text NOT NULL,
 	"bank_holidays" text,
 	"leave_year_start" text,
@@ -97,6 +98,7 @@ CREATE TABLE "time_off_policy_versions" (
 	CONSTRAINT "time_off_policy_versions_id_policy_unique" UNIQUE("id","time_off_policy_id"),
 	CONSTRAINT "time_off_policy_versions_status_known" CHECK ("time_off_policy_versions"."status" in ('draft', 'published')),
 	CONSTRAINT "time_off_policy_versions_terms_only_on_draft" CHECK (("time_off_policy_versions"."terms_id" is not null) = ("time_off_policy_versions"."status" = 'draft')),
+	CONSTRAINT "time_off_policy_versions_stops_only_on_draft" CHECK (not "time_off_policy_versions"."stops" or "time_off_policy_versions"."status" = 'draft'),
 	CONSTRAINT "time_off_policy_versions_bank_holidays_with_allowance" CHECK (("time_off_policy_versions"."bank_holidays" is not null) = ("time_off_policy_versions"."balance" = 'balance_from_allowance')),
 	CONSTRAINT "time_off_policy_versions_leave_year_with_balance" CHECK (("time_off_policy_versions"."leave_year_start" is not null) = ("time_off_policy_versions"."balance" <> 'no_balance')),
 	CONSTRAINT "time_off_policy_versions_fixed_date_month_set" CHECK (("time_off_policy_versions"."leave_year_start_month" is not null)

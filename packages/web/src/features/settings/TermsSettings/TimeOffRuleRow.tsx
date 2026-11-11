@@ -95,7 +95,9 @@ export function TimeOffRuleRow({
           {!open && unpublished && (
             <div className="mt-1.5 flex items-center gap-2 text-[13px] text-muted-foreground">
               <DraftPill />
-              <span className="flex-1">{ruleLine(unpublished)}</span>
+              <span className="flex-1">
+                {unpublished.stops ? t("terms.timeOff.stopDraft") : ruleLine(unpublished)}
+              </span>
               <Button variant="ghost" size="sm" onClick={onDiscard}>
                 {t("terms.edit.discard")}
               </Button>
@@ -113,11 +115,18 @@ export function TimeOffRuleRow({
             {t("terms.edit.stop")}
           </Button>
         )}
-        {!open && !stopDate && (current || unpublished || planned.length === 0) && (
-          <Button variant={current || unpublished ? "ghost" : "outline"} size="sm" onClick={onEdit}>
-            {t(current || unpublished ? "terms.edit.edit" : "terms.edit.offer")}
-          </Button>
-        )}
+        {!open &&
+          !stopDate &&
+          !unpublished?.stops &&
+          (current || unpublished || planned.length === 0) && (
+            <Button
+              variant={current || unpublished ? "ghost" : "outline"}
+              size="sm"
+              onClick={onEdit}
+            >
+              {t(current || unpublished ? "terms.edit.edit" : "terms.edit.offer")}
+            </Button>
+          )}
       </div>
       {open?.editor}
     </li>

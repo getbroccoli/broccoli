@@ -44,6 +44,8 @@ export interface PolicyVersion {
   termsId: string | null;
   /** 1 on creation, plus 1 on every save of a draft. */
   revision: number;
+  /** A draft that stops offering the type: its rules are the ones it stops. */
+  stops: boolean;
   balance: DatedPolicy["balance"];
   bankHolidays: DatedPolicy["bankHolidays"];
   /** Null for a `no_balance` policy. */

@@ -23,6 +23,7 @@ import {
   nextLeaveYear,
   peopleText,
   rulesChangeBox,
+  stopChangeBox,
   weekChangeBox,
 } from "./termsDraft";
 import type { Terms } from "./termsQueries";
@@ -46,9 +47,11 @@ type DateOption = "THIS_LEAVE_YEAR" | "TODAY" | "NEXT_LEAVE_YEAR" | "ANOTHER_DAT
 export function PublishDialog({ terms, open, onClose, publish, publishing }: Props) {
   const earliest = terms.earliestChange;
   const countsChange = changesCounts(terms);
-  const [choice, setChoice] = useState<DateOption>(defaultDate(terms));
+  // Every change starts today unless picked otherwise; one that changes how a type counts starts a leave year.
+  const [choice, setChoice] = useState<DateOption>(countsChange ? "THIS_LEAVE_YEAR" : "TODAY");
   const [otherDate, setOtherDate] = useState("");
-  const [unticked, setUnticked] = useState<ReadonlySet<string>>(new Set());
+  // Others sharing stopped rules are listed unticked: a stop ends the type only where it was made.
+  const [unticked, setUnticked] = useState<ReadonlySet<string> | null>(null);
   const startDate = dateOf(choice, earliest, otherDate);
   const read = useQuery(TermsPublishSuggestionsDocument, {
     variables: { id: terms.id, from: startDate },
@@ -57,7 +60,8 @@ export function PublishDialog({ terms, open, onClose, publish, publishing }: Pro
   });
   const suggestions = read.data?.terms?.publishSuggestions;
   const owners = suggestions?.owners ?? [];
-  const ticked = owners.filter((owner) => !unticked.has(ownerKey(owner)));
+  const untickedKeys = unticked ?? onlyStoppedFor(terms, owners);
+  const ticked = owners.filter((owner) => !untickedKeys.has(ownerKey(owner)));
   const people = suggestions ? reachedBy(ticked) : null;
 
   const confirm = async () => {
@@ -82,9 +86,9 @@ export function PublishDialog({ terms, open, onClose, publish, publishing }: Pro
               {owners.map((owner) => (
                 <label key={ownerKey(owner)} className="flex items-center gap-3 text-sm">
                   <Checkbox
-                    checked={!unticked.has(ownerKey(owner))}
+                    checked={!untickedKeys.has(ownerKey(owner))}
                     onCheckedChange={(checked) =>
-                      setUnticked(toggled(unticked, ownerKey(owner), checked))
+                      setUnticked(toggled(untickedKeys, ownerKey(owner), checked))
                     }
                   />
                   <span className="flex-1">{owner.name}</span>
@@ -172,6 +176,26 @@ function peopleCount(count: number): string {
     : t("terms.publish.reach", { count: String(count) });
 }
 
+/** Owners other than these terms that would only get stops. */
+function onlyStoppedFor(
+  terms: Terms,
+  owners: readonly (Owner & { versionIds: readonly string[] })[],
+): ReadonlySet<string> {
+  const stops = new Set(
+    terms.timeOff.flatMap(({ unpublished }) => (unpublished?.stops ? [unpublished.id] : [])),
+  );
+  return new Set(
+    owners
+      .filter(
+        (owner) =>
+          owner.termsId !== terms.id &&
+          owner.versionIds.length > 0 &&
+          owner.versionIds.every((id) => stops.has(id)),
+      )
+      .map(ownerKey),
+  );
+}
+
 function ownerKey({ termsId, employeeId }: Owner): string {
   return termsId ? `terms:${termsId}` : `employee:${employeeId}`;
 }
@@ -199,16 +223,10 @@ function changesCounts(terms: Terms): boolean {
   return terms.timeOff.some(
     ({ unpublished, versions }) =>
       unpublished !== null &&
+      !unpublished.stops &&
       versionOn(versions, today) !== null &&
       versionOn(versions, today)!.balance !== unpublished.balance,
   );
-}
-
-/** Rules start a leave year, as offering a type did; a week alone starts today. */
-function defaultDate(terms: Terms): DateOption {
-  return terms.timeOff.some(({ unpublished }) => unpublished !== null)
-    ? "THIS_LEAVE_YEAR"
-    : "TODAY";
 }
 
 function dateOptions(earliest: string, countsChange: boolean) {
@@ -246,7 +264,16 @@ function changesOf(terms: Terms, startDate: string): ChangeBox[] {
     : [];
   const rules = terms.timeOff.flatMap(({ timeOffType, unpublished, versions }) =>
     unpublished
-      ? [rulesChangeBox(timeOffType.name, unpublished, versionOn(versions, startDate), startDate)]
+      ? [
+          unpublished.stops
+            ? stopChangeBox(timeOffType.name, startDate)
+            : rulesChangeBox(
+                timeOffType.name,
+                unpublished,
+                versionOn(versions, startDate),
+                startDate,
+              ),
+        ]
       : [],
   );
   return [...week, ...rules];

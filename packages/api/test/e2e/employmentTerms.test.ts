@@ -36,30 +36,28 @@ test("an admin can list and open the default terms with their week, time off and
   });
 });
 
-test("an admin can stop a policy through GraphQL", async ({ env }) => {
+test("an admin can save a stop draft through GraphQL", async ({ env }) => {
   const browser = await setUpEmploymentTerms(env);
   const termsId = await env.seed.defaultTermsId();
   const before = await readTermsSettings(browser, termsId);
-  const year = Number(before.earliestChange.slice(0, 4));
   const family = before.timeOff.find(({ timeOffType }) => timeOffType.typeKey === "FAMILY_LEAVE")!;
 
-  const stopped = await browser.graphql(
-    `mutation StopPolicy($input: TimeOffPolicyStopInput!) {
-    timeOff { stopPolicy(input: $input) {
-      stoppedAssignmentId
+  const saved = await browser.graphql(
+    `mutation SaveTimeOffStop($input: TimeOffStopSaveInput!) {
+    timeOff { saveTimeOffStop(input: $input) {
+      rules { id stops }
       error { __typename }
     } }
   }`,
-    { input: { termsId, timeOffTypeId: family.timeOffType.id, stopDate: `${year + 1}-01-01` } },
+    { input: { termsId, timeOffTypeId: family.timeOffType.id } },
   );
 
-  expect(await stopped.json()).toEqual({
-    data: { timeOff: { stopPolicy: { error: null, stoppedAssignmentId: family.versions[0]!.id } } },
+  expect(saved.status).toBe(200);
+  expect(await saved.json()).toMatchObject({
+    data: {
+      timeOff: { saveTimeOffStop: { error: null, rules: { stops: true } } },
+    },
   });
-  const after = await readTermsSettings(browser, termsId);
-  expect(
-    after.timeOff.find(({ timeOffType }) => timeOffType.id === family.timeOffType.id)!.versions,
-  ).toEqual([{ ...family.versions[0], endDate: `${year}-12-31` }]);
 });
 
 const defaultTerms = {

@@ -60,13 +60,13 @@ export interface TimeOffPolicyRepository {
   insertPolicy(policy: { timeOffTypeId: string; name?: string | null }): Promise<string>;
   /** Deletes a policy with its versions; none may be assigned. */
   deletePolicy(id: string): Promise<void>;
-  /** A new version with its rules, revision 1; returns its id. */
+  /** A new version with its rules, revision 1; `stops` only on a draft that stops the type. Returns its id. */
   insertVersion(
     timeOffPolicyId: string,
-    version: NewPolicyVersion & { status: VersionStatus; termsId?: string | null },
+    version: NewPolicyVersion & { status: VersionStatus; termsId?: string | null; stops?: boolean },
   ): Promise<string>;
-  /** New rules on a draft, one revision later. */
-  updateDraft(versionId: string, version: NewPolicyVersion): Promise<void>;
+  /** New rules on a draft, one revision later; `stops` makes it a draft that stops the type. */
+  updateDraft(versionId: string, version: NewPolicyVersion, stops?: boolean): Promise<void>;
   /** Makes a draft published, no longer any terms' draft. */
   publishVersion(versionId: string): Promise<void>;
   /** Deletes a draft with its rules; nothing may be granted from them. */
@@ -198,20 +198,21 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
       await orm().delete(timeOffPolicies).where(eq(timeOffPolicies.id, id));
     },
 
-    async insertVersion(timeOffPolicyId, { status, termsId = null, ...version }) {
+    async insertVersion(timeOffPolicyId, { status, termsId = null, stops = false, ...version }) {
       const [inserted] = await orm()
         .insert(timeOffPolicyVersions)
-        .values({ timeOffPolicyId, status, termsId, ...versionColumns(version) })
+        .values({ timeOffPolicyId, status, termsId, stops, ...versionColumns(version) })
         .returning({ id: timeOffPolicyVersions.id });
       await insertRules(db, inserted!.id, version.rules);
       return inserted!.id;
     },
 
-    async updateDraft(versionId, version) {
+    async updateDraft(versionId, version, stops = false) {
       await orm()
         .update(timeOffPolicyVersions)
         .set({
           ...versionColumns(version),
+          stops,
           revision: sql`${timeOffPolicyVersions.revision} + 1`,
         })
         .where(eq(timeOffPolicyVersions.id, versionId));

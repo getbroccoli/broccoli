@@ -7,8 +7,9 @@ import {
   test,
   timeOffPolicyService,
 } from "#test/support";
+import { timeOffPolicyRepository } from "../db";
 
-test("stopping a type writes one terms history line with the old rules and stop date", async ({
+test("publishing a stop writes one terms history line with the old rules and stop date", async ({
   orm,
   seed,
   transact,
@@ -23,10 +24,15 @@ test("stopping a type writes one terms history line with the old rules and stop 
   const service = timeOffPolicyService(orm, { today: "2026-11-06" });
   const history = termsService(orm, { today: "2026-11-06" });
 
-  await service.stopPolicy(OWNER, {
+  const draft = await service.saveTimeOffStop(OWNER, {
     termsId,
     timeOffTypeId: policy!.timeOffTypeId,
-    stopDate: "2027-01-01",
+  });
+  await service.publishTerms(OWNER, {
+    termsId,
+    versions: [draft],
+    startDate: "2027-01-01",
+    owners: [{ termsId }],
   });
 
   const page = await history.readTermsHistory(OWNER, termsId, {});
@@ -66,11 +72,19 @@ test("cancelling a planned stop writes one terms history line with the cancelled
   const [policy] = await readTermsPolicies(orm, termsId);
   const service = timeOffPolicyService(orm, { today: "2026-11-06" });
   const history = termsService(orm, { today: "2026-11-06" });
-  const stopped = await service.stopPolicy(OWNER, {
+  const draft = await service.saveTimeOffStop(OWNER, {
     termsId,
     timeOffTypeId: policy!.timeOffTypeId,
-    stopDate: "2027-01-01",
   });
+  await service.publishTerms(OWNER, {
+    termsId,
+    versions: [draft],
+    startDate: "2027-01-01",
+    owners: [{ termsId }],
+  });
+  const stopped = (await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).at(
+    -1,
+  )!;
   const before = await history.readTermsHistory(OWNER, termsId, {});
 
   await service.cancelPolicyStop(OWNER, {

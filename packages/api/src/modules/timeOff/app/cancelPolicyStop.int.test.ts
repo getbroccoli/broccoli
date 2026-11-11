@@ -23,11 +23,19 @@ test("cancelling a planned stop makes the last assignment open-ended again", asy
   });
   const [policy] = await readTermsPolicies(orm, termsId);
   const service = timeOffPolicyService(orm, { today: "2026-11-06" });
-  const stopped = await service.stopPolicy(OWNER, {
+  const draft = await service.saveTimeOffStop(OWNER, {
     termsId,
     timeOffTypeId: policy!.timeOffTypeId,
-    stopDate: "2027-01-01",
   });
+  await service.publishTerms(OWNER, {
+    termsId,
+    versions: [draft],
+    startDate: "2027-01-01",
+    owners: [{ termsId }],
+  });
+  const stopped = (await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).at(
+    -1,
+  )!;
 
   await service.cancelPolicyStop(OWNER, { assignmentId: stopped.id });
 
@@ -55,11 +63,19 @@ test("cancelling a planned stop keeps December's rules open-ended and the previo
     startDate: "2026-12-01",
     rules: { balance: "no_balance" },
   });
-  const stopped = await service.stopPolicy(OWNER, {
+  const draft = await service.saveTimeOffStop(OWNER, {
     termsId,
     timeOffTypeId: policy!.timeOffTypeId,
-    stopDate: "2027-01-01",
   });
+  await service.publishTerms(OWNER, {
+    termsId,
+    versions: [draft],
+    startDate: "2027-01-01",
+    owners: [{ termsId }],
+  });
+  const stopped = (await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).at(
+    -1,
+  )!;
   const [previous] = await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] });
 
   await service.cancelPolicyStop(OWNER, { assignmentId: stopped.id });

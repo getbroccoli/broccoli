@@ -81,11 +81,14 @@ Use terms where a type is not offered, such as new terms.
 
 ## Stop offering a type
 
-- [ ] An offered row without a planned change or draft has "Stop" beside "Edit"; Stop opens "Stop offering Family leave on <terms>" with "Applies from" on next leave year and "People keep the time off they take before this date."
-- [ ] "Stop offering" shows the row's line "Not offered from 1 Jan <next year>" with "Cancel change", no "Edit" or "Stop", and the History line "You stopped offering Family leave from 1 Jan <next year>".
+- [ ] An offered row without a planned change or draft has "Stop" beside "Edit". Stop saves a draft: the row keeps today's rules with a "Draft" line "Not offered from the date you publish" and "Discard", no "Edit" or "Stop", and the header shows "Publish".
+- [ ] "Discard" removes the draft line and brings "Edit" and "Stop" back.
+- [ ] Publish opens on "Today" and offers 1 Jan this year, 1 Jan next year and "Other date…"; "What changes" shows "Family leave: not offered" with "From <date>." and the people it reaches.
+- [ ] Publishing from 1 Jan <next year> shows the row's line "Not offered from 1 Jan <next year>" with "Cancel change", and the History line "You stopped offering Family leave from 1 Jan <next year>".
 - [ ] "Cancel change" says "Family leave stays offered on <terms>."; confirming removes the line and adds "You cancelled stopping Family leave from 1 Jan <next year>".
-- [ ] With someone's approved or pending Family leave booked from the stop date, the dialog stays open and says "Someone on <terms> has Family leave booked from 1 Jan <next year>. Move or decline it first."
-- [ ] A stop from today shows "Not offered here" with "Offer" at once; Offer, Save and Publish from today give the type back from today.
+- [ ] With someone's approved or pending Family leave booked from the date, Publish is refused with "1 person has this time off type booked from that date."
+- [ ] Publishing a stop from today shows "Not offered here" with "Offer" at once; Offer, Save and Publish from today give the type back from today.
+- [ ] Edits and offers also open Publish on "Today" with "Other date…"; only a change to how a type counts offers just the leave-year starts.
 
 ## Add a type from the terms
 

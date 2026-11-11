@@ -94,6 +94,8 @@ type TimeOffWithPolicies {
 "Time off rules saved on terms and not published yet."
 type UnpublishedTimeOffRules {
   id: ID!
+  "True for a stop: Publish ends these rules, today's, instead of giving them."
+  stops: Boolean!
   "Goes up by one each time they are saved; publishing names the revision it saw."
   revision: Int!
   balance: TimeOffBalanceKind!
@@ -156,12 +158,10 @@ input TimeOffPolicyDiscardInput {
   versionId: ID!
 }
 
-"A set of terms stopping a type from a date."
-input TimeOffPolicyStopInput {
+"A set of terms stopping a type: their unpublished draft for it, ended by Publish."
+input TimeOffStopSaveInput {
   termsId: ID!
   timeOffTypeId: ID!
-  "The first day the type is not offered; no earlier than the start of the current leave year."
-  stopDate: Date!
 }
 
 input TimeOffPolicyCancelChangeInput {
@@ -205,14 +205,6 @@ type TimeOffPolicyDiscardPayload {
 }
 
 union TimeOffPolicyDiscardError = NotFoundError
-
-"The id of the rules that now end the day before the stop, or why it was refused."
-type TimeOffPolicyStopPayload {
-  stoppedAssignmentId: ID
-  error: TimeOffPolicyStopError
-}
-
-union TimeOffPolicyStopError = InvalidInputError | ConflictError
 
 input TimeOffPolicyCancelStopInput {
   "The id of the rules a planned stop ends, as `TimeOffWithPolicies.versions` gives it."
@@ -452,13 +444,13 @@ type TimeOffMutations {
   saveTimeOffPolicy(input: TimeOffPolicySaveInput!): TimeOffPolicySavePayload!
   "Deletes unpublished rules. Admins only."
   discardTimeOffPolicy(input: TimeOffPolicyDiscardInput!): TimeOffPolicyDiscardPayload!
-  "Stops offering the type on the terms from a date no earlier than the start of the current leave year: their rules end the day before, and later ones go. Refused with a ConflictError while someone's booked time off of the type from that date would be left without rules. Admins only."
-  stopPolicy(input: TimeOffPolicyStopInput!): TimeOffPolicyStopPayload!
+  "Saves the terms' unpublished draft for a type as a stop of their rules for it today, replacing a rules draft; Publish ends those rules from its date. Refused when the terms have no rules for the type today (`timeOffTypeId` / `not_offered`). Nobody's rules change until the terms are published. Admins only."
+  saveTimeOffStop(input: TimeOffStopSaveInput!): TimeOffPolicySavePayload!
   "Removes a rules change that has not started; the rules before it run on, and a planned offer leaves the type not offered. Refused with a ConflictError once it has started. Admins only."
   cancelPolicyChange(input: TimeOffPolicyCancelChangeInput!): TimeOffPolicyCancelChangePayload!
   "Cancels a planned stop: the rules it ends, the type's last on their owner and ending on or after today, run on open-ended. Refused with a ConflictError when they are no planned stop. Admins only."
   cancelPolicyStop(input: TimeOffPolicyCancelStopInput!): TimeOffPolicyCancelStopPayload!
-  "Publishes the terms' unpublished working week and rules and gives them, from a date no earlier than the start of the current leave year, to the owners asked: these terms and others using what they replace. How a type counts changes only from the start of a leave year (`rules.balance` / `not_leave_year_start`). Refused with a ConflictError when they were saved again since `versions` was read. Admins only."
+  "Publishes the terms' unpublished working week and rules and gives them, from a date no earlier than the start of the current leave year, to the owners asked: these terms and others using what they replace. How a type counts changes only from the start of a leave year (`rules.balance` / `not_leave_year_start`). A stop ends the owners' rules for its type the day before the date instead (`startDate` / `not_offered` when an owner has none then). Refused with a ConflictError when they were saved again since `versions` was read, or when a stop would leave booked time off without rules. Admins only."
   publishTerms(input: TermsPublishInput!): TermsPublishPayload!
 }
 

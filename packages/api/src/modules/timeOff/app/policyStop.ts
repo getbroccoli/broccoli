@@ -2,18 +2,24 @@ import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import type { Transact, Tx } from "../../../core/db";
 import type { Logger } from "../../../core/logger";
 import type { SecurityContext } from "../../../core/security";
-import { addDays, type CalendarDate, coversDate, parseUuid } from "../../../utils";
-import { type EmployeeReadService, parseChangeDate } from "../../employees";
-import { type PolicyAssignment, timeOffPolicyRepository, timeOffRepository } from "../db";
-import { isPlannedStop } from "../domain";
+import { addDays, type CalendarDate, parseUuid } from "../../../utils";
+import {
+  type AssignmentOwner,
+  applyAssignmentPlan,
+  type EmployeeReadService,
+  isSameOwner,
+} from "../../employees";
+import { timeOffPolicyRepository, timeOffRepository } from "../db";
+import { isPlannedStop, type PolicyVersion } from "../domain";
 import { readPeople } from "./allowanceEngine";
+import type { PolicyPublish } from "./policyPublishPlan";
 import {
   appendRulesHistory,
   employeesOf,
-  existingTerms,
   existingType,
   ownerIds,
   rulesChanged,
+  saveTermsDraft,
   versionOf,
 } from "./policyRules";
 import type { TimeOffService } from "./timeOffService";
@@ -27,38 +33,72 @@ export interface StopDependencies {
 }
 
 /**
- * Stops offering the type on the terms from `stopDate`; logs the outcome, or why it was refused.
- * Returns the assignment that now ends the day before.
+ * Saves the terms' unpublished draft for the type as a stop, a copy of their rules for it today;
+ * Publish then ends those rules from its date. Replaces a rules draft. INVALID_INPUT when the terms
+ * have no rules for the type today.
  */
-export async function stopPolicy(
-  dependencies: StopDependencies,
+export async function saveTimeOffStop(
+  { transact, logger, employeeReads, today }: StopDependencies,
   ctx: SecurityContext,
-  input: { termsId: string; timeOffTypeId: string; stopDate: string },
-): Promise<PolicyAssignment> {
+  input: { termsId: string; timeOffTypeId: string },
+): Promise<PolicyVersion> {
   ctx.require("MANAGE_WORKSPACE");
-  const { logger } = dependencies;
-  const { stopped, ...outcome } = await dependencies
-    .transact((tx) => stopTermsPolicy(dependencies, ctx, tx, input))
-    .catch((error: unknown) => {
-      if (error instanceof ApplicationError) {
-        const ids = {
-          termsId: parseUuid(input.termsId),
-          timeOffTypeId: parseUuid(input.timeOffTypeId),
-        };
-        logger.info({ ...ids, code: error.code }, "Refused to stop offering a time off type");
+  const saved = await transact((tx) =>
+    saveTermsDraft(employeeReads, tx, { ...input, today: today() }, ({ policies, inForce }) => {
+      if (!inForce) {
+        throw invalidInput([{ field: "timeOffTypeId", code: "not_offered" }]);
       }
-      throw error;
-    });
-  logger.info(
-    {
-      assignmentId: stopped.id,
-      ...stopped.owner,
-      timeOffTypeId: stopped.timeOffTypeId,
-      ...outcome,
-    },
-    "Stopped offering a time off type",
+      const { balance, bankHolidays, leaveYear, rules } = versionOf(policies, inForce.versionId);
+      return { version: { balance, bankHolidays, leaveYear, rules }, stops: true };
+    }),
   );
-  return stopped;
+  logger.info(
+    { termsId: input.termsId, timeOffPolicyVersionId: saved.id, revision: saved.revision },
+    "Saved an unpublished stop of a time off type",
+  );
+  return saved;
+}
+
+/**
+ * Publishes a stop: each ticked owner's rows of the policy end the day before `from` and their
+ * later ones go, with a line in the owner's history; the stop draft goes. CONFLICT when booked
+ * time off of the type from `from` would be left without rules. Returns the employees reached.
+ */
+export async function publishStop(
+  employeeReads: EmployeeReadService,
+  ctx: SecurityContext,
+  tx: Tx,
+  { version, policy, owners: plans }: PolicyPublish,
+  owners: readonly AssignmentOwner[],
+  from: CalendarDate,
+): Promise<string[]> {
+  const repository = timeOffPolicyRepository(tx);
+  const ticked = plans.filter(({ owner }) => owners.some((one) => isSameOwner(one, owner)));
+  const people = new Set<string>();
+  for (const { owner } of ticked) {
+    for (const id of await employeesOf(employeeReads, tx, owner)) people.add(id);
+  }
+  const refuseLostBookings = await watchBookedTimeOff(employeeReads, tx, {
+    employeeIds: [...people],
+    timeOffTypeId: policy.timeOffType.id,
+    from,
+  });
+  for (const { owner, plan, refusal, replaced } of ticked) {
+    if (!plan) {
+      throw refusal;
+    }
+    await applyAssignmentPlan(repository, plan, () => Promise.resolve());
+    await appendRulesHistory(ctx, tx, owner, policy.timeOffType, {
+      before: replaced && {
+        ...versionOf([policy], replaced.versionId),
+        startDate: replaced.startDate,
+      },
+      after: { stopDate: from },
+    });
+  }
+  await refuseLostBookings();
+  await repository.deleteVersion(version.id);
+  return [...people];
 }
 
 /** Cancels a planned stop by the assignment it ends, which runs on open-ended. */
@@ -80,60 +120,6 @@ export async function cancelPolicyStop(
     },
     "Cancelled stopping a time off type",
   );
-}
-
-/**
- * Ends the terms' rules for the type the day before `stopDate` and deletes their later rows;
- * returns the row that ends. INVALID_INPUT when the type is not offered the day before; CONFLICT
- * while someone's booked time off of the type from `stopDate` would be left without rules.
- */
-async function stopTermsPolicy(
-  { employeeReads, timeOff, today }: StopDependencies,
-  ctx: SecurityContext,
-  tx: Tx,
-  input: { termsId: string; timeOffTypeId: string; stopDate: string },
-) {
-  const repository = timeOffPolicyRepository(tx);
-  await repository.lockPolicies();
-  const termsId = await existingTerms(employeeReads, tx, input.termsId);
-  const timeOffType = existingType(await repository.findAllTypes(), input.timeOffTypeId);
-  const stopDate = parseChangeDate(input.stopDate, today(), "stopDate");
-  const lane = (await repository.findAssignments({ termsIds: [termsId] })).filter(
-    (row) => row.timeOffTypeId === timeOffType.id,
-  );
-  const lastDay = addDays(stopDate, -1);
-  const stopped = lane.find((row) => coversDate(row, lastDay));
-  if (!stopped) {
-    throw invalidInput([{ field: "stopDate", code: "not_offered" }]);
-  }
-  const later = lane.filter((row) => row.startDate >= stopDate);
-  const employeeIds = await employeesOf(employeeReads, tx, { termsId });
-  await refuseBookedTimeOff(employeeReads, tx, {
-    employeeIds,
-    timeOffTypeId: timeOffType.id,
-    stopDate,
-    removed: (row) => row.id === stopped.id || later.some(({ id }) => id === row.id),
-    stopped: { ...stopped, endDate: lastDay },
-  });
-  for (const row of later) {
-    await repository.deleteAssignment(row.id);
-  }
-  await repository.endAssignment(stopped.id, lastDay);
-  const policies = await repository.findAll();
-  await appendRulesHistory(ctx, tx, stopped.owner, timeOffType, {
-    before: { ...versionOf(policies, stopped.versionId), startDate: stopped.startDate },
-    after: { stopDate },
-  });
-  const ensured = await timeOff.ensureAllowances(ctx, tx, {
-    employeeIds,
-    cause: rulesChanged(stopped.timeOffPolicyId, stopDate),
-  });
-  return {
-    stopped: { ...stopped, endDate: lastDay },
-    stopDate,
-    reachedCount: employeeIds.length,
-    ...ensured,
-  };
 }
 
 /**
@@ -174,54 +160,39 @@ async function cancelPlannedStop(
 }
 
 /**
- * Refuses, with CONFLICT, a stop that would leave a booked day without rules: one the terms' rows
- * cover for the person today and nothing covers once `removed` go and `stopped` ends.
+ * Notes which booked days of the type from `from` have rules now; the returned check refuses, with
+ * CONFLICT, once any of them has none.
  */
-async function refuseBookedTimeOff(
+async function watchBookedTimeOff(
   employeeReads: EmployeeReadService,
   tx: Tx,
-  input: {
-    employeeIds: string[];
-    timeOffTypeId: string;
-    stopDate: CalendarDate;
-    removed: (row: PolicyAssignment) => boolean;
-    stopped: PolicyAssignment;
-  },
-) {
-  const booked = await timeOffRepository(tx).findDaysFrom({
-    employeeIds: input.employeeIds,
-    timeOffTypeId: input.timeOffTypeId,
-    from: input.stopDate,
-  });
-  if (booked.length === 0) {
-    return;
-  }
+  input: { employeeIds: string[]; timeOffTypeId: string; from: CalendarDate },
+): Promise<() => Promise<void>> {
+  const booked = await timeOffRepository(tx).findDaysFrom(input);
   const ids = [...new Set(booked.map(({ employeeId }) => employeeId))];
-  const [before, after] = await Promise.all([
-    readPeople(employeeReads, tx, ids),
-    readPeople(employeeReads, tx, ids, (stored) => [
-      ...stored.filter((row) => !input.removed(row)),
-      input.stopped,
-    ]),
-  ]);
-  const timelines = (people: typeof before.people) =>
-    new Map(people.map((person) => [person.employeeId, person.timelineOf(input.timeOffTypeId)]));
-  const [rulesBefore, rulesAfter] = [timelines(before.people), timelines(after.people)];
-  const losing = new Set(
-    booked
-      .filter(
-        ({ employeeId, date }) =>
-          rulesBefore.get(employeeId)!.getVersionOnDate(date) !== null &&
-          rulesAfter.get(employeeId)!.getVersionOnDate(date) === null,
-      )
-      .map(({ employeeId }) => employeeId),
-  );
-  if (losing.size > 0) {
-    throw new ApplicationError(
-      "CONFLICT",
-      losing.size === 1
-        ? "1 person has this time off type booked from that date."
-        : `${losing.size} people have this time off type booked from that date.`,
+  const coveredDays = async () => {
+    const { people } = await readPeople(employeeReads, tx, ids);
+    const timelines = new Map(
+      people.map((person) => [person.employeeId, person.timelineOf(input.timeOffTypeId)]),
     );
-  }
+    return booked.map(
+      ({ employeeId, date }) => timelines.get(employeeId)!.getVersionOnDate(date) !== null,
+    );
+  };
+  const before = ids.length > 0 ? await coveredDays() : [];
+  return async () => {
+    if (ids.length === 0) return;
+    const after = await coveredDays();
+    const losing = new Set(
+      booked.filter((_day, i) => before[i] && !after[i]).map(({ employeeId }) => employeeId),
+    );
+    if (losing.size > 0) {
+      throw new ApplicationError(
+        "CONFLICT",
+        losing.size === 1
+          ? "1 person has this time off type booked from that date."
+          : `${losing.size} people have this time off type booked from that date.`,
+      );
+    }
+  };
 }

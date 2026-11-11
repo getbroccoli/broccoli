@@ -57,14 +57,8 @@ export const termsEn = {
   "terms.edit.stop": "Stop",
   "terms.timeOff.add": "Add time off type",
   "terms.timeOff.stops": "Not offered from {date}",
-  "terms.edit.stop.title": "Stop offering {type} on {terms}",
-  "terms.edit.stop.confirm": "Stop offering",
-  "terms.edit.stop.done": "{type} is no longer offered on {terms} from that date.",
-  "terms.edit.stop.hint": "People keep the time off they take before this date.",
-  "terms.edit.stop.saveLine":
-    "Stops {type} for {people} on {terms} from {date}. Their allowances are worked out again from that date.",
-  "terms.edit.stop.booked":
-    "Someone on {terms} has {type} booked from {date}. Move or decline it first.",
+  "terms.timeOff.stopDraft": "Not offered from the date you publish",
+  "terms.edit.stop.change": "{type}: not offered",
   "terms.edit.stopStays": "{type} stays offered on {terms}.",
   "terms.edit.cancel": "Cancel",
   "terms.edit.save": "Save",
@@ -129,6 +123,7 @@ export const termsEn = {
   "terms.publish.failed": "The changes could not be published. Try again.",
   "terms.publish.countsDate":
     "How a type counts changes only from the start of a leave year. Pick 1 January.",
+  "terms.publish.notOffered": "A type you stop isn't offered on that date. Pick a later date.",
   "terms.publish.overlaps": "A later change on these terms is in the way. Cancel it first.",
   "terms.edit.cancelTitle": "Cancel this change?",
   "terms.edit.keepChange": "Keep change",

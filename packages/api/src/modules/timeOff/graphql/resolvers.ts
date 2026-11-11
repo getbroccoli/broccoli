@@ -138,11 +138,10 @@ export function createResolvers(
           await policies.discardTimeOffPolicy(context.getActor(), input);
           return { discardedVersionId: input.versionId };
         }, ["NOT_FOUND"]),
-      stopPolicy: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["TimeOffPolicyStopPayload"]>(async () => {
-          const stopped = await policies.stopPolicy(context.getActor(), input);
-          return { stoppedAssignmentId: stopped.id };
-        }, ["INVALID_INPUT", "CONFLICT"]),
+      saveTimeOffStop: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TimeOffPolicySavePayload"]>(async () => {
+          return { rules: await policies.saveTimeOffStop(context.getActor(), input) };
+        }, ["INVALID_INPUT"]),
       cancelPolicyChange: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["TimeOffPolicyCancelChangePayload"]>(async () => {
           await policies.cancelPolicyChange(context.getActor(), input);

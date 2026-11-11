@@ -2,8 +2,9 @@ import { invalidInput } from "../../../core/applicationError";
 import type { Tx } from "../../../core/db";
 import { createRecordHistoryService } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
-import { type CalendarDate, parseUuid } from "../../../utils";
+import { type CalendarDate, coversDate, parseUuid } from "../../../utils";
 import type { AssignmentOwner, EmployeeReadService } from "../../employees";
+import { type PolicyAssignment, timeOffPolicyRepository } from "../db";
 import {
   type NewPolicyVersion,
   type PolicyVersion,
@@ -97,6 +98,73 @@ export function existingType(types: readonly TimeOffType[], timeOffTypeId: strin
     throw invalidInput([{ field: "timeOffTypeId", code: "not_found" }]);
   }
   return type;
+}
+
+/** What a terms draft is saved from: the type's draft and the terms' rules for it today, if any. */
+export interface DraftBase {
+  policies: TimeOffPolicy[];
+  draft: PolicyVersion | null;
+  inForce: PolicyAssignment | null;
+}
+
+/**
+ * Saves the terms' draft for the type as `build` makes it: again, one revision later, or new under
+ * the policy they have for it today, or a new one for an offer.
+ */
+export async function saveTermsDraft(
+  employeeReads: Pick<EmployeeReadService, "readTermsMemberIds">,
+  tx: Tx,
+  input: { termsId: string; timeOffTypeId: string; today: CalendarDate },
+  build: (base: DraftBase) => { version: NewPolicyVersion; stops: boolean },
+): Promise<PolicyVersion> {
+  const repository = timeOffPolicyRepository(tx);
+  await repository.lockPolicies();
+  const termsId = await existingTerms(employeeReads, tx, input.termsId);
+  const timeOffType = existingType(await repository.findAllTypes(), input.timeOffTypeId);
+  const policies = await repository.findAll();
+  const draft = draftOf(policies, termsId, timeOffType.id);
+  const inForce = await termsRowOn(tx, termsId, timeOffType.id, input.today);
+  const { version, stops } = build({ policies, draft, inForce });
+  if (draft) {
+    await repository.updateDraft(draft.id, version, stops);
+    return versionOf(await repository.findAll(), draft.id);
+  }
+  const policyId =
+    inForce?.timeOffPolicyId ?? (await repository.insertPolicy({ timeOffTypeId: timeOffType.id }));
+  const id = await repository.insertVersion(policyId, {
+    ...version,
+    status: "draft",
+    termsId,
+    stops,
+  });
+  return versionOf(await repository.findAll(), id);
+}
+
+/** The terms' unpublished rules for the type, if any. */
+function draftOf(
+  policies: readonly TimeOffPolicy[],
+  termsId: string,
+  timeOffTypeId: string,
+): PolicyVersion | null {
+  return (
+    policies
+      .filter(({ timeOffType }) => timeOffType.id === timeOffTypeId)
+      .flatMap(({ versions }) => versions)
+      .find(({ status, termsId: owner }) => status === "draft" && owner === termsId) ?? null
+  );
+}
+
+/** The terms' assignment for the type covering `date`; null without one. */
+async function termsRowOn(
+  tx: Tx,
+  termsId: string,
+  timeOffTypeId: string,
+  date: CalendarDate,
+): Promise<PolicyAssignment | null> {
+  const rows = (await timeOffPolicyRepository(tx).findAssignments({ termsIds: [termsId] })).filter(
+    (row) => row.timeOffTypeId === timeOffTypeId,
+  );
+  return rows.find((row) => coversDate(row, date)) ?? null;
 }
 
 function lineValue(line: RulesLine): string {

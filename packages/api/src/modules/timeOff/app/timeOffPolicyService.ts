@@ -1,8 +1,7 @@
 import { ApplicationError } from "../../../core/applicationError";
-import type { Tx } from "../../../core/db";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
-import { addDays, type CalendarDate, coversDate, parseUuid, todayInLondon } from "../../../utils";
+import { addDays, type CalendarDate, parseUuid, todayInLondon } from "../../../utils";
 import {
   cancelPlannedVersion,
   createEmployeeReadService,
@@ -21,13 +20,12 @@ import {
 import {
   appendRulesHistory,
   employeesOf,
-  existingTerms,
-  existingType,
   ownerIds,
   rulesChanged,
+  saveTermsDraft,
   versionOf,
 } from "./policyRules";
-import { cancelPolicyStop, stopPolicy } from "./policyStop";
+import { cancelPolicyStop, saveTimeOffStop } from "./policyStop";
 import {
   publishTerms,
   type PublishSuggestions,
@@ -53,14 +51,13 @@ export interface TimeOffPolicyService {
   /** Deletes unpublished rules; a policy left without versions goes too. */
   discardTimeOffPolicy: (ctx: SecurityContext, input: { versionId: string }) => Promise<void>;
   /**
-   * Stops offering the type on the terms from `stopDate`, no earlier than the start of the current
-   * leave year: their rules end the day before and later ones go. CONFLICT while someone's booked
-   * time off of the type from then would be left without rules. Returns the row that ends.
+   * Saves these terms' unpublished draft for the type as a stop of their rules for it today, which
+   * Publish ends from its date; replaces a rules draft. Nobody's rules change.
    */
-  stopPolicy: (
+  saveTimeOffStop: (
     ctx: SecurityContext,
-    input: { termsId: string; timeOffTypeId: string; stopDate: string },
-  ) => Promise<PolicyAssignment>;
+    input: { termsId: string; timeOffTypeId: string },
+  ) => Promise<PolicyVersion>;
   /**
    * Removes a rules assignment that starts after today; the one ending the day before runs to its
    * end. CONFLICT once it has started, or when the two around it would count the type differently
@@ -111,30 +108,20 @@ export function createTimeOffPolicyService({
     async saveTimeOffPolicy(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
       const rules = parseRules(input.rules);
-      const saved = await transact(async (tx) => {
-        const repository = timeOffPolicyRepository(tx);
-        await repository.lockPolicies();
-        const termsId = await existingTerms(employeeReads, tx, input.termsId);
-        const timeOffType = existingType(await repository.findAllTypes(), input.timeOffTypeId);
-        const policies = await repository.findAll();
-        const draft = draftOf(policies, termsId, timeOffType.id);
-        const inForce = await termsRowOn(tx, termsId, timeOffType.id, today());
-        const base = draft ?? (inForce && versionOf(policies, inForce.versionId));
-        const version = versionFromRules(rules, base);
-        if (draft) {
-          await repository.updateDraft(draft.id, version);
-          return versionOf(await repository.findAll(), draft.id);
-        }
-        const policyId =
-          inForce?.timeOffPolicyId ??
-          (await repository.insertPolicy({ timeOffTypeId: timeOffType.id }));
-        const id = await repository.insertVersion(policyId, {
-          ...version,
-          status: "draft",
-          termsId,
-        });
-        return versionOf(await repository.findAll(), id);
-      });
+      const saved = await transact((tx) =>
+        saveTermsDraft(
+          employeeReads,
+          tx,
+          { ...input, today: today() },
+          ({ policies, draft, inForce }) => ({
+            version: versionFromRules(
+              rules,
+              draft ?? (inForce && versionOf(policies, inForce.versionId)),
+            ),
+            stops: false,
+          }),
+        ),
+      );
       logger.info(
         { termsId: input.termsId, timeOffPolicyVersionId: saved.id, revision: saved.revision },
         "Saved unpublished time off rules",
@@ -166,7 +153,7 @@ export function createTimeOffPolicyService({
       );
     },
 
-    stopPolicy: (ctx, input) => stopPolicy(publishing, ctx, input),
+    saveTimeOffStop: (ctx, input) => saveTimeOffStop(publishing, ctx, input),
 
     async cancelPolicyChange(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
@@ -216,33 +203,6 @@ export function createTimeOffPolicyService({
     readPublishSuggestions: (ctx, input) => readPublishSuggestions(publishing, ctx, input),
     publishTerms: (ctx, input) => publishTerms(publishing, ctx, input),
   };
-}
-
-/** The terms' unpublished rules for the type, if any. */
-function draftOf(
-  policies: readonly TimeOffPolicy[],
-  termsId: string,
-  timeOffTypeId: string,
-): PolicyVersion | null {
-  return (
-    policies
-      .filter(({ timeOffType }) => timeOffType.id === timeOffTypeId)
-      .flatMap(({ versions }) => versions)
-      .find(({ status, termsId: owner }) => status === "draft" && owner === termsId) ?? null
-  );
-}
-
-/** The terms' assignment for the type covering `date`; null without one. */
-async function termsRowOn(
-  tx: Tx,
-  termsId: string,
-  timeOffTypeId: string,
-  date: CalendarDate,
-): Promise<PolicyAssignment | null> {
-  const rows = (await timeOffPolicyRepository(tx).findAssignments({ termsIds: [termsId] })).filter(
-    (row) => row.timeOffTypeId === timeOffTypeId,
-  );
-  return rows.find((row) => coversDate(row, date)) ?? null;
 }
 
 /**

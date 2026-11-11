@@ -1,12 +1,17 @@
 import { type ReactNode, useState } from "react";
+import { toast } from "sonner";
 
-import { EmploymentTermsStackDocument, type TimeOffRulesInput } from "@/__generated__/graphql";
+import {
+  EmploymentTermsStackDocument,
+  SaveTermsTimeOffStopDocument,
+  type TimeOffRulesInput,
+} from "@/__generated__/graphql";
+import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
 import { AddTimeOffTypeDialog } from "../TimeOffSettings";
-import { StopDialog } from "./StopDialog";
-import type { Terms, TimeOffRow } from "./termsQueries";
+import { TERMS_REFETCH, type Terms, type TimeOffRow } from "./termsQueries";
 import { TimeOffRuleRow } from "./TimeOffRuleRow";
 
 type Props = {
@@ -35,7 +40,18 @@ export function TermsTimeOffSection({
   onAdded,
 }: Props) {
   const [adding, setAdding] = useState(false);
-  const [stopping, setStopping] = useState<TimeOffRow | null>(null);
+  const [saveStop] = usePayloadMutation(SaveTermsTimeOffStopDocument, { refetch: TERMS_REFETCH });
+  // Stop saves a draft, like an edit; Publish ends the rules from its date.
+  const stop = async ({ timeOffType }: TimeOffRow) => {
+    try {
+      await saveStop({
+        variables: { input: { termsId: terms.id, timeOffTypeId: timeOffType.id } },
+      });
+      toast(t("terms.edit.saved", { what: timeOffType.name, terms: terms.name }));
+    } catch {
+      toast.error(t("terms.edit.saveFailed"));
+    }
+  };
   return (
     <section aria-labelledby="terms-time-off" className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
@@ -52,7 +68,7 @@ export function TermsTimeOffSection({
             termsName={terms.name}
             open={open?.timeOffTypeId === row.timeOffType.id ? open : null}
             onEdit={() => onEdit(row.timeOffType.id)}
-            onStop={() => setStopping(row)}
+            onStop={() => void stop(row)}
             onCancelPlanned={(version) => onCancelPlanned(row.timeOffType.id, version)}
             onCancelStop={(version) => onCancelStop(row.timeOffType.id, version)}
             onDiscard={() => row.unpublished && onDiscard(row.unpublished.id)}
@@ -62,7 +78,6 @@ export function TermsTimeOffSection({
       <Button variant="outline" size="sm" className="self-start" onClick={() => setAdding(true)}>
         {t("terms.timeOff.add")}
       </Button>
-      {stopping && <StopDialog terms={terms} row={stopping} onClose={() => setStopping(null)} />}
       {adding && (
         <AddTimeOffTypeDialog
           refetch={[EmploymentTermsStackDocument]}
