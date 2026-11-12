@@ -12,6 +12,8 @@ import {
   agentSecurityResolver,
   type AgentSecurityResolver,
   createAgentConnectionService,
+  createLiveNudges,
+  type LiveNudges,
 } from "./agentAccess";
 import { authHandler, type DeploymentServer } from "./auth";
 import { connectDatabase, createBeforeCommitBus, type Database, transactor } from "./db";
@@ -20,7 +22,6 @@ import { createEventBus } from "./events";
 import { type GraphqlApi, startGraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
 import { createJobRunner } from "./jobs";
-import { createLiveNudges, type LiveNudges } from "./live";
 import { refuseBearerAuth, resolveSecurityContext, selfHostedServer } from "./instance";
 import type { Logger } from "./logger";
 import { managedServer } from "./managedSignIn";

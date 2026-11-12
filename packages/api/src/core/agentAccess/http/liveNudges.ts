@@ -1,8 +1,8 @@
 import express from "express";
 
-import { sendApplicationError } from "../applicationError";
-import type { EventHandlers } from "../events";
-import { requireSignedIn, type SecurityResolver } from "../security";
+import { sendApplicationError } from "../../applicationError";
+import type { EventHandlers } from "../../events";
+import { requireSignedIn, type SecurityResolver } from "../../security";
 
 /** Often enough that proxies never close a quiet stream. */
 const HEARTBEAT_MS = 25_000;
