@@ -5,12 +5,10 @@ export {
   type EventStart,
   isTriggeringEvent,
   matchEventStarts,
-  TRIGGERING_EVENTS,
   type TriggerEvent,
 } from "./eventTrigger";
 export {
   type DayOffset,
-  type EventTrigger,
   parseProcessDefinition,
   PROCESS_DEFINITION_SCHEMA_VERSION,
   type ProcessDefinition,

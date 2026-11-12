@@ -2,7 +2,8 @@ import { EXAMPLE_PAYLOAD, expect, SYSTEM, test, instances, setupSteps } from "#t
 
 import { createEventBus, type PublishedEvent } from "../events";
 import { createLogger } from "../logger";
-import { createBeforeCommitBus, MAX_BEFORE_COMMIT_ROUNDS, transactor } from ".";
+import { createBeforeCommitBus, transactor } from ".";
+import { MAX_BEFORE_COMMIT_ROUNDS } from "./transaction";
 
 test("dispatches queued events after the write commits", async ({ orm, seed }) => {
   await seed.owner();
