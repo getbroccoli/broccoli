@@ -1,6 +1,7 @@
 /** English copy under `nav.*`. */
 export const navEn = {
   "nav.label": "Main",
+  "nav.today": "Today",
   "nav.tasks": "Tasks",
   "nav.tasksNeedYou": "{count} need you",
   "nav.people": "People",

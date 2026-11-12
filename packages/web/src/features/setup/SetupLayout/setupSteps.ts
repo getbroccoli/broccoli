@@ -3,7 +3,7 @@ import { redirect } from "@tanstack/react-router";
 import type { Mode, SetupStep } from "@/__generated__/graphql";
 import type { MessageKey } from "@/i18n";
 
-/** The path of a setup page, or of the directory once setup is done. */
+/** The path of a setup page, or of Today once setup is done. */
 export type SetupPath =
   | "/setup/company"
   | "/setup/ai"
@@ -13,7 +13,7 @@ export type SetupPath =
   | "/setup/who"
   | "/setup"
   | "/setup/ready"
-  | "/people";
+  | "/";
 
 interface PageDefinition {
   id: string;
@@ -94,8 +94,8 @@ const READY = {
   step: "READY",
 } as const satisfies PageDefinition;
 
-/** Where setup ends: the directory. */
-const FINISHED: SetupPath = "/people";
+/** Where setup ends: Today. */
+const FINISHED: SetupPath = "/";
 
 /** Setup's pages depend on whether its last step creates an owner or uses the existing account. */
 export interface SetupFlow {
@@ -148,7 +148,7 @@ export function stepViews(current: SetupStepId, flow: SetupFlow): StepView[] {
   });
 }
 
-/** The first page of a server step, or the directory once setup is done. */
+/** The first page of a server step, or Today once setup is done. */
 export function setupStepPage(step: SetupStep, flow: SetupFlow): SetupPath {
   if (step === "DONE") {
     return FINISHED;
@@ -168,7 +168,7 @@ export function previousPage(page: SetupStepId, flow: SetupFlow): SetupPath | un
   return previous && isOpenAt(previous, current.step) ? previous.path : undefined;
 }
 
-/** The page after `page`, or the directory after the last one. */
+/** The page after `page`, or Today after the last one. */
 export function nextPage(page: SetupStepId, flow: SetupFlow): SetupPath {
   const pages = pagesOf(flow);
   return pages[pages.indexOf(pageOf(page, flow)) + 1]?.path ?? FINISHED;
