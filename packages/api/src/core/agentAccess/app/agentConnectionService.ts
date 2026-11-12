@@ -119,11 +119,13 @@ export function createAgentConnectionService({
           "Only a signed-in person can disconnect their agent.",
         );
       }
+      const { userId } = ctx.user;
       const ended = await endAllConnections(
         { transact, logger },
-        { userId: ctx.user.userId, reason: "disconnected_by_person" },
+        { userId, reason: "disconnected_by_person" },
       );
-      return latestOf(ended);
+      // The same pick as the page's next read, when several connections ended at once.
+      return ended.length > 0 ? agentConnectionRepository(orm).findLastEnding(userId) : null;
     },
     async readMyLastEndedConnection(ctx) {
       return ctx.user ? agentConnectionRepository(orm).findLastEnding(ctx.user.userId) : null;
@@ -148,10 +150,6 @@ async function endAllConnections(
     );
   }
   return ended;
-}
-
-function latestOf(ended: StoredEndedAgentConnection[]): StoredEndedAgentConnection | null {
-  return ended.toSorted((a, b) => b.connectedAt.getTime() - a.connectedAt.getTime())[0] ?? null;
 }
 
 /** Ends the unused connection of this client only, so a replacement allowed meanwhile stays. */

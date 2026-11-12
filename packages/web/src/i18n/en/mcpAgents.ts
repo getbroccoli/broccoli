@@ -25,9 +25,10 @@ export const mcpAgentsEn = {
   "mcpAgents.address.copy": "Copy",
   "mcpAgents.address.copied": "Copied",
   "mcpAgents.address.copyByHand": "Copy it by hand",
-  "mcpAgents.selfHosted.title": "Open Broccoli at its public address before you copy it.",
+  "mcpAgents.selfHosted.title":
+    "Open Broccoli at the address your agent will use before you copy it.",
   "mcpAgents.selfHosted.detail":
-    "An agent connected at one address stops working at another; SELF_HOSTED_PUBLIC_URL fixes that address. Claude and ChatGPT reach Broccoli only at a public HTTPS address.",
+    "An agent connected at one address stops working at another; SELF_HOSTED_PUBLIC_URL fixes that address. Claude and ChatGPT need a public HTTPS address; Claude Code and Codex also work on your company network.",
   "mcpAgents.selfHosted.guide": "How to set it",
   "mcpAgents.ended.title": "No agent connected.",
   "mcpAgents.ended.disconnected": "You disconnected {client}.",

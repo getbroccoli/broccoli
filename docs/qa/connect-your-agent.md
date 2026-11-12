@@ -31,7 +31,7 @@ A manual check of connecting a person's own agent over MCP against a development
 ## Your agent page
 
 - [ ] "Your agent" is in the menu for every signed-in person, and its page shows the address the browser is on plus `/api/mcp`, with Copy.
-- [ ] On a self-hosted instance, a note says to open Broccoli at its public address and names `SELF_HOSTED_PUBLIC_URL`.
+- [ ] On a self-hosted instance, a note says to open Broccoli at the address the agent will use and names `SELF_HOSTED_PUBLIC_URL`.
 - [ ] The Claude, ChatGPT and "Claude Code, Codex or another client" tabs show their steps; each command's Copy copies it with this address.
 - [ ] Following the Claude Code tab connects it; coming back to the window shows the agent, "Connected …· Last active …" and a dot on the menu item.
 - [ ] "Disconnect", then "Disconnect" in the confirm, shows "You disconnected Claude Code."; the agent's next call is refused.
