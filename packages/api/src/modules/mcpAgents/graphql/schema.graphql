@@ -35,11 +35,20 @@ type Query {
   myAgentConnection: AgentConnection
   "The caller's most recently ended agent connection; null when none has ended."
   myLastEndedAgentConnection: EndedAgentConnection
+  "Whether the caller closed the invitation to connect their agent on Today."
+  agentInvitationClosed: Boolean!
 }
 
 type McpAgentsMutations {
   "Ends the caller's agent connection, so its next call is refused; does nothing without one."
   disconnect: AgentConnectionMutationPayload!
+  "Closes the invitation to connect an agent on Today for the caller, for good; does nothing when already closed."
+  closeInvitation: CloseAgentInvitationPayload!
+}
+
+"After the caller closed the invitation to connect their agent."
+type CloseAgentInvitationPayload {
+  agentInvitationClosed: Boolean!
 }
 
 "After a change to the caller's agent connection."

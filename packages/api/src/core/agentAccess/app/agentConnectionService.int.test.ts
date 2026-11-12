@@ -183,6 +183,40 @@ test("the current connection includes when the agent last used it", async ({ orm
   expect(connection?.lastUsedAt).toEqual(new Date("2026-11-12T12:00:00Z"));
 });
 
+test("a person's invitation is not closed before they close it", async ({ orm }) => {
+  const closed = await agentConnectionService(orm).isInvitationClosed(OWNER);
+
+  expect(closed).toBe(false);
+});
+
+test("closing the invitation keeps it closed, also when closed twice", async ({ orm, seed }) => {
+  await seed.agentConnection({ userId: OWNER.user!.userId });
+  const service = agentConnectionService(orm);
+
+  await service.closeInvitation(OWNER);
+
+  expect(await service.isInvitationClosed(OWNER)).toBe(true);
+  await service.closeInvitation(OWNER);
+  expect(await service.isInvitationClosed(OWNER)).toBe(true);
+});
+
+test("closing leaves another person's invitation open", async ({ orm, seed }) => {
+  await seed.agentConnection({ userId: OWNER.user!.userId });
+  await seed.agentConnection({ userId: ADMIN.user!.userId });
+  const service = agentConnectionService(orm);
+
+  await service.closeInvitation(OWNER);
+
+  expect(await service.isInvitationClosed(ADMIN)).toBe(false);
+});
+
+test("closing the invitation refuses a caller without a user", async ({ orm }) => {
+  await expect(agentConnectionService(orm).closeInvitation(SYSTEM)).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    message: "Only a signed-in person can close the invitation to connect their agent.",
+  });
+});
+
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-11-12T12:00:00Z"));

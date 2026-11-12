@@ -46,6 +46,10 @@ export interface AgentConnectionService {
   disconnectMyAgent: (ctx: SecurityContext) => Promise<StoredEndedAgentConnection | null>;
   /** The caller's most recently ended connection; null without one, or for a caller who is no user. */
   readMyLastEndedConnection: (ctx: SecurityContext) => Promise<StoredEndedAgentConnection | null>;
+  /** Whether the caller closed the invitation to connect their agent; false for a caller who is no user. */
+  isInvitationClosed: (ctx: SecurityContext) => Promise<boolean>;
+  /** Closes the invitation to connect their agent for the caller, for good. */
+  closeInvitation: (ctx: SecurityContext) => Promise<void>;
 }
 
 export function createAgentConnectionService({
@@ -129,6 +133,20 @@ export function createAgentConnectionService({
     },
     async readMyLastEndedConnection(ctx) {
       return ctx.user ? agentConnectionRepository(orm).findLastEnding(ctx.user.userId) : null;
+    },
+    async isInvitationClosed(ctx) {
+      return ctx.user ? agentConnectionRepository(orm).isInvitationClosed(ctx.user.userId) : false;
+    },
+    async closeInvitation(ctx) {
+      if (!ctx.user) {
+        throw new ApplicationError(
+          "FORBIDDEN",
+          "Only a signed-in person can close the invitation to connect their agent.",
+        );
+      }
+      const { userId } = ctx.user;
+      await agentConnectionRepository(orm).closeInvitation(userId, new Date());
+      logger.info({ userId }, "Agent invitation closed");
     },
   };
 }
