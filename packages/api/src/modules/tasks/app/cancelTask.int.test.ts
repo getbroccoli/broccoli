@@ -1,10 +1,10 @@
 import { expect, signedIn, taskService, test } from "#test/support";
 
 test("lets the asker cancel a task with a reason visible to both people", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
-  const task = await seed.task({ assigneeEmployeeId: holder.id, requestedByEmployeeId: asker.id });
-  const holderCtx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
+  const task = await seed.task({ assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id });
+  const assigneeCtx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
   const askerCtx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
   const tasks = taskService(orm);
 
@@ -15,7 +15,7 @@ test("lets the asker cancel a task with a reason visible to both people", async 
     cancelledAt: expect.any(Date) as unknown,
     cancelReason: "No longer needed",
   });
-  expect(await tasks.listMyTasks(holderCtx)).toEqual({
+  expect(await tasks.listMyTasks(assigneeCtx)).toEqual({
     needsYou: [],
     waitingOnOthers: [],
     resolvedRecently: [cancelled],
@@ -27,11 +27,11 @@ test("lets the asker cancel a task with a reason visible to both people", async 
   });
 });
 
-test("refuses cancellation by the holder", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+test("refuses cancellation by the assignee", async ({ orm, seed }) => {
+  const assignee = await seed.employee();
   const asker = await seed.employee();
-  const task = await seed.task({ assigneeEmployeeId: holder.id, requestedByEmployeeId: asker.id });
-  const ctx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
+  const task = await seed.task({ assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id });
+  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
   const tasks = taskService(orm);
 
   await expect(tasks.cancel(ctx, task.id, "No longer needed")).rejects.toMatchObject({
@@ -42,9 +42,9 @@ test("refuses cancellation by the holder", async ({ orm, seed }) => {
 });
 
 test("refuses a blank cancellation reason without changing the task", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
-  const task = await seed.task({ assigneeEmployeeId: holder.id, requestedByEmployeeId: asker.id });
+  const task = await seed.task({ assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id });
   const ctx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
   const tasks = taskService(orm);
 
@@ -56,14 +56,14 @@ test("refuses a blank cancellation reason without changing the task", async ({ o
 });
 
 test("refuses cancellation of a done task", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
   const task = await seed.task({
-    assigneeEmployeeId: holder.id,
-    requestedByEmployeeId: asker.id,
+    assigneeEmployeeId: assignee.id,
+    askedByEmployeeId: asker.id,
     status: "done",
     doneAt: new Date("2026-11-08T12:00:00Z"),
-    doneByEmployeeId: holder.id,
+    doneByEmployeeId: assignee.id,
   });
   const ctx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
 
@@ -74,9 +74,9 @@ test("refuses cancellation of a done task", async ({ orm, seed }) => {
 });
 
 test("records cancellation and its trimmed reason in the task's history", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
-  const task = await seed.task({ assigneeEmployeeId: holder.id, requestedByEmployeeId: asker.id });
+  const task = await seed.task({ assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id });
   const ctx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
 
   const { historyLine } = await taskService(orm).cancel(ctx, task.id, "  No longer needed  ");
@@ -91,13 +91,13 @@ test("records cancellation and its trimmed reason in the task's history", async 
 });
 
 test("hides a task from an unrelated caller trying to cancel it", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
   const other = await seed.employee();
   const task = await seed.task({
-    assigneeEmployeeId: holder.id,
-    requestedByEmployeeId: asker.id,
-    aboutEmployeeId: other.id,
+    assigneeEmployeeId: assignee.id,
+    askedByEmployeeId: asker.id,
+    subjectEmployeeId: other.id,
   });
   const ctx = signedIn(orm, { employeeId: other.id, profiles: ["OWNER"] });
 

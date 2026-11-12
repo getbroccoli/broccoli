@@ -1,6 +1,6 @@
-import { and, countDistinct, gte, inArray, notInArray, sql } from "drizzle-orm";
+import { and, countDistinct, gte, ne, sql } from "drizzle-orm";
 
-import { ormOf, type Tx } from "../../../core/db";
+import { anyOf, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
 import type { LedgerLineKind, LedgerSum, NewLedgerLine } from "../domain";
 import { allowanceLedgerLines } from "./allowanceLedgerLinesTable";
@@ -38,7 +38,7 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
       return orm()
         .select()
         .from(allowances)
-        .where(inArray(allowances.employeeId, [...employeeIds]))
+        .where(anyOf(allowances.employeeId, employeeIds))
         .orderBy(allowances.leaveYearStart);
     },
 
@@ -67,14 +67,16 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
           kind: allowanceLedgerLines.kind,
           allowanceRuleId: allowanceLedgerLines.allowanceRuleId,
           bankHolidayDate,
+          timeOffDayId: allowanceLedgerLines.timeOffDayId,
+          bookedDate: sql<CalendarDate | null>`case when ${allowanceLedgerLines.kind} = 'time_off_booked' then min(${allowanceLedgerLines.effectiveDate}) end`,
           amount: sql<string>`sum(${allowanceLedgerLines.amount})`,
           lineCount: sql<number>`count(*)::int`,
         })
         .from(allowanceLedgerLines)
         .where(
           and(
-            inArray(allowanceLedgerLines.allowanceId, [...allowanceIds]),
-            notInArray(allowanceLedgerLines.kind, ["time_off_booked", "manual_adjustment"]),
+            anyOf(allowanceLedgerLines.allowanceId, allowanceIds),
+            ne(allowanceLedgerLines.kind, "manual_adjustment"),
           ),
         )
         .groupBy(
@@ -82,6 +84,7 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
           allowanceLedgerLines.kind,
           allowanceLedgerLines.allowanceRuleId,
           bankHolidayDate,
+          allowanceLedgerLines.timeOffDayId,
         );
       const sums = rows.map((row) => ({ ...row, kind: row.kind as LedgerSum["kind"] }));
       return Map.groupBy(sums, ({ allowanceId }) => allowanceId);
@@ -95,7 +98,7 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
           amount: sql<string>`sum(${allowanceLedgerLines.amount})`,
         })
         .from(allowanceLedgerLines)
-        .where(inArray(allowanceLedgerLines.allowanceId, [...allowanceIds]))
+        .where(anyOf(allowanceLedgerLines.allowanceId, allowanceIds))
         .groupBy(allowanceLedgerLines.allowanceId, allowanceLedgerLines.kind);
       const sums = rows.map((row) => ({ ...row, amount: Number(row.amount) }));
       return Map.groupBy(sums, ({ allowanceId }) => allowanceId);

@@ -10,7 +10,6 @@ import {
   SYSTEM,
   test,
   sampleXlsxFile,
-  xlsxFileWithDistantCell,
   instances,
 } from "#test/support";
 
@@ -36,35 +35,27 @@ test("stores a mapping source named after the file and sends its first job", asy
   ).toEqual([{ content: bytes, mimeType: "text/csv" }]);
 });
 
-test("refuses a second upload while the first is being read without storing anything or sending a job", async ({
+test("refuses a second upload while the first is being read and stores only the first", async ({
   orm,
   fakeDecisions: fake,
 }) => {
   const imports = importServices(orm, { decisions: fake.decisions });
   const bytes = sampleXlsxFile({ sheets: [{ name: "Staff", rows: [["Name"], ["Avery Stone"]] }] });
-  const first = Promise.allSettled([
-    imports.files.uploadFile(OWNER, { name: "slow.xlsx", bytes: xlsxFileWithDistantCell() }),
+  const first = imports.files.uploadFile(OWNER, { name: "staff.xlsx", bytes });
+  await expect(
+    imports.files.uploadFile(OWNER, { name: "second.xlsx", bytes }),
+  ).rejects.toMatchObject({ code: "UNAVAILABLE" });
+  const sourceId = await first;
+
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([
+    { id: sourceId, kind: "file", name: "staff.xlsx", status: "mapping" },
   ]);
-
-  try {
-    await expect(
-      imports.files.uploadFile(OWNER, { name: "staff.xlsx", bytes }),
-    ).rejects.toMatchObject({ code: "UNAVAILABLE" });
-
-    expect(await imports.reads.listSources(OWNER)).toEqual([]);
-    expect(await storedFileIds(orm)).toEqual([]);
-    expect(imports.sentJobs).toEqual([]);
-  } finally {
-    expect(await first).toMatchObject([
-      {
-        status: "rejected",
-        reason: {
-          code: "INVALID_INPUT",
-          fieldErrors: [{ field: "file", code: "unsupported_file" }],
-        },
-      },
-    ]);
-  }
+  expect(await orm.select({ content: files.content }).from(files)).toEqual([
+    { content: Buffer.from(bytes) },
+  ]);
+  expect(imports.sentJobs).toEqual([
+    { name: "imports.mapFile", payload: { sourceId, attempt: 0 } },
+  ]);
 });
 
 test("accepts the next upload after the first upload finishes with an unreadable workbook", async ({
@@ -74,7 +65,10 @@ test("accepts the next upload after the first upload finishes with an unreadable
   const imports = importServices(orm, { decisions: fake.decisions });
   const bytes = sampleXlsxFile({ sheets: [{ name: "Staff", rows: [["Name"], ["Avery Stone"]] }] });
   await expect(
-    imports.files.uploadFile(OWNER, { name: "slow.xlsx", bytes: xlsxFileWithDistantCell() }),
+    imports.files.uploadFile(OWNER, {
+      name: "invalid.xlsx",
+      bytes: Buffer.from([0x50, 0x4b, 0x03, 0x04]),
+    }),
   ).rejects.toMatchObject({
     code: "INVALID_INPUT",
     fieldErrors: [{ field: "file", code: "unsupported_file" }],

@@ -1,55 +1,30 @@
 import { expect, it } from "vitest";
 
 import {
-  appliesFromHint,
-  asksForDate,
-  canChangeCounts,
+  changesOnlyDays,
+  longDate,
+  peopleText,
   rulesChangeBox,
   rulesErrors,
   rulesDraftOf,
-  rulesSaveLine,
-  savedToast,
   weekChangeBox,
-  weekErrors,
-  weekHint,
-  weekSaveLine,
   type RulesDraft,
-  type WeekDraft,
 } from "./termsDraft";
-import type { PolicyVersionText } from "@/features/termsDisplay";
-
-it("asks for no date when nobody was ever on terms whose versions predate the leave year", () => {
-  const versions = [{ startDate: null }, { startDate: "2025-03-01" }];
-
-  expect(asksForDate(false, versions, "2026-01-01")).toBe(false);
-});
-
-it("asks for a date when nobody was ever on terms with a version starting after the leave year starts", () => {
-  const versions = [{ startDate: "2026-07-01" }];
-
-  expect(asksForDate(false, versions, "2026-01-01")).toBe(true);
-});
-
-it("asks for a date once anyone was on the terms even with no versions", () => {
-  expect(asksForDate(true, [], "2026-01-01")).toBe(true);
-});
+import { nextLeaveYear, type RuleText } from "@/features/termsDisplay";
 
 it("summarises a days-only change and the bank holidays that stay on top", () => {
-  expect(rulesChangeBox("Annual leave", rules, currentRules, "2027-01-01")).toEqual({
+  expect(rulesChangeBox("Annual leave", nextRules, currentRules, "2027-01-01")).toEqual({
     title: "Annual leave: 20 → 22 days",
     detail: "From 1 Jan 2027, bank holidays still on top",
   });
 });
 
-it("keeps bank holidays on top without naming a date when nobody was ever on the terms", () => {
-  expect(rulesChangeBox("Annual leave", rules, currentRules, null)).toEqual({
-    title: "Annual leave: 20 → 22 days",
-    detail: "Bank holidays still on top",
-  });
-});
-
 it("summarises an offer of recorded leave", () => {
-  const offer: RulesDraft = { ...rules, offer: true, balance: "NO_BALANCE", days: "" };
+  const offer: RuleText = {
+    balance: "NO_BALANCE",
+    bankHolidays: null,
+    yearlyEntitlement: null,
+  };
 
   expect(rulesChangeBox("Family leave", offer, null, "2026-01-01")).toEqual({
     title: "Family leave: offered, Recorded, doesn't count",
@@ -57,20 +32,11 @@ it("summarises an offer of recorded leave", () => {
   });
 });
 
-it("names no date for an offer when nobody was ever on the terms", () => {
-  const offer: RulesDraft = { ...rules, offer: true, balance: "NO_BALANCE", days: "" };
-
-  expect(rulesChangeBox("Family leave", offer, null, null)).toEqual({
-    title: "Family leave: offered, Recorded, doesn't count",
-    detail: null,
-  });
-});
-
 it("summarises a change to unlimited leave", () => {
   expect(
     rulesChangeBox(
       "Annual leave",
-      { ...rules, balance: "UNLIMITED_BALANCE" },
+      { balance: "UNLIMITED_BALANCE", bankHolidays: null, yearlyEntitlement: null },
       currentRules,
       "2027-01-01",
     ),
@@ -80,150 +46,57 @@ it("summarises a change to unlimited leave", () => {
   });
 });
 
+it("recognises a days-only change when counting and bank holidays stay the same", () => {
+  expect(changesOnlyDays(nextRules, currentRules)).toBe(true);
+});
+
+it("does not treat a bank holiday change as a days-only change", () => {
+  expect(
+    changesOnlyDays(
+      { ...nextRules, bankHolidays: "BANK_HOLIDAYS_INCLUDED_IN_ALLOWANCE" },
+      currentRules,
+    ),
+  ).toBe(false);
+});
+
+it("does not treat an offer as a days-only change", () => {
+  expect(changesOnlyDays(nextRules, null)).toBe(false);
+});
+
 it("summarises a new working week and when it starts", () => {
-  expect(weekChangeBox(week, week.startDate)).toEqual({
+  const nextWeek = {
+    mondayMinutes: 480,
+    tuesdayMinutes: 480,
+    wednesdayMinutes: 480,
+    thursdayMinutes: 480,
+    fridayMinutes: 0,
+    saturdayMinutes: 0,
+    sundayMinutes: 0,
+  };
+
+  expect(weekChangeBox(nextWeek, "2026-12-01")).toEqual({
     title: "Working week: Mon–Thu, 8 hours",
     detail: "From 1 Dec 2026.",
   });
 });
 
-it("names no date for a working week when nobody was ever on the terms", () => {
-  expect(weekChangeBox(week, null)).toEqual({
-    title: "Working week: Mon–Thu, 8 hours",
-    detail: null,
-  });
-});
-
-it("names no date in the week save line when nobody was ever on the terms", () => {
-  expect(weekSaveLine(0, "Senior staff", null)).toBe(
-    "Saving changes the working week for nobody on Senior staff yet.",
-  );
-});
-
-it("names no date in the rules save line when nobody was ever on the terms", () => {
-  expect(rulesSaveLine(false, "Annual leave", 0, "Senior staff", null)).toBe(
-    "Saving changes Annual leave for nobody on Senior staff yet.",
-  );
-});
-
-it("names no date in the offer save line when nobody was ever on the terms", () => {
-  expect(rulesSaveLine(true, "Family leave", 0, "Senior staff", null)).toBe(
-    "Saving offers Family leave to nobody on Senior staff yet.",
-  );
-});
-
-it("names the people reached by a working week change", () => {
-  expect(weekSaveLine(6, "Scotland", "2026-12-01")).toBe(
-    "Saving changes the working week for the 6 people on Scotland, from 1 December 2026. Their allowances are worked out again from that date.",
-  );
-});
-
-it("uses the singular when a working week change reaches one person", () => {
-  expect(weekSaveLine(1, "Scotland", "2026-12-01")).toBe(
-    "Saving changes the working week for the 1 person on Scotland, from 1 December 2026. Their allowances are worked out again from that date.",
-  );
-});
-
-it("says nobody is reached when the terms have no people", () => {
-  expect(weekSaveLine(0, "Scotland", "2026-12-01")).toBe(
-    "Saving changes the working week for nobody on Scotland yet, from 1 December 2026.",
-  );
-});
-
-it("leaves the count out while the working week's reach loads", () => {
-  expect(weekSaveLine(null, "Scotland", "2026-12-01")).toBe(
-    "Saving changes the working week for the people on Scotland, from 1 December 2026. Their allowances are worked out again from that date.",
-  );
-});
-
-it("names the rules being changed and says earlier years stay as they were", () => {
-  expect(rulesSaveLine(false, "Annual leave", 31, "England and Wales", "2027-01-01")).toBe(
-    "Saving changes Annual leave for the 31 people on England and Wales, from 1 January 2027. Earlier years stay as they were.",
-  );
-});
-
-it("describes offering a type to the person reached", () => {
-  expect(rulesSaveLine(true, "Family leave", 1, "Northern Ireland", "2026-01-01")).toBe(
-    "Saving offers Family leave to the 1 person on Northern Ireland, from 1 January 2026.",
-  );
-});
-
-it("accepts working hours in quarter-hour steps", () => {
-  expect(
-    weekErrors({ ...week, hours: ["7.25", "0", "0", "0", "0", "0", "0"] }, "2026-01-01"),
-  ).toEqual({});
-});
-
-it("refuses working hours between quarter-hour steps", () => {
-  expect(
-    weekErrors({ ...week, hours: ["7.3", "0", "0", "0", "0", "0", "0"] }, "2026-01-01"),
-  ).toEqual({ hours: "Enter hours from 0 to 24, in quarter hours." });
-});
-
-it("requires at least one working day", () => {
-  expect(weekErrors({ ...week, hours: ["0", "0", "0", "0", "0", "0", "0"] }, "2026-01-01")).toEqual(
-    { hours: "At least one day needs hours." },
-  );
-});
-
-it("refuses a working week starting before the earliest allowed date", () => {
-  expect(weekErrors({ ...week, startDate: "2025-12-31" }, "2026-01-01")).toEqual({
-    startDate: "Pick a date from 1 Jan 2026.",
-  });
+it.each([
+  { count: 6, text: "the 6 people" },
+  { count: 1, text: "the 1 person" },
+  { count: 0, text: "the 0 people" },
+  { count: null, text: "the people" },
+])("describes the people reached as $text", ({ count, text }) => {
+  expect(peopleText(count)).toBe(text);
 });
 
 it.each(["366", "20.5"])("accepts %s days of yearly entitlement", (days) => {
-  expect(rulesErrors({ ...rules, days }, "2026-01-01")).toEqual({});
+  expect(rulesErrors({ ...rules, days })).toEqual({});
 });
 
 it.each(["367", "20.3", "", "-1"])("refuses invalid yearly entitlement %j", (days) => {
-  expect(rulesErrors({ ...rules, days }, "2026-01-01")).toEqual({
+  expect(rulesErrors({ ...rules, days })).toEqual({
     days: "Enter days from 0 to 366, in half days.",
   });
-});
-
-it("refuses rules starting before the earliest allowed date", () => {
-  expect(
-    rulesErrors({ ...rules, appliesFrom: "ANOTHER_DATE", otherDate: "2025-12-31" }, "2026-01-01"),
-  ).toEqual({ startDate: "Pick a date from 1 Jan 2026." });
-});
-
-it("prevents changing how an existing type counts in July", () => {
-  expect(
-    canChangeCounts(
-      { ...rules, appliesFrom: "ANOTHER_DATE", otherDate: "2026-07-01" },
-      "2026-01-01",
-    ),
-  ).toBe(false);
-});
-
-it("allows changing how a type counts at the start of next leave year", () => {
-  expect(canChangeCounts({ ...rules, appliesFrom: "NEXT_LEAVE_YEAR" }, "2026-01-01")).toBe(true);
-});
-
-it("allows an offer to choose how leave counts in July", () => {
-  expect(
-    canChangeCounts(
-      { ...rules, offer: true, appliesFrom: "ANOTHER_DATE", otherDate: "2026-07-01" },
-      "2026-01-01",
-    ),
-  ).toBe(true);
-});
-
-it("confirms a working week saved from today", () => {
-  expect(savedToast("Working week", "Scotland", "2026-11-06", "2026-11-06")).toBe(
-    "Working week saved for Scotland.",
-  );
-});
-
-it("adds the start date when a saved working week is planned", () => {
-  expect(savedToast("Working week", "Scotland", "2026-12-01", "2026-11-06")).toBe(
-    "Working week saved for Scotland. It changes on 1 Dec 2026.",
-  );
-});
-
-it("compares the new working week's hours and days with the old week", () => {
-  expect(weekHint(week, currentWeek)).toBe("32 hours a week, over 4 days. Was Mon–Fri, 7.5 hours.");
 });
 
 it.each([
@@ -252,13 +125,11 @@ it.each([
 ] as const)(
   "starts an offer from the type defaults: $balance, $days days, on top $onTop",
   ({ balance, entitlementDays, bankHolidays, days, onTop }) => {
-    expect(rulesDraftOf(null, { balance, entitlementDays, bankHolidays })).toEqual({
+    expect(rulesDraftOf(null, { balance, entitlementDays, bankHolidays }, true)).toEqual({
       offer: true,
       balance,
       days,
       onTop,
-      appliesFrom: "THIS_LEAVE_YEAR",
-      otherDate: "",
     });
   },
 );
@@ -268,69 +139,49 @@ it("starts editing from today's policy version instead of the type defaults", ()
     rulesDraftOf(
       { ...currentRules, bankHolidays: "BANK_HOLIDAYS_INCLUDED_IN_ALLOWANCE" },
       defaultRules,
+      false,
     ),
   ).toEqual({
     offer: false,
     balance: "BALANCE_FROM_ALLOWANCE",
     days: "20",
     onTop: false,
-    appliesFrom: "THIS_LEAVE_YEAR",
-    otherDate: "",
   });
 });
 
-it("starts a change of rules and an offer from this leave year", () => {
-  expect(rulesDraftOf(currentRules, defaultRules).appliesFrom).toBe("THIS_LEAVE_YEAR");
-  expect(rulesDraftOf(null, defaultRules).appliesFrom).toBe("THIS_LEAVE_YEAR");
+it("keeps a saved unpublished offer marked as an offer when editing it again", () => {
+  expect(rulesDraftOf(nextRules, defaultRules, true)).toEqual({
+    offer: true,
+    balance: "BALANCE_FROM_ALLOWANCE",
+    days: "22",
+    onTop: true,
+  });
 });
 
-it("says what each start does to the leave year", () => {
-  expect(appliesFromHint({ ...rules, appliesFrom: "THIS_LEAVE_YEAR" }, "2026-01-01")).toBe(
-    "This leave year, so 2026 allowances change now.",
-  );
-  expect(appliesFromHint(rules, "2026-01-01")).toBe("Next leave year. 2026 stays as it is.");
-  expect(appliesFromHint({ ...rules, appliesFrom: "ANOTHER_DATE" }, "2026-01-01")).toBe(
-    "Splits 2026 at that date.",
-  );
+it("keeps the year padded when moving to the next January", () => {
+  expect(nextLeaveYear("0001-01-01")).toBe("0002-01-01");
 });
 
-it("says an offer from next leave year waits until then", () => {
-  expect(appliesFromHint({ ...rules, offer: true }, "2026-01-01")).toBe(
-    "Not offered until next leave year.",
-  );
+it("displays year 0001 as supplied", () => {
+  expect(longDate("0001-01-01")).toBe("1 January 1");
 });
-
-const week: WeekDraft = {
-  hours: ["8", "8", "8", "8", "0", "0", "0"],
-  calendar: "SCOTLAND",
-  startDate: "2026-12-01",
-};
 
 const rules: RulesDraft = {
   offer: false,
   balance: "BALANCE_FROM_ALLOWANCE",
   days: "22",
   onTop: true,
-  appliesFrom: "NEXT_LEAVE_YEAR",
-  otherDate: "",
 };
 
-const currentRules: PolicyVersionText = {
-  startDate: null,
+const currentRules: RuleText = {
   balance: "BALANCE_FROM_ALLOWANCE",
   bankHolidays: "BANK_HOLIDAYS_ON_TOP_OF_ALLOWANCE",
   yearlyEntitlement: { days: 20, daysPerWeek: 5 },
-  leaveYearStart: { kind: "LEAVE_YEAR_FROM_FIXED_DATE", month: 1, day: 1 },
 };
 
-const currentWeek = {
-  mondayMinutes: 450,
-  tuesdayMinutes: 450,
-  wednesdayMinutes: 450,
-  thursdayMinutes: 450,
-  fridayMinutes: 450,
-  saturdayMinutes: 0,
-  sundayMinutes: 0,
+const nextRules: RuleText = {
+  ...currentRules,
+  yearlyEntitlement: { days: 22, daysPerWeek: 5 },
 };
 
 const defaultRules = {

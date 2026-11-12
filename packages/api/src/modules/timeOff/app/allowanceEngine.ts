@@ -1,6 +1,6 @@
 import type { Tx } from "../../../core/db";
 import { PrincipalSecurityContext } from "../../../core/security";
-import type { CalendarDate } from "../../../utils";
+import { addYears, type CalendarDate } from "../../../utils";
 import { BANK_HOLIDAY_CALENDARS, type BankHolidayService } from "../../bankHolidays";
 import {
   type EmployeeReadService,
@@ -11,13 +11,18 @@ import {
 import {
   type Allowance,
   allowanceRepository,
+  type BookedDay,
   type PolicyAssignment,
   timeOffPolicyRepository,
+  timeOffRepository,
 } from "../db";
 import {
   type AllowanceCause,
   type AllowanceInputs,
+  type BookedDayLine,
   calculateAllowance,
+  chargedDays,
+  costOn,
   type DatedPolicy,
   leaveYearContaining,
   ledgerDifference,
@@ -62,16 +67,24 @@ export async function ensureAllowancesOf(
   const allowances = allowanceRepository(tx);
   const { people, policies } = await readPeople(dependencies.employeeReads, tx, ids);
   const today = dependencies.today();
-  const created = await allowances.insert(missingAllowances(people, policies, today));
+  // A year back reaches the start of every leave year that has not ended.
+  const bookedDays = Map.groupBy(
+    await timeOffRepository(tx).findBookedDays({ employeeIds: ids, from: addYears(today, -1) }),
+    ({ employeeId, timeOffTypeId }) => `${employeeId}:${timeOffTypeId}`,
+  );
+  const created = await allowances.insert(missingAllowances(people, policies, today, bookedDays));
   const open = [
     ...people.flatMap(({ allowances: own }) =>
       own.filter(({ leaveYearEnd }) => leaveYearEnd >= today),
     ),
     ...created,
   ];
-  const lines = await differenceLines(dependencies, tx, { people, open, cause });
+  const lines = await differenceLines(dependencies, tx, { people, open, cause, bookedDays });
   return { allowancesCreated: created.length, linesAppended: await allowances.insertLines(lines) };
 }
+
+/** Booked days by `<employee id>:<time off type id>`. */
+type BookedDaysByPersonAndType = ReadonlyMap<string, readonly BookedDay[]>;
 
 /** What decides one person's allowances. */
 export interface Person {
@@ -83,7 +96,10 @@ export interface Person {
   allowances: readonly Allowance[];
 }
 
-/** Every policy, and what decides each person's allowances. */
+/**
+ * Every policy, and what decides each person's allowances; `assignments` replaces the stored
+ * assignments read, as a publish would leave them.
+ */
 export async function readPeople(
   employeeReads: Pick<
     AllowanceEngineDependencies["employeeReads"],
@@ -91,20 +107,20 @@ export async function readPeople(
   >,
   tx: Tx,
   ids: readonly string[],
+  assignments?: (stored: PolicyAssignment[]) => PolicyAssignment[],
 ): Promise<{ people: Person[]; policies: TimeOffPolicy[] }> {
   const policyRepository = timeOffPolicyRepository(tx);
-  const [policies, employments, memberships, assignments, existing] = await Promise.all([
+  const [policies, employments, memberships, existing] = await Promise.all([
     policyRepository.findAll(),
     employeeReads.readEmploymentPeriods(tx, ids),
     employeeReads.readTermsMemberships(tx, ids),
-    policyRepository.findAssignments(ids),
     allowanceRepository(tx).findByEmployees(ids),
   ]);
-  const byId = new Map(policies.map((policy) => [policy.id, policy]));
-  const termsPolicyIds = new Map(
-    policies.flatMap(({ id, termsId, timeOffType }) =>
-      termsId ? [[`${termsId}:${timeOffType.id}`, id] as const] : [],
-    ),
+  const termsIds = [...new Set([...memberships.values()].flat().map(({ termsId }) => termsId))];
+  const stored = await policyRepository.findAssignments({ employeeIds: ids, termsIds });
+  const rows = Map.groupBy(assignments ? assignments(stored) : stored, laneKey);
+  const versions = new Map(
+    policies.flatMap((policy) => policy.versions.map((version) => [version.id, version])),
   );
   const existingOf = Map.groupBy(existing, ({ employeeId }) => employeeId);
   const people = ids.map((employeeId) => {
@@ -115,10 +131,11 @@ export async function readPeople(
       serviceStart: periods[0]?.startDate ?? null,
       timelineOf: (timeOffTypeId: string) =>
         createPersonTimeline({
-          direct: ownPoliciesOf(assignments.get(employeeId) ?? [], timeOffTypeId),
+          direct: rows.get(laneKey({ owner: { employeeId }, timeOffTypeId })) ?? [],
           terms: memberships.get(employeeId) ?? [],
-          idOfTerms: (termsId: string) => termsPolicyIds.get(`${termsId}:${timeOffTypeId}`) ?? null,
-          versions: (policyId: string) => byId.get(policyId)?.versions ?? [],
+          termsAssignments: (termsId) =>
+            rows.get(laneKey({ owner: { termsId }, timeOffTypeId })) ?? [],
+          version: (versionId) => versions.get(versionId)!,
         }),
       allowances: existingOf.get(employeeId) ?? [],
     };
@@ -126,28 +143,54 @@ export async function readPeople(
   return { people, policies };
 }
 
-/** A person's own policies for one type, dated, as their timeline reads them. */
-export function ownPoliciesOf(assignments: readonly PolicyAssignment[], timeOffTypeId: string) {
-  return assignments
-    .filter((assignment) => assignment.timeOffTypeId === timeOffTypeId)
-    .map(({ timeOffPolicyId, startDate, endDate }) => ({
-      id: timeOffPolicyId,
+/** One owner's assignments for one type, as a key. */
+export function laneKey({
+  owner,
+  timeOffTypeId,
+}: Pick<PolicyAssignment, "owner" | "timeOffTypeId">): string {
+  const ownerKey =
+    "employeeId" in owner ? `employee:${owner.employeeId}` : `terms:${owner.termsId}`;
+  return `${ownerKey}:${timeOffTypeId}`;
+}
+
+/** The person's policies for the allowance's type over its leave year. */
+export function datedPolicies(
+  person: Person,
+  allowance: Pick<Allowance, "timeOffTypeId" | "leaveYearStart" | "leaveYearEnd">,
+): DatedPolicy[] {
+  return person
+    .timelineOf(allowance.timeOffTypeId)
+    .getVersions(allowance.leaveYearStart, allowance.leaveYearEnd)
+    .map(({ version, startDate, endDate }) => ({
       startDate,
       endDate,
+      balance: version.balance,
+      bankHolidays: version.bankHolidays,
+      rules: version.rules,
     }));
 }
 
-/** The allowances to create: one per person and type that has none for the year needed. */
+/**
+ * The allowances to create: one per person and type that has none for the year needed, which is
+ * the year they are in or start in, and each later year they have a day booked in.
+ */
 function missingAllowances(
   people: readonly Person[],
   policies: readonly TimeOffPolicy[],
   today: CalendarDate,
+  bookedDays: BookedDaysByPersonAndType,
 ) {
   const typeIds = [...new Set(policies.map(({ timeOffType }) => timeOffType.id))];
   return people.flatMap((person) =>
     typeIds.flatMap((typeId) => {
-      const allowance = newAllowance(person, typeId, today);
-      return allowance ? [{ employeeId: person.employeeId, ...allowance }] : [];
+      const later = (bookedDays.get(`${person.employeeId}:${typeId}`) ?? [])
+        .map(({ date }) => date)
+        .filter((date) => date > today);
+      const needed = [today, ...later].flatMap((date) => {
+        const allowance = newAllowance(person, typeId, date);
+        return allowance ? [{ employeeId: person.employeeId, ...allowance }] : [];
+      });
+      return [...new Map(needed.map((one) => [one.leaveYearStart, one])).values()];
     }),
   );
 }
@@ -160,10 +203,12 @@ async function differenceLines(
     people,
     open,
     cause,
+    bookedDays,
   }: {
     people: readonly Person[];
     open: readonly Allowance[];
     cause: AllowanceCause;
+    bookedDays: BookedDaysByPersonAndType;
   },
 ): Promise<NewLedgerLine[]> {
   if (open.length === 0) {
@@ -181,9 +226,10 @@ async function differenceLines(
       workingWeeks: weeks.get(allowance.employeeId)!,
       bankHolidays: holidayDates,
     };
+    const booked = bookedLines(allowance, bookedDays, inputs);
     return ledgerDifference(
       allowance,
-      calculateAllowance(inputs),
+      [...calculateAllowance(inputs), ...booked],
       sums.get(allowance.id) ?? [],
       cause,
       previousCalculation(inputs, cause),
@@ -219,6 +265,36 @@ async function readFigures(
     [...holidays].map(([calendar, days]) => [calendar, days.map(({ date }) => date)]),
   );
   return { weeks, holidayDates, sums };
+}
+
+/**
+ * What each day booked in the allowance's leave year costs it, under the week of that day; only
+ * the days the year charges.
+ */
+function bookedLines(
+  allowance: Allowance,
+  bookedDays: BookedDaysByPersonAndType,
+  { workingWeeks, bankHolidays, policies }: AllowanceInputs,
+): BookedDayLine[] {
+  const inYear = (
+    bookedDays.get(`${allowance.employeeId}:${allowance.timeOffTypeId}`) ?? []
+  ).filter(({ date }) => allowance.leaveYearStart <= date && date <= allowance.leaveYearEnd);
+  return chargedDays(inYear, policies).map(({ timeOffDayId, date, dayPart }) => {
+    const { cost } = costOn({
+      date,
+      dayPart,
+      workingWeeks,
+      isBankHoliday: (calendar, day) => bankHolidays.get(calendar)?.includes(day) ?? false,
+    });
+    return {
+      kind: "time_off_booked",
+      allowanceRuleId: null,
+      bankHolidayDate: null,
+      timeOffDayId,
+      amount: (-cost).toFixed(6),
+      firstDate: date,
+    };
+  });
 }
 
 /** A start correction's calculation from the previous start, so grants change from the right date. */
@@ -261,18 +337,4 @@ function newAllowance(
       (startDate === null || startDate <= end) && (endDate === null || endDate >= start),
   );
   return overlaps || !employed ? null : { timeOffTypeId, leaveYearStart: start, leaveYearEnd: end };
-}
-
-/** The policy versions that apply to the person over the allowance's leave year. */
-function datedPolicies(person: Person, allowance: Allowance): DatedPolicy[] {
-  return person
-    .timelineOf(allowance.timeOffTypeId)
-    .getVersions(allowance.leaveYearStart, allowance.leaveYearEnd)
-    .map(({ version, startDate, endDate }) => ({
-      startDate,
-      endDate,
-      balance: version.balance,
-      bankHolidays: version.bankHolidays,
-      rules: version.rules,
-    }));
 }

@@ -20,8 +20,10 @@ export {
   type LocationWithPeopleCount,
 } from "./locationService";
 export { employeeDirectory } from "./employeeDirectory";
+export { applyAssignmentPlan, firstReplaced } from "./employmentTerms/workingWeekPublish";
 export {
   createWorkingPatternService,
+  type WorkingPatternPublish,
   type WorkingPatternService,
 } from "./employmentTerms/workingPatternService";
 export {
@@ -35,6 +37,10 @@ export {
   type TermsChange,
 } from "./employmentTerms/employeeTermsService";
 export type { TermsMovePreview } from "./employmentTerms/membershipsAfterMove";
+export {
+  createOwnWorkingWeekService,
+  type OwnWorkingWeekService,
+} from "./employmentTerms/ownWorkingWeekService";
 export { employeeRecordType } from "./employeeRecordType";
 export {
   type CopyTermsParts,
@@ -43,9 +49,10 @@ export {
   type TermsService,
 } from "./employmentTerms/termsService";
 export { termsRecordType } from "./employmentTerms/termsRecordType";
-export type { TermsOverview } from "./employmentTerms/readTermsOverviews";
+export type { DatedWorkingWeek, TermsOverview } from "./employmentTerms/readTermsOverviews";
 export {
   createEmployeeInviteService,
   type EmployeeInviteService,
   type InviteDetails,
 } from "./invites/employeeInviteService";
+export { employeeNotFound } from "./employeeNotFound";

@@ -14,6 +14,7 @@ import {
   type TermsMoveSkipReason,
 } from "../../domain";
 import { employeeNotFound } from "../employeeNotFound";
+import { type EmploymentTerms, readEmploymentTerms } from "./readEmploymentTerms";
 
 const recordHistory = createRecordHistoryService();
 
@@ -25,8 +26,14 @@ export interface EmployeeTermsService {
    * before. Adds a history line per person moved.
    */
   changeTerms: (ctx: SecurityContext, input: TermsChangeInput) => Promise<TermsChange>;
-  /** What `changeTerms` would do, writing nothing. */
-  previewTermsChange: (ctx: SecurityContext, input: TermsChangeInput) => Promise<TermsChange>;
+  /**
+   * What `changeTerms` would do, writing nothing: each person moved with their terms read from the
+   * move's date as after it and as now, so a past date compares the rules on that date.
+   */
+  previewTermsChange: (
+    ctx: SecurityContext,
+    input: TermsChangeInput,
+  ) => Promise<TermsChangePreview>;
   /**
    * Removes the person's move starting on `startDate`; the terms before it run on. CONFLICT once
    * it has started, or when there is none.
@@ -48,6 +55,15 @@ export interface TermsChange {
   /** In input order, each with the date they move from. */
   moved: { employeeId: string; startDate: CalendarDate }[];
   skipped: { employeeId: string; reason: TermsMoveSkipReason }[];
+}
+
+/** `TermsChange` with each moved person's terms after the move and as they are now. */
+export interface TermsChangePreview {
+  moved: (TermsChange["moved"][number] & {
+    employmentTerms: EmploymentTerms;
+    currentTerms: EmploymentTerms;
+  })[];
+  skipped: TermsChange["skipped"];
 }
 
 export function createEmployeeTermsService({
@@ -108,8 +124,19 @@ export function createEmployeeTermsService({
     async previewTermsChange(ctx, input) {
       const request = parseRequest(ctx, input, today());
       const { moves, skipped } = await transact((tx) => planMoves(tx, request));
+      const from = request.startDate;
+      const move = { termsId: request.termsId, startDate: from };
+      const employeeIds = moves.map(({ employeeId }) => employeeId);
+      const deps = { transact, today };
+      const after = await readEmploymentTerms(deps, ctx, { employeeIds, move, from });
+      const now = await readEmploymentTerms(deps, ctx, { employeeIds, from });
       return {
-        moved: moves.map(({ employeeId, from }) => ({ employeeId, startDate: from })),
+        moved: moves.map(({ employeeId, from: startDate }) => ({
+          employeeId,
+          startDate,
+          employmentTerms: { ...after.get(employeeId)!, move, from },
+          currentTerms: { ...now.get(employeeId)!, from },
+        })),
         skipped,
       };
     },

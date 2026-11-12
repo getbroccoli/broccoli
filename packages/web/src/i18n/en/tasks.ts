@@ -16,6 +16,7 @@ export const tasksEn = {
   "tasks.column.due": "Due",
   "tasks.column.where": "Where it is",
   "tasks.type.MANUAL_TO_DO": "To-do",
+  "tasks.type.PROCESS_STEP_TO_DO": "To-do",
   "tasks.status.TO_DO": "To do",
   "tasks.status.WAITING": "Waiting",
   "tasks.status.DONE": "Done",

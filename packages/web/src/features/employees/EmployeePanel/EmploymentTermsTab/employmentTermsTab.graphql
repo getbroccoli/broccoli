@@ -39,6 +39,11 @@ fragment EmploymentTermsTab_terms on EmployeeEmploymentTerms {
       name
       icon
       colour
+      defaultRules {
+        balance
+        entitlementDays
+        bankHolidays
+      }
     }
     versions {
       source
@@ -125,6 +130,136 @@ mutation CancelTermsChange($input: EmployeeTermsCancelChangeInput!) {
         ... on Error {
           message
         }
+      }
+    }
+  }
+}
+
+mutation SetOwnWorkingWeek($input: EmployeeOwnWorkingWeekSetInput!) {
+  employees {
+    setOwnWorkingWeek(input: $input) {
+      ...OwnWorkingWeekPayload @unmask
+    }
+  }
+}
+
+mutation UseTermsWorkingWeek($input: EmployeeTermsWorkingWeekUseInput!) {
+  employees {
+    useTermsWorkingWeek(input: $input) {
+      ...OwnWorkingWeekPayload @unmask
+    }
+  }
+}
+
+mutation CancelOwnWorkingWeekChange($input: EmployeeOwnWorkingWeekCancelChangeInput!) {
+  employees {
+    cancelOwnWorkingWeekChange(input: $input) {
+      ...OwnWorkingWeekPayload @unmask
+    }
+  }
+}
+
+# The person's new week, for the tab and the panel.
+fragment OwnWorkingWeekPayload on EmployeeOwnWorkingWeekPayload {
+  employee {
+    ...EmployeePanel_employee @unmask
+    employmentTerms {
+      ...EmploymentTermsTab_terms @unmask
+    }
+  }
+  error {
+    __typename
+    ... on Error {
+      message
+    }
+    ... on InvalidInputError {
+      fields {
+        field
+        code
+      }
+    }
+  }
+}
+
+# The person's rules from a date on, for how a type counts before an earlier "Applies from".
+query PersonRulesSince($id: ID!, $from: Date!) {
+  employee(id: $id) {
+    id
+    employmentTerms {
+      timeOff(from: $from) {
+        timeOffType {
+          id
+        }
+        versions {
+          source
+          startDate
+          endDate
+          rules {
+            id
+            balance
+          }
+        }
+      }
+    }
+  }
+}
+
+# The terms' rules for a type over time, for what a return to them does.
+query TermsTypeOffer($termsId: ID!, $timeOffTypeId: ID!) {
+  terms(id: $termsId) {
+    id
+    timeOff(timeOffTypeId: $timeOffTypeId) {
+      versions {
+        id
+        startDate
+        endDate
+        balance
+      }
+    }
+  }
+}
+
+mutation SetOwnRules($input: TimeOffOwnRulesSetInput!) {
+  timeOff {
+    setOwnRules(input: $input) {
+      ...OwnRulesPayload @unmask
+    }
+  }
+}
+
+mutation UseTermsRules($input: TimeOffTermsRulesUseInput!) {
+  timeOff {
+    useTermsRules(input: $input) {
+      ...OwnRulesPayload @unmask
+    }
+  }
+}
+
+mutation CancelOwnRulesChange($input: TimeOffOwnRulesCancelChangeInput!) {
+  timeOff {
+    cancelOwnRulesChange(input: $input) {
+      ...OwnRulesPayload @unmask
+    }
+  }
+}
+
+# The person's new rules, for the tab and the panel.
+fragment OwnRulesPayload on TimeOffOwnRulesPayload {
+  employee {
+    ...EmployeePanel_employee @unmask
+    employmentTerms {
+      ...EmploymentTermsTab_terms @unmask
+    }
+  }
+  error {
+    __typename
+    ... on Error {
+      message
+    }
+    ... on InvalidInputError {
+      fields {
+        field
+        code
       }
     }
   }

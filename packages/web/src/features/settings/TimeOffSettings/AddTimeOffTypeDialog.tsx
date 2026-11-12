@@ -1,7 +1,9 @@
 import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
 
-import { CreateTimeOffTypeDocument, TimeOffSettingsDocument } from "@/__generated__/graphql";
+import type { DocumentNode } from "graphql";
+
+import { CreateTimeOffTypeDocument, type CreateTimeOffTypeMutation } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,11 +17,18 @@ import {
 import { t } from "@/i18n";
 
 import { nameErrorOf } from "./nameError";
-import { daysError, typeInputOf } from "./timeOffRules";
+import { daysError } from "@/features/termsDisplay";
+import { typeInputOf } from "./timeOffRules";
 import { TimeOffTypeFields, type TimeOffTypeValues } from "./TimeOffTypeFields";
 
 type Props = {
+  /** The shown queries listing types; lists are ordered by name on the server, so they reload. */
+  refetch: DocumentNode[];
   onClose: () => void;
+  /** Called with the new type once the lists showing it have reloaded. */
+  onAdded?: (
+    timeOffType: NonNullable<CreateTimeOffTypeMutation["timeOff"]["createType"]["timeOffType"]>,
+  ) => void;
 };
 
 /** A new type starts with the default look, colleagues see its name, and it doesn't count. */
@@ -32,12 +41,11 @@ const NEW_TYPE: TimeOffTypeValues = {
 };
 
 /** Adds a time off type for the whole company; no terms offer it yet. */
-export function AddTimeOffTypeDialog({ onClose }: Props) {
+export function AddTimeOffTypeDialog({ refetch, onClose, onAdded }: Props) {
   const [values, setValues] = useState(NEW_TYPE);
-  // The list is ordered by name on the server, so it reloads after adding.
   const [createType, { loading, error, payloadError }] = usePayloadMutation(
     CreateTimeOffTypeDocument,
-    { refetch: [TimeOffSettingsDocument] },
+    { refetch },
   );
   const trimmed = values.name.trim();
   const nameError = nameErrorOf(payloadError);
@@ -49,6 +57,7 @@ export function AddTimeOffTypeDialog({ onClose }: Props) {
       const { timeOffType } = await createType({ variables: { input: typeInputOf(values) } });
       toast(t("settings.timeOff.added", { name: timeOffType?.name ?? trimmed }));
       onClose();
+      if (timeOffType) onAdded?.(timeOffType);
     } catch {
       // The form shows the failure.
     }

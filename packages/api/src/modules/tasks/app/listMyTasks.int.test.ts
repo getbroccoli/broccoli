@@ -3,17 +3,17 @@ import { afterEach, beforeEach, vi } from "vitest";
 import { calendarDate, EMPLOYEE, expect, signedIn, taskService, test } from "#test/support";
 
 test("groups held tasks by status", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
-  const ctx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
-  const people = { assigneeEmployeeId: holder.id, requestedByEmployeeId: asker.id };
+  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
+  const people = { assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id };
   const toDo = await seed.task(people);
   const waiting = await seed.task({ ...people, status: "waiting" });
   const done = await seed.task({
     ...people,
     status: "done",
     doneAt: new Date("2026-11-08T12:00:00Z"),
-    doneByEmployeeId: holder.id,
+    doneByEmployeeId: assignee.id,
   });
   const cancelled = await seed.task({
     ...people,
@@ -30,17 +30,17 @@ test("groups held tasks by status", async ({ orm, seed }) => {
 });
 
 test("shows the asker's open tasks under waiting on others", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
   const ctx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
-  const people = { assigneeEmployeeId: holder.id, requestedByEmployeeId: asker.id };
+  const people = { assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id };
   const waiting = await seed.task({ ...people, status: "waiting" });
   const toDo = await seed.task(people);
   const done = await seed.task({
     ...people,
     status: "done",
     doneAt: new Date("2026-11-08T12:00:00Z"),
-    doneByEmployeeId: holder.id,
+    doneByEmployeeId: assignee.id,
   });
   const cancelled = await seed.task({
     ...people,
@@ -59,7 +59,7 @@ test("shows the asker's open tasks under waiting on others", async ({ orm, seed 
 test("lists a task once when the caller holds it and asked for it", async ({ orm, seed }) => {
   const employee = await seed.employee();
   const ctx = signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] });
-  const people = { assigneeEmployeeId: employee.id, requestedByEmployeeId: employee.id };
+  const people = { assigneeEmployeeId: employee.id, askedByEmployeeId: employee.id };
   const toDo = await seed.task(people);
   const waiting = await seed.task({ ...people, status: "waiting" });
   const done = await seed.task({
@@ -86,10 +86,10 @@ test("orders tasks needing the caller by due date then oldest first with undated
   orm,
   seed,
 }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
-  const ctx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
-  const people = { assigneeEmployeeId: holder.id, requestedByEmployeeId: asker.id };
+  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
+  const people = { assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id };
   const undated = await seed.task(people);
   const later = await seed.task({ ...people, dueDate: calendarDate("2026-11-12") });
   const earlier = await seed.task({ ...people, dueDate: calendarDate("2026-11-10") });
@@ -113,18 +113,18 @@ test("orders waiting tasks oldest first across tasks held and asked for", async 
   const ctx = signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] });
   const asked = await seed.task({
     assigneeEmployeeId: other.id,
-    requestedByEmployeeId: employee.id,
+    askedByEmployeeId: employee.id,
     dueDate: calendarDate("2026-11-12"),
   });
   const held = await seed.task({
     assigneeEmployeeId: employee.id,
-    requestedByEmployeeId: other.id,
+    askedByEmployeeId: other.id,
     status: "waiting",
     dueDate: calendarDate("2026-11-10"),
   });
   const askedWaiting = await seed.task({
     assigneeEmployeeId: other.id,
-    requestedByEmployeeId: employee.id,
+    askedByEmployeeId: employee.id,
     status: "waiting",
   });
 
@@ -134,21 +134,21 @@ test("orders waiting tasks oldest first across tasks held and asked for", async 
 });
 
 test("orders resolved tasks by their closing time newest first", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
-  const ctx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
-  const people = { assigneeEmployeeId: holder.id, requestedByEmployeeId: asker.id };
+  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
+  const people = { assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id };
   const newest = await seed.task({
     ...people,
     status: "done",
     doneAt: new Date("2026-11-09T11:00:00Z"),
-    doneByEmployeeId: holder.id,
+    doneByEmployeeId: assignee.id,
   });
   const oldest = await seed.task({
     ...people,
     status: "done",
     doneAt: new Date("2026-10-30T12:00:00Z"),
-    doneByEmployeeId: holder.id,
+    doneByEmployeeId: assignee.id,
   });
   const middle = await seed.task({
     ...people,
@@ -166,15 +166,15 @@ test("keeps tasks closed within fourteen days and excludes tasks closed fifteen 
   orm,
   seed,
 }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
-  const ctx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
-  const people = { assigneeEmployeeId: holder.id, requestedByEmployeeId: asker.id };
+  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
+  const people = { assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id };
   const done = await seed.task({
     ...people,
     status: "done",
     doneAt: new Date("2026-10-26T12:00:01Z"),
-    doneByEmployeeId: holder.id,
+    doneByEmployeeId: assignee.id,
   });
   const cancelled = await seed.task({
     ...people,
@@ -186,7 +186,7 @@ test("keeps tasks closed within fourteen days and excludes tasks closed fifteen 
     ...people,
     status: "done",
     doneAt: new Date("2026-10-25T12:00:00Z"),
-    doneByEmployeeId: holder.id,
+    doneByEmployeeId: assignee.id,
   });
   await seed.task({
     ...people,
@@ -201,9 +201,9 @@ test("keeps tasks closed within fourteen days and excludes tasks closed fifteen 
 });
 
 test("returns empty groups for a caller without an employee", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   await seed.task({
-    assigneeEmployeeId: holder.id,
+    assigneeEmployeeId: assignee.id,
     processSource: { processKey: "onboarding", processRunId: null, stepKey: "read_handbook" },
   });
 
@@ -215,14 +215,14 @@ test("returns empty groups for a caller without an employee", async ({ orm, seed
 });
 
 test("hides tasks from the person they are about", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
   const about = await seed.employee();
   const ctx = signedIn(orm, { employeeId: about.id, profiles: ["OWNER"] });
   const people = {
-    assigneeEmployeeId: holder.id,
-    requestedByEmployeeId: asker.id,
-    aboutEmployeeId: about.id,
+    assigneeEmployeeId: assignee.id,
+    askedByEmployeeId: asker.id,
+    subjectEmployeeId: about.id,
   };
   await seed.task(people);
   await seed.task({ ...people, status: "waiting" });
@@ -230,7 +230,7 @@ test("hides tasks from the person they are about", async ({ orm, seed }) => {
     ...people,
     status: "done",
     doneAt: new Date("2026-11-08T12:00:00Z"),
-    doneByEmployeeId: holder.id,
+    doneByEmployeeId: assignee.id,
   });
   await seed.task({
     ...people,

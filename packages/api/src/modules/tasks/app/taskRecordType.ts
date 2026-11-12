@@ -4,7 +4,7 @@ import { parseUuid } from "../../../utils";
 import { taskRepository } from "../db";
 import { isTaskVisibleTo } from "../domain";
 
-/** How core reads a task's history: only its holder and the person who asked, as for the task. */
+/** How core reads a task's history: only its assignee and the person who asked, as for the task. */
 export function taskRecordType(orm: Orm): RecordTypeRegistration {
   return {
     graphqlType: "Task",

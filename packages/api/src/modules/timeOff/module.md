@@ -49,7 +49,7 @@ Code constants (`domain/standardLeavePolicies.ts`) that turning time off on copi
 3. The target (`domain/allowanceCalculator.ts`) splits the leave year wherever the employment, policy version, working week or service step changes, and pro-rates each rule by the part's days per week and share of the year. On-top policies add the year's bank holidays for the days per week; days per week is the number of weekdays with minutes above 0, and each bank holiday on such a working day is taken as 1 day. The grants are rounded up once to the half day.
 4. Each line identity (a rule's grant, the bank holiday grant, one bank holiday, the rounding) whose lines add up to something else gets one line with the difference, author Broccoli itself, cause and ref from the call. A bank holiday's line takes effect on its date. Initial grants take effect on their first contributing day. Start-date corrections use the earlier of the previous and new starts (the year start if either is unknown), but never before the grant's first contributing day in either calculation; rounding follows the earliest changed grant. Working-pattern corrections use the later of the change date and the first contributing day. All dates stay within the allowance year. The idempotency key is `allowanceId:identity:n`, `n` the identity's existing lines: a repeat appends nothing.
 
-Causes (`cause_kind`, with `cause_ref`): `time_off_turned_on` (no ref), `employee_added`, `start_date_changed` (new date), `working_pattern_changed` (from date), `time_off_rules_changed` (`<policy id>:<from date>`; corrections start from the later of that date and the first contributing day), `leave_year_started` and `daily_check` (the run's date). Amounts carry six decimal places.
+Causes (`cause_kind`, with `cause_ref`): `time_off_turned_on` (no ref), `time_off_booked` and `time_off_cancelled` (time off id), `employee_added`, `start_date_changed` (new date), `working_pattern_changed` (from date), `time_off_rules_changed` (`<policy id>:<from date>`; corrections start from the later of that date and the first contributing day), `leave_year_started` and `daily_check` (the run's date). Amounts carry six decimal places.
 
 What runs the engine; none writes lines itself, and while no policy applies each run writes nothing:
 
@@ -71,6 +71,19 @@ Full-timer in England and Wales employed all of 2026 on the statutory minimum: g
 - `no_balance`: no leave year exists, so the calendar year; the days of approved or pending time off of that type, a half day 0.5; shown only when the person is employed on some day of that year.
 - No allowance for the year (the person left before it) or no policy at all (time off is off) gives no row; while time off is off the list is empty for everyone.
 
+## Booking time off
+
+`BookTimeOffService`, for now for admins (the `time_off` create and delete scopes, which only `time_off.manage.all` grants), books time off for anyone, approved straight away, and cancels it.
+
+- A day costs 1, a morning or afternoon 0.5, and 0 on a weekday the person's working week has no minutes for or on a bank holiday of that week's calendar (`domain/bookedDay.ts`). Only days that cost something are stored as `time_off_days`.
+- `bookTimeOff` refuses, as invalid input on `dates`: a clash with approved time off of any type (a morning and an afternoon can share a day), no working days, a type with no policy for the person on some date, a date outside employment, a date before the start of the leave year holding today or after the end of the next one, and more than 366 days. Over the balance is never refused.
+- `previewBooking` books and runs the engine in a transaction it rolls back, so what it shows is what booking writes: each date's cost and reason, and each touched leave year's remaining before and after.
+- `cancelTimeOff` marks the time off cancelled; its days stay.
+- Both run the engine for the person in the same transaction, causes `time_off_booked` and `time_off_cancelled` (ref: the time off id).
+- `WhosOutService.readWhosOut` gives everyone signed in each readable person's dates (working, not a working day, bank holiday, not employed) and approved bookings over at most 62 days. A private type's id, and every booking's cost, note and booked time, are left out for anyone outside the person's `time_off` read scope.
+
+The engine treats each booked day as a line identity, `time_off_booked` per `time_off_day_id`, on the allowance whose leave year holds the day: minus the day's cost under the working week of that day while the time off is approved, 0 once cancelled. Every run re-costs booked days in open leave years, so a later terms move, own week or bank holiday change gives days back or takes them. A booked day in a later leave year creates that year's allowance.
+
 ## Listing time off types for Settings
 
 `TimeOffService.listTimeOffTypes`, for admins (`MANAGE_WORKSPACE`), answers `Query.timeOffSettings`: every time off type in the order above, with or without a policy, and how many people have time off.
@@ -84,6 +97,7 @@ Full-timer in England and Wales employed all of 2026 on the statutory minimum: g
 `TimeOffPolicyService`, for admins, changes terms' rules after time off is on, as the working week changes (see [working patterns](../employees/module.md#rules)): from no earlier than the start of the current leave year, a later planned version stays, and only a version that has not started can be cancelled.
 
 - `createPolicy` offers a type the terms don't have; `changePolicy` adds new rules from a date; `cancelPolicyChange` removes a planned version, and the policy too when it was a planned offer.
+- A stop is a draft, like an edit: `saveTimeOffStop` saves the terms' draft for a type with `stops: true`, a copy of their rules today. Publishing it ends each ticked owner's rows of that policy the day before the date and deletes later ones, adds none, and deletes the draft, so past rules and history stay. Publish is refused while someone's approved or pending time off of the type from that date would be left without rules. Before a published stop takes effect, `cancelPolicyStop` with the ended assignment's id makes it open-ended again. A stopped type is offered again by publishing a rules draft from the stop date or later. Its history value is `{"stopDate": …}`.
 - How a type counts (`balance`) changes only from the start of a leave year; an offer may count any way.
 - The new version keeps what Settings does not show from the one it replaces: leave year, days per week, service steps, and `max_days` while the new days stay at or under it.
 - Each runs the engine for the people it reaches in the same transaction (cause `time_off_rules_changed`) and adds one `terms` history line, field `timeOff.<type id>`, with the rules before and after as JSON and the type's name as the label.

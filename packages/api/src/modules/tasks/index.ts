@@ -9,6 +9,7 @@ export { createTaskService } from "./app";
 
 // Public types.
 export type { NewTask, TaskService } from "./app";
+export type { Task, TaskStatus } from "./domain";
 
 /** Work asked of people, and each person's My tasks. */
 export function tasksModule({

@@ -1,5 +1,9 @@
 import {
+  calendarDate,
+  seedTermsPolicy,
   termsService,
+  recordHistory,
+  seedTimeOffAssignment,
   expect,
   OWNER,
   giveTermsPolicies,
@@ -8,6 +12,7 @@ import {
   timeOffPolicyService,
 } from "#test/support";
 import { timeOffPolicyRepository } from "../db";
+import { STANDARD_LEAVE_POLICIES } from "../domain";
 
 test("changing rules writes one terms history line with both dated settings and the type's name", async ({
   orm,
@@ -24,14 +29,20 @@ test("changing rules writes one terms history line with both dated settings and 
   const service = timeOffPolicyService(orm, { today: "2026-11-06" });
   const history = termsService(orm, { today: "2026-11-06" });
 
-  await service.changePolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
-    startDate: "2026-01-01",
+  const draft1 = await service.saveTimeOffPolicy(OWNER, {
+    termsId,
+    timeOffTypeId: policy!.timeOffType.id,
     rules: {
       balance: "balance_from_allowance",
       entitlementDays: 22,
       bankHolidays: "bank_holidays_on_top_of_allowance",
     },
+  });
+  await service.publishTerms(OWNER, {
+    termsId,
+    versions: [draft1],
+    startDate: "2026-01-01",
+    owners: [{ termsId }],
   });
 
   const page = await history.readTermsHistory(OWNER, termsId, {});
@@ -49,7 +60,7 @@ test("changing rules writes one terms history line with both dated settings and 
     newLabel: "Annual leave",
   });
   expect(JSON.parse(line.changes[0]!.oldValue!)).toEqual({
-    startDate: null,
+    startDate: "2026-01-01",
     balance: "balance_from_allowance",
     entitlementDays: 20,
     bankHolidays: "bank_holidays_on_top_of_allowance",
@@ -71,11 +82,16 @@ test("offering a type writes one terms history line with no old settings", async
   const service = timeOffPolicyService(orm, { today: "2026-11-06" });
   const history = termsService(orm, { today: "2026-11-06" });
 
-  await service.createPolicy(OWNER, {
+  const draft2 = await service.saveTimeOffPolicy(OWNER, {
     termsId,
     timeOffTypeId: type.id,
-    startDate: "2026-07-01",
     rules: { balance: "no_balance" },
+  });
+  await service.publishTerms(OWNER, {
+    termsId,
+    versions: [draft2],
+    startDate: "2026-07-01",
+    owners: [{ termsId }],
   });
 
   const page = await history.readTermsHistory(OWNER, termsId, {});
@@ -115,18 +131,27 @@ test("cancelling planned rules writes one terms history line with the cancelled 
   const [policy] = await timeOffPolicyRepository(orm).findAll();
   const service = timeOffPolicyService(orm, { today: "2026-11-06" });
   const history = termsService(orm, { today: "2026-11-06" });
-  await service.changePolicy(OWNER, {
-    timeOffPolicyId: policy!.id,
-    startDate: "2027-01-01",
+  const draft3 = await service.saveTimeOffPolicy(OWNER, {
+    termsId,
+    timeOffTypeId: policy!.timeOffType.id,
     rules: {
       balance: "balance_from_allowance",
       entitlementDays: 22,
       bankHolidays: "bank_holidays_on_top_of_allowance",
     },
   });
+  await service.publishTerms(OWNER, {
+    termsId,
+    versions: [draft3],
+    startDate: "2027-01-01",
+    owners: [{ termsId }],
+  });
   const before = await history.readTermsHistory(OWNER, termsId, {});
 
-  await service.cancelPolicyChange(OWNER, { timeOffPolicyId: policy!.id, startDate: "2027-01-01" });
+  const [planned] = (
+    await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })
+  ).filter(({ startDate }) => startDate === "2027-01-01");
+  await service.cancelPolicyChange(OWNER, { assignmentId: planned!.id });
 
   const page = await history.readTermsHistory(OWNER, termsId, {});
   const added = page.edges.filter(
@@ -151,5 +176,108 @@ test("cancelling planned rules writes one terms history line with the cancelled 
     balance: "balance_from_allowance",
     entitlementDays: 22,
     bankHolidays: "bank_holidays_on_top_of_allowance",
+  });
+});
+
+test("publishing to a person's own assignment writes their history", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const termsId = await seed.defaultTermsId();
+  const employee = await seed.employee({ startDate: "2025-01-01" });
+  await giveTermsPolicies(orm, transact, {
+    termsId,
+    policies: [{ key: "uk_20_days_plus_bank_holidays" }],
+  });
+  const [assignment] = await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] });
+  await seedTimeOffAssignment(orm, {
+    employeeId: employee.id,
+    timeOffTypeId: assignment!.timeOffTypeId,
+    timeOffPolicyId: assignment!.timeOffPolicyId,
+    versionId: assignment!.versionId,
+  });
+  const service = timeOffPolicyService(orm);
+  const draft = await service.saveTimeOffPolicy(OWNER, {
+    termsId,
+    timeOffTypeId: assignment!.timeOffTypeId,
+    rules: {
+      balance: "balance_from_allowance",
+      entitlementDays: 22,
+      bankHolidays: "bank_holidays_on_top_of_allowance",
+    },
+  });
+
+  await service.publishTerms(OWNER, {
+    termsId,
+    versions: [draft],
+    startDate: "2026-01-01",
+    owners: [{ employeeId: employee.id }],
+  });
+
+  const history = await recordHistory.read(orm, "employee", employee.id, {});
+  expect(history.edges).toHaveLength(1);
+  expect(history.edges[0]!.node).toMatchObject({
+    recordType: "employee",
+    recordId: employee.id,
+    operation: "UPDATED",
+    changes: [{ field: `timeOff.${assignment!.timeOffTypeId}` }],
+  });
+  expect(JSON.parse(history.edges[0]!.node.changes[0]!.newValue!)).toMatchObject({
+    startDate: "2026-01-01",
+    entitlementDays: 22,
+  });
+});
+
+test("publishing to a planned policy assignment records its own start date in terms history", async ({
+  orm,
+  seed,
+}) => {
+  const termsId = await seed.defaultTermsId();
+  const otherTermsId = await seed.terms("Other terms");
+  const type = await seedTimeOffType(orm, "Study leave");
+  const shared = await seedTermsPolicy(orm, {
+    termsId,
+    timeOffTypeId: type.id,
+    version: STANDARD_LEAVE_POLICIES.uk_20_days_plus_bank_holidays,
+    startDate: "2026-01-01",
+  });
+  const repository = timeOffPolicyRepository(orm);
+  await repository.insertAssignment({
+    owner: { termsId: otherTermsId },
+    timeOffTypeId: type.id,
+    timeOffPolicyId: shared.id,
+    versionId: shared.versionId,
+    startDate: calendarDate("2026-07-01"),
+    endDate: null,
+  });
+  const service = timeOffPolicyService(orm);
+  const draft = await service.saveTimeOffPolicy(OWNER, {
+    termsId,
+    timeOffTypeId: type.id,
+    rules: {
+      balance: "balance_from_allowance",
+      entitlementDays: 22,
+      bankHolidays: "bank_holidays_on_top_of_allowance",
+    },
+  });
+
+  await service.publishTerms(OWNER, {
+    termsId,
+    versions: [draft],
+    startDate: "2026-06-01",
+    owners: [{ termsId: otherTermsId }],
+  });
+
+  expect(await repository.findAssignments({ termsIds: [otherTermsId] })).toMatchObject([
+    { versionId: draft.id, startDate: "2026-07-01", endDate: null },
+  ]);
+  const page = await termsService(orm).readTermsHistory(OWNER, otherTermsId, {});
+  expect(page.edges).toHaveLength(1);
+  const [change] = page.edges[0]!.node.changes;
+  expect(change!.field).toBe(`timeOff.${type.id}`);
+  expect(JSON.parse(change!.newValue!)).toMatchObject({
+    startDate: "2026-07-01",
+    entitlementDays: 22,
   });
 });

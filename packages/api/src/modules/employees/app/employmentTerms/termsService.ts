@@ -9,15 +9,15 @@ import {
   type RecordOperation,
 } from "../../../../core/records";
 import type { SecurityContext } from "../../../../core/security";
-import { type CalendarDate, parseUuid, todayInLondon } from "../../../../utils";
+import { type CalendarDate, coversDate, parseUuid, todayInLondon } from "../../../../utils";
 import type { BankHolidayCalendar } from "../../../bankHolidays";
 import { termsRepository, workingPatternRepository } from "../../db";
 import {
   deleteRefusal,
   parseTermsName,
   STANDARD_WEEKS,
+  type PatternWeek,
   TermsNameTakenError,
-  versionsFromToday,
 } from "../../domain";
 import { readTermsOverviews, type TermsOverview } from "./readTermsOverviews";
 import { termsRecordType } from "./termsRecordType";
@@ -34,7 +34,10 @@ export interface TermsService {
     termsId: string,
     args: PageArgs,
   ) => Promise<Connection<HistoryLine>>;
-  /** Adds terms on a Mon–Fri week with these bank holidays and no time off offered. Admins only. */
+  /**
+   * Adds terms with an unpublished Mon–Fri week on these bank holidays and no time off offered.
+   * Admins only.
+   */
   createTerms: (
     ctx: SecurityContext,
     input: { name: string; bankHolidayCalendar: BankHolidayCalendar },
@@ -50,9 +53,9 @@ export interface TermsService {
    */
   deleteTerms: (ctx: SecurityContext, input: { id: string }) => Promise<{ deletedTermsId: string }>;
   /**
-   * New terms named `name`, inside `tx`, with the source terms' working week from today on,
-   * today's from the beginning, and what `copyTermsParts` copies; nobody on them and no location.
-   * Returns their id. Admins only.
+   * New terms named `name`, inside `tx`, with an unpublished copy of the working week the source
+   * terms work today, and what `copyTermsParts` copies; nobody on them and no location, nothing
+   * shared with the source. Returns their id. Admins only.
    */
   cloneTerms: (
     ctx: SecurityContext,
@@ -94,10 +97,10 @@ export function createTermsService({
       const termsId = await refuseTakenName(() =>
         transact(async (tx) => {
           const id = await termsRepository(tx).insert(name);
-          await workingPatternRepository(tx).insertPattern(
-            { termsId: id },
-            { ...STANDARD_WEEKS.monday_to_friday_7_5_hours, bankHolidayCalendar },
-          );
+          await addUnpublishedWeek(tx, id, {
+            ...STANDARD_WEEKS.monday_to_friday_7_5_hours,
+            bankHolidayCalendar,
+          });
           await recordNameChange(ctx, tx, "CREATED", id, { from: null, to: name });
           return id;
         }),
@@ -143,6 +146,7 @@ export function createTermsService({
           }
           refuseDeleteWhenBlocked(terms);
           await recordNameChange(ctx, tx, "DELETED", termsId, { from: terms.name, to: null });
+          await workingPatternRepository(tx).deleteTermsDrafts(termsId);
           await termsRepository(tx).delete(termsId);
         });
       } catch (error) {
@@ -168,18 +172,35 @@ export function createTermsService({
       const cloneId = await refuseTakenName(() => termsRepository(tx).insert(name));
       // Before the week: editing time off rules holds the policies, then reads working patterns.
       await copyTermsParts(ctx, tx, { fromTermsId: sourceId, toTermsId: cloneId });
-      const patterns = workingPatternRepository(tx);
-      const source = (await patterns.findPatterns()).find(({ termsId }) => termsId === sourceId)!;
-      // Today's week covers the past too, as on new terms: a first version starts from the beginning.
-      const [current, ...planned] = versionsFromToday(source.versions, today(), null);
-      const patternId = await patterns.insertPattern({ termsId: cloneId }, current!);
-      for (const version of planned) {
-        await patterns.insertVersion(patternId, version);
+      const week = await weekWorkedOn(tx, sourceId, today());
+      if (week) {
+        await addUnpublishedWeek(tx, cloneId, week);
       }
       await recordNameChange(ctx, tx, "CREATED", cloneId, { from: null, to: name });
       return cloneId;
     },
   };
+}
+
+/** Gives the terms a new pattern whose only version is their unpublished `week`. */
+async function addUnpublishedWeek(tx: Tx, termsId: string, week: PatternWeek): Promise<void> {
+  const patterns = workingPatternRepository(tx);
+  const patternId = await patterns.insertPattern(null);
+  await patterns.insertVersion(patternId, { ...week, status: "draft", termsId });
+}
+
+/** The week the terms work on `date`; null when they work none. */
+async function weekWorkedOn(
+  tx: Tx,
+  termsId: string,
+  date: CalendarDate,
+): Promise<PatternWeek | null> {
+  const patterns = workingPatternRepository(tx);
+  const row = (await patterns.findAssignments({ termsIds: [termsId] })).find((candidate) =>
+    coversDate(candidate, date),
+  );
+  const versions = (await patterns.findPatterns()).flatMap(({ versions: all }) => all);
+  return row ? versions.find(({ id }) => id === row.versionId)! : null;
 }
 
 /** Copies the source terms' rows another module owns, such as time off rules, onto the clone. */

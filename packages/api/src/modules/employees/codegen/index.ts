@@ -5,8 +5,9 @@ export const codegenMappers = {
   Employee: "../../modules/employees/domain#Employee as EmployeeModel",
   Location: "../../modules/employees/app#LocationWithPeopleCount as LocationModel",
   Terms: "../../modules/employees/app#TermsOverview as TermsModel",
-  WorkingPattern: "../../modules/employees/domain#WorkingPattern as WorkingPatternModel",
-  WorkingWeekVersion: "../../modules/employees/domain#PatternVersion as WorkingWeekVersionModel",
+  WorkingWeekVersion: "../../modules/employees/app#DatedWorkingWeek as WorkingWeekVersionModel",
+  UnpublishedWorkingWeek:
+    "../../modules/employees/domain#PatternVersion as UnpublishedWorkingWeekModel",
   EmployeeEmploymentTerms:
     "../../modules/employees/app#EmploymentTerms as EmployeeEmploymentTermsModel",
   PersonWorkingWeek: "../../modules/employees/app#PersonWorkingWeek as PersonWorkingWeekModel",

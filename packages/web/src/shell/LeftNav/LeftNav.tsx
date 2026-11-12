@@ -1,5 +1,8 @@
-import { CaretLeft, CheckSquare, Users } from "@phosphor-icons/react";
+import { useQuery } from "@apollo/client/react";
+import { CalendarBlank, CaretLeft, CheckSquare, Robot, Users } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
+
+import { LeftNavAgentConnectionDocument } from "@/__generated__/graphql";
 
 import { useTasksNeedingYou } from "@/features/tasks";
 import { t } from "@/i18n";
@@ -26,6 +29,10 @@ const SETTINGS_SYSTEM_ITEMS: NavItem[] = [
 export function LeftNav() {
   const inSettings = useInSettings();
   const tasksNeedingYou = useTasksNeedingYou() ?? 0;
+  const agentConnected = Boolean(
+    useQuery(LeftNavAgentConnectionDocument, { fetchPolicy: "cache-first" }).data
+      ?.myAgentConnection,
+  );
   const appItems: NavItem[] = [
     {
       to: "/tasks",
@@ -35,6 +42,13 @@ export function LeftNav() {
       countLabel: t("nav.tasksNeedYou", { count: String(tasksNeedingYou) }),
     },
     { to: "/people", label: t("nav.people"), icon: Users },
+    { to: "/time-off", label: t("nav.timeOff"), icon: CalendarBlank },
+    {
+      to: "/agent",
+      label: t("nav.yourAgent"),
+      icon: Robot,
+      dotLabel: agentConnected ? t("nav.agentConnected") : undefined,
+    },
   ];
   return (
     <aside className="shrink-0 md:h-full md:w-56 md:overflow-hidden">

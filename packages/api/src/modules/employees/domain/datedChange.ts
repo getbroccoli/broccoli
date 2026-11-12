@@ -1,9 +1,9 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
-import { addDays, type CalendarDate, type CalendarDateRange, coversDate } from "../../../utils";
+import { addDays, type CalendarDate, type CalendarDateRange } from "../../../utils";
 import { parseDateField } from "./workingPattern";
 
 /**
- * The earliest date a working pattern or time off policy may change from: the start of the
+ * The earliest date a working pattern or time off policy assignment may start from: the start of the
  * current leave year, since a closed leave year's allowances are never worked out again.
  * shortcut: every leave year starts on 1 January; take the policy's own leave year once they can differ.
  */
@@ -12,18 +12,10 @@ export function earliestChangeDate(today: CalendarDate): CalendarDate {
 }
 
 /**
- * The versions a clone copies: the one covering today, starting from `from` instead, then the
- * planned ones; versions that ended before today are left out.
+ * The date what setup and turning time off on give terms applies from, as a fresh workspace's
+ * seeded week does: before any day Broccoli works out.
  */
-export function versionsFromToday<V extends CalendarDateRange>(
-  versions: readonly V[],
-  today: CalendarDate,
-  from: CalendarDate | null,
-): V[] {
-  return versions
-    .filter(({ endDate }) => endDate === null || endDate >= today)
-    .map((version) => (coversDate(version, today) ? { ...version, startDate: from } : version));
-}
+export const SETUP_START_DATE = "2000-01-01" as CalendarDate;
 
 /** The date a change applies from, sent in `startDate`; refuses one before the earliest date. */
 export function parseChangeDate(value: string, today: CalendarDate): CalendarDate {
@@ -32,6 +24,27 @@ export function parseChangeDate(value: string, today: CalendarDate): CalendarDat
     throw invalidInput([{ field: "startDate", code: "too_early" }]);
   }
   return startDate;
+}
+
+/**
+ * The date a change for one person applies from, sent in `startDate`: not before the earliest date
+ * or their start (`too_early`), nor after their employment ends (`after_leaving`).
+ */
+export function parsePersonChangeDate(
+  value: string,
+  today: CalendarDate,
+  periods: readonly CalendarDateRange[],
+): CalendarDate {
+  const from = parseChangeDate(value, today);
+  const start = periods[0]?.startDate ?? null;
+  if (start && from < start) {
+    throw invalidInput([{ field: "startDate", code: "too_early" }]);
+  }
+  const ends = periods.map(({ endDate }) => endDate);
+  if (ends.length > 0 && ends.every((end) => end !== null && end < from)) {
+    throw invalidInput([{ field: "startDate", code: "after_leaving" }]);
+  }
+  return from;
 }
 
 /**

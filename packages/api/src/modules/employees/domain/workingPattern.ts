@@ -1,33 +1,33 @@
 import { invalidInput } from "../../../core/applicationError";
-import {
-  type CalendarDate,
-  type CalendarDateRange,
-  coversDate,
-  parseCalendarDate,
-} from "../../../utils";
+import { type CalendarDate, parseCalendarDate } from "../../../utils";
 import type { BankHolidayCalendar } from "../../bankHolidays";
+import type { VersionStatus } from "./assignment";
 
 /** Minutes worked on each weekday, Monday to Sunday; 0 is not working. */
 export type WeekdayMinutes = readonly [number, number, number, number, number, number, number];
 
-/** A pattern's minutes from a date to a date; never edited, only ended. */
-export interface PatternVersion extends CalendarDateRange {
+/** A pattern's minutes and whose bank holidays apply, with no dates: assignments say when. */
+export interface PatternVersion {
   id: string;
+  workingPatternId: string;
+  status: VersionStatus;
+  /** Set only on a draft: the terms whose screen saved it. */
+  termsId: string | null;
+  /** 1 on creation, plus 1 on every save of a draft. */
+  revision: number;
   minutes: WeekdayMinutes;
   bankHolidayCalendar: BankHolidayCalendar;
 }
 
-/** A pattern's minutes and bank holidays: what a version holds besides its dates. */
-export type PatternWeek = Omit<PatternVersion, "id" | "startDate" | "endDate">;
+/** A pattern's minutes and bank holidays: what a version holds. */
+export type PatternWeek = Pick<PatternVersion, "minutes" | "bankHolidayCalendar">;
 
-/** A way of working: one set of terms' own, or a named one people are put on one by one. */
+/** A way of working: what its versions share. */
 export interface WorkingPattern {
   id: string;
-  /** Null: a named pattern for one person at a time. */
-  termsId: string | null;
-  /** Null on a terms' pattern. */
+  /** Null on a pattern made on the terms screen. */
   name: string | null;
-  /** Oldest first; the first starts from the beginning. */
+  /** Oldest first, drafts among them. */
   versions: PatternVersion[];
 }
 
@@ -39,15 +39,6 @@ export interface WorkingWeek {
   startDate: CalendarDate;
   minutes: WeekdayMinutes | null;
   bankHolidayCalendar: BankHolidayCalendar | null;
-}
-
-/** The name a pattern is saved under; refuses a blank one. */
-export function parsePatternName(name: string): string {
-  const trimmed = name.trim();
-  if (!trimmed) {
-    throw invalidInput([{ field: "name", code: "required" }]);
-  }
-  return trimmed;
 }
 
 /** Minutes on each weekday as they are stored: whole minutes in a day, at least one working day. */
@@ -76,31 +67,3 @@ function isMinutesInADay(value: number): boolean {
 }
 
 const MINUTES_IN_A_DAY = 1440;
-
-/**
- * How dated rows make room for a new one from `from` to `until`: the one that started earlier and
- * covers `from` ends the day before, one starting on `from` goes; a later one it would overlap
- * refuses the new one.
- */
-export function makeRoomForDatedRow<R extends CalendarDateRange>(
-  rows: readonly R[],
-  from: CalendarDate,
-  until: CalendarDate | null,
-): { ended: R | null; replaced: R | null } {
-  const overlapsLater = rows.some(
-    ({ startDate }) =>
-      startDate !== null && startDate > from && (until === null || startDate <= until),
-  );
-  if (overlapsLater) {
-    throw invalidInput([{ field: "endDate", code: "overlaps" }]);
-  }
-  const replaced = rows.find((row) => row.startDate === from) ?? null;
-  const ended =
-    rows.find(
-      (row) =>
-        row !== replaced &&
-        (row.startDate === null || row.startDate < from) &&
-        coversDate(row, from),
-    ) ?? null;
-  return { ended, replaced };
-}

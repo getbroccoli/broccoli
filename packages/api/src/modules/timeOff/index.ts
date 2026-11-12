@@ -1,16 +1,28 @@
 import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
+import type { BankHolidayService } from "../bankHolidays";
 import {
   allowanceEventHandlers,
+  createBookTimeOffService,
+  createOwnTimeOffRulesService,
   createTimeOffPolicyService,
+  createWhosOutService,
   ensureAllowancesJob,
   type TimeOffSetupService,
   type TimeOffService,
 } from "./app";
+import { createEmployeeReadService } from "../employees";
 import { createResolvers } from "./graphql";
 
 // Public values.
-export { createTimeOffPolicyService, createTimeOffSetupService, createTimeOffService } from "./app";
+export {
+  createBookTimeOffService,
+  createOwnTimeOffRulesService,
+  createTimeOffPolicyService,
+  createTimeOffSetupService,
+  createTimeOffService,
+  createWhosOutService,
+} from "./app";
 
 // Public types.
 export type {
@@ -26,10 +38,12 @@ export type { AllowanceCause, StandardLeavePolicyKey } from "./domain";
 export function timeOffModule({
   timeOff,
   timeOffSetup,
+  bankHolidays,
   ...dependencies
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   timeOff: TimeOffService;
   timeOffSetup: TimeOffSetupService;
+  bankHolidays: BankHolidayService;
 }): ModuleManifest {
   return {
     name: "timeOff",
@@ -38,6 +52,12 @@ export function timeOffModule({
       timeOff,
       timeOffSetup,
       createTimeOffPolicyService({ ...dependencies, timeOff }),
+      createBookTimeOffService({ ...dependencies, timeOff, bankHolidays }),
+      createWhosOutService({ ...dependencies, bankHolidays }),
+      {
+        ownRules: createOwnTimeOffRulesService({ ...dependencies, timeOff }),
+        employees: createEmployeeReadService(dependencies),
+      },
     ),
     events: {
       ...allowanceEventHandlers({ timeOff, ...dependencies }),

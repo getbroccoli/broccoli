@@ -102,8 +102,8 @@ test("fills Oliver's tasks with two to do and two waiting on others", async ({ o
 
   expect(tasks.needsYou).toHaveLength(2);
   expect(tasks.needsYou).toMatchObject([
-    { assigneeEmployeeId: oliver.id, requestedByEmployeeId: priya.id, status: "to_do" },
-    { assigneeEmployeeId: oliver.id, requestedByEmployeeId: priya.id, status: "to_do" },
+    { assigneeEmployeeId: oliver.id, askedByEmployeeId: priya.id, status: "to_do" },
+    { assigneeEmployeeId: oliver.id, askedByEmployeeId: priya.id, status: "to_do" },
   ]);
   expect(tasks.needsYou[0]!.dueDate! < today).toBe(true);
   expect(tasks.needsYou[1]!.dueDate! > today).toBe(true);
@@ -112,12 +112,12 @@ test("fills Oliver's tasks with two to do and two waiting on others", async ({ o
     expect.arrayContaining([
       expect.objectContaining({
         assigneeEmployeeId: oliver.id,
-        requestedByEmployeeId: james.id,
+        askedByEmployeeId: james.id,
         status: "waiting",
       }),
       expect.objectContaining({
         assigneeEmployeeId: priya.id,
-        requestedByEmployeeId: oliver.id,
+        askedByEmployeeId: oliver.id,
         status: "to_do",
       }),
     ]),

@@ -13,6 +13,7 @@ import {
   createEmployeeTermsService,
   createEmployeeWorkingPatternService,
   createLocationService,
+  createOwnWorkingWeekService,
   createTermsService,
   createWorkingPatternService,
   type EmployeeInviteService,
@@ -25,6 +26,8 @@ import { avatarRouter, inviteRateLimit } from "./http";
 
 // Public values.
 export {
+  applyAssignmentPlan,
+  firstReplaced,
   createEmployeeInviteService,
   createEmployeeManagerService,
   createEmployeePermissionService,
@@ -35,22 +38,36 @@ export {
   createEmployeeTermsService,
   createEmployeeWorkingPatternService,
   createLocationService,
+  createOwnWorkingWeekService,
   createTermsService,
   employeeDirectory,
+  employeeNotFound,
   termsRecordType,
 } from "./app";
 export {
+  cancelOwnChange,
   cancelPlannedVersion,
+  changesWithin,
   createPersonTimeline,
   earliestChangeDate,
   employeeFieldErrors,
-  makeRoomForDatedRow,
   parseChangeDate,
   parseDateField,
   parseEmployeeField,
   parseTermsSetup,
+  isSameOwner,
+  NEW_ROW,
+  ownStretchesOf,
+  ownStretchOn,
+  parsePersonChangeDate,
   personVersionsFrom,
-  versionsFromToday,
+  planEnd,
+  planOrRefusal,
+  plannedRowsReplaced,
+  rowsAfterPlan,
+  SETUP_START_DATE,
+  withOwnStretch,
+  withoutOwnStretches,
 } from "./domain";
 
 // Public types.
@@ -64,11 +81,14 @@ export type {
   EmployeeSetupService,
   ImportedEmployees,
   InviteDetails,
+  WorkingPatternPublish,
   WorkingPatternService,
   EmployeeTermsService,
   EmployeeWorkingPatternService,
   LocationService,
+  OwnWorkingWeekService,
   TermsMovePreview,
+  TermsOverview,
 } from "./app";
 export type {
   Employee,
@@ -76,8 +96,13 @@ export type {
   EmployeeOrderField,
   NewEmployee,
   NewEmployeeInput,
+  Assignment,
+  AssignmentOwner,
+  AssignmentPlan,
+  OwnStretch,
   PersonTimeline,
   PersonVersion,
+  VersionStatus,
   TermsMembership,
   TermsSetup,
   WeekdayMinutes,
@@ -113,6 +138,7 @@ export function employeesModule({
     ...createWorkingPatternService(dependencies),
     ...createEmployeeWorkingPatternService(dependencies),
     ...createEmployeeTermsService(dependencies),
+    ...createOwnWorkingWeekService(dependencies),
   };
   return {
     name: "employees",

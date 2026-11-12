@@ -22,7 +22,7 @@ A manual check of Settings › Employment terms, the list and one set of terms, 
 - [ ] Working week shows Mon to Fri at "7.5", Sat and Sun "Off", "Hours a week 37.5", "Bank holidays England and Wales".
 - [ ] Time off lists Annual leave "From a balance · 28 days a year, bank holidays included · Leave year from 1 January", then Sickness, Family leave and Other "Recorded, doesn't count", each with its icon.
 - [ ] History, below the sections as on a person's panel, reads "Broccoli set up England and Wales" with "Time off turned on"; a setup the owner finished names the owner.
-- [ ] Working week and each offered type have "Edit"; no "Add time off type", and no "What changes" until a section is open.
+- [ ] Working week and each offered type have "Edit", each offered type "Stop", and "Add time off type" sits under the list; no "What changes" until a section is open.
 - [ ] The header has a ⋯ menu with "Rename", "Clone" and a disabled "Delete England and Wales" reading "The default terms stay, because people without a location start on them."
 - [ ] An unknown id, such as `/settings/terms/00000000-0000-4000-8000-000000000001`, reads "These terms could not be found."
 
@@ -30,9 +30,10 @@ A manual check of Settings › Employment terms, the list and one set of terms, 
 
 - [ ] "New terms" opens a dialog with Name, its hint, and "Bank holidays" set to the default terms' ones; the footer says it starts with a Mon–Fri week and no time off.
 - [ ] Creating with an empty name says "Enter a name."; with 101 characters "Use 100 characters or fewer."; with " england and wales " "There are already terms called England and Wales."
-- [ ] Creating "Senior staff" on Scotland bank holidays opens its stack: "0 people", Mon to Fri at "7.5", "Bank holidays Scotland", every type "Not offered here" and History "owner@example.com created Senior staff" with "Edited". The list shows it after England and Wales. Opening "New terms" again shows an empty name and the default terms' bank holidays.
+- [ ] Creating "Senior staff" on Scotland bank holidays opens its stack: "0 people", a "Draft" pill by the name and "Publish" in the header, Working week "No working week yet" with the line "Draft Mon–Fri, 7.5 hours, Scotland bank holidays" and "Discard", every type "Not offered here" and History "You created Senior staff". The list shows it after England and Wales with a "Draft" pill and "No working week yet". Opening "New terms" again shows an empty name and the default terms' bank holidays.
+- [ ] "Publish" on Senior staff publishes at once, without a dialog: "Changes published for Senior staff.", Mon to Fri at "7.5", no "Draft" pill, and History "You changed the working week to Mon–Fri, 7.5 hours from 1 Jan <this year>".
 - [ ] ⋯ › Rename to "Senior team" updates the header, the list and History; a taken name shows the same error as creating.
-- [ ] ⋯ › Clone on England and Wales, after planning Annual leave for next leave year, opens "Clone terms" with the name "Copy of England and Wales"; a taken name shows the same error as creating. Cloning opens the new terms: "0 people", no locations, the same working week, the same rules on each type with the same planned change, and History "owner@example.com created Copy of England and Wales". England and Wales is unchanged.
+- [ ] ⋯ › Clone on England and Wales, after planning Annual leave for next leave year, opens "Clone terms" with the name "Copy of England and Wales"; a taken name shows the same error as creating. Cloning opens the new terms: "0 people", no locations, a "Draft" pill, today's working week and each type's rules today as "Draft" lines (the planned change is not copied), and History "owner@example.com created Copy of England and Wales". England and Wales is unchanged. Publishing the clone suggests only the clone and changes nothing on England and Wales.
 - [ ] ⋯ › "Delete Senior team" reads "Nobody was ever on these terms."; choosing it closes the stack, shows "Senior team deleted." and the list no longer shows it.
 - [ ] Terms London starts people on, chosen in Settings › Locations, show Delete disabled with "London starts new people here. Choose other terms for it in Settings › Locations first."
 - [ ] Terms a person was ever on show Delete disabled with "Terms people were on stay, so their history stays true."
@@ -41,22 +42,30 @@ A manual check of Settings › Employment terms, the list and one set of terms, 
 
 ## Change the working week
 
-- [ ] "Edit" on Working week opens it in place with a dark border: seven hour fields from today's week, "Bank holidays" and "Applies from" as one row "Today", "1 Jan <next year>", "Other date…", on "Today".
-- [ ] Set Mon to Thu to 8 and Fri to 0: the hint reads "32 hours a week, over 4 days. Was Mon–Fri, 7.5 hours.", "What changes" shows "Working week: Mon–Thu, 8 hours" with "From <today>." and the people by name, five at first, then "Show all 40".
-- [ ] The footer reads "Saving changes the working week for the 40 people on England and Wales, from <today>. Their allowances are worked out again from that date." beside Cancel and Save.
-- [ ] 7.3 hours or all days 0 each show their message and keep Save off; days before 1 January this year can't be picked.
-- [ ] Save shows "Working week saved for England and Wales." and the new week; History reads "You changed the working week to Mon–Thu, 8 hours", with no "Edited" label.
-- [ ] A week from a later date shows under today's as "From <date>: …" with "Cancel change"; the toast adds "It changes on <date>."
+- [ ] "Edit" on Working week opens it in place with a dark border: seven hour fields from today's week and "Bank holidays"; no "Applies from" and no "What changes".
+- [ ] Set Mon to Thu to 8 and Fri to 0: the hint reads "32 hours a week, over 4 days. Was Mon–Fri, 7.5 hours."; the footer reads "Saving keeps the change unpublished until you publish the terms." beside Cancel and Save.
+- [ ] 7.3 hours or all days 0 each show their message and keep Save off.
+- [ ] Save shows "Working week saved for England and Wales. Publish the terms to apply it.", today's week unchanged, and under it "Draft Mon–Thu, 8 hours, England and Wales bank holidays" with "Discard"; the header shows a "Draft" pill and "Publish"; History has no new line and nobody's allowance changes.
+- [ ] "Edit" again opens the draft's hours; saving again keeps one draft line.
+- [ ] "Discard" removes the draft line, shows "Unpublished change discarded." and, with no other draft, the "Draft" pill and "Publish".
 
 ## Change a type's rules
 
-- [ ] "Edit" on Annual leave opens it with "Counts", "Allowance" 28, "Bank holidays on top" off, "Leave year From 1 January" and "Applies from" as one row "1 Jan <this year>", "1 Jan <next year>", "Other date…", on "1 Jan <this year>" with "This leave year, so <this year> allowances change now."
-- [ ] Typing 30 shows "Changed: 28 → 30 days" and "Not saved" in the row, and "Annual leave: 28 → 30 days" with "From 1 Jan <year>, bank holidays still included" in "What changes".
-- [ ] "Other date…" shows a date field; with a date off 1 January, Unlimited and Doesn't count are disabled and the counts keep today's.
+- [ ] "Edit" on Annual leave opens it with "Counts", "Allowance" 28, "Bank holidays on top" off and "Leave year From 1 January"; every choice under "Counts" is enabled and there is no "Applies from".
+- [ ] Typing 30 shows "Changed: 28 → 30 days" and "Not saved" in the row.
 - [ ] 367, 20.3 or an empty allowance shows "Enter a number of days from 0 to 366." and keeps Save off.
-- [ ] Saving from next leave year shows "Annual leave saved for England and Wales. It changes on 1 Jan <next year>.", the planned line with "Cancel change", and the History line "You changed Annual leave to 30 days a year from 1 Jan <next year>".
-- [ ] Saving from this leave year's start changes today's line, and the list's Annual leave cell.
-- [ ] Changing Sickness to Unlimited from this leave year's start reads "Unlimited · Leave year from 1 January".
+- [ ] Save shows "Annual leave saved for England and Wales. Publish the terms to apply it." and the row's line "Draft From a balance · 30 days a year, bank holidays included · Leave year from 1 January" with "Discard"; today's line still reads 28 days.
+
+## Publish
+
+- [ ] With the week and Annual leave saved, "Publish" opens "Publish changes to England and Wales": "Apply to" with England and Wales ticked ("Terms · 40 people"; "Terms · 1 person" for one), "Applies from" as "Today", "1 Jan <this year>", "1 Jan <next year>", "Other date…" on "1 Jan <this year>", and "What changes" with "Working week: Mon–Thu, 8 hours" and "Annual leave: 28 → 30 days", each "From <date>", then the people by name, five at first, then "Show all 40".
+- [ ] The footer reads "Publishing applies these from <date> and reaches the 40 people, each with the changes that apply to them. Their allowances are worked out again from that date. Unticked ones keep their current settings."; unticking every row reads "Tick who gets the changes to publish them." and turns Publish off
+- [ ] With a draft that changes how a type counts, such as Sickness to Unlimited, "Applies from" offers only "1 Jan <this year>" and "1 Jan <next year>", and the hint reads "How a type counts changes only from the start of a leave year."
+- [ ] Publishing from 1 Jan <this year> shows "Changes published for England and Wales.", the new week and 30 days as today's, no "Draft" pill, the list's cells updated, and History "You changed the working week to Mon–Thu, 8 hours from 1 Jan <this year>" and "You changed Annual leave to 30 days a year from 1 Jan <this year>". A person on the terms shows 24 days for the four-day week.
+- [ ] Publishing from 1 Jan <next year> keeps today's lines and adds planned lines "From 1 Jan <next year>: …" with "Cancel change".
+- [ ] With such a planned change, publishing another draft of the same section from an earlier date says "Replaces the changes planned from 1 Jan <next year>." in "What changes"; afterwards the planned line is gone and History reads "You cancelled the change to … from 1 Jan <next year>" beside the new change.
+- [ ] "Cancel change" on a change that started meanwhile, or that another tab cancelled, shows the server's reason, not "Try again".
+- [ ] Saving again in another tab after the dialog opened, then publishing, shows "These changes were saved again since you opened them." and nothing changes.
 
 ## Cancel a planned change
 
@@ -65,23 +74,29 @@ A manual check of Settings › Employment terms, the list and one set of terms, 
 
 ## Offer a type
 
-Every type is offered on the demo terms. For a type that is not, delete the terms' policy for Other in the dev database, or use the terms from "Before time off is on" below.
+Use terms where a type is not offered, such as new terms.
 
-- [ ] A "Not offered here" row has "Offer", which opens the form filled from the type's default rules in Settings › Time off, with every choice enabled; Other's is "Doesn't count".
-- [ ] The untouched offer already shows "What changes" and can be saved.
-- [ ] With "Doesn't count" chosen, "What changes" reads "Other: offered, Recorded, doesn't count" and "Saving offers Other to the 38 people on England and Wales, from 1 January <this year>."
-- [ ] Saving shows the row as offered and History reads "You offered Other from 1 Jan <this year>: Recorded, doesn't count".
-- [ ] An offer from next leave year shows its planned line and no "Offer"; cancelling it brings "Not offered here" and "Offer" back.
+- [ ] A "Not offered here" row has "Offer", which opens the form filled from the type's default rules in Settings › Time off; Other's is "Doesn't count".
+- [ ] The untouched offer can be saved; the row keeps "Not offered here" with a "Draft" line, and its button reads "Edit".
+- [ ] Publishing offers it: the row shows its rules and History reads "You offered Other from <date>: Recorded, doesn't count".
+- [ ] An offer published from next leave year shows its planned line and no "Offer"; cancelling it brings "Not offered here" and "Offer" back.
 
-## Terms nobody was ever on
+## Stop offering a type
 
-Use terms nobody was ever on, such as ones made with "New terms".
+- [ ] An offered row without a planned change or draft has "Stop" beside "Edit". Stop saves a draft: the row keeps today's rules with a "Draft" line "Not offered from the date you choose in Publish" and "Discard", no "Edit" or "Stop", and the header shows "Publish".
+- [ ] "Discard" removes the draft line and brings "Edit" and "Stop" back.
+- [ ] Publish opens on "Today" and offers 1 Jan this year, 1 Jan next year and "Other date…"; "What changes" shows "Family leave: not offered" with "From <date>." and the people it reaches.
+- [ ] Publishing from 1 Jan <next year> shows the row's line "Not offered from 1 Jan <next year>" with "Cancel change", and the History line "You stopped offering Family leave from 1 Jan <next year>".
+- [ ] "Cancel change" says "Family leave stays offered on <terms>."; confirming removes the line and adds "You cancelled stopping Family leave from 1 Jan <next year>".
+- [ ] With someone's approved or pending Family leave booked from the date, Publish is refused with "1 person has this time off type booked from that date."
+- [ ] Publishing a stop from today shows "Not offered here" with "Offer" at once; Offer, Save and Publish from today give the type back from today.
+- [ ] Edits and offers also open Publish on "Today" with "Other date…"; only a change to how a type counts offers just the leave-year starts.
 
-- [ ] "Edit" on Working week has no "Applies from"; the footer reads "Saving changes the working week for nobody on <terms> yet." and "What changes" names no date.
-- [ ] Saving shows the new week from the start of this leave year, with no planned line.
-- [ ] "Edit" or "Offer" on a type has no "Applies from" and no "This changes only from the start of a leave year" hint; every choice under "Counts" is enabled.
-- [ ] A days-only change reads "Bank holidays still on top" or "Bank holidays still included" in "What changes"; the footer reads "Saving changes <type> for nobody on <terms> yet.", or "Saving offers <type> to nobody on <terms> yet." for an offer.
-- [ ] Terms someone was on in the past, even with nobody on them today, still ask "Applies from".
+## Add a type from the terms
+
+- [ ] "Add time off type" under the list opens the Settings › Time off Add dialog.
+- [ ] Adding "Study leave" shows its row with the Offer form open; closing the form leaves "Not offered here" and "Offer".
+- [ ] Settings › Time off lists Study leave.
 
 ## One section at a time
 
@@ -99,7 +114,7 @@ Exit the demo, then finish setup with the owner but without the Company defaults
 
 - [ ] With the API stopped, reloading the list shows "Employment terms could not be loaded." and "Try again", which reloads it once the API is back.
 - [ ] At 390 px wide, the terms fill the screen edge to edge, History follows the sections and Close stays at the bottom; the list scrolls sideways inside its box.
-- [ ] With a section open, "What changes" appears on the right; at 390 px wide it sits below History, the form stacks and the save line wraps beside Cancel and Save.
+- [ ] With a section open, the form takes the whole width; at 390 px wide it stacks and the save line wraps beside Cancel and Save. The Publish dialog fits the screen with a gutter and scrolls inside.
 
 ## Access
 

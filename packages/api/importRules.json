@@ -62,6 +62,15 @@
       "src/modules/imports",
       "src/modules/system"
     ],
+    "src/modules/mcpAgents": ["src/core/*", "!src/core/server", "src/modules/employees"],
+    "src/modules/processes": [
+      "src/core/*",
+      "!src/core/server",
+      "src/modules/bankHolidays",
+      "src/modules/employees",
+      "src/modules/tasks",
+      "src/utils"
+    ],
     "src/modules/slack": ["src/core/*", "!src/core/server", "src/integrations/slack", "src/utils"],
     "src/modules/system": ["src/core/*", "!src/core/server"],
     "src/modules/tasks": ["src/core/*", "!src/core/server", "src/modules/employees", "src/utils"],
@@ -80,6 +89,7 @@
     "src/utils": [],
     "src/core/server": ["src/core/*"],
     "src/core/moduleManifest": [
+      "src/core/agentAccess",
       "src/core/db",
       "src/core/events",
       "src/core/graphql",
@@ -97,6 +107,14 @@
       "src/utils"
     ],
     "src/core/security": ["src/core/applicationError", "src/core/auth", "src/core/db"],
+    "src/core/agentAccess": [
+      "src/core/applicationError",
+      "src/core/auth",
+      "src/core/db",
+      "src/core/instance",
+      "src/core/logger",
+      "src/core/security"
+    ],
     "src/core/instance": [
       "src/integrations/ai",
       "src/integrations/mail",
@@ -134,7 +152,7 @@
       "src/core/security"
     ],
     "src/core/jobs": ["src/core/db", "src/core/logger"],
-    "src/core/db": ["src/core/events", "src/core/logger"],
+    "src/core/db": ["src/core/applicationError", "src/core/events", "src/core/logger"],
     "src/core/events": ["src/core/logger"],
     "src/core/pagination": ["src/core/applicationError"],
     "src/core/health": ["src/core/readiness"],

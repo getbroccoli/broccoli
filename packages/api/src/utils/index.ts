@@ -7,6 +7,7 @@ export {
   isWithin,
   parseCalendarDate,
   parseDateColumn,
+  dateInLondon,
   todayInLondon,
   todayInUtc,
   weekdayOf,

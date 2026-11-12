@@ -13,6 +13,8 @@ export interface EmploymentRepository {
   ): Promise<void>;
   /** Each employee's start date: the start of their first employment, an unknown one counting first. */
   findStartDates(employeeIds: readonly string[]): Promise<Map<string, CalendarDate | null>>;
+  /** The employees whose first employment starts from `from` to `until`, both included, with that date. */
+  findStartingBetween(from: CalendarDate, until: CalendarDate): Promise<Map<string, CalendarDate>>;
   /** Each employee's employments, oldest first, by employee id. */
   findPeriods(
     employeeIds: readonly string[],
@@ -24,6 +26,8 @@ export interface EmploymentRepository {
    * Take it before employee row locks so edits, manager changes and resets cannot deadlock.
    */
   lockForWrites(): Promise<void>;
+  /** Holds back employee and employment writes, deletes among them, but not other readers. */
+  lockForReads(): Promise<void>;
   /** The direct manager of each employee's employment held on `date`; those without one are left out. */
   findManagerIds(employeeIds: readonly string[], date: CalendarDate): Promise<Map<string, string>>;
   /**
@@ -73,6 +77,16 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
       return new Map(rows.map(({ employeeId, startDate }) => [employeeId, startDate]));
     },
 
+    findStartingBetween: async (from, until) => {
+      const firstStart = sql<CalendarDate>`min(${employments.startDate})`;
+      const rows = await orm()
+        .select({ employeeId: employments.employeeId, startDate: firstStart })
+        .from(employments)
+        .groupBy(employments.employeeId)
+        .having(sql`${firstStart} between ${from} and ${until}`);
+      return new Map(rows.map(({ employeeId, startDate }) => [employeeId, startDate]));
+    },
+
     findPeriods: async (employeeIds) => {
       const rows = await orm()
         .select({
@@ -95,6 +109,10 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
 
     lockForWrites: async () => {
       await orm().execute(sql`lock table ${employments} in share row exclusive mode`);
+    },
+
+    lockForReads: async () => {
+      await orm().execute(sql`lock table ${employments} in share mode`);
     },
 
     findManagerIds: async (employeeIds, date) => {

@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { eq, sql } from "drizzle-orm";
 import { inject } from "vitest";
 
-import { session, user } from "../../src/core/auth";
+import { oauthConsent, session, user } from "../../src/core/auth";
 import { connectDatabase, type Database } from "../../src/core/db";
 import { createLogger } from "../../src/core/logger";
 import type { RunningServer } from "../../src/core/server";
@@ -125,6 +125,22 @@ export class TestEnv {
 
   async expireSessionAt(userId: string, expiresAt: Date): Promise<void> {
     await this.database.orm.update(session).set({ expiresAt }).where(eq(session.userId, userId));
+  }
+
+  async ageAgentConnection(userId: string, days: number): Promise<void> {
+    await this.database.orm
+      .update(oauthConsent)
+      .set({ updatedAt: sql`now() - ${days} * interval '1 day'` })
+      .where(eq(oauthConsent.userId, userId));
+  }
+
+  async readAgentConnectionLastUsedAt(userId: string): Promise<Date> {
+    const [connection] = await this.database.orm
+      .select({ updatedAt: oauthConsent.updatedAt })
+      .from(oauthConsent)
+      .where(eq(oauthConsent.userId, userId));
+    assert(connection);
+    return connection.updatedAt;
   }
 
   async createUser(email: string): Promise<void> {

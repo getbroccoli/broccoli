@@ -2,12 +2,6 @@ import { addDays, type CalendarDate, type CalendarDateRange } from "../../../uti
 import type { PersonTimeline } from "./personTimeline";
 import type { PatternVersion, WorkingWeek } from "./workingPattern";
 
-/** A person's own pattern from a date to a date. */
-export interface DatedPattern extends CalendarDateRange {
-  id: string;
-  workingPatternId: string;
-}
-
 /** A person's terms over a period; null dates are open. */
 export interface TermsMembership extends CalendarDateRange {
   termsId: string;
@@ -43,6 +37,10 @@ export function workingWeeksOf(
       add(next, null);
     }
     add(startDate, version);
+    // Stops before stepping past `until`, which may be the last day a date can hold.
+    if (endDate >= until) {
+      return weeks;
+    }
     next = addDays(endDate, 1);
   }
   if (next <= until) {

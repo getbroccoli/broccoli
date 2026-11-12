@@ -3,18 +3,19 @@ import { toast } from "sonner";
 
 import {
   CancelTermsTimeOffChangeDocument,
+  CancelTermsTimeOffStopDocument,
   CancelTermsWorkingWeekChangeDocument,
 } from "@/__generated__/graphql";
-import { usePayloadMutation } from "@/apollo";
+import { PayloadFailure, usePayloadMutation } from "@/apollo";
 import { t } from "@/i18n";
 
+import { peopleText } from "./termsDraft";
 import { TERMS_REFETCH, type Terms, type TimeOffRow } from "./termsQueries";
 import { ruleSummary, versionBefore, weekSummary } from "@/features/termsDisplay";
+import { addDays } from "@/lib/calendarDay";
 
 /** A planned change waiting for "Cancel change" to be confirmed, with what stays once it goes. */
-type PlannedChange =
-  | { kind: "week"; startDate: string; body: string }
-  | { kind: "rules"; timeOffPolicyId: string; startDate: string; body: string };
+type PlannedChange = { kind: "week" | "rules" | "stop"; assignmentId: string; body: string };
 
 /** Cancelling the terms' planned changes, each after a confirmation saying what stays. */
 export function usePlannedChanges(terms: Terms) {
@@ -22,19 +23,20 @@ export function usePlannedChanges(terms: Terms) {
   const options = { refetch: TERMS_REFETCH };
   const [cancelWeek, weekState] = usePayloadMutation(CancelTermsWorkingWeekChangeDocument, options);
   const [cancelRules, rulesState] = usePayloadMutation(CancelTermsTimeOffChangeDocument, options);
+  const [cancelStop, stopState] = usePayloadMutation(CancelTermsTimeOffStopDocument, options);
+  const cancels = { week: cancelWeek, rules: cancelRules, stop: cancelStop };
 
-  const confirm = async (change: PlannedChange) => {
+  const confirm = async ({ kind, assignmentId }: PlannedChange) => {
     try {
-      if (change.kind === "week") {
-        const input = { workingPatternId: terms.workingPattern.id, startDate: change.startDate };
-        await cancelWeek({ variables: { input } });
-      } else {
-        const { timeOffPolicyId, startDate } = change;
-        await cancelRules({ variables: { input: { timeOffPolicyId, startDate } } });
-      }
+      await cancels[kind]({ variables: { input: { assignmentId } } });
       toast(t("terms.edit.cancelled"));
-    } catch {
-      toast.error(t("terms.edit.cancelFailed"));
+    } catch (error) {
+      // The server says why the change stays: started meanwhile, or already gone.
+      const failure =
+        error instanceof PayloadFailure
+          ? (error.payloadError as { __typename: string; message: string })
+          : null;
+      toast.error(failure?.message ?? t("terms.edit.cancelFailed"));
     }
     setPlanned(null);
   };
@@ -42,28 +44,37 @@ export function usePlannedChanges(terms: Terms) {
   return {
     /** What stays once the asked change goes; null while none is asked. */
     body: planned?.body ?? null,
-    pending: weekState.loading || rulesState.loading,
+    pending: weekState.loading || rulesState.loading || stopState.loading,
     askWeek: (version: Terms["workingWeek"][number]) => setPlanned(weekChange(terms, version)),
     askRules: (timeOffTypeId: string, version: TimeOffRow["versions"][number]) =>
       setPlanned(rulesChange(terms, timeOffTypeId, version)),
+    /** Cancelling a planned stop goes by the rules it ends. */
+    askStop: (timeOffTypeId: string, version: TimeOffRow["versions"][number]) => {
+      const row = terms.timeOff.find(({ timeOffType }) => timeOffType.id === timeOffTypeId)!;
+      setPlanned({
+        kind: "stop",
+        assignmentId: version.id,
+        body: t("terms.edit.stopStays", { type: row.timeOffType.name, terms: terms.name }),
+      });
+    },
     close: () => setPlanned(null),
     confirm: () => planned && void confirm(planned),
   };
 }
 
-function weekChange(terms: Terms, version: Terms["workingWeek"][number]): PlannedChange | null {
-  const before = versionBefore(terms.workingWeek, version.startDate!);
-  return (
-    before && {
-      kind: "week",
-      startDate: version.startDate!,
-      body: t("terms.edit.weekStays", {
-        week: weekSummary(before),
-        people: peopleOf(terms.peopleCount),
-        terms: terms.name,
-      }),
-    }
-  );
+function weekChange(terms: Terms, version: Terms["workingWeek"][number]): PlannedChange {
+  const before = rowBefore(terms.workingWeek, version.startDate);
+  return {
+    kind: "week",
+    assignmentId: version.id,
+    body: before
+      ? t("terms.edit.weekStays", {
+          week: weekSummary(before),
+          people: peopleText(terms.peopleCount),
+          terms: terms.name,
+        })
+      : t("terms.edit.weekStaysNone", { terms: terms.name }),
+  };
 }
 
 function rulesChange(
@@ -72,17 +83,16 @@ function rulesChange(
   version: TimeOffRow["versions"][number],
 ): PlannedChange {
   const row = terms.timeOff.find(({ timeOffType }) => timeOffType.id === timeOffTypeId)!;
-  const before = versionBefore(row.versions, version.startDate!);
+  const before = rowBefore(row.versions, version.startDate);
   const values = {
     type: row.timeOffType.name,
-    people: peopleOf(terms.peopleCount),
+    people: peopleText(terms.peopleCount),
     terms: terms.name,
   };
   const fromAllowance = before?.balance === "BALANCE_FROM_ALLOWANCE";
   return {
     kind: "rules",
-    timeOffPolicyId: row.policy!.id,
-    startDate: version.startDate!,
+    assignmentId: version.id,
     body: before
       ? t(fromAllowance ? "terms.edit.rulesStaysAt" : "terms.edit.rulesStays", {
           ...values,
@@ -92,6 +102,14 @@ function rulesChange(
   };
 }
 
-function peopleOf(count: number): string {
-  return count === 1 ? t("terms.edit.onePerson") : t("terms.edit.people", { count: String(count) });
+/**
+ * The row a cancelled one's days go back to: the one before it, when it ends the day before; null
+ * across a gap, which stays empty.
+ */
+function rowBefore<V extends { startDate: string; endDate?: string | null }>(
+  rows: readonly V[],
+  startDate: string,
+): V | null {
+  const before = versionBefore(rows, startDate);
+  return before?.endDate === addDays(startDate, -1) ? before : null;
 }

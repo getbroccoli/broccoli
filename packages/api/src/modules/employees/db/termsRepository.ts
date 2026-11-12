@@ -1,6 +1,6 @@
 import { and, asc, countDistinct, desc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-orm";
 
-import { isUniqueViolation, type Orm, ormOf, type Tx } from "../../../core/db";
+import { anyOf, isUniqueViolation, type Orm, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
 import { type Terms, type TermsMembership, TermsNameTakenError } from "../domain";
 import { employeeTerms } from "./employeeTermsTable";
@@ -147,7 +147,7 @@ export function termsRepository(db: Orm | Tx): TermsRepository {
       const rows = await orm()
         .select()
         .from(employeeTerms)
-        .where(inArray(employeeTerms.employeeId, [...employeeIds]));
+        .where(anyOf(employeeTerms.employeeId, employeeIds));
       const memberships = new Map<string, TermsMembership[]>();
       for (const { employeeId, termsId, startDate, endDate } of rows) {
         const membership = { termsId, startDate, endDate };
@@ -158,9 +158,7 @@ export function termsRepository(db: Orm | Tx): TermsRepository {
 
     async replaceMemberships(memberships) {
       if (memberships.size === 0) return;
-      await orm()
-        .delete(employeeTerms)
-        .where(inArray(employeeTerms.employeeId, [...memberships.keys()]));
+      await orm().delete(employeeTerms).where(anyOf(employeeTerms.employeeId, memberships.keys()));
       await orm()
         .insert(employeeTerms)
         .values(

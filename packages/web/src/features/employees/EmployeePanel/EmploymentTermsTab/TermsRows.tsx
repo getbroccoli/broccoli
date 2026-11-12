@@ -1,15 +1,11 @@
 import type { EmploymentTermsTab_TermsFragment } from "@/__generated__/graphql";
-import {
-  calendarName,
-  companyToday,
-  ruleSummary,
-  TimeOffTypeIcon,
-  weekSummary,
-} from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
-import { changeLineOn, rowOf, ruleSourceLabel } from "./employmentTermsView";
-import { TermsRuleRow } from "./TermsRuleRow";
+import { changeLineOn, describeRules, describeWeek, ruleSourceLabel } from "./employmentTermsView";
+import { TimeOffTypeRow } from "./TimeOffTypeRow";
+import type { OwnRulesEdit, TermsOn } from "./useOwnRulesEdit";
+import type { OwnWeekEdit } from "./useOwnWeekEdit";
+import { WeekRow } from "./WeekRow";
 
 type Terms = EmploymentTermsTab_TermsFragment;
 
@@ -23,6 +19,15 @@ type Props = {
   viewerIsPerson: boolean;
   /** A move being edited: the person's terms before and after it, read from its date. */
   change: { before: Terms; after: Terms; date: string } | null;
+  employeeId: string;
+  /** Admins edit the person's own week; null for everyone else. */
+  weekEdit: OwnWeekEdit | null;
+  /** Admins edit the person's own rules for each type; null for everyone else. */
+  rulesEdit: OwnRulesEdit | null;
+  /** Another edit is open on the tab. */
+  locked: boolean;
+  earliest: string;
+  termsOn: TermsOn;
 };
 
 /** The working week row, then a row per company time off type, each with what a move changes. */
@@ -33,8 +38,13 @@ export function TermsRows({
   firstName,
   viewerIsPerson,
   change,
+  employeeId,
+  weekEdit,
+  rulesEdit,
+  locked,
+  earliest,
+  termsOn,
 }: Props) {
-  const today = companyToday();
   const sourceOf = (version: { source: "FROM_THEIR_TERMS" | "THEIR_OWN"; startDate: string }) =>
     ruleSourceLabel(version.source, {
       termsName: termsNameOn(version.startDate),
@@ -42,21 +52,14 @@ export function TermsRows({
       personFirstName: firstName,
     });
   const notOffered = t("people.panel.terms.notOfferedLower");
-  const week = rowOf(
-    workingWeek,
-    today,
-    describeWeek,
-    sourceOf,
-    t("people.panel.terms.noWeekLower"),
-  );
 
   return (
     <ul>
-      <TermsRuleRow
-        label={t("people.panel.terms.workingWeek")}
-        value={week.value}
-        missing={t("people.panel.terms.noWeek")}
-        planned={week.planned}
+      <WeekRow
+        employeeId={employeeId}
+        firstName={firstName}
+        workingWeek={workingWeek}
+        sourceOf={sourceOf}
         change={
           change &&
           changeLineOn(
@@ -67,25 +70,24 @@ export function TermsRows({
             t("people.panel.terms.noWeekLower"),
           )
         }
+        edit={weekEdit}
+        locked={locked || Boolean(rulesEdit?.mode)}
+        earliest={earliest}
+        termsNameOn={termsNameOn}
       />
-      {timeOff?.map(({ timeOffType, versions }) => {
-        const row = rowOf(versions, today, describeRules, sourceOf, notOffered);
-        const sameType = (type: { timeOffType: { id: string } }) =>
-          type.timeOffType.id === timeOffType.id;
+      {timeOff?.map((type) => {
+        const sameType = (other: { timeOffType: { id: string } }) =>
+          other.timeOffType.id === type.timeOffType.id;
         const before = change?.before.timeOff?.find(sameType);
         const after = change?.after.timeOff?.find(sameType);
         return (
-          <TermsRuleRow
-            key={timeOffType.id}
-            label={
-              <>
-                <TimeOffTypeIcon icon={timeOffType.icon} colour={timeOffType.colour} />
-                <span className="[overflow-wrap:anywhere]">{timeOffType.name}</span>
-              </>
-            }
-            value={row.value}
-            missing={t("people.panel.terms.notOffered", { terms: currentTermsName })}
-            planned={row.planned}
+          <TimeOffTypeRow
+            key={type.timeOffType.id}
+            employeeId={employeeId}
+            firstName={firstName}
+            timeOff={type}
+            sourceOf={sourceOf}
+            currentTermsName={currentTermsName}
             change={
               change &&
               changeLineOn(
@@ -96,26 +98,13 @@ export function TermsRows({
                 notOffered,
               )
             }
+            edit={rulesEdit}
+            locked={locked || Boolean(weekEdit?.mode)}
+            earliest={earliest}
+            termsOn={termsOn}
           />
         );
       })}
     </ul>
   );
-}
-
-/** A week as its row reads it: "Mon–Fri, 7.5 hours", then its bank holidays. */
-function describeWeek({ week }: Terms["workingWeek"][number]) {
-  return {
-    text: weekSummary(week),
-    detail: t("people.panel.terms.bankHolidays", {
-      calendar: calendarName(week.bankHolidayCalendar),
-    }),
-  };
-}
-
-/** A type's rules as its row reads them: "20 days a year, bank holidays on top", or recorded only. */
-function describeRules({ rules }: NonNullable<Terms["timeOff"]>[number]["versions"][number]) {
-  return {
-    text: rules.balance === "NO_BALANCE" ? t("terms.rule.recorded") : ruleSummary(rules),
-  };
 }

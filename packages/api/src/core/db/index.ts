@@ -2,6 +2,8 @@
 export { connectDatabase } from "./database";
 export { containsPattern } from "./likePattern";
 export { MIGRATION_LOCK_KEY } from "./migrationRun";
+export { anyOf } from "./anyOf";
+export { jsonb } from "./jsonb";
 export { afterKeyset, keysetOrder, nullsLast, orderByKeyset } from "./keyset";
 export { ormOf, transactor } from "./transaction";
 export { isForeignKeyViolation, isUniqueViolation } from "./uniqueViolation";

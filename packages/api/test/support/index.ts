@@ -11,6 +11,17 @@ export {
 export { approveReviewedImport } from "./approveReviewedImport";
 export { createExternalAgentCode, exchangeExternalAgentCode } from "./createExternalAgentCode";
 export { createBrowser, type Browser } from "./browser";
+export {
+  authorize,
+  authorizeAgent,
+  callMcpTool,
+  connectAgent,
+  exchangeAgentCode,
+  refreshAgent,
+  registerAgentClient,
+} from "./agentClient";
+export { agentConnectionService } from "./agentConnectionService";
+export { mcpAgentToolService } from "./mcpAgentToolService";
 export { startDisconnectingProxy, type DisconnectingProxy } from "./disconnectingProxy";
 export { test, slackTest } from "./fixture";
 export { startFakeBrandServer } from "./fakeBrandServer";
@@ -33,6 +44,13 @@ export { termsChangedEvents } from "./termsChangedEvents";
 export { PNG, JPEG, WEBP } from "./images";
 export { fakeSlackApi, SLACK_MEMBER_WITH_PHOTO, SLACK_PHOTO_URL } from "./fakeSlackApi";
 export { managedOptions, postInit, startManagedEnv, signInAsManagedOwner } from "./managedTestEnv";
+export {
+  assignedManagedEnv,
+  managedTicketClaims,
+  postManagedTicket,
+  sessionCookieOf,
+  startManagedSignIn,
+} from "./managedSignInFlow";
 export { holdMigrationLock, type MigrationLockHolder } from "./migrationLock";
 export {
   createEmptyTestDatabase,
@@ -60,6 +78,7 @@ export {
   passwordResetEmail,
 } from "./services";
 export type { EmployeeServices } from "./services";
+export { processService } from "./processService";
 export {
   employeeSetup,
   fileStorage,
@@ -98,7 +117,7 @@ export { expectBlockedBy } from "./expectBlockedBy";
 export { recordChangedEvents } from "./recordChangedEvents";
 export { signedIn } from "./signedIn";
 export { bankHolidayService } from "./bankHolidayService";
-export { createStandardPattern, workingPatternService } from "./workingPatternService";
+export { workingPatternService } from "./workingPatternService";
 
 export { fakeMail } from "./fakeMail";
 export { startFakeResend } from "./fakeResend";
@@ -118,7 +137,11 @@ export {
   readAllowances,
   readTermsPolicies,
   readTermsPolicyVersions,
+  seedAnnualLeaveEmployee,
   type TermsPolicy,
+  bookTimeOffService,
+  whosOutService,
+  ownTimeOffRulesService,
   timeOffPolicyService,
   timeOffService,
   transactWithTimeOffEvents,
@@ -130,7 +153,7 @@ export {
   seedTimeOff,
   seedTimeOffAssignment,
   seedTimeOffPolicy,
-  seedTimeOffPolicyVersions,
+  seedTermsPolicy,
   seedTimeOffType,
 } from "./seedTimeOff";
 export { testTransactor } from "./testTransactor";
@@ -138,7 +161,31 @@ export {
   timeOffSetupService,
   scotlandTimeOffSetup,
   readTimeOffTerms,
+  readWorkingPatterns,
   readOwnPatternAssignments,
 } from "./timeOffSetup";
 
 export { DecisionsError, type Answers, type Decisions } from "../../src/integrations/ai";
+
+export { seedWorkingPattern, seedTermsWeek, seedOwnWeek } from "./seedWorkingPattern";
+
+export {
+  setUpEmploymentTerms,
+  readTermsSettings,
+  saveTermsWeek,
+  saveTermsRules,
+} from "./employmentTermsGraphql";
+export {
+  type Drafts,
+  peopleSnapshot,
+  placeSnapshot,
+  readPublishedAssignments,
+  readWeeks,
+  saveDrafts,
+  seedTermsWithPeople,
+  type Week,
+} from "./publishTermsPlace";
+export { hostileText, storedTextSnapshot } from "./hostileText";
+export { storedTextProbe } from "./storedTextProbe";
+export { seedPagingBoundary } from "./pagingBoundary";
+export { seedMixedCountsEmployee } from "./seedMixedCountsEmployee";

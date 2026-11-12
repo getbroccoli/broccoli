@@ -2331,91 +2331,56 @@
           "name": "name",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
-        },
-        "terms_id": {
-          "name": "terms_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "balance": {
-          "name": "balance",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "bank_holidays": {
-          "name": "bank_holidays",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "leave_year_start": {
-          "name": "leave_year_start",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "leave_year_start_month": {
-          "name": "leave_year_start_month",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "leave_year_start_day": {
-          "name": "leave_year_start_day",
-          "type": "integer",
-          "primaryKey": false,
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "time_off_policies_type_name_unique": {
+          "name": "time_off_policies_type_name_unique",
+          "columns": [
+            {
+              "expression": "time_off_type_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lower(btrim(\"name\"))",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "time_off_policies_time_off_type_id_time_off_types_id_fk": {
           "name": "time_off_policies_time_off_type_id_time_off_types_id_fk",
           "tableFrom": "time_off_policies",
-          "columnsFrom": ["time_off_type_id"],
           "tableTo": "time_off_types",
+          "columnsFrom": ["time_off_type_id"],
           "columnsTo": ["id"],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "time_off_policies_terms_type_unique": {
-          "name": "time_off_policies_terms_type_unique",
-          "columns": ["terms_id", "time_off_type_id"],
-          "nullsNotDistinct": false
-        },
         "time_off_policies_id_type_unique": {
           "name": "time_off_policies_id_type_unique",
-          "columns": ["id", "time_off_type_id"],
-          "nullsNotDistinct": false
+          "nullsNotDistinct": false,
+          "columns": ["id", "time_off_type_id"]
         }
       },
       "policies": {},
       "checkConstraints": {
-        "time_off_policies_bank_holidays_with_allowance": {
-          "name": "time_off_policies_bank_holidays_with_allowance",
-          "value": "(\"time_off_policies\".\"bank_holidays\" is not null) = (\"time_off_policies\".\"balance\" = 'balance_from_allowance')"
-        },
-        "time_off_policies_leave_year_with_balance": {
-          "name": "time_off_policies_leave_year_with_balance",
-          "value": "(\"time_off_policies\".\"leave_year_start\" is not null) = (\"time_off_policies\".\"balance\" <> 'no_balance')"
-        },
-        "time_off_policies_fixed_date_month_set": {
-          "name": "time_off_policies_fixed_date_month_set",
-          "value": "(\"time_off_policies\".\"leave_year_start_month\" is not null)\n        = (\"time_off_policies\".\"leave_year_start\" is not distinct from 'leave_year_from_fixed_date')"
-        },
-        "time_off_policies_fixed_date_day_set": {
-          "name": "time_off_policies_fixed_date_day_set",
-          "value": "(\"time_off_policies\".\"leave_year_start_day\" is not null)\n        = (\"time_off_policies\".\"leave_year_start\" is not distinct from 'leave_year_from_fixed_date')"
-        },
-        "time_off_policies_fixed_date_valid": {
-          "name": "time_off_policies_fixed_date_valid",
-          "value": "\"time_off_policies\".\"leave_year_start_month\" between 1 and 12 and \"time_off_policies\".\"leave_year_start_day\" between 1 and\n        case when \"time_off_policies\".\"leave_year_start_month\" = 2 then 28\n          when \"time_off_policies\".\"leave_year_start_month\" in (4, 6, 9, 11) then 30 else 31 end"
+        "time_off_policies_name_not_blank": {
+          "name": "time_off_policies_name_not_blank",
+          "value": "btrim(\"time_off_policies\".\"name\") <> ''"
         }
       },
       "isRLSEnabled": false
@@ -2435,7 +2400,13 @@
           "name": "employee_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "terms_id": {
+          "name": "terms_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         },
         "time_off_type_id": {
           "name": "time_off_type_id",
@@ -2449,14 +2420,20 @@
           "primaryKey": false,
           "notNull": true
         },
-        "effective_from": {
-          "name": "effective_from",
+        "time_off_policy_version_id": {
+          "name": "time_off_policy_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_date": {
+          "name": "start_date",
           "type": "date",
           "primaryKey": false,
           "notNull": true
         },
-        "effective_until": {
-          "name": "effective_until",
+        "end_date": {
+          "name": "end_date",
           "type": "date",
           "primaryKey": false,
           "notNull": false
@@ -2474,38 +2451,81 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
+        },
+        "time_off_policy_assignments_version_idx": {
+          "name": "time_off_policy_assignments_version_idx",
+          "columns": [
+            {
+              "expression": "time_off_policy_version_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "time_off_policy_assignments_terms_idx": {
+          "name": "time_off_policy_assignments_terms_idx",
+          "columns": [
+            {
+              "expression": "terms_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
         "time_off_policy_assignments_type_fk": {
           "name": "time_off_policy_assignments_type_fk",
           "tableFrom": "time_off_policy_assignments",
-          "columnsFrom": ["time_off_type_id"],
           "tableTo": "time_off_types",
+          "columnsFrom": ["time_off_type_id"],
           "columnsTo": ["id"],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         },
         "time_off_policy_assignments_policy_of_type_fk": {
           "name": "time_off_policy_assignments_policy_of_type_fk",
           "tableFrom": "time_off_policy_assignments",
-          "columnsFrom": ["time_off_policy_id", "time_off_type_id"],
           "tableTo": "time_off_policies",
+          "columnsFrom": ["time_off_policy_id", "time_off_type_id"],
           "columnsTo": ["id", "time_off_type_id"],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "time_off_policy_assignments_version_of_policy_fk": {
+          "name": "time_off_policy_assignments_version_of_policy_fk",
+          "tableFrom": "time_off_policy_assignments",
+          "tableTo": "time_off_policy_versions",
+          "columnsFrom": ["time_off_policy_version_id", "time_off_policy_id"],
+          "columnsTo": ["id", "time_off_policy_id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
+        "time_off_policy_assignments_one_owner": {
+          "name": "time_off_policy_assignments_one_owner",
+          "value": "num_nonnulls(\"time_off_policy_assignments\".\"employee_id\", \"time_off_policy_assignments\".\"terms_id\") = 1"
+        },
         "time_off_policy_assignments_dates_in_order": {
           "name": "time_off_policy_assignments_dates_in_order",
-          "value": "\"time_off_policy_assignments\".\"effective_until\" >= \"time_off_policy_assignments\".\"effective_from\""
+          "value": "\"time_off_policy_assignments\".\"end_date\" >= \"time_off_policy_assignments\".\"start_date\""
         }
       },
       "isRLSEnabled": false
@@ -2544,6 +2564,19 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {

@@ -22,7 +22,9 @@ export type AllowanceCause =
         | "WORKING_PATTERN_CHANGED"
         | "TERMS_CHANGED"
         | "LEAVE_YEAR_STARTED"
-        | "DAILY_CHECK";
-      /** The terms id, employee id or date the cause names; null when it names none. */
+        | "DAILY_CHECK"
+        | "TIME_OFF_BOOKED"
+        | "TIME_OFF_CANCELLED";
+      /** The terms id, employee id, time off id or date the cause names; null when it names none. */
       ref: string | null;
     };

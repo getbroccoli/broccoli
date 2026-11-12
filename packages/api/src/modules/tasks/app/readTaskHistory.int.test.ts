@@ -1,20 +1,20 @@
 import { expect, signedIn, taskService, test } from "#test/support";
 
-test("lets the holder read creation and completion newest first", async ({
+test("lets the assignee read creation and completion newest first", async ({
   orm,
   seed,
   transact,
 }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
-  const ctx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
+  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
   const tasks = taskService(orm);
   const task = await transact((tx) =>
     tasks.createTask(ctx, tx, {
       type: "manual_to_do",
       title: "Read the handbook",
-      assigneeEmployeeId: holder.id,
-      requestedByEmployeeId: asker.id,
+      assigneeEmployeeId: assignee.id,
+      askedByEmployeeId: asker.id,
     }),
   );
   const { historyLine } = await tasks.markDone(ctx, task.id);
@@ -34,7 +34,7 @@ test("lets the holder read creation and completion newest first", async ({
 });
 
 test("lets the person who asked read the task's history", async ({ orm, seed, transact }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
   const ctx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
   const tasks = taskService(orm);
@@ -42,8 +42,8 @@ test("lets the person who asked read the task's history", async ({ orm, seed, tr
     tasks.createTask(ctx, tx, {
       type: "manual_to_do",
       title: "Read the handbook",
-      assigneeEmployeeId: holder.id,
-      requestedByEmployeeId: asker.id,
+      assigneeEmployeeId: assignee.id,
+      askedByEmployeeId: asker.id,
     }),
   );
 
@@ -58,10 +58,10 @@ test("refuses task history to an unrelated person even when they are the owner",
   orm,
   seed,
 }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
   const other = await seed.employee();
-  const task = await seed.task({ assigneeEmployeeId: holder.id, requestedByEmployeeId: asker.id });
+  const task = await seed.task({ assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id });
   const ctx = signedIn(orm, { employeeId: other.id, profiles: ["OWNER"] });
 
   await expect(taskService(orm).readTaskHistory(ctx, task.id, {})).rejects.toMatchObject({
@@ -71,13 +71,13 @@ test("refuses task history to an unrelated person even when they are the owner",
 });
 
 test("refuses task history to the person the task is about", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
   const about = await seed.employee();
   const task = await seed.task({
-    assigneeEmployeeId: holder.id,
-    requestedByEmployeeId: asker.id,
-    aboutEmployeeId: about.id,
+    assigneeEmployeeId: assignee.id,
+    askedByEmployeeId: asker.id,
+    subjectEmployeeId: about.id,
   });
   const ctx = signedIn(orm, { employeeId: about.id, profiles: ["EMPLOYEE"] });
 

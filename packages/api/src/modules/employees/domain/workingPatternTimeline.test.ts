@@ -5,12 +5,13 @@ import type { PatternVersion, WeekdayMinutes } from "./workingPattern";
 import { createPersonTimeline, type TimelineCreateInputArgs } from "./personTimeline";
 import { workingWeeksOf } from "./workingPatternTimeline";
 
-it("has no working week before and after a person's own pattern", () => {
-  const short = version([240, 0, 0, 0, 0, 0, 0]);
+it("has no working week before and after a person's own assignment", () => {
+  const short = version("short", [240, 0, 0, 0, 0, 0, 0]);
   const timeline = timelineOf({
-    direct: [{ id: "short", startDate: day("2026-09-01"), endDate: day("2026-09-30") }],
-    versions: { short: [short] },
+    direct: [assignment("short", "2026-09-01", "2026-09-30")],
+    versions: { short },
   });
+
   expect(workingWeeksOf(timeline, day("2026-08-01"), day("2026-10-31"))).toEqual([
     noWeek("2026-08-01"),
     week(short, "2026-09-01"),
@@ -19,12 +20,13 @@ it("has no working week before and after a person's own pattern", () => {
 });
 
 it("has no working week outside a person's terms", () => {
-  const standard = version([450, 0, 0, 0, 0, 0, 0]);
+  const standard = version("standard", [450, 0, 0, 0, 0, 0, 0]);
   const timeline = timelineOf({
     terms: [{ termsId: "terms", startDate: day("2026-09-01"), endDate: day("2026-09-30") }],
-    termsPattern: "standard",
-    versions: { standard: [standard] },
+    termsAssignments: [assignment("standard", "2026-01-01")],
+    versions: { standard },
   });
+
   expect(workingWeeksOf(timeline, day("2026-08-01"), day("2026-10-31"))).toEqual([
     noWeek("2026-08-01"),
     week(standard, "2026-09-01"),
@@ -32,84 +34,107 @@ it("has no working week outside a person's terms", () => {
   ]);
 });
 
-it("merges identical weeks across an own pattern and a pattern change", () => {
-  const standard = version([450, 0, 0, 0, 0, 0, 0]);
+it("merges identical weeks across direct and inherited assignments", () => {
+  const standard = version("standard", [450, 0, 0, 0, 0, 0, 0]);
   const timeline = timelineOf({
-    direct: [{ id: "short", startDate: day("2026-09-01"), endDate: day("2026-09-30") }],
+    direct: [
+      assignment("first", "2026-09-01", "2026-09-14"),
+      assignment("next", "2026-09-15", "2026-09-30"),
+    ],
     terms: [{ termsId: "terms", startDate: null, endDate: null }],
-    termsPattern: "standard",
+    termsAssignments: [assignment("standard", "2026-01-01")],
     versions: {
-      standard: [standard],
-      short: [
-        version([450, 0, 0, 0, 0, 0, 0], null, day("2026-09-14")),
-        version([450, 0, 0, 0, 0, 0, 0], day("2026-09-15")),
-      ],
+      standard,
+      first: version("first", standard.minutes),
+      next: version("next", standard.minutes),
     },
   });
+
   expect(workingWeeksOf(timeline, day("2026-08-01"), day("2026-10-31"))).toEqual([
     week(standard, "2026-08-01"),
   ]);
 });
 
 it("splits when weekday minutes change within the requested period", () => {
-  const versions = [
-    version([450, 0, 0, 0, 0, 0, 0], null, day("2026-09-04")),
-    version([240, 0, 0, 0, 0, 0, 0], day("2026-09-05"), day("2026-09-14")),
-    version([300, 0, 0, 0, 0, 0, 0], day("2026-09-15"), day("2026-09-20")),
-    version([480, 0, 0, 0, 0, 0, 0], day("2026-09-21")),
-  ];
+  const first = version("first", [450, 0, 0, 0, 0, 0, 0]);
+  const second = version("second", [240, 0, 0, 0, 0, 0, 0]);
+  const third = version("third", [300, 0, 0, 0, 0, 0, 0]);
+  const last = version("last", [480, 0, 0, 0, 0, 0, 0]);
   const timeline = timelineOf({
-    direct: [{ id: "short", startDate: day("2026-09-01"), endDate: day("2026-09-30") }],
-    versions: { short: versions },
+    direct: [
+      assignment("first", "2026-09-01", "2026-09-04"),
+      assignment("second", "2026-09-05", "2026-09-14"),
+      assignment("third", "2026-09-15", "2026-09-20"),
+      assignment("last", "2026-09-21", "2026-09-30"),
+    ],
+    versions: { first, second, third, last },
   });
+
   expect(workingWeeksOf(timeline, day("2026-09-01"), day("2026-09-15"))).toEqual([
-    week(versions[0]!, "2026-09-01"),
-    week(versions[1]!, "2026-09-05"),
-    week(versions[2]!, "2026-09-15"),
+    week(first, "2026-09-01"),
+    week(second, "2026-09-05"),
+    week(third, "2026-09-15"),
   ]);
   expect(workingWeeksOf(timeline, day("2026-09-10"), day("2026-09-20"))).toEqual([
-    week(versions[1]!, "2026-09-10"),
-    week(versions[2]!, "2026-09-15"),
+    week(second, "2026-09-10"),
+    week(third, "2026-09-15"),
   ]);
 });
 
-it("has no working week without an own pattern or terms", () => {
+it("has no working week without an own assignment or terms", () => {
   expect(workingWeeksOf(timelineOf({}), day("2026-09-01"), day("2026-09-30"))).toEqual([
     noWeek("2026-09-01"),
   ]);
 });
 
+it("should return one week for an open assignment on the final calendar day", () => {
+  // Arrange
+  const date = day("9999-12-31");
+  const timeline = timelineOf({
+    direct: [assignment("a", "9999-12-31")],
+    versions: { a: version("a", [480, 0, 0, 0, 0, 0, 0]) },
+  });
+
+  // Act
+  const weeks = workingWeeksOf(timeline, date, date);
+
+  // Assert
+  expect(weeks.map((week) => week.startDate)).toEqual([date]);
+});
+
 function timelineOf({
   direct = [],
   terms = [],
-  termsPattern = null,
+  termsAssignments = [],
   versions = {},
 }: {
   direct?: TimelineCreateInputArgs<PatternVersion>["direct"];
   terms?: TimelineCreateInputArgs<PatternVersion>["terms"];
-  termsPattern?: string | null;
-  versions?: Record<string, PatternVersion[]>;
+  termsAssignments?: TimelineCreateInputArgs<PatternVersion>["direct"];
+  versions?: Record<string, PatternVersion>;
 }) {
   return createPersonTimeline({
     direct,
     terms,
-    idOfTerms: () => termsPattern,
-    versions: (id) => versions[id] ?? [],
+    termsAssignments: () => termsAssignments,
+    version: (id) => versions[id]!,
   });
 }
 
-function version(
-  minutes: WeekdayMinutes,
-  startDate: CalendarDate | null = null,
-  endDate: CalendarDate | null = null,
-): PatternVersion {
+function version(id: string, minutes: WeekdayMinutes): PatternVersion {
   return {
-    id: `${startDate}`,
-    startDate,
-    endDate,
+    id,
+    workingPatternId: "pattern",
+    status: "published",
+    termsId: null,
+    revision: 1,
     minutes,
     bankHolidayCalendar: "england_and_wales",
   };
+}
+
+function assignment(versionId: string, startDate: string, endDate: string | null = null) {
+  return { versionId, startDate: day(startDate), endDate: endDate === null ? null : day(endDate) };
 }
 
 function week({ minutes, bankHolidayCalendar }: PatternVersion, startDate: string) {
@@ -119,7 +144,6 @@ function week({ minutes, bankHolidayCalendar }: PatternVersion, startDate: strin
 function noWeek(startDate: string) {
   return { startDate, minutes: null, bankHolidayCalendar: null };
 }
-
 function day(value: string): CalendarDate {
   return value as CalendarDate;
 }

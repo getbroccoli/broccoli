@@ -1,6 +1,6 @@
 import type { EmploymentTermsStackQuery } from "@/__generated__/graphql";
 import { type MessageKey, t } from "@/i18n";
-import { calendarDayOf, calendarDayParts } from "@/lib/calendarDay";
+import { calendarDayOf, utcDay } from "@/lib/calendarDay";
 
 /** A working week's minutes per day, Monday first. */
 export type WeekMinutes = Record<(typeof DAY_FIELDS)[number], number>;
@@ -8,8 +8,11 @@ export type WeekMinutes = Record<(typeof DAY_FIELDS)[number], number>;
 /** A time off policy version's rules, as the terms' rows describe them. */
 export type PolicyVersionText = Pick<
   NonNullable<EmploymentTermsStackQuery["terms"]>["timeOff"][number]["versions"][number],
-  "startDate" | "balance" | "bankHolidays" | "leaveYearStart" | "yearlyEntitlement"
->;
+  "balance" | "bankHolidays" | "leaveYearStart" | "yearlyEntitlement"
+> & {
+  /** Unset on unpublished rules, which have no date until they are published. */
+  startDate?: string | null;
+};
 
 /** "Mon–Fri, 7.5 hours"; days that are not a run are listed; unequal hours read as a weekly total. */
 export function weekSummary(week: WeekMinutes): string {
@@ -58,6 +61,23 @@ export function ruleSummary(version: RuleText): string {
   return version.balance === "UNLIMITED_BALANCE"
     ? t("terms.rule.unlimited")
     : allowanceText(version);
+}
+
+/** Rules as history keeps them, with lower-case enum values, as `ruleSummary` reads them. */
+export function storedRuleText({
+  balance,
+  entitlementDays,
+  bankHolidays,
+}: {
+  balance: string;
+  entitlementDays: number | null;
+  bankHolidays: string | null;
+}): RuleText {
+  return {
+    balance: balance.toUpperCase() as RuleText["balance"],
+    bankHolidays: bankHolidays?.toUpperCase() as RuleText["bankHolidays"],
+    yearlyEntitlement: entitlementDays === null ? null : { days: entitlementDays, daysPerWeek: 5 },
+  };
 }
 
 /** What `ruleSummary` reads of a version. */
@@ -175,7 +195,7 @@ function daysOf(version: RuleText): string {
 
 /** A `YYYY-MM-DD` day as "1 Dec 2026". */
 export function shortDate(value: string): string {
-  return SHORT_DATE.format(Date.UTC(...calendarDayParts(value)));
+  return SHORT_DATE.format(utcDay(value));
 }
 
 // Formatted in UTC from a UTC timestamp, so no time zone moves the calendar day.

@@ -7,9 +7,12 @@ import { createLogger } from "../../src/core/logger";
 import { createDemoFillService } from "../../src/modules/demo";
 import { createTaskService } from "../../src/modules/tasks";
 import {
+  createBookTimeOffService,
+  createOwnTimeOffRulesService,
   createTimeOffPolicyService,
   createTimeOffSetupService,
   createTimeOffService,
+  createWhosOutService,
   timeOffModule,
 } from "../../src/modules/timeOff";
 import { employeeTerms } from "../../src/modules/employees/db";
@@ -27,11 +30,13 @@ import {
   type StandardLeavePolicyKey,
   type TimeOffTypeKey,
 } from "../../src/modules/timeOff/domain";
-import { type CalendarDate } from "../../src/utils";
+import { type CalendarDate, coversDate } from "../../src/utils";
+import { calendarDate } from "./calendarDate";
 import { bankHolidayService } from "./bankHolidayService";
 import { employeeSetup } from "./statelessServices";
 import { OWNER } from "./testSecurityContext";
 import type { TestSeed } from "./testSeed";
+import { processService } from "./processService";
 import { testTransactor } from "./testTransactor";
 
 /** The time off service on `orm` with the shipped bank holidays and silent logs; `today` is the engine's date. */
@@ -45,9 +50,51 @@ export function timeOffService(orm: Orm, { today = "2026-06-01" }: { today?: str
   });
 }
 
+/** The booking service on `orm`, with the engine of `timeOffService`; `today` is its date. */
+export function bookTimeOffService(orm: Orm, { today = "2026-11-09" }: { today?: string } = {}) {
+  return createBookTimeOffService({
+    orm,
+    transact: testTransactor(orm),
+    logger: createLogger("silent"),
+    timeOff: timeOffService(orm, { today }),
+    bankHolidays: bankHolidayService(),
+    today: () => today as CalendarDate,
+  });
+}
+
+/** The who's out service on `orm`; `today` is its date. */
+export function whosOutService(orm: Orm, { today = "2026-11-09" }: { today?: string } = {}) {
+  return createWhosOutService({
+    orm,
+    transact: testTransactor(orm),
+    bankHolidays: bankHolidayService(),
+    today: () => today as CalendarDate,
+  });
+}
+
 /** The time off policy service on `orm`, with the engine of `timeOffService`; `today` is its date. */
-export function timeOffPolicyService(orm: Orm, { today = "2026-06-01" }: { today?: string } = {}) {
+export function timeOffPolicyService(
+  orm: Orm,
+  {
+    today = "2026-06-01",
+    transact = testTransactor(orm),
+  }: { today?: string; transact?: Transact } = {},
+) {
   return createTimeOffPolicyService({
+    orm,
+    transact,
+    logger: createLogger("silent"),
+    timeOff: timeOffService(orm, { today }),
+    today: () => today as CalendarDate,
+  });
+}
+
+/** The own time off rules service on `orm`, with the engine of `timeOffService`; `today` is its date. */
+export function ownTimeOffRulesService(
+  orm: Orm,
+  { today = "2026-06-01" }: { today?: string } = {},
+) {
+  return createOwnTimeOffRulesService({
     orm,
     transact: testTransactor(orm),
     logger: createLogger("silent"),
@@ -63,7 +110,7 @@ export type TermsPolicy =
   | { timeOffTypeId: string; version: NewPolicyVersion };
 
 /**
- * Gives terms copies of policies from the beginning and ensures their people's allowances, as
+ * Gives terms published policies from the current year's start and ensures their people's allowances, as
  * turning time off on does; `today` is the engine's date.
  */
 export async function giveTermsPolicies(
@@ -85,7 +132,20 @@ export async function giveTermsPolicies(
           : "recordOnly" in policy
             ? [typeId(policy.recordOnly), RECORD_ONLY_POLICY]
             : [policy.timeOffTypeId, policy.version];
-      await timeOffPolicyRepository(tx).insertPolicy({ timeOffTypeId, termsId }, version);
+      const repository = timeOffPolicyRepository(tx);
+      const timeOffPolicyId = await repository.insertPolicy({ timeOffTypeId });
+      const versionId = await repository.insertVersion(timeOffPolicyId, {
+        ...version,
+        status: "published",
+      });
+      await repository.insertAssignment({
+        timeOffTypeId,
+        timeOffPolicyId,
+        versionId,
+        owner: { termsId },
+        startDate: calendarDate(`${(today ?? "2026-06-01").slice(0, 4)}-01-01`),
+        endDate: null,
+      });
     }
     const members = await ormOf(tx)
       .select({ employeeId: employeeTerms.employeeId })
@@ -110,25 +170,48 @@ export async function giveDefaultTermsStatutoryMinimum(
   });
 }
 
-/** Terms' policies have no public read yet: each with its type and how its first version counts. */
-export async function readTermsPolicies(orm: Orm, termsId: string) {
-  const policies = await timeOffPolicyRepository(orm).findAll();
-  return policies
-    .filter((policy) => policy.termsId === termsId)
-    .map(({ id, timeOffType, versions: [version] }) => ({
-      id,
-      typeKey: timeOffType.typeKey,
-      balance: version!.balance,
-      bankHolidays: version!.bankHolidays,
-      entitlementDays:
-        version!.rules.find((rule) => rule.kind === "yearly_entitlement")?.entitlementDays ?? null,
-    }));
+/** A full-time employee started in 2025, with statutory Annual leave and 20 days remaining in 2026. */
+export async function seedAnnualLeaveEmployee(orm: Orm, seed: TestSeed, transact: Transact) {
+  const employee = await seed.employee({ startDate: "2025-01-01" });
+  await giveDefaultTermsStatutoryMinimum(orm, seed, transact);
+  const annual = (await orm.select().from(timeOffTypes)).find(
+    ({ typeKey }) => typeKey === "annual_leave",
+  )!;
+  return { employeeId: employee.id, timeOffTypeId: annual.id };
 }
 
-/** A terms' policies with every version and allowance rule, including ended ones. */
+/** The published policies these terms use on the fixed test date. */
+export async function readTermsPolicies(orm: Orm, termsId: string, today = "2026-06-01") {
+  const repository = timeOffPolicyRepository(orm);
+  const policies = await repository.findAll();
+  const assignments = await repository.findAssignments({ termsIds: [termsId] });
+  return assignments
+    .filter((row) => coversDate(row, calendarDate(today)))
+    .map((row) => {
+      const policy = policies.find(({ id }) => id === row.timeOffPolicyId)!;
+      const version = policy.versions.find(({ id }) => id === row.versionId)!;
+      return {
+        id: policy.id,
+        timeOffTypeId: policy.timeOffType.id,
+        versionId: version.id,
+        typeKey: policy.timeOffType.typeKey,
+        balance: version.balance,
+        bankHolidays: version.bankHolidays,
+        entitlementDays:
+          version.rules.find((rule) => rule.kind === "yearly_entitlement")?.entitlementDays ?? null,
+      };
+    });
+}
+
+/** Policies assigned to these terms or holding their drafts, with every version. */
 export async function readTermsPolicyVersions(orm: Orm, termsId: string) {
-  return (await timeOffPolicyRepository(orm).findAll()).filter(
-    (policy) => policy.termsId === termsId,
+  const repository = timeOffPolicyRepository(orm);
+  const policies = await repository.findAll();
+  const assignments = await repository.findAssignments({ termsIds: [termsId] });
+  return policies.filter(
+    (policy) =>
+      assignments.some((row) => row.timeOffPolicyId === policy.id) ||
+      policy.versions.some((version) => version.termsId === termsId),
   );
 }
 
@@ -154,6 +237,7 @@ export function transactWithTimeOffEvents(orm: Orm): Transact {
         decisions: { decide: () => Promise.reject(new Error("Unexpected model request")) },
         bankHolidays: bankHolidayService(),
       }),
+      bankHolidays: bankHolidayService(),
       transact: testTransactor(orm),
       logger: createLogger("silent"),
     }).events!,
@@ -161,7 +245,7 @@ export function transactWithTimeOffEvents(orm: Orm): Transact {
   return transactor(orm, eventBus);
 }
 
-/** Deletes every employee and resets time off and tasks, as startup composes it. */
+/** Deletes every employee and resets time off, processes and tasks, as startup composes it. */
 export function deleteAllEmployees(orm: Orm) {
   const timeOff = timeOffService(orm);
   const tasks = createTaskService({
@@ -169,10 +253,13 @@ export function deleteAllEmployees(orm: Orm) {
     transact: testTransactor(orm),
     logger: createLogger("silent"),
   });
+  const processes = processService(orm);
   return async (ctx: SecurityContext, tx: Tx) => {
     await timeOff.lockPolicies(ctx, tx);
+    await processes.lockProcesses(ctx, tx);
     await employeeSetup.deleteAllEmployees(ctx, tx);
     await timeOff.resetTimeOff(ctx, tx);
+    await processes.resetProcesses(ctx, tx);
     await tasks.resetTasks(ctx, tx);
   };
 }

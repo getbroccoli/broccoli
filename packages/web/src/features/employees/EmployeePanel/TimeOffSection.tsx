@@ -1,4 +1,5 @@
 import type { EmployeePanel_EmployeeFragment } from "@/__generated__/graphql";
+import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { formatCalendarDate } from "@/lib/formatDate";
 import { formatDays } from "@/lib/formatDays";
@@ -10,26 +11,35 @@ type TimeOffType = NonNullable<EmployeePanel_EmployeeFragment["timeOffTypes"]>[n
 type Props = {
   /** The person's time off types, Annual leave first; the caller may read them. */
   timeOffTypes: readonly TimeOffType[];
+  /** Set for who may book: opens Book time off for this person. */
+  onBook?: () => void;
 };
 
 const dayCount = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
 
 /** A person's time off in their current leave year: allowances first, then what is only recorded. */
-export function TimeOffSection({ timeOffTypes }: Props) {
+export function TimeOffSection({ timeOffTypes, onBook }: Props) {
   const first = timeOffTypes[0];
   const allowances = timeOffTypes.filter(({ balance }) => balance !== "NO_BALANCE");
   const recorded = timeOffTypes.filter(({ balance }) => balance === "NO_BALANCE");
 
   return (
     <section aria-labelledby="employee-time-off" className="flex flex-col gap-2">
-      <h2
-        id="employee-time-off"
-        className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase"
-      >
-        {first
-          ? t("people.panel.timeOff.title", { period: periodOf(first) })
-          : t("people.panel.timeOff.titleWithoutPeriod")}
-      </h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2
+          id="employee-time-off"
+          className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase"
+        >
+          {first
+            ? t("people.panel.timeOff.title", { period: periodOf(first) })
+            : t("people.panel.timeOff.titleWithoutPeriod")}
+        </h2>
+        {onBook && (
+          <Button variant="ghost" size="sm" onClick={onBook}>
+            {t("people.panel.timeOff.book")}
+          </Button>
+        )}
+      </div>
       {!first && <p className="text-sm text-muted-foreground">{t("people.panel.timeOff.empty")}</p>}
       {allowances.map((type) => (
         <section

@@ -8,9 +8,11 @@
       "src/features/employees",
       "src/features/imports",
       "src/features/invites",
+      "src/features/mcpAgents",
       "src/features/settings",
       "src/features/setup",
       "src/features/tasks",
+      "src/features/timeOff",
       "src/i18n",
       "src/shell"
     ],
@@ -58,6 +60,17 @@
       "src/lib/calendarDay",
       "src/lib/class-names"
     ],
+    "src/features/timeOff": [
+      "src/__generated__",
+      "src/apollo",
+      "src/components/ui",
+      "src/features/employees",
+      "src/features/termsDisplay",
+      "src/i18n",
+      "src/lib/calendarDay",
+      "src/lib/class-names",
+      "src/lib/formatDays"
+    ],
     "src/features/demo": [
       "src/__generated__",
       "src/apollo",
@@ -90,6 +103,17 @@
       "src/apollo",
       "src/components/ui",
       "src/i18n"
+    ],
+    "src/features/mcpAgents": [
+      "src/__generated__",
+      "src/apollo",
+      "src/components/ui",
+      "src/features/auth",
+      "src/i18n",
+      "src/lib/class-names",
+      "src/lib/postJson",
+      "src/lib/useCopyToClipboard",
+      "src/shell"
     ],
     "src/features/imports": [
       "src/__generated__",
@@ -144,9 +168,11 @@
     ],
     "src/features/termsDisplay": [
       "src/__generated__",
+      "src/components/form",
       "src/components/ui",
       "src/i18n",
-      "src/lib/calendarDay"
+      "src/lib/calendarDay",
+      "src/lib/class-names"
     ],
     "src/features/setup": [
       "src/__generated__",

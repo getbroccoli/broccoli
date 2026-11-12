@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 import { timeOffTypes } from "./timeOffTypesTable";
 
@@ -22,6 +22,9 @@ export const timeOff = pgTable(
     status: text("status", {
       enum: ["pending_approval", "approved", "declined", "cancelled"],
     }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /** The signed-in user who booked it; null when Broccoli itself did. */
+    createdByUserId: text("created_by_user_id"),
   },
   (table) => [
     index("time_off_employee_idx").on(table.employeeId),

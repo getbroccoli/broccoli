@@ -1,6 +1,6 @@
-import { and, count, eq, gt, inArray } from "drizzle-orm";
+import { and, count, eq, gt } from "drizzle-orm";
 
-import { type Orm, ormOf, type Tx } from "../../../core/db";
+import { anyOf, type Orm, ormOf, type Tx } from "../../../core/db";
 import type { KeysetRow } from "../../../core/pagination";
 import {
   FileSource,
@@ -53,7 +53,7 @@ export function importReader(db: Orm | Tx): ImportReader {
       const rows = await orm()
         .select(sourceColumns)
         .from(importSources)
-        .where(inArray(importSources.id, [...ids]));
+        .where(anyOf(importSources.id, ids));
       return rows.map((row) => new ImportSource(row));
     },
 
@@ -82,9 +82,7 @@ export function importReader(db: Orm | Tx): ImportReader {
       const rows = await orm()
         .select({ sourceId: importRecords.sourceId, count: count() })
         .from(importRecords)
-        .where(
-          and(eq(importRecords.type, "employee"), inArray(importRecords.sourceId, [...sourceIds])),
-        )
+        .where(and(eq(importRecords.type, "employee"), anyOf(importRecords.sourceId, sourceIds)))
         .groupBy(importRecords.sourceId);
       return new Map(rows.map(({ sourceId, count }) => [sourceId, count]));
     },

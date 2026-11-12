@@ -2,11 +2,11 @@ import type { Orm, Transact } from "../../src/core/db";
 import { createLogger } from "../../src/core/logger";
 import {
   createEmployeeTermsService,
+  createOwnWorkingWeekService,
   createWorkingPatternService,
   createEmployeeWorkingPatternService,
 } from "../../src/modules/employees";
 import { calendarDate } from "./calendarDate";
-import { OWNER } from "./testSecurityContext";
 import { testTransactor } from "./testTransactor";
 
 /**
@@ -30,17 +30,6 @@ export function workingPatternService(
     ...createEmployeeWorkingPatternService(dependencies),
     ...createWorkingPatternService(dependencies),
     ...createEmployeeTermsService(dependencies),
+    ...createOwnWorkingWeekService(dependencies),
   };
-}
-
-/** A named Monday-to-Friday pattern of 7.5-hour days, called Standard, that people can be put on. */
-export function createStandardPattern(orm: Orm) {
-  return createWorkingPatternService({
-    orm,
-    transact: testTransactor(orm),
-    logger: createLogger("silent"),
-  }).createPattern(OWNER, {
-    name: "Standard",
-    minutes: [450, 450, 450, 450, 450, 0, 0],
-  });
 }

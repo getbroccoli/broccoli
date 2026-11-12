@@ -1,4 +1,12 @@
-import { expect, OWNER, test, workingPatternService } from "#test/support";
+import {
+  expect,
+  OWNER,
+  test,
+  workingPatternService,
+  seedWorkingPattern,
+  seedOwnWeek,
+  timeOffPolicyService,
+} from "#test/support";
 
 test("assigning a Scotland pattern changes the calendar from its date despite identical hours", async ({
   orm,
@@ -6,14 +14,14 @@ test("assigning a Scotland pattern changes the calendar from its date despite id
 }) => {
   const employee = await seed.employee();
   const patterns = workingPatternService(orm);
-  const pattern = await patterns.createPattern(OWNER, {
+  const pattern = await seedWorkingPattern(orm, {
     name: "Standard Scotland",
     minutes: [450, 450, 450, 450, 450, 0, 0],
     bankHolidayCalendar: "scotland",
   });
-  await patterns.assignPattern(OWNER, {
+  await seedOwnWeek(orm, {
     employeeId: employee.id,
-    workingPatternId: pattern.id,
+    versionId: pattern.versionId,
     startDate: "2026-07-01",
   });
 
@@ -43,14 +51,17 @@ test("changing only a pattern's calendar starts a new working week from its date
 }) => {
   const employee = await seed.employee();
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPatterns(OWNER)).find(
-    (pattern) => pattern.termsId !== null,
-  )!;
-  await patterns.changePattern(OWNER, {
-    workingPatternId: standard.id,
-    startDate: "2026-07-01",
+  const termsId = await seed.defaultTermsId();
+  const draft = await patterns.saveWorkingPattern(OWNER, {
+    termsId,
     minutes: [450, 450, 450, 450, 450, 0, 0],
     bankHolidayCalendar: "scotland",
+  });
+  await timeOffPolicyService(orm).publishTerms(OWNER, {
+    termsId,
+    versions: [{ id: draft.id, revision: draft.revision }],
+    startDate: "2026-07-01",
+    owners: [{ termsId }],
   });
 
   const weeks = await patterns.readWorkingWeeks(OWNER, {

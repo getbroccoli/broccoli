@@ -1,0 +1,53 @@
+"A person's own agent, such as Claude or Codex, connected to Broccoli to act as them."
+type AgentConnection {
+  id: ID!
+  "The name the agent gave itself; null when it gave none."
+  clientName: String
+  "When the person last allowed it."
+  connectedAt: DateTime!
+  "When the agent last called Broccoli; when it was allowed, until its first call."
+  lastUsedAt: DateTime!
+}
+
+"An agent connection that has ended, and why."
+type EndedAgentConnection {
+  id: ID!
+  "The name the agent gave itself; null when it gave none."
+  clientName: String
+  connectedAt: DateTime!
+  endedAt: DateTime!
+  reason: AgentConnectionEndReason!
+}
+
+enum AgentConnectionEndReason {
+  "The person chose Disconnect on Your agent."
+  DISCONNECTED_BY_PERSON
+  "The person allowed another agent, which replaced this one."
+  REPLACED_BY_ANOTHER_AGENT
+  "The person's password was reset."
+  ENDED_BY_PASSWORD_RESET
+  "The agent's next call came after 30 days without one."
+  ENDED_AFTER_30_DAYS_UNUSED
+}
+
+type Query {
+  "The caller's own agent connection; null without one."
+  myAgentConnection: AgentConnection
+  "The caller's most recently ended agent connection; null when none has ended."
+  myLastEndedAgentConnection: EndedAgentConnection
+}
+
+type McpAgentsMutations {
+  "Ends the caller's agent connection, so its next call is refused; does nothing without one."
+  disconnect: AgentConnectionMutationPayload!
+}
+
+"After a change to the caller's agent connection."
+type AgentConnectionMutationPayload {
+  "The connection that just ended; null when none was connected."
+  endedAgentConnection: EndedAgentConnection
+}
+
+type Mutation {
+  mcpAgents: McpAgentsMutations!
+}

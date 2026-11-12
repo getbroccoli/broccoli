@@ -1,7 +1,5 @@
-import { inArray } from "drizzle-orm";
-
 import { user } from "../../auth";
-import { type Orm, ormOf, type Tx } from "../../db";
+import { anyOf, type Orm, ormOf, type Tx } from "../../db";
 
 /** The current email of each of these users that still exists, by user id. */
 export async function findUserEmails(
@@ -11,6 +9,6 @@ export async function findUserEmails(
   const rows = await ormOf(db)
     .select({ id: user.id, email: user.email })
     .from(user)
-    .where(inArray(user.id, [...userIds]));
+    .where(anyOf(user.id, userIds));
   return new Map(rows.map(({ id, email }) => [id, email]));
 }

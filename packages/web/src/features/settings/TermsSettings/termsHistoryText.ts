@@ -6,8 +6,8 @@ import {
   DAY_NAMES,
   hoursOf,
   ruleSummary,
-  type RuleText,
   shortDate,
+  storedRuleText,
   type WeekMinutes,
   weekSummary,
 } from "@/features/termsDisplay";
@@ -41,12 +41,14 @@ export function termsChangeSentence(
   }
   if (field.startsWith("timeOff.")) {
     const type = newLabel ?? "";
+    const stop = stopSentence(type, oldValue, newValue, madeOn);
+    if (stop) return stop;
     const rules = parseValue<RulesValue>(newValue);
     const before = parseValue<RulesValue>(oldValue);
     if (!rules) {
       return before && t("terms.history.rulesCancelled", { type, date: dateOf(before) });
     }
-    const rule = ruleSummary(ruleTextOf(rules));
+    const rule = ruleSummary(storedRuleText(rules));
     if (!before) {
       return startsOtherDay(rules, madeOn)
         ? t("terms.history.offeredFrom", { type, rule: upperFirst(rule), date: dateOf(rules) })
@@ -126,6 +128,28 @@ interface RulesValue {
   bankHolidays: string | null;
 }
 
+/** A stop as history keeps it: the first day the type is not offered. */
+type StopValue = { stopDate: string } | RulesValue;
+
+/** "stopped offering Family leave from 1 Jan 2027", or its cancel; null for a change of rules. */
+function stopSentence(
+  type: string,
+  oldValue: string | null,
+  newValue: string | null,
+  madeOn: string,
+): string | null {
+  const stop = parseValue<StopValue>(newValue);
+  if (stop && "stopDate" in stop) {
+    return stop.stopDate === madeOn
+      ? t("terms.history.stopped", { type })
+      : t("terms.history.stoppedFrom", { type, date: shortDate(stop.stopDate) });
+  }
+  const before = parseValue<StopValue>(oldValue);
+  return before && "stopDate" in before
+    ? t("terms.history.stopCancelled", { type, date: shortDate(before.stopDate) })
+    : null;
+}
+
 function parseValue<V>(value: string | null): V | null {
   return value === null ? null : (JSON.parse(value) as V);
 }
@@ -138,14 +162,6 @@ function weekMinutesOf({ minutes }: WeekValue): WeekMinutes {
 
 function calendarOf({ bankHolidayCalendar }: WeekValue): string {
   return calendarName(bankHolidayCalendar.toUpperCase() as BankHolidayCalendar);
-}
-
-function ruleTextOf({ balance, entitlementDays, bankHolidays }: RulesValue): RuleText {
-  return {
-    balance: balance.toUpperCase() as RuleText["balance"],
-    bankHolidays: bankHolidays?.toUpperCase() as RuleText["bankHolidays"],
-    yearlyEntitlement: entitlementDays === null ? null : { days: entitlementDays, daysPerWeek: 5 },
-  };
 }
 
 function dateOf({ startDate }: { startDate: string | null }): string {

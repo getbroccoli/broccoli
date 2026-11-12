@@ -18,6 +18,8 @@ import {
 } from "./employees";
 import { externalAgentsModule } from "./externalAgents";
 import { createImportServices, importsModule } from "./imports";
+import { mcpAgentsModule } from "./mcpAgents";
+import { createProcessService, processesModule } from "./processes";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
 import { createTaskService, tasksModule } from "./tasks";
@@ -54,13 +56,17 @@ export function createModules(
   });
   const timeOff = createTimeOffService({ ...core, bankHolidays });
   const tasks = createTaskService(core);
-  // Every path that clears the people resets time off and tasks too, back to a fresh workspace.
+  const processes = createProcessService({ ...core, tasks, bankHolidays });
+  // Every path that clears the people resets time off, processes and tasks too, back to a fresh workspace.
   const deleteAllEmployees: typeof employeeSetup.deleteAllEmployees = async (ctx, tx) => {
     // The policies' lock first: turning time off on holds it while its allowances wait on employee rows.
     await timeOff.lockPolicies(ctx, tx);
+    // Then the processes: a step command locks its process before its run and task.
+    await processes.lockProcesses(ctx, tx);
     // Employees next: their assignments, allowances and ledger lines point at the policies.
     await employeeSetup.deleteAllEmployees(ctx, tx);
     await timeOff.resetTimeOff(ctx, tx);
+    await processes.resetProcesses(ctx, tx);
     await tasks.resetTasks(ctx, tx);
   };
   // Built once: the employees module serves it and setup's last step invites through it.
@@ -103,9 +109,11 @@ export function createModules(
     slackModule(slackConnection),
     importsModule(importServices),
     externalAgentsModule({ ...core, mode: deployment.mode, imports: importServices }),
+    mcpAgentsModule(core),
     timeOffModule({
       ...core,
       timeOff,
+      bankHolidays,
       timeOffSetup: createTimeOffSetupService({
         ...core,
         decisions: aiSettings.decisions,
@@ -113,6 +121,7 @@ export function createModules(
       }),
     }),
     tasksModule({ orm: core.orm, tasks, employees: createEmployeeReadService(core) }),
+    processesModule({ logger: core.logger, processes }),
   ];
   return {
     manifests: [...manifests, recordsManifest(core, manifests)],

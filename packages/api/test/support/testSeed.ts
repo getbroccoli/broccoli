@@ -18,6 +18,7 @@ import { calendarDate } from "./calendarDate";
 import { TEST_SECRET_BOX } from "./testSecretBox";
 import { defaultTermsId, insertTerms, leaveTerms, moveToTerms } from "./seedTerms";
 import { seedUser } from "./seedUser";
+import { seedAgentConnection } from "./seedAgentConnection";
 import { seedTask } from "./seedTask";
 import { testTransactor } from "./testTransactor";
 
@@ -180,6 +181,10 @@ export class TestSeed {
   task(overrides: Omit<Parameters<typeof seedTask>[1], "title"> & { title?: string }) {
     return seedTask(this.orm, { title: `Task ${++this.#count}`, ...overrides });
   }
+
+  /** A person's agent connection, as Allow leaves it. */
+  agentConnection = (options: Parameters<typeof seedAgentConnection>[1]) =>
+    seedAgentConnection(this.orm, options);
 
   /** The id of the seeded "England and Wales" terms, which every new employee joins. */
   defaultTermsId = () => defaultTermsId(this.orm);

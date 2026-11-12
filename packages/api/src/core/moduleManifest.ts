@@ -1,6 +1,8 @@
 import type { BetterAuthPlugin } from "better-auth";
 import type express from "express";
 
+import type { AgentSecurityResolver } from "./agentAccess";
+
 import type { Orm, Transact } from "./db";
 import type { AddApprovedPeople, PasswordResetEmailService, SetupDemo } from "./instance";
 import type { EventHandlers } from "./events";
@@ -43,11 +45,13 @@ export interface ModuleManifest {
   jobs?: JobHandlers;
   /**
    * HTTP routes under `/api/` that GraphQL cannot serve, such as images; `publicOrigin` is the
-   * origin browsers reach the instance at.
+   * origin browsers reach the instance at, and `resolveAgentSecurity` checks the token of a
+   * person's own agent.
    */
   router?: (
     resolveSecurity: SecurityResolver,
     publicOrigin: (request: express.Request) => Promise<string>,
+    resolveAgentSecurity: AgentSecurityResolver,
   ) => express.Router;
   /** Endpoints under `/api/auth/` that sign people in, on both modes; the module's router mounts first. */
   authPlugin?: BetterAuthPlugin;

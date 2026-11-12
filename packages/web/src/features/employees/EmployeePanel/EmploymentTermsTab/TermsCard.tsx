@@ -2,7 +2,7 @@ import type { EmploymentTermsTab_TermsFragment } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import { companyToday, shortDate } from "@/features/termsDisplay";
 import { t } from "@/i18n";
-import { calendarDayParts } from "@/lib/calendarDay";
+import { addDays } from "@/lib/calendarDay";
 import { cn } from "@/lib/class-names";
 
 import { ChangeTermsForm } from "../../ChangeTermsForm";
@@ -11,6 +11,8 @@ import { PlannedMove } from "./PlannedMove";
 import { TermsLastChange } from "./TermsLastChange";
 import { TermsName } from "./TermsName";
 import { TermsRows } from "./TermsRows";
+import type { OwnRulesEdit } from "./useOwnRulesEdit";
+import type { OwnWeekEdit } from "./useOwnWeekEdit";
 import type { TermsChange } from "./useTermsChange";
 
 type Props = {
@@ -23,6 +25,10 @@ type Props = {
   linksToSettings: boolean;
   /** Admins move the person to other terms here; null for everyone else. */
   change: TermsChange | null;
+  /** Admins edit the person's own week here; null for everyone else. */
+  weekEdit: OwnWeekEdit | null;
+  /** Admins edit the person's own rules here; null for everyone else. */
+  rulesEdit: OwnRulesEdit | null;
 };
 
 /**
@@ -36,17 +42,20 @@ export function TermsCard({
   viewerIsPerson,
   linksToSettings,
   change,
+  weekEdit,
+  rulesEdit,
 }: Props) {
   const { periods, timeOff } = employmentTerms;
   const today = companyToday();
   const { current, planned, earlier } = termsPeriodsOn(periods, today);
-  const termsNameOn = (date: string) =>
-    termsPeriodsOn(periods, date).current?.termsName ?? current?.termsName ?? "";
+  const termsOn = (date: string) => termsPeriodsOn(periods, date).current ?? current;
+  const termsNameOn = (date: string) => termsOn(date)?.termsName ?? "";
   // A type without a balance has no leave year; the first one with one says it.
   const leaveYear = timeOff
     ?.flatMap(({ versions }) => versions)
     .find(({ rules }) => rules.leaveYearStart)?.rules.leaveYearStart;
   const editing = change?.open ?? false;
+  const otherEdit = Boolean(weekEdit?.mode) || Boolean(rulesEdit?.mode);
   const changeDate = change?.value.startDate ?? today;
 
   return (
@@ -62,7 +71,7 @@ export function TermsCard({
           <Button
             variant="ghost"
             size="sm"
-            disabled={editing}
+            disabled={editing || otherEdit}
             onClick={() => change.start(employmentTerms.earliestChange)}
           >
             {t("people.panel.terms.change")}
@@ -83,7 +92,7 @@ export function TermsCard({
               earliest={change.earliest}
               currentTermsId={current?.termsId}
               hint={[
-                t("changeTerms.hint", { terms: termsNameOn(dayBefore(changeDate)) }),
+                t("changeTerms.hint", { terms: termsNameOn(addDays(changeDate, -1)) }),
                 change.after && t("changeTerms.hintMarked", { date: shortDate(changeDate) }),
               ]
                 .filter(Boolean)
@@ -115,7 +124,7 @@ export function TermsCard({
             period={{ ...period, startDate: period.startDate! }}
             staysOn={(index === 0 ? current : planned[index - 1])?.termsName ?? ""}
             linksToSettings={linksToSettings}
-            canCancel={Boolean(change) && !editing}
+            canCancel={Boolean(change) && !editing && !otherEdit}
           />
         ))}
         <TermsRows
@@ -124,6 +133,12 @@ export function TermsCard({
           currentTermsName={current?.termsName ?? ""}
           firstName={firstName}
           viewerIsPerson={viewerIsPerson}
+          employeeId={employeeId}
+          weekEdit={weekEdit}
+          rulesEdit={rulesEdit}
+          locked={editing}
+          earliest={employmentTerms.earliestChange}
+          termsOn={termsOn}
           change={
             change?.before && change.after
               ? { before: change.before, after: change.after, date: changeDate }
@@ -167,11 +182,6 @@ export function TermsCard({
       <TermsLastChange employeeId={employeeId} />
     </section>
   );
-}
-
-function dayBefore(day: string): string {
-  const [year, month, date] = calendarDayParts(day);
-  return new Date(Date.UTC(year, month, date - 1)).toISOString().slice(0, 10);
 }
 
 // Formatted in UTC from a UTC timestamp, so no time zone moves the calendar day.

@@ -17,6 +17,8 @@ import { parseTicketClaims } from "../jwt";
 import { verifyToken, type TokenCheck } from "../jwt";
 
 const STATE_COOKIE = "__Host-managed_state";
+/** Where the browser goes after signing in, such as back to an agent's Allow page. */
+const RETURN_COOKIE = "__Host-managed_return";
 const STATE_LIFETIME_SECONDS = 5 * 60;
 const STATE_PATTERN = /^[a-f0-9]{64}$/;
 const MAX_TICKET_LENGTH = 8192;
@@ -51,19 +53,36 @@ export function callbackOnlyTrust({ websiteOrigin }: ManagedAssignment) {
 // eslint-disable-next-line broccoli/max-lines-per-function -- an endpoint table; each handler is checked on its own.
 export function managedSignInPlugin(options: ManagedSignInOptions) {
   const { companyId, publicOrigin, websiteOrigin } = options.assignment;
-  const signInFailed = (error: SignInError) => redirect(`${publicOrigin}/login?error=${error}`);
+  // A retry from the login page still returns where the sign-in was going.
+  const signInFailed = (error: SignInError, returnPath: string) => {
+    const query = new URLSearchParams({ error });
+    if (returnPath !== "/") {
+      query.set("redirect", returnPath);
+    }
+    return redirect(`${publicOrigin}/login?${query.toString()}`);
+  };
 
   return {
     id: "managed-sign-in",
     endpoints: {
       managedStart: createAuthEndpoint(
         "/managed/start",
-        { method: "GET", query: z.object({ method: z.string().optional() }).optional() },
+        {
+          method: "GET",
+          query: z
+            .object({ method: z.string().optional(), redirect: z.string().optional() })
+            .optional(),
+        },
         (ctx) => {
           const state = randomBytes(32).toString("hex");
           ctx.setCookie(STATE_COOKIE, state, {
             ...STATE_COOKIE_OPTIONS,
             maxAge: STATE_LIFETIME_SECONDS,
+          });
+          const returnPath = localPathOf(ctx.query?.redirect, publicOrigin);
+          ctx.setCookie(RETURN_COOKIE, returnPath ?? "", {
+            ...STATE_COOKIE_OPTIONS,
+            maxAge: returnPath ? STATE_LIFETIME_SECONDS : 0,
           });
           const entry = new URL("/api/auth/managed/entry", websiteOrigin);
           entry.searchParams.set("company", companyId);
@@ -83,22 +102,24 @@ export function managedSignInPlugin(options: ManagedSignInOptions) {
           metadata: { allowedMediaTypes: ["application/x-www-form-urlencoded"] },
         },
         async (ctx) => {
-          // The state is single-use: cleared whatever the outcome.
+          // The state is single-use: cleared whatever the outcome, with where to return.
+          const returnPath = localPathOf(ctx.getCookie(RETURN_COOKIE), publicOrigin) ?? "/";
           ctx.setCookie(STATE_COOKIE, "", { ...STATE_COOKIE_OPTIONS, maxAge: 0 });
+          ctx.setCookie(RETURN_COOKIE, "", { ...STATE_COOKIE_OPTIONS, maxAge: 0 });
           try {
             const ticket = await readTicket(ctx, ctx.body.ticket, options);
             if (!ticket) {
-              return signInFailed("sign_in_required");
+              return signInFailed("sign_in_required", returnPath);
             }
             await setSessionCookie(ctx, await signIn(ctx, ticket, options.transact));
-            return redirect(`${publicOrigin}/`);
+            return redirect(`${publicOrigin}${returnPath}`);
           } catch (error) {
             if (error instanceof InvalidTokenError || error instanceof SignInRefusedError) {
-              return signInFailed("sign_in_required");
+              return signInFailed("sign_in_required", returnPath);
             }
             // Never log the ticket, the cookie or the request body.
             ctx.context.logger.error("Managed sign-in failed", { error: (error as Error).name });
-            return signInFailed("sign_in_unavailable");
+            return signInFailed("sign_in_unavailable", returnPath);
           }
         },
       ),
@@ -156,5 +177,32 @@ function redirect(location: string): Response {
   return new Response(null, {
     status: 303,
     headers: { location, "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" },
+  });
+}
+
+/**
+ * `raw` as a path on `origin` (path, query and hash), or null when it could lead elsewhere:
+ * another site, a protocol-relative or backslashed address, or control characters.
+ */
+function localPathOf(raw: string | null | undefined, origin: string): string | null {
+  if (
+    !raw?.startsWith("/") ||
+    raw.startsWith("//") ||
+    raw.includes("\\") ||
+    hasControlCharacter(raw)
+  ) {
+    return null;
+  }
+  const url = new URL(raw, origin);
+  // Checked after parsing, which resolves dot segments: `/a/..//x` becomes `//x`.
+  return url.origin === origin && !url.pathname.startsWith("//")
+    ? url.pathname + url.search + url.hash
+    : null;
+}
+
+function hasControlCharacter(text: string): boolean {
+  return [...text].some((character) => {
+    const code = character.charCodeAt(0);
+    return code < 0x20 || code === 0x7f;
   });
 }

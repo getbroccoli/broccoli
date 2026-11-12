@@ -13,8 +13,7 @@ import {
   TimeOffTypeIcon,
 } from "@/features/termsDisplay";
 
-import { daysError, type RulesValues } from "./timeOffRules";
-import { TimeOffRulesFields } from "./TimeOffRulesFields";
+import { daysError, type RulesValues, TimeOffRulesFields } from "@/features/termsDisplay";
 
 /** What an admin sets on a type: its identity, the same in every set of terms, and default rules. */
 export type TimeOffTypeValues = {

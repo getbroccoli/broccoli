@@ -1,7 +1,16 @@
 // Public values.
 export { authDatabase, createBetterAuth } from "./createBetterAuth";
 export { authHandler, fixedAuth } from "./authSource";
-export { account, session, user } from "./schema";
+export {
+  account,
+  oauthAccessToken,
+  oauthClient,
+  oauthConsent,
+  oauthRefreshToken,
+  oauthResource,
+  session,
+  user,
+} from "./schema";
 
 // Public types.
 export type { Auth, AuthConfig } from "./createBetterAuth";

@@ -62,6 +62,7 @@ test("deletes a type with a person's exception and keeps an unrelated type", asy
     employeeId: employee.id,
     timeOffTypeId: policy.timeOffTypeId,
     timeOffPolicyId: policy.id,
+    versionId: policy.versionId,
   });
   const service = timeOffService(orm);
   await transact((tx) =>

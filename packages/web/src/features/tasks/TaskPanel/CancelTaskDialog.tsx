@@ -16,15 +16,15 @@ import { t } from "@/i18n";
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** The holder, who reads the reason. */
-  holderName: string;
+  /** The assignee, who reads the reason. */
+  assigneeName: string;
   isPending: boolean;
   /** Cancels with the trimmed reason; resolves true once cancelled. */
   onCancel: (reason: string) => Promise<boolean>;
 };
 
 /** Asks the person who asked for a task why they withdraw it; the reason is required. */
-export function CancelTaskDialog({ open, onOpenChange, holderName, isPending, onCancel }: Props) {
+export function CancelTaskDialog({ open, onOpenChange, assigneeName, isPending, onCancel }: Props) {
   const [reason, setReason] = useState("");
   const [showRequired, setShowRequired] = useState(false);
 
@@ -53,7 +53,7 @@ export function CancelTaskDialog({ open, onOpenChange, holderName, isPending, on
         <AlertDialogHeader>
           <AlertDialogTitle>{t("tasks.cancelDialog.title")}</AlertDialogTitle>
           <AlertDialogDescription>
-            {t("tasks.cancelDialog.description", { name: holderName })}
+            {t("tasks.cancelDialog.description", { name: assigneeName })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <Input

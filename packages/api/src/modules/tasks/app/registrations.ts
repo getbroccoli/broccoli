@@ -2,7 +2,7 @@
 
 declare module "../../../core/records" {
   interface RecordTypes {
-    /** A task's own changes; its holder and asker read them through the task, not `recordHistory`. */
+    /** A task's own changes; its assignee and asker read them through the task, not `recordHistory`. */
     task: true;
   }
 }

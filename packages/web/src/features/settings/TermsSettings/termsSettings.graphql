@@ -4,6 +4,7 @@ query EmploymentTerms {
     name
     isDefault
     peopleCount
+    hasUnpublishedChanges
     workingWeek {
       id
       startDate
@@ -50,13 +51,23 @@ query EmploymentTermsStack($id: ID!) {
     peopleCount
     deleteBlocker
     hadPeople
+    hasUnpublishedChanges
+    earliestChange
     locations {
       id
       name
     }
-    workingPattern {
+    unpublishedWorkingWeek {
       id
-      earliestChange
+      revision
+      mondayMinutes
+      tuesdayMinutes
+      wednesdayMinutes
+      thursdayMinutes
+      fridayMinutes
+      saturdayMinutes
+      sundayMinutes
+      bankHolidayCalendar
     }
     workingWeek {
       id
@@ -84,11 +95,22 @@ query EmploymentTermsStack($id: ID!) {
           bankHolidays
         }
       }
-      policy {
+      unpublished {
         id
-        earliestChange
+        revision
+        stops
+        balance
+        bankHolidays
+        leaveYearStart {
+          kind
+          month
+          day
+        }
+        yearlyEntitlement {
+          days
+          daysPerWeek
+        }
       }
-      earliestOffer
       versions {
         id
         startDate
@@ -109,39 +131,20 @@ query EmploymentTermsStack($id: ID!) {
   }
 }
 
-query TermsWeekReach($id: ID!, $from: Date!) {
+query TermsPublishSuggestions($id: ID!, $from: Date!) {
   terms(id: $id) {
     id
-    workingPattern {
-      id
-      reach(from: $from) {
-        id
-        firstName
-        lastName
-      }
-    }
-  }
-}
-
-query TermsTimeOffReach($id: ID!, $timeOffTypeId: ID!, $from: Date!, $offer: Boolean!) {
-  terms(id: $id) {
-    id
-    timeOff(timeOffTypeId: $timeOffTypeId) {
-      timeOffType {
-        id
-      }
-      policy @skip(if: $offer) {
-        id
-        reach(from: $from) {
+    publishSuggestions(from: $from) {
+      owners {
+        termsId
+        employeeId
+        name
+        versionIds
+        reached {
           id
           firstName
           lastName
         }
-      }
-      offerReach(from: $from) @include(if: $offer) {
-        id
-        firstName
-        lastName
       }
     }
   }
@@ -158,12 +161,23 @@ fragment TermsChangeError on Error {
   }
 }
 
-mutation ChangeTermsWorkingWeek($input: WorkingPatternChangeInput!) {
+mutation SaveTermsWorkingWeek($input: WorkingPatternSaveInput!) {
   employees {
-    changeWorkingPattern(input: $input) {
-      workingPattern {
+    saveWorkingPattern(input: $input) {
+      workingWeek {
         id
       }
+      error {
+        ...TermsChangeError
+      }
+    }
+  }
+}
+
+mutation DiscardTermsWorkingWeek($input: WorkingPatternDiscardInput!) {
+  employees {
+    discardWorkingPattern(input: $input) {
+      discardedVersionId
       error {
         ...TermsChangeError
       }
@@ -174,7 +188,21 @@ mutation ChangeTermsWorkingWeek($input: WorkingPatternChangeInput!) {
 mutation CancelTermsWorkingWeekChange($input: WorkingPatternCancelChangeInput!) {
   employees {
     cancelWorkingPatternChange(input: $input) {
-      workingPattern {
+      cancelledAssignmentId
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+      }
+    }
+  }
+}
+
+mutation SaveTermsTimeOffRules($input: TimeOffPolicySaveInput!) {
+  timeOff {
+    saveTimeOffPolicy(input: $input) {
+      rules {
         id
       }
       error {
@@ -184,10 +212,21 @@ mutation CancelTermsWorkingWeekChange($input: WorkingPatternCancelChangeInput!) 
   }
 }
 
-mutation OfferTermsTimeOff($input: TimeOffPolicyCreateInput!) {
+mutation DiscardTermsTimeOffRules($input: TimeOffPolicyDiscardInput!) {
   timeOff {
-    createPolicy(input: $input) {
-      timeOffPolicy {
+    discardTimeOffPolicy(input: $input) {
+      discardedVersionId
+      error {
+        ...TermsChangeError
+      }
+    }
+  }
+}
+
+mutation SaveTermsTimeOffStop($input: TimeOffStopSaveInput!) {
+  timeOff {
+    saveTimeOffStop(input: $input) {
+      rules {
         id
       }
       error {
@@ -197,12 +236,10 @@ mutation OfferTermsTimeOff($input: TimeOffPolicyCreateInput!) {
   }
 }
 
-mutation ChangeTermsTimeOffRules($input: TimeOffPolicyChangeInput!) {
+mutation CancelTermsTimeOffStop($input: TimeOffPolicyCancelStopInput!) {
   timeOff {
-    changePolicy(input: $input) {
-      timeOffPolicy {
-        id
-      }
+    cancelPolicyStop(input: $input) {
+      reopenedAssignmentId
       error {
         ...TermsChangeError
       }
@@ -213,11 +250,34 @@ mutation ChangeTermsTimeOffRules($input: TimeOffPolicyChangeInput!) {
 mutation CancelTermsTimeOffChange($input: TimeOffPolicyCancelChangeInput!) {
   timeOff {
     cancelPolicyChange(input: $input) {
-      timeOffPolicy {
+      cancelledAssignmentId
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+      }
+    }
+  }
+}
+
+mutation PublishTerms($input: TermsPublishInput!) {
+  timeOff {
+    publishTerms(input: $input) {
+      terms {
         id
       }
       error {
-        ...TermsChangeError
+        __typename
+        ... on Error {
+          message
+        }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
+        }
       }
     }
   }
