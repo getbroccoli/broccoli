@@ -61,6 +61,11 @@ export function changesOnlyDays(next: RuleText, current: RuleText | null): boole
 /** A box in "What changes": the new value, and from when. */
 export type ChangeBox = { title: string; detail: string };
 
+/** The box in "What changes" for a stop: "Family leave: not offered", and from when. */
+export function stopChangeBox(typeName: string, startDate: string): ChangeBox {
+  return { title: t("terms.edit.stop.change", { type: typeName }), detail: fromDate(startDate) };
+}
+
 /** The box in "What changes" for the week: the new week, and from when. */
 export function weekChangeBox(week: WeekMinutes, startDate: string): ChangeBox {
   return {

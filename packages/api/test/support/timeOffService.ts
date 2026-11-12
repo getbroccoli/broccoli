@@ -7,9 +7,11 @@ import { createLogger } from "../../src/core/logger";
 import { createDemoFillService } from "../../src/modules/demo";
 import { createTaskService } from "../../src/modules/tasks";
 import {
+  createBookTimeOffService,
   createTimeOffPolicyService,
   createTimeOffSetupService,
   createTimeOffService,
+  createWhosOutService,
   timeOffModule,
 } from "../../src/modules/timeOff";
 import { employeeTerms } from "../../src/modules/employees/db";
@@ -41,6 +43,28 @@ export function timeOffService(orm: Orm, { today = "2026-06-01" }: { today?: str
     orm,
     transact: testTransactor(orm),
     logger: createLogger("silent"),
+    bankHolidays: bankHolidayService(),
+    today: () => today as CalendarDate,
+  });
+}
+
+/** The booking service on `orm`, with the engine of `timeOffService`; `today` is its date. */
+export function bookTimeOffService(orm: Orm, { today = "2026-11-09" }: { today?: string } = {}) {
+  return createBookTimeOffService({
+    orm,
+    transact: testTransactor(orm),
+    logger: createLogger("silent"),
+    timeOff: timeOffService(orm, { today }),
+    bankHolidays: bankHolidayService(),
+    today: () => today as CalendarDate,
+  });
+}
+
+/** The who's out service on `orm`; `today` is its date. */
+export function whosOutService(orm: Orm, { today = "2026-11-09" }: { today?: string } = {}) {
+  return createWhosOutService({
+    orm,
+    transact: testTransactor(orm),
     bankHolidays: bankHolidayService(),
     today: () => today as CalendarDate,
   });
@@ -130,6 +154,16 @@ export async function giveDefaultTermsStatutoryMinimum(
   });
 }
 
+/** A full-time employee started in 2025, with statutory Annual leave and 20 days remaining in 2026. */
+export async function seedAnnualLeaveEmployee(orm: Orm, seed: TestSeed, transact: Transact) {
+  const employee = await seed.employee({ startDate: "2025-01-01" });
+  await giveDefaultTermsStatutoryMinimum(orm, seed, transact);
+  const annual = (await orm.select().from(timeOffTypes)).find(
+    ({ typeKey }) => typeKey === "annual_leave",
+  )!;
+  return { employeeId: employee.id, timeOffTypeId: annual.id };
+}
+
 /** The published policies these terms use on the fixed test date. */
 export async function readTermsPolicies(orm: Orm, termsId: string, today = "2026-06-01") {
   const repository = timeOffPolicyRepository(orm);
@@ -187,6 +221,7 @@ export function transactWithTimeOffEvents(orm: Orm): Transact {
         decisions: { decide: () => Promise.reject(new Error("Unexpected model request")) },
         bankHolidays: bankHolidayService(),
       }),
+      bankHolidays: bankHolidayService(),
       transact: testTransactor(orm),
       logger: createLogger("silent"),
     }).events!,

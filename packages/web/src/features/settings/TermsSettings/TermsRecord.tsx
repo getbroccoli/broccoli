@@ -115,8 +115,7 @@ export function TermsRecord({ terms }: Props) {
               }
             />
             <TermsTimeOffSection
-              termsName={terms.name}
-              timeOff={terms.timeOff}
+              terms={terms}
               open={
                 open?.kind === "rules"
                   ? {
@@ -140,7 +139,9 @@ export function TermsRecord({ terms }: Props) {
               }
               onEdit={editing.editRules}
               onCancelPlanned={planned.askRules}
+              onCancelStop={planned.askStop}
               onDiscard={discarding.discardRules}
+              onAdded={editing.offerType}
             />
           </fieldset>
           <RecordHistory recordType="TERMS" recordId={terms.id} description={TERMS_DESCRIPTION} />

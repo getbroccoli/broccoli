@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import type { TimeOffRulesInput } from "@/__generated__/graphql";
+
 import { rulesInputOf } from "../TimeOffSettings";
 import { type RulesDraft, rulesDraftOf, rulesErrors } from "./termsDraft";
 import type { Terms, TimeOffRow } from "./termsQueries";
@@ -22,7 +24,9 @@ export type OpenSection =
  * unsaved changes; saving keeps the section's changes unpublished.
  */
 export function useTermsEditing(terms: Terms) {
-  const [open, setOpen] = useState<OpenSection | null>(null);
+  const [chosen, setOpen] = useState<OpenSection | null>(null);
+  // A type added from the panel opens once the reloaded terms list it; until then nothing is open.
+  const open = chosen?.kind === "rules" && !hasRow(terms, chosen.timeOffTypeId) ? null : chosen;
   const [opened, setOpened] = useState<OpenSection | null>(null);
   const [waiting, setWaiting] = useState<OpenSection | null>(null);
   const { save, saving } = useSaveSection(terms);
@@ -59,6 +63,8 @@ export function useTermsEditing(terms: Terms) {
     editWeek: () => ask({ kind: "week", draft: weekDraftOf(weekShown) }),
     editRules: (timeOffTypeId: string) =>
       ask({ kind: "rules", timeOffTypeId, draft: draftOf(rowOf(terms, timeOffTypeId)) }),
+    offerType: ({ id, defaultRules }: { id: string; defaultRules: TimeOffRulesInput }) =>
+      ask({ kind: "rules", timeOffTypeId: id, draft: rulesDraftOf(null, defaultRules, true) }),
     change: setOpen,
     close: () => show(null),
     discard: () => show(waiting),
@@ -77,6 +83,10 @@ function errorsOf(open: OpenSection) {
 function savedValues(section: OpenSection | null): string {
   if (!section) return "";
   return JSON.stringify(section.kind === "week" ? section.draft : rulesInputOf(section.draft));
+}
+
+function hasRow(terms: Terms, timeOffTypeId: string): boolean {
+  return terms.timeOff.some(({ timeOffType }) => timeOffType.id === timeOffTypeId);
 }
 
 function rowOf(terms: Terms, timeOffTypeId: string): TimeOffRow {

@@ -42,6 +42,7 @@ export {
   type AssignmentPlan,
   isSameOwner,
   NEW_ROW,
+  planEnd,
   planOrRefusal,
   plannedRowsReplaced,
   rowsAfterPlan,
@@ -62,6 +63,7 @@ export {
   type TermsMoveSkipReason,
 } from "./termsMove";
 export {
+  changesWithin,
   createPersonTimeline,
   type PersonTimeline,
   type PersonVersion,

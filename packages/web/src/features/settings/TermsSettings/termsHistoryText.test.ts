@@ -117,6 +117,48 @@ it("describes cancelled rules with the type's name and cancelled start date", ()
   ).toBe("cancelled the change to Annual leave from 1 Jan 2027");
 });
 
+it("describes stopping a type from another day with its date", () => {
+  expect(
+    termsChangeSentence(
+      {
+        field: "timeOff.family",
+        newLabel: "Family leave",
+        oldValue: JSON.stringify({ ...noBalance, startDate: null }),
+        newValue: JSON.stringify({ stopDate: "2027-01-01" }),
+      },
+      TODAY,
+    ),
+  ).toBe("stopped offering Family leave from 1 Jan 2027");
+});
+
+it("describes stopping a type on the day it was made without its date", () => {
+  expect(
+    termsChangeSentence(
+      {
+        field: "timeOff.family",
+        newLabel: "Family leave",
+        oldValue: JSON.stringify({ ...noBalance, startDate: null }),
+        newValue: JSON.stringify({ stopDate: "2027-01-01" }),
+      },
+      "2027-01-01",
+    ),
+  ).toBe("stopped offering Family leave");
+});
+
+it("describes cancelling a planned stop with the type's name and stop date", () => {
+  expect(
+    termsChangeSentence(
+      {
+        field: "timeOff.family",
+        newLabel: "Family leave",
+        oldValue: JSON.stringify({ stopDate: "2027-01-01" }),
+        newValue: null,
+      },
+      TODAY,
+    ),
+  ).toBe("cancelled stopping Family leave from 1 Jan 2027");
+});
+
 it("leaves other fields to the generic history wording", () => {
   expect(
     termsChangeSentence({ field: "name", oldValue: "Old terms", newValue: "New terms" }, TODAY),

@@ -64,6 +64,21 @@ export function planReplacement<R extends Assignment>(
 }
 
 /**
+ * How one owner's rows `isReplaced` accepts end from `from`, as `planReplacement` makes room but
+ * adding none; null when none covers `from` or starts later.
+ */
+export function planEnd<R extends Assignment>(
+  rows: readonly R[],
+  isReplaced: (row: R) => boolean,
+  from: CalendarDate,
+): AssignmentPlan | null {
+  if (!rows.some((row) => isReplaced(row) && (coversDate(row, from) || row.startDate > from))) {
+    return null;
+  }
+  return { ...planReplacement(rows, isReplaced, from), added: [] };
+}
+
+/**
  * `planReplacement`, keeping a refusal instead of throwing it, so an owner nobody publishes to
  * cannot refuse the others; publishing to that owner throws `refusal`.
  */

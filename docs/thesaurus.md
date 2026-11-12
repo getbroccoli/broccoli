@@ -48,6 +48,8 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Bank holiday calendar**: one nation's bank holidays (England and Wales, Scotland or Northern Ireland), chosen on a working pattern version.
 - **Standard leave policy**: one of the three Annual leave policies Broccoli ships as code constants, which turning time off on copies into terms and code finds by key: the UK statutory minimum (28 days for a five-day week, at most 28, bank holidays included), 20 days plus bank holidays, and 25 days plus bank holidays; each leave year starts on 1 January.
 - **Time off**: everything a person is away from work for, of any time off type (Annual leave, Sickness, Family leave, Other or the company's own). Not "PTO", "vacation", "holiday" or "absence".
+- **Booking**: time off an admin records for a person, approved straight away; cancelling it gives its days back. Not "request", which waits for approval, nor "absence".
+- **Who's out**: the Time off page's month of everyone's time off, bank holidays and days off. A private type shows to colleagues as **Off**.
 - **Allowance figures**: what a person's panel shows for a time off type with an allowance, in days for one leave year: **entitlement** (everything granted, bank holidays on top and adjustments included), **bank holidays** (those the year takes from it), **used** and **remaining** (entitlement less bank holidays and used).
 - **Days recorded**: the days of a time off type with no balance, such as Sickness, a person has in a calendar year; a half day counts 0.5.
 - **Security context**: who is calling application code: a signed-in user, and whether they are the owner; the setup holder; or the system.

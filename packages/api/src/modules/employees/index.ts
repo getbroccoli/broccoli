@@ -45,6 +45,7 @@ export {
 } from "./app";
 export {
   cancelPlannedVersion,
+  changesWithin,
   createPersonTimeline,
   earliestChangeDate,
   employeeFieldErrors,
@@ -55,6 +56,7 @@ export {
   isSameOwner,
   NEW_ROW,
   personVersionsFrom,
+  planEnd,
   planOrRefusal,
   plannedRowsReplaced,
   rowsAfterPlan,

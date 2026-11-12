@@ -1,6 +1,6 @@
 import type { Tx } from "../../../core/db";
 import { PrincipalSecurityContext } from "../../../core/security";
-import type { CalendarDate } from "../../../utils";
+import { addYears, type CalendarDate } from "../../../utils";
 import { BANK_HOLIDAY_CALENDARS, type BankHolidayService } from "../../bankHolidays";
 import {
   type EmployeeReadService,
@@ -11,13 +11,17 @@ import {
 import {
   type Allowance,
   allowanceRepository,
+  type BookedDay,
   type PolicyAssignment,
   timeOffPolicyRepository,
+  timeOffRepository,
 } from "../db";
 import {
   type AllowanceCause,
   type AllowanceInputs,
+  type BookedDayLine,
   calculateAllowance,
+  costOn,
   type DatedPolicy,
   leaveYearContaining,
   ledgerDifference,
@@ -62,16 +66,24 @@ export async function ensureAllowancesOf(
   const allowances = allowanceRepository(tx);
   const { people, policies } = await readPeople(dependencies.employeeReads, tx, ids);
   const today = dependencies.today();
-  const created = await allowances.insert(missingAllowances(people, policies, today));
+  // A year back reaches the start of every leave year that has not ended.
+  const bookedDays = Map.groupBy(
+    await timeOffRepository(tx).findBookedDays({ employeeIds: ids, from: addYears(today, -1) }),
+    ({ employeeId, timeOffTypeId }) => `${employeeId}:${timeOffTypeId}`,
+  );
+  const created = await allowances.insert(missingAllowances(people, policies, today, bookedDays));
   const open = [
     ...people.flatMap(({ allowances: own }) =>
       own.filter(({ leaveYearEnd }) => leaveYearEnd >= today),
     ),
     ...created,
   ];
-  const lines = await differenceLines(dependencies, tx, { people, open, cause });
+  const lines = await differenceLines(dependencies, tx, { people, open, cause, bookedDays });
   return { allowancesCreated: created.length, linesAppended: await allowances.insertLines(lines) };
 }
+
+/** Booked days by `<employee id>:<time off type id>`. */
+type BookedDaysByPersonAndType = ReadonlyMap<string, readonly BookedDay[]>;
 
 /** What decides one person's allowances. */
 export interface Person {
@@ -140,17 +152,27 @@ export function laneKey({
   return `${ownerKey}:${timeOffTypeId}`;
 }
 
-/** The allowances to create: one per person and type that has none for the year needed. */
+/**
+ * The allowances to create: one per person and type that has none for the year needed, which is
+ * the year they are in or start in, and each later year they have a day booked in.
+ */
 function missingAllowances(
   people: readonly Person[],
   policies: readonly TimeOffPolicy[],
   today: CalendarDate,
+  bookedDays: BookedDaysByPersonAndType,
 ) {
   const typeIds = [...new Set(policies.map(({ timeOffType }) => timeOffType.id))];
   return people.flatMap((person) =>
     typeIds.flatMap((typeId) => {
-      const allowance = newAllowance(person, typeId, today);
-      return allowance ? [{ employeeId: person.employeeId, ...allowance }] : [];
+      const later = (bookedDays.get(`${person.employeeId}:${typeId}`) ?? [])
+        .map(({ date }) => date)
+        .filter((date) => date > today);
+      const needed = [today, ...later].flatMap((date) => {
+        const allowance = newAllowance(person, typeId, date);
+        return allowance ? [{ employeeId: person.employeeId, ...allowance }] : [];
+      });
+      return [...new Map(needed.map((one) => [one.leaveYearStart, one])).values()];
     }),
   );
 }
@@ -163,10 +185,12 @@ async function differenceLines(
     people,
     open,
     cause,
+    bookedDays,
   }: {
     people: readonly Person[];
     open: readonly Allowance[];
     cause: AllowanceCause;
+    bookedDays: BookedDaysByPersonAndType;
   },
 ): Promise<NewLedgerLine[]> {
   if (open.length === 0) {
@@ -184,9 +208,10 @@ async function differenceLines(
       workingWeeks: weeks.get(allowance.employeeId)!,
       bankHolidays: holidayDates,
     };
+    const booked = bookedLines(allowance, bookedDays, inputs);
     return ledgerDifference(
       allowance,
-      calculateAllowance(inputs),
+      [...calculateAllowance(inputs), ...booked],
       sums.get(allowance.id) ?? [],
       cause,
       previousCalculation(inputs, cause),
@@ -222,6 +247,32 @@ async function readFigures(
     [...holidays].map(([calendar, days]) => [calendar, days.map(({ date }) => date)]),
   );
   return { weeks, holidayDates, sums };
+}
+
+/** What each day booked in the allowance's leave year costs it, under the week of that day. */
+function bookedLines(
+  allowance: Allowance,
+  bookedDays: BookedDaysByPersonAndType,
+  { workingWeeks, bankHolidays }: AllowanceInputs,
+): BookedDayLine[] {
+  return (bookedDays.get(`${allowance.employeeId}:${allowance.timeOffTypeId}`) ?? [])
+    .filter(({ date }) => allowance.leaveYearStart <= date && date <= allowance.leaveYearEnd)
+    .map(({ timeOffDayId, date, dayPart }) => {
+      const { cost } = costOn({
+        date,
+        dayPart,
+        workingWeeks,
+        isBankHoliday: (calendar, day) => bankHolidays.get(calendar)?.includes(day) ?? false,
+      });
+      return {
+        kind: "time_off_booked",
+        allowanceRuleId: null,
+        bankHolidayDate: null,
+        timeOffDayId,
+        amount: (-cost).toFixed(6),
+        firstDate: date,
+      };
+    });
 }
 
 /** A start correction's calculation from the previous start, so grants change from the right date. */

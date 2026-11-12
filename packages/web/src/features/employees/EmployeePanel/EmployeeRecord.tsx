@@ -5,6 +5,7 @@ import type { EmployeePanel_EmployeeFragment } from "@/__generated__/graphql";
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs";
 import { type CopiedLink, CopiedLinkDialog, InviteDialog } from "@/features/invites";
 import { EditBar, FieldValue } from "@/features/records";
+import { companyToday } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
 import { DiscardChangesDialog } from "./DiscardChangesDialog";
@@ -69,6 +70,14 @@ export function EmployeeRecord({ employee, onClose }: Props) {
   const changedLabels = EMPLOYEE_DESCRIPTION.fields
     .filter((field) => draft.changed.includes(field.key as EmployeeFieldKey))
     .map((field) => field.label);
+  // shortcut: booking follows the admin grant until profiles grant it by scope.
+  const bookTimeOff = operations.includes("MANAGE_WORKSPACE")
+    ? () =>
+        void navigate({
+          to: "/time-off",
+          search: { book: employee.id, month: companyToday().slice(0, 7) },
+        })
+    : undefined;
 
   return (
     <>
@@ -134,7 +143,9 @@ export function EmployeeRecord({ employee, onClose }: Props) {
             }
           />
 
-          {employee.timeOffTypes && <TimeOffSection timeOffTypes={employee.timeOffTypes} />}
+          {employee.timeOffTypes && (
+            <TimeOffSection timeOffTypes={employee.timeOffTypes} onBook={bookTimeOff} />
+          )}
 
           <EmployeeDetails employee={employee} draft={draft} canEdit={canEdit} />
         </TabsPanel>

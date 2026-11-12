@@ -1,5 +1,5 @@
 import { invalidInput } from "../../../core/applicationError";
-import { addDays, type CalendarDate } from "../../../utils";
+import { addDays, type CalendarDate, type CalendarDateRange } from "../../../utils";
 import type { NewPolicyVersion } from "./standardLeavePolicies";
 import type { PolicyVersion } from "./timeOffPolicy";
 
@@ -151,6 +151,24 @@ export function rulesValue(
     entitlementDays: yearly?.entitlementDays ?? null,
     bankHolidays: version.bankHolidays,
   });
+}
+
+/** Whether `row` is a planned stop: it ends on or after today and nothing in its owner's `lane` follows it. */
+export function isPlannedStop(
+  lane: readonly CalendarDateRange[],
+  { endDate }: CalendarDateRange,
+  today: CalendarDate,
+): boolean {
+  return (
+    endDate !== null &&
+    endDate >= today &&
+    !lane.some((other) => other.startDate !== null && other.startDate > endDate)
+  );
+}
+
+/** A stop as history keeps it: a JSON object with its date. */
+export function stopValue(stopDate: string): string {
+  return JSON.stringify({ stopDate });
 }
 
 const BALANCES: readonly TimeOffRules["balance"][] = [

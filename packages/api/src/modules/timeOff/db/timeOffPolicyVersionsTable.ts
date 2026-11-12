@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   foreignKey,
   index,
@@ -30,6 +31,8 @@ export const timeOffPolicyVersions = pgTable(
     termsId: uuid("terms_id"),
     /** 1 on creation, plus 1 on every save of a draft, so Publish sees what the admin reviewed. */
     revision: integer("revision").notNull().default(1),
+    /** Set only on a draft that stops the type: publishing ends the rules instead of giving these. */
+    stops: boolean("stops").notNull().default(false),
     balance: text("balance", {
       enum: ["balance_from_allowance", "unlimited_balance", "no_balance"],
     }).notNull(),
@@ -59,6 +62,10 @@ export const timeOffPolicyVersions = pgTable(
     check(
       "time_off_policy_versions_terms_only_on_draft",
       sql`(${table.termsId} is not null) = (${table.status} = 'draft')`,
+    ),
+    check(
+      "time_off_policy_versions_stops_only_on_draft",
+      sql`not ${table.stops} or ${table.status} = 'draft'`,
     ),
     check(
       "time_off_policy_versions_bank_holidays_with_allowance",

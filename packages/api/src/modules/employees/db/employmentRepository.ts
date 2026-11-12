@@ -24,6 +24,8 @@ export interface EmploymentRepository {
    * Take it before employee row locks so edits, manager changes and resets cannot deadlock.
    */
   lockForWrites(): Promise<void>;
+  /** Holds back employee and employment writes, deletes among them, but not other readers. */
+  lockForReads(): Promise<void>;
   /** The direct manager of each employee's employment held on `date`; those without one are left out. */
   findManagerIds(employeeIds: readonly string[], date: CalendarDate): Promise<Map<string, string>>;
   /**
@@ -95,6 +97,10 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
 
     lockForWrites: async () => {
       await orm().execute(sql`lock table ${employments} in share row exclusive mode`);
+    },
+
+    lockForReads: async () => {
+      await orm().execute(sql`lock table ${employments} in share mode`);
     },
 
     findManagerIds: async (employeeIds, date) => {

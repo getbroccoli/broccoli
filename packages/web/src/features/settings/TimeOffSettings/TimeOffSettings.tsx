@@ -46,7 +46,12 @@ export function TimeOffSettings() {
       ) : (
         <Skeleton className="h-[200px] rounded-xl" />
       )}
-      {adding && <AddTimeOffTypeDialog onClose={() => setAdding(false)} />}
+      {adding && (
+        <AddTimeOffTypeDialog
+          refetch={[TimeOffSettingsDocument]}
+          onClose={() => setAdding(false)}
+        />
+      )}
     </section>
   );
 }

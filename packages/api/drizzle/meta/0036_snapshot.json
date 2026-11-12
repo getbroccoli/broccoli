@@ -3133,6 +3133,13 @@
           "notNull": true,
           "default": 1
         },
+        "stops": {
+          "name": "stops",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "balance": {
           "name": "balance",
           "type": "text",
@@ -3251,6 +3258,10 @@
         "time_off_policy_versions_fixed_date_valid": {
           "name": "time_off_policy_versions_fixed_date_valid",
           "value": "\"time_off_policy_versions\".\"leave_year_start_month\" between 1 and 12 and \"time_off_policy_versions\".\"leave_year_start_day\" between 1 and\n        case when \"time_off_policy_versions\".\"leave_year_start_month\" = 2 then 28\n          when \"time_off_policy_versions\".\"leave_year_start_month\" in (4, 6, 9, 11) then 30 else 31 end"
+        },
+        "time_off_policy_versions_stops_only_on_draft": {
+          "name": "time_off_policy_versions_stops_only_on_draft",
+          "value": "not \"time_off_policy_versions\".\"stops\" or \"time_off_policy_versions\".\"status\" = 'draft'"
         }
       },
       "isRLSEnabled": false
@@ -3289,6 +3300,19 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
