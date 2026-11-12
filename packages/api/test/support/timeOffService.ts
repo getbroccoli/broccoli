@@ -36,6 +36,7 @@ import { bankHolidayService } from "./bankHolidayService";
 import { employeeSetup } from "./statelessServices";
 import { OWNER } from "./testSecurityContext";
 import type { TestSeed } from "./testSeed";
+import { processService } from "./processService";
 import { testTransactor } from "./testTransactor";
 
 /** The time off service on `orm` with the shipped bank holidays and silent logs; `today` is the engine's date. */
@@ -244,7 +245,7 @@ export function transactWithTimeOffEvents(orm: Orm): Transact {
   return transactor(orm, eventBus);
 }
 
-/** Deletes every employee and resets time off and tasks, as startup composes it. */
+/** Deletes every employee and resets time off, processes and tasks, as startup composes it. */
 export function deleteAllEmployees(orm: Orm) {
   const timeOff = timeOffService(orm);
   const tasks = createTaskService({
@@ -256,6 +257,7 @@ export function deleteAllEmployees(orm: Orm) {
     await timeOff.lockPolicies(ctx, tx);
     await employeeSetup.deleteAllEmployees(ctx, tx);
     await timeOff.resetTimeOff(ctx, tx);
+    await processService(orm).resetProcesses(ctx, tx);
     await tasks.resetTasks(ctx, tx);
   };
 }

@@ -71,6 +71,8 @@ export const processRuns = pgTable(
       .on(table.processId, table.recordType, table.recordId)
       .where(sql`${table.status} = 'in_progress'`),
     index("process_runs_process_status_idx").on(table.processId, table.status),
+    // Whether a record ever had a run of the process, which the daily job asks for each due record.
+    index("process_runs_record_idx").on(table.processId, table.recordType, table.recordId),
     index("process_runs_subject_idx").on(table.subjectEmployeeId),
     check(
       "process_runs_status_known",

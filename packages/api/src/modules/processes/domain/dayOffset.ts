@@ -1,3 +1,4 @@
+import { ApplicationError } from "../../../core/applicationError";
 import { addDays, type CalendarDate, weekdayOf } from "../../../utils";
 import type { DayOffset } from "./processDefinition";
 
@@ -18,12 +19,21 @@ export function addDayOffset(
   }
   const step = Math.sign(amount);
   let date = from;
-  for (let left = Math.abs(amount); left > 0;) {
+  for (let left = Math.abs(amount), searched = 0; left > 0; searched += 1) {
+    if (searched === MAX_SEARCH_DAYS) {
+      throw new ApplicationError(
+        "CONFLICT",
+        `No working day comes within ${MAX_SEARCH_DAYS} days.`,
+      );
+    }
     date = addDays(date, step);
     if (isWorkingDay(date)) left -= 1;
   }
   return date;
 }
+
+/** Past the largest business offset (260) with every holiday and part-time week: a longer search finds none. */
+const MAX_SEARCH_DAYS = 1000;
 
 /** One stretch of a person's working week, as employees reads it: minutes Monday first. */
 export interface DatedWeek {
@@ -33,7 +43,7 @@ export interface DatedWeek {
 
 /**
  * Working days under the weeks in force on each date (oldest first) less `isBankHoliday`; null for a
- * person with no working week at all, whose business days count as calendar days.
+ * person with no working week at all. A date with no week in force counts, as calendar days do.
  */
 export function workingDaysOf(
   weeks: readonly DatedWeek[],
@@ -42,7 +52,8 @@ export function workingDaysOf(
   if (!weeks.some(({ minutes }) => minutes !== null)) return null;
   return (date) => {
     const weekIndex = weeks.findLastIndex(({ startDate }) => startDate <= date);
-    const minutes = weeks[weekIndex]?.minutes?.[weekdayOf(date)] ?? 0;
-    return minutes > 0 && !isBankHoliday(date, weekIndex);
+    const minutes = weeks[weekIndex]?.minutes;
+    if (!minutes) return true;
+    return minutes[weekdayOf(date)]! > 0 && !isBankHoliday(date, weekIndex);
   };
 }

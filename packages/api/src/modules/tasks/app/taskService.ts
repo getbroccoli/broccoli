@@ -143,17 +143,19 @@ export function createTaskService({
     readTasksInTransaction: (tx, taskIds) => taskRepository(tx).findByIds(taskIds),
 
     async markDoneInTransaction(ctx, tx, taskId) {
-      return changeLockedTask(ctx, tx, taskId, (task, employeeId) => {
-        refuseUnlessAssignee(task, employeeId, MARK_DONE_REFUSAL);
-        return markTaskDone(task, employeeId, new Date());
+      const { task } = await changeLockedTask(ctx, tx, taskId, (locked, employeeId) => {
+        refuseUnlessAssignee(locked, employeeId, MARK_DONE_REFUSAL);
+        return markTaskDone(locked, employeeId, new Date());
       });
+      return task;
     },
 
     async reopenInTransaction(ctx, tx, taskId) {
-      return changeLockedTask(ctx, tx, taskId, (task, employeeId) => {
-        refuseUnlessAssignee(task, employeeId, REOPEN_REFUSAL);
-        return reopenTask(task);
+      const { task } = await changeLockedTask(ctx, tx, taskId, (locked, employeeId) => {
+        refuseUnlessAssignee(locked, employeeId, REOPEN_REFUSAL);
+        return reopenTask(locked);
       });
+      return task;
     },
 
     async cancelInTransaction(ctx, tx, { taskIds, reason, cause }) {
@@ -250,28 +252,21 @@ async function changeTask(
   taskId: string,
   change: (task: Task, employeeId: string) => Task,
 ): Promise<TaskChange> {
-  return transact(async (tx) => {
-    const tasks = taskRepository(tx);
-    const id = parseUuid(taskId);
-    const { task, employeeId } = requireVisible(ctx, id ? await tasks.lockById(id) : null);
-    const saved = await tasks.saveStatus(change(task, employeeId));
-    return { task: saved, historyLine: await appendStatusChange(ctx, tx, task, saved) };
-  });
+  return transact((tx) => changeLockedTask(ctx, tx, taskId, change));
 }
 
-/** Changes one task locked in `tx` that the caller may see, with its history line. */
+/** Changes one task the caller may see, locked in `tx`, with the history line it appends. */
 async function changeLockedTask(
   ctx: SecurityContext,
   tx: Tx,
   taskId: string,
   change: (task: Task, employeeId: string) => Task,
-): Promise<Task> {
+): Promise<TaskChange> {
   const tasks = taskRepository(tx);
   const id = parseUuid(taskId);
   const { task, employeeId } = requireVisible(ctx, id ? await tasks.lockById(id) : null);
   const saved = await tasks.saveStatus(change(task, employeeId));
-  await appendStatusChange(ctx, tx, task, saved);
-  return saved;
+  return { task: saved, historyLine: await appendStatusChange(ctx, tx, task, saved) };
 }
 
 async function appendStatusChange(

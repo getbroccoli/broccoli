@@ -1,5 +1,5 @@
 import { type Tx } from "../../../core/db";
-import { type SecurityContext } from "../../../core/security";
+import { PrincipalSecurityContext, type SecurityContext } from "../../../core/security";
 import type { Task } from "../../tasks";
 import { processRepository, type StoredProcess } from "../db";
 import {
@@ -9,8 +9,16 @@ import {
   removalCancellation,
   type RunStep,
   settleRun,
+  SUBJECT_REMOVED,
 } from "../domain";
-import { type Deps, type StepChange, requireRun, runIdOf, toRunView } from "./processRunDetails";
+import {
+  type Deps,
+  type StepChange,
+  requireRun,
+  runIdOf,
+  toAssigneeRun,
+  toRunView,
+} from "./processRunDetails";
 
 /**
  * Locks the task's run, cancels it when it can no longer run, else applies the step change and
@@ -35,11 +43,13 @@ export async function changeStep(
   ]);
   return transact(async (tx) => {
     const runs = processRepository(tx);
+    // The process before the run, as starts take it: a reopen and a start for one person take turns.
+    await runs.lockProcess(process!.id);
     const locked = (await runs.lockRun(runId))!;
-    const checked = await cancelIfCannotRun(deps, ctx, tx, locked);
+    const checked = await cancelIfCannotRun(deps, tx, locked);
     if (checked.status === "cancelled" && locked.status !== "cancelled") {
       const [cancelledTask] = await tasks.readTasksInTransaction(tx, [task.id]);
-      return { run: toRunView(checked, process!), task: cancelledTask! };
+      return { run: toAssigneeRun(toRunView(checked, process!)), task: cancelledTask! };
     }
     const steps = await runs.findSteps(locked.id);
     const step = steps.find(({ taskId: id }) => id === task.id)!;
@@ -51,17 +61,15 @@ export async function changeStep(
       new Date(),
     );
     const saved = settled === locked ? locked : await runs.saveRun(settled);
-    return { run: toRunView(saved, process!), task: changed.task };
+    return { run: toAssigneeRun(toRunView(saved, process!)), task: changed.task };
   });
 }
 
-/** The run, cancelled and saved when its subject or a waiting step's assignee is gone; else as it was. */
-export async function cancelIfCannotRun(
-  deps: Deps,
-  ctx: SecurityContext,
-  tx: Tx,
-  run: StoredRun,
-): Promise<StoredRun> {
+/**
+ * The run, cancelled and saved when its subject or a waiting step's assignee is gone; else as it was.
+ * The run cancels itself, so Broccoli is the author, whoever's command noticed.
+ */
+export async function cancelIfCannotRun(deps: Deps, tx: Tx, run: StoredRun): Promise<StoredRun> {
   if (run.status !== "in_progress") return run;
   const steps = await processRepository(tx).findSteps(run.id);
   const subject = run.subjectEmployeeId
@@ -75,9 +83,9 @@ export async function cancelIfCannotRun(
   if (!removal) return run;
   const runReason =
     removal.cause === "cancelled_because_subject_was_removed"
-      ? "The person this process is about was removed from Broccoli."
+      ? SUBJECT_REMOVED
       : `The assignee of '${(await deps.starter.stepTitles(tx, run)).get(removal.stepKey!)}' was removed from Broccoli.`;
-  return cancel(deps, ctx, tx, run, {
+  return cancel(deps, PrincipalSecurityContext.system(), tx, run, {
     cause: removal.cause,
     runReason,
     taskReason: PROCESS_CANCELLED,

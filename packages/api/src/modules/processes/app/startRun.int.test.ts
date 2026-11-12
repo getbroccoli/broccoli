@@ -78,6 +78,33 @@ test("an admin starts two parallel tasks with their assignees, source and due da
   });
 });
 
+test("tasks from an admin's welcome are authored by Broccoli with the run as cause", async ({
+  orm,
+  seed,
+}) => {
+  const admin = await seed.employee();
+  const employee = await seed.employee();
+  const adminCtx = signedIn(orm, { employeeId: admin.id, profiles: ["ADMIN"] });
+  const assigneeCtx = signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] });
+  const processes = processService(orm, { today: () => calendarDate("2026-12-03") });
+
+  const started = await processes.startRun(adminCtx, {
+    processKey: WELCOME_NEW_STARTER,
+    employeeId: employee.id,
+  });
+
+  const history = await taskService(orm).readTaskHistory(assigneeCtx, started.steps[1]!.task!.id, {
+    first: 10,
+  });
+  expect(history.edges.map(({ node }) => node)).toMatchObject([
+    {
+      operation: "CREATED",
+      author: { kind: "BROCCOLI_ITSELF" },
+      cause: { kind: "PROCESS_RUN", ref: started.run.id },
+    },
+  ]);
+});
+
 test("an early manual welcome uses the person's future start day and manager", async ({
   orm,
   seed,

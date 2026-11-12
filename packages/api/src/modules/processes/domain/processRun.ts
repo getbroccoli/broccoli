@@ -29,6 +29,9 @@ export type AssigneeNote = (typeof ASSIGNEE_NOTES)[number];
 export const SKIP_REASONS = ["no_assignee_for_step"] as const;
 export type SkipReason = (typeof SKIP_REASONS)[number];
 
+/** Why a run whose subject was removed stops: on the run for admins, and refusing a reopen. */
+export const SUBJECT_REMOVED = "The person this process is about was removed from Broccoli.";
+
 /** What the tasks of a run cancelled for a removal tell their assignees; the detail stays on the run. */
 export const PROCESS_CANCELLED = "This process was cancelled.";
 
@@ -119,10 +122,18 @@ export function reopenStep(
     processName,
     subjectFirstName,
     isSuperseded,
-  }: { processName: string; subjectFirstName: string; isSuperseded: boolean },
+  }: {
+    processName: string;
+    /** Null once the person the run is about was removed. */
+    subjectFirstName: string | null;
+    isSuperseded: boolean;
+  },
 ): RunStep {
   if (run.status === "cancelled") {
     throw new ApplicationError("CONFLICT", PROCESS_CANCELLED);
+  }
+  if (run.subjectEmployeeId !== null && subjectFirstName === null) {
+    throw new ApplicationError("CONFLICT", SUBJECT_REMOVED);
   }
   if (isSuperseded) {
     throw new ApplicationError(

@@ -83,6 +83,7 @@ CREATE UNIQUE INDEX "process_versions_one_draft_per_process" ON "process_version
 CREATE UNIQUE INDEX "process_runs_start_key_unique" ON "process_runs" USING btree ("process_id","start_key") WHERE "process_runs"."start_key" is not null;--> statement-breakpoint
 CREATE UNIQUE INDEX "process_runs_one_in_progress_per_record" ON "process_runs" USING btree ("process_id","record_type","record_id") WHERE "process_runs"."status" = 'in_progress';--> statement-breakpoint
 CREATE INDEX "process_runs_process_status_idx" ON "process_runs" USING btree ("process_id","status");--> statement-breakpoint
+CREATE INDEX "process_runs_record_idx" ON "process_runs" USING btree ("process_id","record_type","record_id");--> statement-breakpoint
 CREATE INDEX "process_runs_subject_idx" ON "process_runs" USING btree ("subject_employee_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "tasks_one_per_run_step" ON "tasks" USING btree ("process_run_id","step_key");--> statement-breakpoint
 ALTER TABLE "tasks" ADD CONSTRAINT "tasks_process_step_from_a_run" CHECK ("tasks"."type" <> 'process_step_to_do'

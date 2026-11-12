@@ -133,6 +133,7 @@ export function createProcessService({
       if (!definition.startableByAdmin) {
         throw new ApplicationError("FORBIDDEN", "This process starts only by itself.");
       }
+      const workspaceOwnerEmployeeId = await starter.readWorkspaceOwner();
       const run = await transact(async (tx) => {
         await processRepository(tx).lockProcess(process.id);
         const subject = await starter.readSubject(tx, subjectId);
@@ -144,7 +145,7 @@ export function createProcessService({
           );
         }
         const startDay = laterOf(today(), subject.startDate);
-        return starter.start(ctx, tx, {
+        return starter.start(tx, {
           process,
           definition,
           subject,
@@ -153,6 +154,7 @@ export function createProcessService({
           triggerDate: null,
           startKey: null,
           startDay,
+          workspaceOwnerEmployeeId,
         });
       });
       logger.info({ runId: run.id, processKey, startCause: run.startCause }, "Process run started");
@@ -214,7 +216,7 @@ export function createProcessService({
           : null;
         const reopened = reopenedStep(run, step, {
           processName: process.name,
-          subjectFirstName: subject?.firstName ?? "",
+          subjectFirstName: subject?.firstName ?? null,
           isSuperseded: newer !== null && newer.id !== run.id,
         });
         return { task: await tasks.reopenInTransaction(ctx, tx, taskId), step: reopened };
@@ -244,13 +246,13 @@ export function createProcessService({
 
     async startDueRuns(ctx, day) {
       ctx.requireSystem();
-      const runsStarted = await startDue(deps, ctx, day, logger);
+      const runsStarted = await startDue(deps, day, logger);
       let runsCancelled = 0;
       for (const run of await processRepository(orm).listRunsInProgress()) {
         try {
           const checked = await transact(async (tx) => {
             const locked = (await processRepository(tx).lockRun(run.id))!;
-            return cancelIfCannotRun(deps, ctx, tx, locked);
+            return cancelIfCannotRun(deps, tx, locked);
           });
           if (checked.status === "cancelled") {
             runsCancelled += 1;

@@ -1,5 +1,5 @@
 {
-  "id": "00dffc7a-ec8b-4c2c-889f-e9566c81e542",
+  "id": "dfbba65b-850c-46dd-bba4-a8067ee065ae",
   "prevId": "d2b2aaa4-7353-4093-b741-6cfcc9e75ddf",
   "version": "7",
   "dialect": "postgresql",
@@ -3714,6 +3714,33 @@
             },
             {
               "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "process_runs_record_idx": {
+          "name": "process_runs_record_idx",
+          "columns": [
+            {
+              "expression": "process_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "record_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "record_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

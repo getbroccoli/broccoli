@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 
 import { parseCalendarDate, weekdayOf, type CalendarDate } from "../../../utils";
-import { addDayOffset } from "./dayOffset";
+import { addDayOffset, workingDaysOf } from "./dayOffset";
 
 test("adds calendar days across a month boundary", () => {
   const result = addDayOffset(day("2026-11-30"), { amount: 3, unit: "calendar_days" }, null);
@@ -61,6 +61,33 @@ test("counts a person's own working weekdays", () => {
   );
 
   expect(result).toBe("2026-12-14");
+});
+
+test("counts calendar days during a gap after a working pattern", () => {
+  const isWorkingDay = workingDaysOf(
+    [
+      { startDate: day("2026-01-01"), minutes: [450, 450, 450, 450, 450, 0, 0] },
+      { startDate: day("2026-12-01"), minutes: null },
+    ],
+    () => false,
+  );
+
+  expect(isWorkingDay!(day("2026-12-05"))).toBe(true);
+  expect(addDayOffset(day("2026-12-03"), { amount: 5, unit: "business_days" }, isWorkingDay)).toBe(
+    "2026-12-08",
+  );
+});
+
+test("refuses a business-day offset when no working day comes within 1000 days", () => {
+  expect(() =>
+    addDayOffset(day("2026-12-03"), { amount: 1, unit: "business_days" }, () => false),
+  ).toThrowError(
+    expect.objectContaining({
+      name: "ApplicationError",
+      code: "CONFLICT",
+      message: "No working day comes within 1000 days.",
+    }),
+  );
 });
 
 function day(value: string): CalendarDate {

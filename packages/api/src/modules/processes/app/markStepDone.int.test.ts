@@ -137,6 +137,33 @@ test("refuses reopening a step in a cancelled run", async ({ orm, seed }) => {
   });
 });
 
+test("refuses reopening a finished welcome after its subject was removed", async ({
+  orm,
+  seed,
+}) => {
+  const manager = await seed.employee();
+  const employee = await seed.employee();
+  await seed.manager(employee.id, manager.id);
+  const managerCtx = signedIn(orm, { employeeId: manager.id, profiles: ["EMPLOYEE"] });
+  const employeeCtx = signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] });
+  const processes = processService(orm, { today: () => calendarDate("2026-12-03") });
+  const started = await processes.startRun(ADMIN, {
+    processKey: WELCOME_NEW_STARTER,
+    employeeId: employee.id,
+  });
+  const meetingId = started.steps[0]!.task!.id;
+  await processes.markStepDone(managerCtx, meetingId);
+  await processes.markStepDone(employeeCtx, started.steps[1]!.task!.id);
+  await employeeServices(orm).deleteEmployee(ADMIN, { id: employee.id });
+
+  await expect(processes.reopenStep(managerCtx, meetingId)).rejects.toMatchObject({
+    code: "CONFLICT",
+    message: "The person this process is about was removed from Broccoli.",
+  });
+  expect(await taskService(orm).readTask(managerCtx, meetingId)).toMatchObject({ status: "done" });
+  expect((await processes.readRun(ADMIN, started.run.id)).run.status).toBe("finished");
+});
+
 test("refuses reopening an older welcome while a newer one is in progress", async ({
   orm,
   seed,
@@ -164,7 +191,7 @@ test("completing a remaining task persists cancellation when the other assignee 
   seed,
 }) => {
   const manager = await seed.employee();
-  const employee = await seed.employee();
+  const employee = await seed.employee({ firstName: "Sam" });
   await seed.manager(employee.id, manager.id);
   const ctx = signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] });
   const processes = processService(orm, { today: () => calendarDate("2026-12-03") });
@@ -177,18 +204,45 @@ test("completing a remaining task persists cancellation when the other assignee 
 
   const changed = await processes.markStepDone(ctx, taskId);
 
-  expect(changed.run).toMatchObject({
-    status: "cancelled",
-    cancelCause: "cancelled_because_step_assignee_was_removed",
-  });
+  expect(changed.run.status).toBe("cancelled");
+  expect(changed.run).not.toHaveProperty("cancelReason");
   expect(changed.task).toMatchObject({
     status: "cancelled",
     cancelReason: "This process was cancelled.",
   });
-  expect((await processes.readRun(ADMIN, started.run.id)).run.status).toBe("cancelled");
+  expect((await processes.readRun(ADMIN, started.run.id)).run).toMatchObject({
+    status: "cancelled",
+    cancelCause: "cancelled_because_step_assignee_was_removed",
+    cancelReason: "The assignee of 'Have a welcome 1:1 with Sam' was removed from Broccoli.",
+  });
   expect(await taskService(orm).readTask(ctx, taskId)).toMatchObject({
     status: "cancelled",
     cancelReason: "This process was cancelled.",
+  });
+});
+
+test("lazy cancellation records Broccoli as the task history author", async ({ orm, seed }) => {
+  const manager = await seed.employee();
+  const employee = await seed.employee();
+  await seed.manager(employee.id, manager.id);
+  const ctx = signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] });
+  const processes = processService(orm, { today: () => calendarDate("2026-12-03") });
+  const started = await processes.startRun(ADMIN, {
+    processKey: WELCOME_NEW_STARTER,
+    employeeId: employee.id,
+  });
+  const taskId = started.steps[1]!.task!.id;
+  await employeeServices(orm).deleteEmployee(ADMIN, { id: manager.id });
+
+  await processes.markStepDone(ctx, taskId);
+
+  const history = await taskService(orm).readTaskHistory(ctx, taskId, { first: 10 });
+  expect(history.edges[0]!.node).toMatchObject({
+    author: { kind: "BROCCOLI_ITSELF" },
+    cause: { kind: "PROCESS_RUN", ref: started.run.id },
+    changes: expect.arrayContaining([
+      { field: "status", oldValue: "to_do", newValue: "cancelled" },
+    ]) as unknown,
   });
 });
 

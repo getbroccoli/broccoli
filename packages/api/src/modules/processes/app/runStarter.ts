@@ -1,12 +1,13 @@
 import { ApplicationError } from "../../../core/applicationError";
 import type { Orm, Transact, Tx } from "../../../core/db";
-import type { SecurityContext } from "../../../core/security";
+import { PrincipalSecurityContext, type SecurityContext } from "../../../core/security";
 import { addDays, type CalendarDate } from "../../../utils";
 import type { BankHolidayService } from "../../bankHolidays";
 import {
   createEmployeeReadService,
   createEmployeeWorkingPatternService,
   employeeDirectory,
+  type EmployeeReadService,
   type EmployeeWorkingPatternService,
 } from "../../employees";
 import type { TaskService } from "../../tasks";
@@ -14,6 +15,7 @@ import { processRepository, type StoredProcess } from "../db";
 import {
   addDayOffset,
   type DayOffset,
+  dueTriggerDate,
   type IsWorkingDay,
   parseProcessDefinition,
   type ProcessDefinition,
@@ -44,15 +46,21 @@ export interface RunStart {
   triggerDate: CalendarDate | null;
   startKey: string | null;
   startDay: CalendarDate;
+  workspaceOwnerEmployeeId: string | null;
 }
 
 /** Starts runs: their steps' assignees, tasks and due dates. */
 export interface RunStarter {
   /** The person with this id, or null when there is none. */
   readSubject(tx: Tx, employeeId: string): Promise<RunSubject | null>;
-  /** Creates the run, its steps and their tasks in `tx`; a run whose steps are all skipped finishes at once. */
-  start(ctx: SecurityContext, tx: Tx, start: RunStart): Promise<ProcessRun>;
-  /** The people whose trigger date is from the later of `turnedOnDay` and `maxDaysLate` days ago, to today. */
+  /** The owner's employee, read before any lock is taken: it needs its own connection. */
+  readWorkspaceOwner(): Promise<string | null>;
+  /**
+   * Trusted: creates the run, its steps and their tasks in `tx`, as Broccoli, with the run as their
+   * cause; a run whose steps are all skipped finishes at once.
+   */
+  start(tx: Tx, start: RunStart): Promise<ProcessRun>;
+  /** The people whose start date triggers a run today, with the date it triggered on. */
   findDue(
     tx: Tx,
     definition: ProcessDefinition,
@@ -79,22 +87,14 @@ export function createRunStarter({
     bankHolidays,
   };
   const directory = employeeDirectory(orm);
-
-  const readSubject = async (tx: Tx, employeeId: string): Promise<RunSubject | null> => {
-    const [employee] = await employees.readEmployeesByName(tx, [employeeId]);
-    if (!employee) return null;
-    const periods = (await employees.readEmploymentPeriods(tx, [employeeId])).get(employeeId);
-    return {
-      id: employee.id,
-      firstName: employee.firstName,
-      startDate: periods?.[0]?.startDate ?? null,
-    };
-  };
+  const system = PrincipalSecurityContext.system();
 
   return {
-    readSubject,
+    readSubject: (tx, employeeId) => readSubject(employees, tx, employeeId),
 
-    async start(ctx, tx, start) {
+    readWorkspaceOwner: () => directory.ownersEmployeeId(),
+
+    async start(tx, start) {
       const { definition, subject, startDay } = start;
       const runs = processRepository(tx);
       const run = await runs.insertRun(newRun(start));
@@ -105,18 +105,18 @@ export function createRunStarter({
       const candidates = {
         subject: subject.id,
         subjects_manager: managers.get(subject.id) ?? null,
-        workspace_owner: await directory.ownersEmployeeId(),
+        workspace_owner: start.workspaceOwnerEmployeeId,
       };
       const needsWorkingDays = definition.steps.some(({ due }) => due.unit === "business_days");
       const isWorkingDay = needsWorkingDays
-        ? await workingDaysAround(calendars, ctx, tx, subject.id, startDay)
+        ? await workingDaysAround(calendars, system, tx, subject.id, startDay)
         : null;
       const steps: RunStep[] = [];
       for (const step of definition.steps) {
         const assignee = resolveAssignee(step.assignee, candidates);
         steps.push(
           assignee
-            ? await startStep(tasks, ctx, tx, { run, start, step, assignee, isWorkingDay })
+            ? await startStep(tasks, system, tx, { run, start, step, assignee, isWorkingDay })
             : skippedStep(run.id, step.key),
         );
       }
@@ -125,28 +125,43 @@ export function createRunStarter({
       return settled === run ? run : runs.saveRun(settled);
     },
 
-    async findDue(tx, { trigger }, { today, turnedOnDay }) {
-      const earliest = laterOf(addDays(today, -trigger.maxDaysLate), turnedOnDay);
-      if (earliest > today) return [];
+    async findDue(tx, { trigger }, days) {
       // A start date's trigger date is at most the offset's span away from it.
-      const span = spanOf(trigger.offset);
+      const span = spanOf(trigger.offset) + trigger.maxDaysLate;
       const starts = await employees.readEmployeesStartingBetween(tx, {
-        from: addDays(earliest, -span),
-        until: addDays(today, span),
+        from: addDays(days.today, -span),
+        until: addDays(days.today, span),
       });
       return [...starts].flatMap(([employeeId, startDate]) => {
-        // shortcut: a trigger offset counts calendar days here; count the person's business days when a ready-made process needs them.
-        const triggerDate = addDayOffset(startDate, trigger.offset, null);
-        return triggerDate >= earliest && triggerDate <= today ? [{ employeeId, triggerDate }] : [];
+        const triggerDate = dueTriggerDate(trigger, startDate, days);
+        return triggerDate ? [{ employeeId, triggerDate }] : [];
       });
     },
 
     async stepTitles(tx, run) {
       const version = (await processRepository(tx).findVersion(run.processVersionId))!;
       const { steps } = parseProcessDefinition(version.schemaVersion, version.definition);
-      const subject = run.subjectEmployeeId ? await readSubject(tx, run.subjectEmployeeId) : null;
+      const subject = run.subjectEmployeeId
+        ? await readSubject(employees, tx, run.subjectEmployeeId)
+        : null;
       return new Map(steps.map(({ key, title }) => [key, filled(title, subject)]));
     },
+  };
+}
+
+/** The person with this id, with their first employment's start, or null when there is none. */
+async function readSubject(
+  employees: EmployeeReadService,
+  tx: Tx,
+  employeeId: string,
+): Promise<RunSubject | null> {
+  const [employee] = await employees.readEmployeesByName(tx, [employeeId]);
+  if (!employee) return null;
+  const periods = (await employees.readEmploymentPeriods(tx, [employeeId])).get(employeeId);
+  return {
+    id: employee.id,
+    firstName: employee.firstName,
+    startDate: periods?.[0]?.startDate ?? null,
   };
 }
 
@@ -268,10 +283,6 @@ async function workingDaysAround(
 /** How far a trigger date can be from its record's date: business days stretch by weekends and holidays. */
 function spanOf({ amount, unit }: DayOffset): number {
   return unit === "calendar_days" ? Math.abs(amount) : Math.abs(amount) * 2 + 14;
-}
-
-function laterOf(day: CalendarDate, other: CalendarDate): CalendarDate {
-  return other > day ? other : day;
 }
 
 function filled(text: string, subject: Pick<RunSubject, "firstName"> | null): string {

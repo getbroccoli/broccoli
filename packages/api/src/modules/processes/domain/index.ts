@@ -1,4 +1,5 @@
 export { addDayOffset, type DatedWeek, type IsWorkingDay, workingDaysOf } from "./dayOffset";
+export { dueTriggerDate } from "./recordDateTrigger";
 export {
   type AssigneeRule,
   type DayOffset,
@@ -29,6 +30,7 @@ export {
   SKIP_REASONS,
   type SkipReason,
   START_CAUSES,
+  SUBJECT_REMOVED,
   type StartCause,
   STEP_STATUSES,
   type StepStatus,

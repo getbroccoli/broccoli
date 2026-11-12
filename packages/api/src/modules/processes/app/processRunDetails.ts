@@ -64,7 +64,8 @@ export interface ProcessRunDetails {
 
 /** A step's task after a step command, and its run; a run cancelled on the way says so instead of throwing. */
 export interface StepChange {
-  run: ProcessRun;
+  /** Without the cancel reason, which names other steps only admins may see. */
+  run: Omit<ProcessRun, "cancelReason">;
   task: Task;
 }
 
@@ -162,16 +163,18 @@ async function readDetailsIn(
   run: StoredRun,
 ): Promise<ProcessRunDetails> {
   const runs = processRepository(tx);
-  const [process] = await runs.findProcessesByIds([run.processId]);
-  const steps = await runs.findSteps(run.id);
+  // Locked, so a step change committing meanwhile cannot show its steps beside the run's old status.
+  const current = (await runs.lockRun(run.id))!;
+  const [process] = await runs.findProcessesByIds([current.processId]);
+  const steps = await runs.findSteps(current.id);
   const taskIds = steps.flatMap(({ taskId }) => (taskId ? [taskId] : []));
   const runTasks = new Map((await tasks.readTasksInTransaction(tx, taskIds)).map((t) => [t.id, t]));
-  const titles = await starter.stepTitles(tx, run);
+  const titles = await starter.stepTitles(tx, current);
   const ordered = [...titles.keys()].flatMap((key) =>
     steps.filter(({ stepKey }) => stepKey === key),
   );
   return {
-    run: toRunView(run, process!),
+    run: toRunView(current, process!),
     steps: ordered.map((step) => {
       const task = step.taskId ? runTasks.get(step.taskId) : undefined;
       return {
@@ -192,4 +195,11 @@ async function readDetailsIn(
       };
     }),
   };
+}
+
+/** The run as an assignee's step change returns it. */
+export function toAssigneeRun(run: ProcessRun): StepChange["run"] {
+  const visible: Partial<ProcessRun> = { ...run };
+  delete visible.cancelReason;
+  return visible as StepChange["run"];
 }
