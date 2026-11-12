@@ -37,6 +37,10 @@ export function workingWeeksOf(
       add(next, null);
     }
     add(startDate, version);
+    // Stops before stepping past `until`, which may be the last day a date can hold.
+    if (endDate >= until) {
+      return weeks;
+    }
     next = addDays(endDate, 1);
   }
   if (next <= until) {

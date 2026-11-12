@@ -11,7 +11,7 @@ import {
   weekSummary,
 } from "@/features/termsDisplay";
 import type { BankHolidayCalendar } from "@/__generated__/graphql";
-import { calendarDayParts } from "@/lib/calendarDay";
+import { addDays } from "@/lib/calendarDay";
 
 /** One stretch of a person on one set of terms, as the panel reads it. */
 export type TermsPeriod = {
@@ -93,7 +93,7 @@ export function rowOf<V extends DatedVersion>(
         version === current
           ? []
           : [line(version.startDate, changeOf(version, before, describe, sourceOf))];
-      const gapStart = version.endDate ? dayAfter(version.endDate) : null;
+      const gapStart = version.endDate ? addDays(version.endDate, 1) : null;
       // Nothing follows until a later version, if any: the type stops being offered.
       const stops = gapStart && next?.startDate !== gapStart ? [line(gapStart, missing)] : [];
       return [...starts, ...stops];
@@ -136,11 +136,6 @@ function changeOf<V extends DatedVersion>(
   const { text, detail } = describe(version);
   const source = version.source !== before?.source || version.source === "THEIR_OWN";
   return [text, detail, source && sourceOf(version)].filter(Boolean).join(" · ");
-}
-
-function dayAfter(day: string): string {
-  const [year, month, date] = calendarDayParts(day);
-  return new Date(Date.UTC(year, month, date + 1)).toISOString().slice(0, 10);
 }
 
 function covers({ startDate, endDate }: TermsPeriod, date: string): boolean {

@@ -1,6 +1,6 @@
 import type { TaskFieldsFragment } from "@/__generated__/graphql";
 import { t } from "@/i18n";
-import { calendarDayOf, calendarDayParts } from "@/lib/calendarDay";
+import { calendarDayOf, utcDay } from "@/lib/calendarDay";
 
 export type TaskRow = TaskFieldsFragment;
 type Person = NonNullable<TaskRow["requestedBy"]>;
@@ -8,7 +8,7 @@ type Person = NonNullable<TaskRow["requestedBy"]>;
 /** "Tue 10 Nov", from a `YYYY-MM-DD` calendar date or an ISO date-time. */
 export function formatTaskDay(value: string): string {
   const day = value.length === 10 ? value : calendarDayOf(new Date(value));
-  return DAY_FORMAT.format(Date.UTC(...calendarDayParts(day)));
+  return DAY_FORMAT.format(utcDay(day));
 }
 
 /**

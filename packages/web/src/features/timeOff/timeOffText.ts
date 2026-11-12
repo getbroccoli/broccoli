@@ -1,5 +1,5 @@
 import { t } from "@/i18n";
-import { calendarDayParts } from "@/lib/calendarDay";
+import { utcDay } from "@/lib/calendarDay";
 import { formatDays } from "@/lib/formatDays";
 
 /** Why a booking can't be made, as the API names it. */
@@ -197,7 +197,7 @@ export function dateRange(from: string, until: string): string {
 function format(date: string, options: Intl.DateTimeFormatOptions): string {
   // en-GB puts a comma after the weekday; the copy reads "Tue 8 Dec".
   return new Intl.DateTimeFormat("en-GB", { ...options, timeZone: "UTC" })
-    .format(Date.UTC(...calendarDayParts(date)))
+    .format(utcDay(date))
     .replace(",", "");
 }
 

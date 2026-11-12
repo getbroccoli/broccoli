@@ -1,6 +1,6 @@
 import type { RecordHistoryQuery } from "@/__generated__/graphql";
 import { type MessageKey, t } from "@/i18n";
-import { calendarDayOf, calendarDayParts } from "@/lib/calendarDay";
+import { addDays, calendarDayOf, utcDay } from "@/lib/calendarDay";
 import { sentenceCase } from "@/lib/sentenceCase";
 
 import type { RecordDescription } from "../recordDescription";
@@ -28,8 +28,7 @@ export function groupByDay<Line extends Pick<HistoryLine, "occurredAt">>(
   timeZone?: string,
 ): { label: string; lines: Line[] }[] {
   const today = calendarDayOf(now, timeZone);
-  const [year, month, date] = calendarDayParts(today);
-  const yesterday = new Date(Date.UTC(year, month, date - 1)).toISOString().slice(0, 10);
+  const yesterday = addDays(today, -1);
   const groups: { day: string; label: string; lines: Line[] }[] = [];
   for (const line of lines) {
     const day = calendarDayOf(new Date(line.occurredAt), timeZone);
@@ -127,11 +126,10 @@ const KNOWN_CAUSES: Partial<Record<string, MessageKey>> = {
 function dayLabel(day: string, today: string, yesterday: string): string {
   if (day === today) return t("records.history.today");
   if (day === yesterday) return t("records.history.yesterday");
-  const [year, month, date] = calendarDayParts(day);
   return new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
     month: "short",
-    year: year === calendarDayParts(today)[0] ? undefined : "numeric",
+    year: day.slice(0, 4) === today.slice(0, 4) ? undefined : "numeric",
     timeZone: "UTC",
-  }).format(Date.UTC(year, month, date));
+  }).format(utcDay(day));
 }

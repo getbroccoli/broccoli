@@ -1,14 +1,7 @@
 import { sql } from "drizzle-orm";
-import {
-  boolean,
-  integer,
-  jsonb,
-  pgTable,
-  text,
-  timestamp,
-  unique,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+
+import { jsonb } from "../../../core/db";
 
 /**
  * What the owner settled in review for one group of records of one type, such as the

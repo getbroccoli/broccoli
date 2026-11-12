@@ -1,6 +1,6 @@
-import { and, countDistinct, gte, inArray, ne, sql } from "drizzle-orm";
+import { and, countDistinct, gte, ne, sql } from "drizzle-orm";
 
-import { ormOf, type Tx } from "../../../core/db";
+import { anyOf, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
 import type { LedgerLineKind, LedgerSum, NewLedgerLine } from "../domain";
 import { allowanceLedgerLines } from "./allowanceLedgerLinesTable";
@@ -38,7 +38,7 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
       return orm()
         .select()
         .from(allowances)
-        .where(inArray(allowances.employeeId, [...employeeIds]))
+        .where(anyOf(allowances.employeeId, employeeIds))
         .orderBy(allowances.leaveYearStart);
     },
 
@@ -75,7 +75,7 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
         .from(allowanceLedgerLines)
         .where(
           and(
-            inArray(allowanceLedgerLines.allowanceId, [...allowanceIds]),
+            anyOf(allowanceLedgerLines.allowanceId, allowanceIds),
             ne(allowanceLedgerLines.kind, "manual_adjustment"),
           ),
         )
@@ -98,7 +98,7 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
           amount: sql<string>`sum(${allowanceLedgerLines.amount})`,
         })
         .from(allowanceLedgerLines)
-        .where(inArray(allowanceLedgerLines.allowanceId, [...allowanceIds]))
+        .where(anyOf(allowanceLedgerLines.allowanceId, allowanceIds))
         .groupBy(allowanceLedgerLines.allowanceId, allowanceLedgerLines.kind);
       const sums = rows.map((row) => ({ ...row, amount: Number(row.amount) }));
       return Map.groupBy(sums, ({ allowanceId }) => allowanceId);

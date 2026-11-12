@@ -1,6 +1,6 @@
 import { asc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 
-import { isUniqueViolation, type Orm, ormOf, type Tx } from "../../../core/db";
+import { anyOf, isUniqueViolation, type Orm, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
 import type { Assignment, VersionStatus } from "../../employees";
 import {
@@ -267,11 +267,9 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
         .where(
           or(
             employeeIds.length > 0
-              ? inArray(timeOffPolicyAssignments.employeeId, [...employeeIds])
+              ? anyOf(timeOffPolicyAssignments.employeeId, employeeIds)
               : undefined,
-            termsIds.length > 0
-              ? inArray(timeOffPolicyAssignments.termsId, [...termsIds])
-              : undefined,
+            termsIds.length > 0 ? anyOf(timeOffPolicyAssignments.termsId, termsIds) : undefined,
           ),
         )
         .orderBy(asc(timeOffPolicyAssignments.startDate));

@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
-import { integer, jsonb, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { integer, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
+import { jsonb } from "../../../core/db";
 import { files } from "../../../core/files";
 import { importSources } from "./importSourcesTable";
 

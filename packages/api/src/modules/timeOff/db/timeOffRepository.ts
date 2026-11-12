@@ -1,6 +1,6 @@
 import { and, asc, between, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 
-import { ormOf, type Tx } from "../../../core/db";
+import { anyOf, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
 import type { DayPart } from "../domain";
 import { timeOff } from "./timeOffTable";
@@ -100,7 +100,7 @@ export function timeOffRepository(tx: Tx): TimeOffRepository {
         .innerJoin(timeOff, eq(timeOff.id, timeOffDays.timeOffId))
         .where(
           and(
-            inArray(timeOff.employeeId, [...employeeIds]),
+            anyOf(timeOff.employeeId, employeeIds),
             eq(timeOff.status, "approved"),
             isNull(timeOffDays.cancelledAt),
             until ? between(timeOffDays.date, from, until) : gte(timeOffDays.date, from),
@@ -127,7 +127,7 @@ export function timeOffRepository(tx: Tx): TimeOffRepository {
         .innerJoin(timeOffDays, eq(timeOffDays.timeOffId, timeOff.id))
         .where(
           and(
-            inArray(timeOff.employeeId, [...employeeIds]),
+            anyOf(timeOff.employeeId, employeeIds),
             eq(timeOff.status, "approved"),
             isNull(timeOffDays.cancelledAt),
             inArray(timeOff.id, inRange),
@@ -192,7 +192,7 @@ export function timeOffRepository(tx: Tx): TimeOffRepository {
         })
         .from(timeOffDays)
         .innerJoin(timeOff, eq(timeOff.id, timeOffDays.timeOffId))
-        .where(and(inArray(timeOff.employeeId, [...employeeIds]), counted(from, until)))
+        .where(and(anyOf(timeOff.employeeId, employeeIds), counted(from, until)))
         .groupBy(timeOff.employeeId, timeOff.timeOffTypeId, yearOfDay);
       return rows.map((row) => ({ ...row, days: Number(row.days) }));
     },
@@ -212,7 +212,7 @@ export function timeOffRepository(tx: Tx): TimeOffRepository {
         .innerJoin(timeOff, eq(timeOff.id, timeOffDays.timeOffId))
         .where(
           and(
-            inArray(timeOff.employeeId, [...employeeIds]),
+            anyOf(timeOff.employeeId, employeeIds),
             eq(timeOff.timeOffTypeId, timeOffTypeId),
             counted(from, LAST_DAY),
           ),

@@ -1,5 +1,7 @@
+import { invalidInput } from "../applicationError";
 import type { DomainEvents, EventBus, EventType, DomainEvent } from "../events";
 import type { Orm, OrmTransaction } from "./database";
+import { isUnstorableText } from "./uniqueViolation";
 
 /**
  * One open transaction, passed from a use case to every operation that must join
@@ -66,6 +68,9 @@ async function runInTransaction<T>(
       transaction = new Transaction(ormTransaction);
       return work(transaction);
     });
+  } catch (error) {
+    // Text Postgres cannot store, such as a NUL in a name, is input the caller must change.
+    throw isUnstorableText(error) ? invalidInput([]) : error;
   } finally {
     // Ended before dispatch, so a handler cannot write through the released connection.
     transaction?.end();

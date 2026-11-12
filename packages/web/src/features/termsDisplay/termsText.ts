@@ -1,6 +1,6 @@
 import type { EmploymentTermsStackQuery } from "@/__generated__/graphql";
 import { type MessageKey, t } from "@/i18n";
-import { calendarDayOf, calendarDayParts } from "@/lib/calendarDay";
+import { calendarDayOf, utcDay } from "@/lib/calendarDay";
 
 /** A working week's minutes per day, Monday first. */
 export type WeekMinutes = Record<(typeof DAY_FIELDS)[number], number>;
@@ -195,7 +195,7 @@ function daysOf(version: RuleText): string {
 
 /** A `YYYY-MM-DD` day as "1 Dec 2026". */
 export function shortDate(value: string): string {
-  return SHORT_DATE.format(Date.UTC(...calendarDayParts(value)));
+  return SHORT_DATE.format(utcDay(value));
 }
 
 // Formatted in UTC from a UTC timestamp, so no time zone moves the calendar day.

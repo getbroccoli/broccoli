@@ -33,7 +33,7 @@ export type HistorySortValues = [string];
 export const HISTORY_SORT_VALUES = z.tuple([
   z
     .string()
-    .regex(/^\d{1,19}$/)
+    .regex(/^\d{1,19}$/, { abort: true })
     .refine((id) => BigInt(id) <= MAX_HISTORY_ID),
 ]);
 
