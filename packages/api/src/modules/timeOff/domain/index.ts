@@ -20,6 +20,7 @@ export {
   type DatedWorkingWeek,
   yearlyDays,
 } from "./allowanceCalculator";
+export { chargedDays } from "./chargedDays";
 export {
   type BookedDayLine,
   ledgerDifference,

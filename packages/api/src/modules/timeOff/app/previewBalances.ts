@@ -1,7 +1,7 @@
 import type { Tx } from "../../../core/db";
 import { allowanceRepository } from "../db";
-import { type CostedDay, timeOffFigures, totalCost } from "../domain";
-import type { Person } from "./allowanceEngine";
+import { chargedDays, type CostedDay, timeOffFigures, totalCost } from "../domain";
+import { datedPolicies, type Person } from "./allowanceEngine";
 import type { ParsedBooking } from "./parseBooking";
 import type { BalanceChange } from "./bookTimeOffService";
 
@@ -24,13 +24,16 @@ export async function balancesAfter(
     const inYear = booked.filter(
       ({ date }) => allowance.leaveYearStart <= date && date <= allowance.leaveYearEnd,
     );
-    const cost = totalCost(inYear);
-    const version = person.timelineOf(timeOffTypeId).getVersionOnDate(inYear[0]!.date);
-    // A year kept from before its policy stopped counting has no balance to show.
-    if (!version || version.balance === "no_balance") {
+    // A year can change how the type counts partway through: a booked day under allowance rules
+    // shows the allowance's figures. A year with no day counted at all, such as one kept from
+    // before its policy stopped counting, shows none.
+    const timeline = person.timelineOf(timeOffTypeId);
+    const balances = inYear.map(({ date }) => timeline.getVersionOnDate(date)?.balance);
+    if (!balances.some((balance) => balance && balance !== "no_balance")) {
       return [];
     }
-    const counted = version.balance === "balance_from_allowance";
+    const counted = balances.includes("balance_from_allowance");
+    const cost = totalCost(chargedDays(inYear, datedPolicies(person, allowance)));
     return {
       periodStart: allowance.leaveYearStart,
       periodEnd: allowance.leaveYearEnd,
