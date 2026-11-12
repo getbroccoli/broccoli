@@ -12,12 +12,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# Jobs run inside containers so that they share no host ports or file ownership
-# with other jobs on the same self-hosted machine.
 jobs:
   test:
     name: Test
-    runs-on: self-hosted
+    runs-on: ubuntu-24.04
     container:
       image: node:24.21.0-bookworm
       options: --cpus 4 --memory 8g --memory-swap 8g
@@ -34,7 +32,7 @@ jobs:
 
   e2e:
     name: End-to-end tests
-    runs-on: self-hosted
+    runs-on: ubuntu-24.04
     container:
       image: node:24.21.0-bookworm
       options: --cpus 4 --memory 8g --memory-swap 8g
