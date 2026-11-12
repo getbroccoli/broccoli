@@ -1,12 +1,17 @@
 import type { Tx } from "../../../../core/db";
 import { workingPatternRepository } from "../../db";
-import { type OwnWeek, ownWeeksOf, type PatternVersion, type PatternWeek } from "../../domain";
+import {
+  type OwnStretch,
+  ownStretchesOf,
+  type PatternVersion,
+  type PatternWeek,
+} from "../../domain";
 
 /** A person's own weeks from their assignments, and the published versions those use. */
 export async function readOwnWeeks(
   tx: Tx,
   employeeId: string,
-): Promise<{ weeks: OwnWeek[]; versions: PatternVersion[] }> {
+): Promise<{ weeks: OwnStretch<PatternWeek>[]; versions: PatternVersion[] }> {
   const repository = workingPatternRepository(tx);
   const assignments = await repository.findAssignments({ employeeIds: [employeeId] });
   const used = new Set(assignments.map(({ versionId }) => versionId));
@@ -14,7 +19,7 @@ export async function readOwnWeeks(
     .flatMap((pattern) => pattern.versions)
     .filter(({ id }) => used.has(id));
   const versionOf = (id: string) => versions.find((version) => version.id === id);
-  return { weeks: ownWeeksOf(assignments, versionOf), versions };
+  return { weeks: ownStretchesOf(assignments, (id) => weekOf(versionOf(id))), versions };
 }
 
 /**
@@ -25,14 +30,14 @@ export async function saveOwnWeeks(
   tx: Tx,
   employeeId: string,
   versions: readonly PatternVersion[],
-  weeks: readonly OwnWeek[],
+  weeks: readonly OwnStretch<PatternWeek>[],
 ): Promise<void> {
   const repository = workingPatternRepository(tx);
   for (const { id } of await repository.findAssignments({ employeeIds: [employeeId] })) {
     await repository.deleteAssignment(id);
   }
   const saved = [...versions];
-  for (const { startDate, endDate, week } of weeks) {
+  for (const { startDate, endDate, value: week } of weeks) {
     let version = saved.find((candidate) => isSameWeek(candidate, week));
     if (!version) {
       const workingPatternId = saved[0]?.workingPatternId ?? (await repository.insertPattern(null));
@@ -57,4 +62,8 @@ function isSameWeek(a: PatternWeek, b: PatternWeek): boolean {
     a.bankHolidayCalendar === b.bankHolidayCalendar &&
     a.minutes.every((minutes, day) => minutes === b.minutes[day])
   );
+}
+
+function weekOf(version: PatternWeek | undefined): PatternWeek | undefined {
+  return version && { minutes: version.minutes, bankHolidayCalendar: version.bankHolidayCalendar };
 }

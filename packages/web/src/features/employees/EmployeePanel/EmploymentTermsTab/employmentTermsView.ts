@@ -2,6 +2,8 @@ import type { RuleSource } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 import {
   calendarName,
+  ruleSummary,
+  type RuleText,
   shortDate,
   splitVersions,
   versionOn,
@@ -156,5 +158,12 @@ export function describeWeek({
     detail: t("people.panel.terms.bankHolidays", {
       calendar: calendarName(week.bankHolidayCalendar),
     }),
+  };
+}
+
+/** A type's rules as its row reads them: "20 days a year, bank holidays on top", or recorded only. */
+export function describeRules({ rules }: { rules: RuleText }) {
+  return {
+    text: rules.balance === "NO_BALANCE" ? t("terms.rule.recorded") : ruleSummary(rules),
   };
 }

@@ -11,6 +11,7 @@ import { PlannedMove } from "./PlannedMove";
 import { TermsLastChange } from "./TermsLastChange";
 import { TermsName } from "./TermsName";
 import { TermsRows } from "./TermsRows";
+import type { OwnRulesEdit } from "./useOwnRulesEdit";
 import type { OwnWeekEdit } from "./useOwnWeekEdit";
 import type { TermsChange } from "./useTermsChange";
 
@@ -26,6 +27,8 @@ type Props = {
   change: TermsChange | null;
   /** Admins edit the person's own week here; null for everyone else. */
   weekEdit: OwnWeekEdit | null;
+  /** Admins edit the person's own rules here; null for everyone else. */
+  rulesEdit: OwnRulesEdit | null;
 };
 
 /**
@@ -40,17 +43,19 @@ export function TermsCard({
   linksToSettings,
   change,
   weekEdit,
+  rulesEdit,
 }: Props) {
   const { periods, timeOff } = employmentTerms;
   const today = companyToday();
   const { current, planned, earlier } = termsPeriodsOn(periods, today);
-  const termsNameOn = (date: string) =>
-    termsPeriodsOn(periods, date).current?.termsName ?? current?.termsName ?? "";
+  const termsOn = (date: string) => termsPeriodsOn(periods, date).current ?? current;
+  const termsNameOn = (date: string) => termsOn(date)?.termsName ?? "";
   // A type without a balance has no leave year; the first one with one says it.
   const leaveYear = timeOff
     ?.flatMap(({ versions }) => versions)
     .find(({ rules }) => rules.leaveYearStart)?.rules.leaveYearStart;
   const editing = change?.open ?? false;
+  const otherEdit = Boolean(weekEdit?.mode) || Boolean(rulesEdit?.mode);
   const changeDate = change?.value.startDate ?? today;
 
   return (
@@ -66,7 +71,7 @@ export function TermsCard({
           <Button
             variant="ghost"
             size="sm"
-            disabled={editing || Boolean(weekEdit?.mode)}
+            disabled={editing || otherEdit}
             onClick={() => change.start(employmentTerms.earliestChange)}
           >
             {t("people.panel.terms.change")}
@@ -119,7 +124,7 @@ export function TermsCard({
             period={{ ...period, startDate: period.startDate! }}
             staysOn={(index === 0 ? current : planned[index - 1])?.termsName ?? ""}
             linksToSettings={linksToSettings}
-            canCancel={Boolean(change) && !editing && !weekEdit?.mode}
+            canCancel={Boolean(change) && !editing && !otherEdit}
           />
         ))}
         <TermsRows
@@ -130,8 +135,10 @@ export function TermsCard({
           viewerIsPerson={viewerIsPerson}
           employeeId={employeeId}
           weekEdit={weekEdit}
+          rulesEdit={rulesEdit}
           locked={editing}
           earliest={employmentTerms.earliestChange}
+          termsOn={termsOn}
           change={
             change?.before && change.after
               ? { before: change.before, after: change.after, date: changeDate }

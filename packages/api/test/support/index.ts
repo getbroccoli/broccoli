@@ -139,6 +139,7 @@ export {
   type TermsPolicy,
   bookTimeOffService,
   whosOutService,
+  ownTimeOffRulesService,
   timeOffPolicyService,
   timeOffService,
   transactWithTimeOffEvents,

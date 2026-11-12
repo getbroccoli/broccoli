@@ -13,7 +13,7 @@ import { EmployeeDetails } from "./EmployeeDetails";
 import { EmployeeHeader } from "./EmployeeHeader";
 import { EmployeeHistory } from "./EmployeeHistory";
 import { TermsTabFooter } from "./TermsTabFooter";
-import { EmploymentTermsTab, useOwnWeekEdit, useTermsChange } from "./EmploymentTermsTab";
+import { EmploymentTermsTab, useTermsTabEdits } from "./EmploymentTermsTab";
 import { EMPLOYEE_DESCRIPTION } from "./employeeDescription";
 import { shownTab } from "./employeePanelSearch";
 import { type EmployeeFieldKey, INPUT_KEYS } from "./employeeDraft";
@@ -34,13 +34,9 @@ type Props = {
 export function EmployeeRecord({ employee, onClose }: Props) {
   const draft = useEmployeeDraft(employee);
   const person = { employeeId: employee.id, firstName: employee.firstName };
-  const termsChange = useTermsChange(person);
-  const weekEdit = useOwnWeekEdit(person);
-  const tabEdits = (termsChange.changed ? 1 : 0) + (weekEdit.changed ? 1 : 0);
-  const closeTabEdits = () => {
-    termsChange.close();
-    weekEdit.close();
-  };
+  const edits = useTermsTabEdits(person);
+  const { termsChange, weekEdit, rulesEdit } = edits;
+  const tabEdits = edits.changedCount;
   const unsaved = draft.changed.length > 0 || tabEdits > 0;
   const [removing, setRemoving] = useState(false);
   const [inviting, setInviting] = useState(false);
@@ -92,7 +88,7 @@ export function EmployeeRecord({ employee, onClose }: Props) {
         value={shownTab(tab, { canReadTerms: employee.employmentTerms !== null })}
         onValueChange={(value: typeof tab) => {
           // An edit with nothing picked closes with its tab; a changed one asks first.
-          if (tabEdits === 0) closeTabEdits();
+          if (tabEdits === 0) edits.close();
           void navigate({ search: (previous) => ({ ...previous, tab: value }) });
         }}
         className="min-h-0 flex-1 gap-0"
@@ -158,6 +154,7 @@ export function EmployeeRecord({ employee, onClose }: Props) {
               linksToSettings={operations.includes("MANAGE_WORKSPACE")}
               change={operations.includes("MANAGE_WORKSPACE") ? termsChange : null}
               weekEdit={operations.includes("MANAGE_WORKSPACE") ? weekEdit : null}
+              rulesEdit={operations.includes("MANAGE_WORKSPACE") ? rulesEdit : null}
             />
           </TabsPanel>
         )}
@@ -169,9 +166,10 @@ export function EmployeeRecord({ employee, onClose }: Props) {
       <TermsTabFooter
         termsChange={termsChange}
         weekEdit={weekEdit}
+        rulesEdit={rulesEdit}
         firstName={employee.firstName}
       />
-      {!termsChange.open && !weekEdit.mode && draft.changed.length > 0 && (
+      {!edits.open && draft.changed.length > 0 && (
         <div className="border-t border-border px-4 py-3">
           <EditBar
             changedLabels={changedLabels}
@@ -195,7 +193,7 @@ export function EmployeeRecord({ employee, onClose }: Props) {
         // Navigation goes on once nothing is changed; a tab switch keeps the record open.
         onDiscard={() => {
           draft.cancel();
-          closeTabEdits();
+          edits.close();
         }}
         onKeepEditing={() => blocker.reset?.()}
       />

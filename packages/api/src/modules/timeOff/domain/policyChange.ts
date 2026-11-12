@@ -93,7 +93,7 @@ export function changesCountsMidYear(
  */
 export function versionFromRules(
   rules: TimeOffRules,
-  before: PolicyVersion | null,
+  before: NewPolicyVersion | null,
 ): NewPolicyVersion {
   if (rules.balance === "no_balance") {
     return { ...rules, leaveYear: null, rules: [] };

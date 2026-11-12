@@ -4,17 +4,20 @@ import type { BankHolidayService } from "../bankHolidays";
 import {
   allowanceEventHandlers,
   createBookTimeOffService,
+  createOwnTimeOffRulesService,
   createTimeOffPolicyService,
   createWhosOutService,
   ensureAllowancesJob,
   type TimeOffSetupService,
   type TimeOffService,
 } from "./app";
+import { createEmployeeReadService } from "../employees";
 import { createResolvers } from "./graphql";
 
 // Public values.
 export {
   createBookTimeOffService,
+  createOwnTimeOffRulesService,
   createTimeOffPolicyService,
   createTimeOffSetupService,
   createTimeOffService,
@@ -51,6 +54,10 @@ export function timeOffModule({
       createTimeOffPolicyService({ ...dependencies, timeOff }),
       createBookTimeOffService({ ...dependencies, timeOff, bankHolidays }),
       createWhosOutService({ ...dependencies, bankHolidays }),
+      {
+        ownRules: createOwnTimeOffRulesService({ ...dependencies, timeOff }),
+        employees: createEmployeeReadService(dependencies),
+      },
     ),
     events: {
       ...allowanceEventHandlers({ timeOff, ...dependencies }),

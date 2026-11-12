@@ -13,7 +13,7 @@ import { t } from "@/i18n";
 import { forgetHistory } from "../../cache";
 import { describeWeek, rowOf } from "./employmentTermsView";
 import { WeekRowEditor } from "./WeekRowEditor";
-import { cancellableStarts, weekToEditFrom } from "./ownWeekText";
+import { cancellableStarts, versionToEditFrom } from "./ownWeekText";
 import { TermsRuleRow } from "./TermsRuleRow";
 import type { OwnWeekEdit } from "./useOwnWeekEdit";
 
@@ -59,7 +59,7 @@ export function WeekRow({
     sourceOf,
     t("people.panel.terms.noWeekLower"),
   );
-  const base = weekToEditFrom(workingWeek, today);
+  const base = versionToEditFrom(workingWeek, today);
   const { planned } = splitVersions(workingWeek, today);
   const hasOwn = [base, ...planned].some((version) => version?.source === "THEIR_OWN");
   const canAct = edit !== null && edit.mode === null && !locked && base !== null;

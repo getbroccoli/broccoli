@@ -2,8 +2,11 @@ import type { TimeOffRulesInput } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 import { calendarDayParts } from "@/lib/calendarDay";
 
-import { daysError, rulesInputOf, type RulesValues, rulesValuesOf } from "../TimeOffSettings";
 import {
+  daysError,
+  rulesInputOf,
+  type RulesValues,
+  rulesValuesOf,
   ruleSummary,
   type RuleText,
   shortDate,

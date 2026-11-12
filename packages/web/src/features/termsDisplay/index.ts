@@ -14,6 +14,7 @@ export {
   type RuleText,
   shortDate,
   splitVersions,
+  storedRuleText,
   versionBefore,
   versionOn,
   type WeekMinutes,
@@ -32,3 +33,6 @@ export {
   weekOfDraft,
   type WeekVersion,
 } from "./weekDraft";
+export { RulesEditor } from "./RulesEditor";
+export { daysError, rulesInputOf, type RulesValues, rulesValuesOf } from "./rulesValues";
+export { TimeOffRulesFields } from "./TimeOffRulesFields";

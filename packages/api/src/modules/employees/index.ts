@@ -41,9 +41,11 @@ export {
   createOwnWorkingWeekService,
   createTermsService,
   employeeDirectory,
+  employeeNotFound,
   termsRecordType,
 } from "./app";
 export {
+  cancelOwnChange,
   cancelPlannedVersion,
   changesWithin,
   createPersonTimeline,
@@ -55,12 +57,17 @@ export {
   parseTermsSetup,
   isSameOwner,
   NEW_ROW,
+  ownStretchesOf,
+  ownStretchOn,
+  parsePersonChangeDate,
   personVersionsFrom,
   planEnd,
   planOrRefusal,
   plannedRowsReplaced,
   rowsAfterPlan,
   SETUP_START_DATE,
+  withOwnStretch,
+  withoutOwnStretches,
 } from "./domain";
 
 // Public types.
@@ -92,6 +99,7 @@ export type {
   Assignment,
   AssignmentOwner,
   AssignmentPlan,
+  OwnStretch,
   PersonTimeline,
   PersonVersion,
   VersionStatus,

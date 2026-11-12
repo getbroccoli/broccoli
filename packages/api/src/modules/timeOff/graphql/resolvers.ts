@@ -24,6 +24,8 @@ import {
 } from "../domain";
 import { bookingResolvers } from "./bookingResolvers";
 import { BALANCE_KINDS, toGraphqlType } from "./graphqlValues";
+import { ownRulesResolvers, type OwnRulesServices } from "./ownRulesResolvers";
+import { toStoredRules } from "./storedRules";
 import { previewTimeOffLoader } from "./previewTimeOffLoader";
 
 type TimeOffTypeRow = ResolversTypes["EmployeeTimeOffType"];
@@ -34,6 +36,7 @@ export function createResolvers(
   policies: TimeOffPolicyService,
   booking: BookTimeOffService,
   whosOut: WhosOutService,
+  ownRules: OwnRulesServices,
 ): Resolvers {
   const bookings = bookingResolvers(booking, whosOut);
   const loaders = timeOffLoaders(timeOff);
@@ -137,6 +140,7 @@ export function createResolvers(
         mutationPayload<ResolversTypes["TermsPublishPayload"]>(async () => {
           return { terms: await policies.publishTerms(context.getActor(), input) };
         }, ["INVALID_INPUT", "CONFLICT"]),
+      ...ownRulesResolvers(ownRules),
     },
     Employee: {
       timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),
@@ -263,17 +267,6 @@ function toGraphqlRules(version: PolicyVersion) {
 }
 
 /** Rules sent through GraphQL as the service takes them: enum values in lower case. */
-function toStoredRules({
-  balance,
-  entitlementDays,
-  bankHolidays,
-}: ResolversTypes["TimeOffRulesInput"]) {
-  return {
-    balance: balance.toLowerCase(),
-    entitlementDays,
-    bankHolidays: bankHolidays?.toLowerCase(),
-  };
-}
 
 function toBalanceKind(balance: PolicyVersion["balance"] | null) {
   return balance && BALANCE_KINDS[balance];

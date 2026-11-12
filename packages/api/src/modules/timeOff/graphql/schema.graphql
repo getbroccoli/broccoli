@@ -587,6 +587,12 @@ type TimeOffMutations {
   cancelPolicyStop(input: TimeOffPolicyCancelStopInput!): TimeOffPolicyCancelStopPayload!
   "Publishes the terms' unpublished working week and rules and gives them, from a date no earlier than the start of the current leave year, to the owners asked: these terms and others using what they replace. How a type counts changes only from the start of a leave year (`rules.balance` / `not_leave_year_start`). A stop ends the owners' rules for its type the day before the date instead (`startDate` / `not_offered` when an owner has none then). Refused with a ConflictError when they were saved again since `versions` was read, or when a stop would leave booked time off without rules. Admins only."
   publishTerms(input: TermsPublishInput!): TermsPublishPayload!
+  "Gives a person their own rules for a type from a date no earlier than this leave year's start or their start, over their terms', until their next own rules change if one is planned; changes them when they have their own then. How the type counts changes only from the start of a leave year (`rules.balance` / `not_leave_year_start`). Admins only."
+  setOwnRules(input: TimeOffOwnRulesSetInput!): TimeOffOwnRulesPayload!
+  "Puts a person back on their terms' rules for a type from a date: their own rules covering it end the day before, later ones go. The type is not offered to them where their terms don't offer it. Admins only."
+  useTermsRules(input: TimeOffTermsRulesUseInput!): TimeOffOwnRulesPayload!
+  "Removes a change to a person's own rules for a type that has not started: new own rules, a change to them, or a return to their terms. Refused with a ConflictError once it has started. Admins only."
+  cancelOwnRulesChange(input: TimeOffOwnRulesCancelChangeInput!): TimeOffOwnRulesPayload!
 }
 
 "The booked time off, or why it was refused."
@@ -608,6 +614,35 @@ type TimeOffCancelPayload {
 }
 
 union TimeOffCancelError = NotFoundError | ConflictError
+
+"A person's own rules for a type from a date."
+input TimeOffOwnRulesSetInput {
+  employeeId: ID!
+  timeOffTypeId: ID!
+  startDate: Date!
+  rules: TimeOffRulesInput!
+}
+
+input TimeOffTermsRulesUseInput {
+  employeeId: ID!
+  timeOffTypeId: ID!
+  startDate: Date!
+}
+
+input TimeOffOwnRulesCancelChangeInput {
+  employeeId: ID!
+  timeOffTypeId: ID!
+  "The start of the change to remove."
+  startDate: Date!
+}
+
+"The person whose time off rules changed, or why it was refused."
+type TimeOffOwnRulesPayload {
+  employee: Employee
+  error: TimeOffOwnRulesError
+}
+
+union TimeOffOwnRulesError = InvalidInputError | NotFoundError | ConflictError
 
 input TimeOffTypeCreateInput {
   "1 to 60 characters; unique, ignoring case and surrounding spaces."

@@ -6,8 +6,8 @@ import {
   DAY_NAMES,
   hoursOf,
   ruleSummary,
-  type RuleText,
   shortDate,
+  storedRuleText,
   type WeekMinutes,
   weekSummary,
 } from "@/features/termsDisplay";
@@ -48,7 +48,7 @@ export function termsChangeSentence(
     if (!rules) {
       return before && t("terms.history.rulesCancelled", { type, date: dateOf(before) });
     }
-    const rule = ruleSummary(ruleTextOf(rules));
+    const rule = ruleSummary(storedRuleText(rules));
     if (!before) {
       return startsOtherDay(rules, madeOn)
         ? t("terms.history.offeredFrom", { type, rule: upperFirst(rule), date: dateOf(rules) })
@@ -162,14 +162,6 @@ function weekMinutesOf({ minutes }: WeekValue): WeekMinutes {
 
 function calendarOf({ bankHolidayCalendar }: WeekValue): string {
   return calendarName(bankHolidayCalendar.toUpperCase() as BankHolidayCalendar);
-}
-
-function ruleTextOf({ balance, entitlementDays, bankHolidays }: RulesValue): RuleText {
-  return {
-    balance: balance.toUpperCase() as RuleText["balance"],
-    bankHolidays: bankHolidays?.toUpperCase() as RuleText["bankHolidays"],
-    yearlyEntitlement: entitlementDays === null ? null : { days: entitlementDays, daysPerWeek: 5 },
-  };
 }
 
 function dateOf({ startDate }: { startDate: string | null }): string {

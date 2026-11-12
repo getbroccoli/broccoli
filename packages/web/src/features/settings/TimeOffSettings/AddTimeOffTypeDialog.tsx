@@ -17,7 +17,8 @@ import {
 import { t } from "@/i18n";
 
 import { nameErrorOf } from "./nameError";
-import { daysError, typeInputOf } from "./timeOffRules";
+import { daysError } from "@/features/termsDisplay";
+import { typeInputOf } from "./timeOffRules";
 import { TimeOffTypeFields, type TimeOffTypeValues } from "./TimeOffTypeFields";
 
 type Props = {

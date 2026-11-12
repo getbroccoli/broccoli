@@ -90,6 +90,17 @@ Add terms "Scotland" in Settings › Employment terms first, and a location "Gla
 - [ ] An own week stays through a move to other terms: Change terms marks no change on the Working week row and the footer adds "<first name> keeps their own working week."
 - [ ] With the week edited, switching tab asks "Discard 1 unsaved change?".
 
+## Own time off rules
+
+- [ ] As the owner, each type row has "Edit"; on Annual leave it opens the rules editor in the row (How it counts, Allowance, Bank holidays on top, Leave year, Applies from: 1 Jan <this year>, 1 Jan <next year>, Other date…), prefilled from the terms' rules. "Change terms" and the Working week row's buttons grey out while it is open.
+- [ ] 25 days from 1 Jan next year: the footer reads "Saving gives <first name> their own Annual leave rules from 1 Jan <year>."; Save toasts "<first name>’s own Annual leave saved." and the row gains "From 1 Jan <year>: 25 days a year, bank holidays on top" with "Cancel change".
+- [ ] 25 days from 1 Jan this year: the row shows 25 days with the "<first name>’s own" pill, the footer had added "<first name>’s allowance is worked out again from that date.", and Overview's Annual leave card shows the new entitlement.
+- [ ] Changing how it counts (Unlimited) with Other date set to a day that is not 1 January shows "How it counts changes only from the start of a leave year." and Save stays disabled.
+- [ ] A type the terms don't offer reads "Not offered on England and Wales" and has "Offer to <first name>"; the footer reads "Saving offers Family leave to <first name> from …".
+- [ ] With own rules, "Use England and Wales’s rules" asks only for Applies from; the footer reads "Saving puts <first name> back on England and Wales’s Annual leave rules from …", or "Saving takes Family leave away from <first name> from …, as England and Wales doesn’t offer it." for an offered type; saving toasts "<first name> is back on England and Wales’s Annual leave from <date>.".
+- [ ] "Cancel change" on a planned own-rules line asks "Cancel this change?" "<first name>’s Annual leave stays as it was." and removes the line; History shows "You gave them their own Annual leave, …", "You put them back on their terms’ Annual leave from …" and "You cancelled the change to their Annual leave from …".
+- [ ] Own rules stay through a move to other terms: Change terms marks no change on that row and the footer adds "<first name> keeps their own Annual leave."
+
 ## Time off
 
 - [ ] A demo person who started before this year shows "Time off · <this year>" between the key facts and Details: an Annual leave card with Entitlement 28, Bank holidays 8, Used 0, Remaining 20, then Sickness, Family leave and Other, each "0 days recorded".
