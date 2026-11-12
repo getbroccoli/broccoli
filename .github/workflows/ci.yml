@@ -18,7 +18,9 @@ jobs:
   test:
     name: Test
     runs-on: self-hosted
-    container: node:24.21.0-bookworm
+    container:
+      image: node:24.21.0-bookworm
+      options: --cpus 4 --memory 8g --memory-swap 8g
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Installs pnpm from packageManager; pnpm then installs Node from devEngines.
@@ -33,7 +35,9 @@ jobs:
   e2e:
     name: End-to-end tests
     runs-on: self-hosted
-    container: node:24.21.0-bookworm
+    container:
+      image: node:24.21.0-bookworm
+      options: --cpus 4 --memory 8g --memory-swap 8g
     services:
       postgres:
         image: postgres:18-alpine
@@ -42,6 +46,7 @@ jobs:
           # Reachable only on the job network.
           POSTGRES_HOST_AUTH_METHOD: trust
         options: >-
+          --cpus 2 --memory 2g --memory-swap 2g
           --tmpfs /var/lib/postgresql:size=1g
           --health-cmd "pg_isready -U broccoli -d postgres"
           --health-interval 2s
