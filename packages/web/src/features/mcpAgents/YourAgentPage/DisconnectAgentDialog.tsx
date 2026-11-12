@@ -17,14 +17,18 @@ import { showAgentDisconnected } from "../cache";
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  client: string;
+  connection: { id: string; client: string };
 };
 
 /** Confirms ending the person's agent connection; its next call is refused. */
-export function DisconnectAgentDialog({ open, onOpenChange, client }: Props) {
+export function DisconnectAgentDialog({ open, onOpenChange, connection }: Props) {
+  const { client } = connection;
   const [disconnect, { loading, error, reset }] = usePayloadMutation(DisconnectAgentDocument, {
     update: (cache, { data }) =>
-      showAgentDisconnected(cache, data?.mcpAgents.disconnect.endedAgentConnection ?? null),
+      showAgentDisconnected(cache, {
+        connectionId: connection.id,
+        ended: data?.mcpAgents.disconnect.endedAgentConnection ?? null,
+      }),
   });
 
   const confirm = async () => {

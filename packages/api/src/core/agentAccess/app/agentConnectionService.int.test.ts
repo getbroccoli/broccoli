@@ -27,6 +27,26 @@ test("disconnect ends the caller's connection and refuses its next use", async (
   ).toBeNull();
 });
 
+test("disconnect and the last ending name the same connection when several end at once", async ({
+  orm,
+  seed,
+}) => {
+  await seed.agentConnection({
+    userId: OWNER.user!.userId,
+    connectedAt: new Date("2026-11-10T12:00:00Z"),
+  });
+  const { connectionId } = await seed.agentConnection({
+    userId: OWNER.user!.userId,
+    connectedAt: new Date("2026-11-11T12:00:00Z"),
+  });
+  const service = agentConnectionService(orm);
+
+  const ended = await service.disconnectMyAgent(OWNER);
+
+  expect(ended).toMatchObject({ id: connectionId });
+  expect(await service.readMyLastEndedConnection(OWNER)).toMatchObject({ id: connectionId });
+});
+
 test("disconnect without a connection returns null", async ({ orm }) => {
   const ended = await agentConnectionService(orm).disconnectMyAgent(OWNER);
 

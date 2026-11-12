@@ -1,6 +1,7 @@
 import { Check, Robot } from "@phosphor-icons/react";
 import { useState } from "react";
 
+import type { YourAgentQuery } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import { t, type MessageKey } from "@/i18n";
 
@@ -12,7 +13,7 @@ const PROMISES: readonly MessageKey[] = [
 ];
 
 type Props = {
-  connection: { clientName?: string | null; connectedAt: string; lastUsedAt: string };
+  connection: NonNullable<YourAgentQuery["myAgentConnection"]>;
   /** Who the agent acts as: the person's name, or their email without an employee. */
   personName: string;
   address: string;
@@ -70,7 +71,11 @@ export function ConnectedAgentCard({ connection, personName, address }: Props) {
       <p className="text-xs text-muted-foreground">
         {t("mcpAgents.connected.replaces", { address, client })}
       </p>
-      <DisconnectAgentDialog open={confirming} onOpenChange={setConfirming} client={client} />
+      <DisconnectAgentDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        connection={{ id: connection.id, client }}
+      />
     </div>
   );
 }

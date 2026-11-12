@@ -110,6 +110,7 @@
       "src/components/ui",
       "src/features/auth",
       "src/i18n",
+      "src/lib/class-names",
       "src/lib/postJson",
       "src/lib/useCopyToClipboard",
       "src/shell"

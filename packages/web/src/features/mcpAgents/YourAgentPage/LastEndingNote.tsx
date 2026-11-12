@@ -1,4 +1,4 @@
-import type { AgentConnectionEndReason } from "@/__generated__/graphql";
+import type { AgentConnectionEndReason, YourAgentQuery } from "@/__generated__/graphql";
 import { t, type MessageKey } from "@/i18n";
 
 /** Replacement never shows: the page then shows the agent that replaced it as connected. */
@@ -9,7 +9,7 @@ const ENDINGS: Partial<Record<AgentConnectionEndReason, MessageKey>> = {
 };
 
 type Props = {
-  ending: { clientName?: string | null; reason: AgentConnectionEndReason };
+  ending: NonNullable<YourAgentQuery["myLastEndedAgentConnection"]>;
 };
 
 /** That no agent is connected, and why the last one ended. */

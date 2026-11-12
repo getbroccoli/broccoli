@@ -14,7 +14,10 @@ import { WaitingForAgent } from "./WaitingForAgent";
 
 /** Where a person connects their own agent, sees it connected, and disconnects it. */
 export function YourAgentPage() {
-  const { data, error, refetch } = useQuery(YourAgentDocument);
+  // An agent connects in another tab or app, so the page never trusts what an earlier visit cached.
+  const { data, error, refetch } = useQuery(YourAgentDocument, {
+    fetchPolicy: "cache-and-network",
+  });
   useRefetchOnFocus(refetch);
   // The address the browser is on: the one an agent's token is issued for.
   const address = `${window.location.origin}/api/mcp`;

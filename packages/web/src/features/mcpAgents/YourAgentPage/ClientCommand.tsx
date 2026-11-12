@@ -15,7 +15,7 @@ export function ClientCommand({ client, line, then }: Props) {
   return (
     <div className="flex flex-col gap-1.5">
       <span className="text-sm font-medium">{client}</span>
-      <CopyableText text={line} copyLabel={t("mcpAgents.cli.copyCommand")} />
+      <CopyableText text={line} copyLabel={t("mcpAgents.cli.copyCommand")} wrap />
       <span className="text-xs text-muted-foreground">{then}</span>
     </div>
   );

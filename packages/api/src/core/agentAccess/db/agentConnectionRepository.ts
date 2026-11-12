@@ -134,7 +134,8 @@ export function agentConnectionRepository(db: Orm | Tx): AgentConnectionReposito
     async findLastEnding(userId) {
       const [row] = await selectEndings(orm())
         .where(eq(agentConnectionEndings.userId, userId))
-        .orderBy(desc(agentConnectionEndings.endedAt))
+        // Connections ended together share `endedAt`; the newest of them ended last, as Disconnect says.
+        .orderBy(desc(agentConnectionEndings.endedAt), desc(agentConnectionEndings.connectedAt))
         .limit(1);
       return row ?? null;
     },
