@@ -183,9 +183,8 @@ export class TestSeed {
   }
 
   /** A person's agent connection, as Allow leaves it. */
-  agentConnection(options: Parameters<typeof seedAgentConnection>[1]) {
-    return seedAgentConnection(this.orm, options);
-  }
+  agentConnection = (options: Parameters<typeof seedAgentConnection>[1]) =>
+    seedAgentConnection(this.orm, options);
 
   /** The id of the seeded "England and Wales" terms, which every new employee joins. */
   defaultTermsId = () => defaultTermsId(this.orm);
