@@ -64,8 +64,8 @@ export interface ProcessRunDetails {
 
 /** A step's task after a step command, and its run; a run cancelled on the way says so instead of throwing. */
 export interface StepChange {
-  /** Without the cancel reason, which names other steps only admins may see. */
-  run: Omit<ProcessRun, "cancelReason">;
+  /** Without why it was cancelled, which only admins may see: it can name another step. */
+  run: Omit<ProcessRun, "cancelReason" | "cancelCause">;
   task: Task;
 }
 
@@ -157,6 +157,14 @@ export function toRunView(run: StoredRun, process: StoredProcess): ProcessRun {
   };
 }
 
+/** The run as an assignee's step change returns it. */
+export function toAssigneeRun(run: ProcessRun): StepChange["run"] {
+  const visible: Partial<ProcessRun> = { ...run };
+  delete visible.cancelReason;
+  delete visible.cancelCause;
+  return visible as StepChange["run"];
+}
+
 async function readDetailsIn(
   { tasks, starter }: Deps,
   tx: Tx,
@@ -195,11 +203,4 @@ async function readDetailsIn(
       };
     }),
   };
-}
-
-/** The run as an assignee's step change returns it. */
-export function toAssigneeRun(run: ProcessRun): StepChange["run"] {
-  const visible: Partial<ProcessRun> = { ...run };
-  delete visible.cancelReason;
-  return visible as StepChange["run"];
 }

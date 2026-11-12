@@ -1,4 +1,10 @@
-export { addDayOffset, type DatedWeek, type IsWorkingDay, workingDaysOf } from "./dayOffset";
+export {
+  addDayOffset,
+  type DatedWeek,
+  type IsWorkingDay,
+  MAX_SEARCH_DAYS,
+  workingDaysOf,
+} from "./dayOffset";
 export { dueTriggerDate } from "./recordDateTrigger";
 export {
   type AssigneeRule,

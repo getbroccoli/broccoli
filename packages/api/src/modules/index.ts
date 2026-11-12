@@ -61,6 +61,8 @@ export function createModules(
   const deleteAllEmployees: typeof employeeSetup.deleteAllEmployees = async (ctx, tx) => {
     // The policies' lock first: turning time off on holds it while its allowances wait on employee rows.
     await timeOff.lockPolicies(ctx, tx);
+    // Then the processes: a step command locks its process before its run and task.
+    await processes.lockProcesses(ctx, tx);
     // Employees next: their assignments, allowances and ledger lines point at the policies.
     await employeeSetup.deleteAllEmployees(ctx, tx);
     await timeOff.resetTimeOff(ctx, tx);

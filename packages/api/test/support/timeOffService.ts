@@ -253,11 +253,13 @@ export function deleteAllEmployees(orm: Orm) {
     transact: testTransactor(orm),
     logger: createLogger("silent"),
   });
+  const processes = processService(orm);
   return async (ctx: SecurityContext, tx: Tx) => {
     await timeOff.lockPolicies(ctx, tx);
+    await processes.lockProcesses(ctx, tx);
     await employeeSetup.deleteAllEmployees(ctx, tx);
     await timeOff.resetTimeOff(ctx, tx);
-    await processService(orm).resetProcesses(ctx, tx);
+    await processes.resetProcesses(ctx, tx);
     await tasks.resetTasks(ctx, tx);
   };
 }

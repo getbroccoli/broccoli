@@ -32,9 +32,6 @@ export function addDayOffset(
   return date;
 }
 
-/** Past the largest business offset (260) with every holiday and part-time week: a longer search finds none. */
-const MAX_SEARCH_DAYS = 1000;
-
 /** One stretch of a person's working week, as employees reads it: minutes Monday first. */
 export interface DatedWeek {
   startDate: CalendarDate;
@@ -57,3 +54,6 @@ export function workingDaysOf(
     return minutes[weekdayOf(date)]! > 0 && !isBankHoliday(date, weekIndex);
   };
 }
+
+/** Past the largest business offset (260) with every holiday and part-time week: a longer search finds none. */
+export const MAX_SEARCH_DAYS = 1000;

@@ -28,6 +28,8 @@ export interface ProcessRepository {
   findVersion(id: string): Promise<{ schemaVersion: number; definition: unknown } | null>;
   /** The process, locked until the transaction ends, so every way of starting a run takes turns. */
   lockProcess(id: string): Promise<void>;
+  /** Every process, locked until the transaction ends, in id order. */
+  lockAllProcesses(): Promise<void>;
   setTurnedOnAt(id: string, turnedOnAt: Date | null): Promise<void>;
   insertRun(run: NewRunRow): Promise<ProcessRun>;
   insertSteps(steps: readonly RunStep[]): Promise<void>;
@@ -104,6 +106,10 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
         .from(processes)
         .where(eq(processes.id, id))
         .for("update");
+    },
+
+    async lockAllProcesses() {
+      await orm.select({ id: processes.id }).from(processes).orderBy(processes.id).for("update");
     },
 
     async setTurnedOnAt(id, turnedOnAt) {

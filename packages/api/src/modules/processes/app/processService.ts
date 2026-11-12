@@ -76,6 +76,11 @@ export interface ProcessService {
     ctx: SecurityContext,
     today: CalendarDate,
   ): Promise<{ runsStarted: number; runsCancelled: number }>;
+  /**
+   * Trusted, for resets: locks every process until the transaction ends, before anything a step
+   * command locks after its process, so a reset and a step command take turns.
+   */
+  lockProcesses(ctx: SecurityContext, tx: Tx): Promise<void>;
   /** Back to a fresh workspace: deletes every run with its tasks, turns every process off, forgets their history. */
   resetProcesses(ctx: SecurityContext, tx: Tx): Promise<void>;
 }
@@ -230,11 +235,17 @@ export function createProcessService({
 
     async readStepProgress(ctx, taskId) {
       const task = await tasks.readTask(ctx, taskId);
-      const run = await requireRun(orm, runIdOf(task));
-      const [process] = await processRepository(orm).findProcessesByIds([run.processId]);
-      const steps = (await processRepository(orm).findSteps(run.id)).filter(
-        ({ status }) => status !== "step_skipped",
-      );
+      const runId = (await requireRun(orm, runIdOf(task))).id;
+      // Locked, so a step change committing meanwhile cannot pair its steps with the old status.
+      const { run, process, steps } = await transact(async (tx) => {
+        const runs = processRepository(tx);
+        const locked = (await runs.lockRun(runId))!;
+        const [found] = await runs.findProcessesByIds([locked.processId]);
+        const counted = (await runs.findSteps(locked.id)).filter(
+          ({ status }) => status !== "step_skipped",
+        );
+        return { run: locked, process: found, steps: counted };
+      });
       return {
         processName: process!.name,
         subjectEmployeeId: run.subjectEmployeeId,
@@ -266,6 +277,11 @@ export function createProcessService({
         }
       }
       return { runsStarted, runsCancelled };
+    },
+
+    async lockProcesses(ctx, tx) {
+      ctx.requireSetupAccess("MANAGE_WORKSPACE");
+      await processRepository(tx).lockAllProcesses();
     },
 
     async resetProcesses(ctx, tx) {

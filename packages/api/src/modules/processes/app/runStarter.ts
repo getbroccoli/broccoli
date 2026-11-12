@@ -16,6 +16,7 @@ import {
   addDayOffset,
   type DayOffset,
   dueTriggerDate,
+  MAX_SEARCH_DAYS,
   type IsWorkingDay,
   parseProcessDefinition,
   type ProcessDefinition,
@@ -170,9 +171,6 @@ interface WorkingCalendars {
   bankHolidays: BankHolidayService;
 }
 
-/** Far enough either side of a start day for any offset within its limits, holidays included. */
-const SEARCH_DAYS = 400;
-
 function newRun({
   process,
   subject,
@@ -251,8 +249,8 @@ async function workingDaysAround(
   employeeId: string,
   day: CalendarDate,
 ): Promise<IsWorkingDay | null> {
-  const from = addDays(day, -SEARCH_DAYS);
-  const until = addDays(day, SEARCH_DAYS);
+  const from = addDays(day, -MAX_SEARCH_DAYS);
+  const until = addDays(day, MAX_SEARCH_DAYS);
   const weeks =
     (
       await workingPatterns.readWorkingWeeksInTransaction(tx, {

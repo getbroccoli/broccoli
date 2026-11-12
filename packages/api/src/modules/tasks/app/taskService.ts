@@ -67,7 +67,7 @@ export interface TaskService {
     ctx: SecurityContext,
     tx: Tx,
     input: { taskIds: readonly string[]; reason: string; cause: TaskCause },
-  ): Promise<Task[]>;
+  ): Promise<void>;
   /** Trusted: puts a task to do on hold in `tx`, until what it waits for happens. */
   markWaiting(ctx: SecurityContext, tx: Tx, taskId: string): Promise<Task>;
   /** The signed-in caller's tasks by where the ball is; all empty for a caller with no employee. */
@@ -160,7 +160,6 @@ export function createTaskService({
 
     async cancelInTransaction(ctx, tx, { taskIds, reason, cause }) {
       const tasks = taskRepository(tx);
-      const cancelled: Task[] = [];
       for (const taskId of taskIds) {
         const task = await tasks.lockById(taskId);
         if (!task || task.status === "done" || task.status === "cancelled") continue;
@@ -168,9 +167,7 @@ export function createTaskService({
           cancelTask(task, requireText(reason, "reason"), new Date()),
         );
         await appendStatusChange(ctx, tx, task, saved, cause);
-        cancelled.push(saved);
       }
-      return cancelled;
     },
 
     async markWaiting(ctx, tx, taskId) {

@@ -206,6 +206,7 @@ test("completing a remaining task persists cancellation when the other assignee 
 
   expect(changed.run.status).toBe("cancelled");
   expect(changed.run).not.toHaveProperty("cancelReason");
+  expect(changed.run).not.toHaveProperty("cancelCause");
   expect(changed.task).toMatchObject({
     status: "cancelled",
     cancelReason: "This process was cancelled.",
