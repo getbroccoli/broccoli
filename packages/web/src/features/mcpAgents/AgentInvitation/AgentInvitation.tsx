@@ -24,12 +24,7 @@ export function AgentInvitation({ otherwise }: Props) {
   // An agent connects or the card closes in another tab, so only this visit's answer counts.
   const { data, error } = useQuery(AgentInvitationDocument, { fetchPolicy: "network-only" });
   const cache = useCache();
-  // A read that answered while the close was on its way may have reopened the card.
-  const [closeInvitation] = usePayloadMutation(CloseAgentInvitationDocument, {
-    update: (updated, { data: closed }) =>
-      closed &&
-      showAgentInvitationClosed(updated, closed.mcpAgents.closeInvitation.agentInvitationClosed),
-  });
+  const [closeInvitation] = usePayloadMutation(CloseAgentInvitationDocument);
 
   if (error && !data) return otherwise;
   if (!data) return null;
