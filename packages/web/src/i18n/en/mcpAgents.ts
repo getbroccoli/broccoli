@@ -17,4 +17,64 @@ export const mcpAgentsEn = {
   "mcpAgents.expired.title": "This link has expired",
   "mcpAgents.expired.description":
     "Go back to your agent and connect Broccoli again. It opens a new page here.",
+  "mcpAgents.page.title": "Your agent",
+  "mcpAgents.page.description":
+    "Connect your own Claude, ChatGPT or coding agent to Broccoli. It acts as you: it reads only what you can, and never approves anything.",
+  "mcpAgents.page.failed": "Couldn’t load your agent. Try again in a moment.",
+  "mcpAgents.address.label": "Your Broccoli address",
+  "mcpAgents.address.copy": "Copy",
+  "mcpAgents.address.copied": "Copied",
+  "mcpAgents.address.copyByHand": "Copy it by hand",
+  "mcpAgents.selfHosted.title": "Open Broccoli at its public address before you copy it.",
+  "mcpAgents.selfHosted.detail":
+    "An agent connected at one address stops working at another; SELF_HOSTED_PUBLIC_URL fixes that address. Claude and ChatGPT reach Broccoli only at a public HTTPS address.",
+  "mcpAgents.selfHosted.guide": "How to set it",
+  "mcpAgents.ended.title": "No agent connected.",
+  "mcpAgents.ended.disconnected": "You disconnected {client}.",
+  "mcpAgents.ended.passwordReset": "{client} was disconnected when your password was reset.",
+  "mcpAgents.ended.unused": "{client} was disconnected after 30 days unused.",
+  "mcpAgents.ended.again": "Connect it again below.",
+  "mcpAgents.unnamedClient": "Your agent",
+  "mcpAgents.tabs.label": "How to connect",
+  "mcpAgents.tabs.claude": "Claude",
+  "mcpAgents.tabs.chatgpt": "ChatGPT",
+  "mcpAgents.tabs.cli": "Claude Code, Codex or another client",
+  "mcpAgents.claude.step1":
+    "In Claude, open Customize → Connectors, choose + Add, then Add custom connector.",
+  "mcpAgents.claude.step2":
+    "Name it Broccoli, paste your Broccoli address and add it, then choose Connect.",
+  "mcpAgents.claude.step3": "Broccoli opens in your browser. Check it’s you and choose Allow.",
+  "mcpAgents.claude.note":
+    "On a Claude Team or Enterprise plan, an owner adds the connector first; then you connect it yourself. Claude reaches Broccoli over the internet, so a Broccoli only on your company network needs Claude Code or Codex.",
+  "mcpAgents.chatgpt.step1": "In ChatGPT, open Plugins, choose + and then Add custom MCP server.",
+  "mcpAgents.chatgpt.step2": "Paste your Broccoli address, choose OAuth and connect.",
+  "mcpAgents.chatgpt.step3": "Broccoli opens in your browser. Check it’s you and choose Allow.",
+  "mcpAgents.chatgpt.note":
+    "Needs a ChatGPT plan that allows custom MCP servers. ChatGPT reaches Broccoli over the internet, so a Broccoli only on your company network needs Claude Code or Codex.",
+  "mcpAgents.cli.claudeCode": "Claude Code",
+  "mcpAgents.cli.claudeCodeThen":
+    "Then run /mcp in Claude Code, choose broccoli and Allow in the browser.",
+  "mcpAgents.cli.codex": "Codex",
+  "mcpAgents.cli.codexThen": "Then run codex mcp login broccoli and Allow in the browser.",
+  "mcpAgents.cli.copyCommand": "Copy command",
+  "mcpAgents.cli.other":
+    "Another MCP client: add your Broccoli address as a remote HTTP server with OAuth, then choose Allow when Broccoli opens.",
+  "mcpAgents.waiting.title": "Waiting for your agent…",
+  "mcpAgents.waiting.detail": "This page updates when you come back to it.",
+  "mcpAgents.connected.badge": "Connected",
+  "mcpAgents.connected.since": "Connected {date} · Last active {lastActive}",
+  "mcpAgents.connected.actsAs": "Acts as you, {name}",
+  "mcpAgents.connected.reads": "Reads only what you can",
+  "mcpAgents.connected.neverApproves": "Never approves anything",
+  "mcpAgents.connected.replaces":
+    "Your Broccoli address: {address}. Connecting another agent replaces {client}.",
+  "mcpAgents.connected.label": "Your connected agent",
+  "mcpAgents.disconnect.open": "Disconnect",
+  "mcpAgents.disconnect.title": "Disconnect {client}?",
+  "mcpAgents.disconnect.detail":
+    "{client} is refused from its next call. You can connect it again at any time.",
+  "mcpAgents.disconnect.cancel": "Cancel",
+  "mcpAgents.disconnect.confirm": "Disconnect",
+  "mcpAgents.disconnect.pending": "Disconnecting…",
+  "mcpAgents.disconnect.failed": "Couldn’t disconnect your agent. Try again.",
 } as const;

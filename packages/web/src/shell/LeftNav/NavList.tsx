@@ -11,6 +11,8 @@ export interface NavItem {
   count?: number;
   /** What the count means, for screen readers. */
   countLabel?: string;
+  /** A green dot beside the label, named this for screen readers; none when unset. */
+  dotLabel?: string;
 }
 
 type Props = { label: string; items: NavItem[] };

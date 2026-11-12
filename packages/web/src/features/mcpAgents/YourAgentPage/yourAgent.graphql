@@ -1,0 +1,38 @@
+query YourAgent {
+  me {
+    id
+    email
+    employee {
+      id
+      firstName
+      lastName
+    }
+  }
+  setup {
+    id
+    mode
+  }
+  myAgentConnection {
+    id
+    clientName
+    connectedAt
+    lastUsedAt
+  }
+  myLastEndedAgentConnection {
+    id
+    clientName
+    reason
+  }
+}
+
+mutation DisconnectAgent {
+  mcpAgents {
+    disconnect {
+      endedAgentConnection {
+        id
+        clientName
+        reason
+      }
+    }
+  }
+}

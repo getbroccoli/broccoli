@@ -106,10 +106,12 @@
     ],
     "src/features/mcpAgents": [
       "src/__generated__",
+      "src/apollo",
       "src/components/ui",
       "src/features/auth",
       "src/i18n",
       "src/lib/postJson",
+      "src/lib/useCopyToClipboard",
       "src/shell"
     ],
     "src/features/imports": [
