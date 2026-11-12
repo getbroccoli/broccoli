@@ -51,11 +51,23 @@ export async function resolveSecurityContext(
   if (!session) {
     return { security: await resolveSetupHolder(orm, requestHeaders), renewedCookies };
   }
-  const { id: userId, email } = session.user;
+  const security = await resolveUserSecurity(orm, directory, session.user);
+  return security ? { security, renewedCookies } : { security: null, renewedCookies: [] };
+}
+
+/**
+ * The security context of a signed-in user, read afresh: their profiles, owner flag and employee.
+ * Null for the demo's provisional owner after the demo ended.
+ */
+export async function resolveUserSecurity(
+  orm: Orm,
+  directory: EmployeeDirectory,
+  { id: userId, email }: { id: string; email: string },
+): Promise<SecurityContext | null> {
   const instance = await instances.readInstance(orm);
   const isOwner = userId === instance.ownerUserId;
   if (hasDemoEnded(instance, userId)) {
-    return { security: null, renewedCookies: [] };
+    return null;
   }
   const user = {
     userId,
@@ -67,7 +79,7 @@ export async function resolveSecurityContext(
     ),
     employeeId: await directory.employeeIdOfUser(userId),
   };
-  return { security: PrincipalSecurityContext.user(user, directory), renewedCookies };
+  return PrincipalSecurityContext.user(user, directory);
 }
 
 /** Whether the user is the demo's provisional owner after its deadline, which nothing extends. */

@@ -11,6 +11,16 @@ export {
 export { approveReviewedImport } from "./approveReviewedImport";
 export { createExternalAgentCode, exchangeExternalAgentCode } from "./createExternalAgentCode";
 export { createBrowser, type Browser } from "./browser";
+export {
+  authorize,
+  authorizeAgent,
+  callMcpTool,
+  connectAgent,
+  exchangeAgentCode,
+  refreshAgent,
+  registerAgentClient,
+} from "./agentClient";
+export { mcpAgentToolService } from "./mcpAgentToolService";
 export { startDisconnectingProxy, type DisconnectingProxy } from "./disconnectingProxy";
 export { test, slackTest } from "./fixture";
 export { startFakeBrandServer } from "./fakeBrandServer";
@@ -33,6 +43,13 @@ export { termsChangedEvents } from "./termsChangedEvents";
 export { PNG, JPEG, WEBP } from "./images";
 export { fakeSlackApi, SLACK_MEMBER_WITH_PHOTO, SLACK_PHOTO_URL } from "./fakeSlackApi";
 export { managedOptions, postInit, startManagedEnv, signInAsManagedOwner } from "./managedTestEnv";
+export {
+  assignedManagedEnv,
+  managedTicketClaims,
+  postManagedTicket,
+  sessionCookieOf,
+  startManagedSignIn,
+} from "./managedSignInFlow";
 export { holdMigrationLock, type MigrationLockHolder } from "./migrationLock";
 export {
   createEmptyTestDatabase,

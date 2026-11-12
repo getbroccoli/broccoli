@@ -8,6 +8,7 @@
       "src/features/employees",
       "src/features/imports",
       "src/features/invites",
+      "src/features/mcpAgents",
       "src/features/settings",
       "src/features/setup",
       "src/features/tasks",
@@ -102,6 +103,14 @@
       "src/apollo",
       "src/components/ui",
       "src/i18n"
+    ],
+    "src/features/mcpAgents": [
+      "src/__generated__",
+      "src/components/ui",
+      "src/features/auth",
+      "src/i18n",
+      "src/lib/postJson",
+      "src/shell"
     ],
     "src/features/imports": [
       "src/__generated__",

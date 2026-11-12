@@ -18,6 +18,7 @@ import {
 } from "./employees";
 import { externalAgentsModule } from "./externalAgents";
 import { createImportServices, importsModule } from "./imports";
+import { mcpAgentsModule } from "./mcpAgents";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
 import { createTaskService, tasksModule } from "./tasks";
@@ -103,6 +104,7 @@ export function createModules(
     slackModule(slackConnection),
     importsModule(importServices),
     externalAgentsModule({ ...core, mode: deployment.mode, imports: importServices }),
+    mcpAgentsModule(core),
     timeOffModule({
       ...core,
       timeOff,

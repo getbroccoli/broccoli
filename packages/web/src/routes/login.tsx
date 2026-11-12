@@ -8,7 +8,9 @@ export const Route = createFileRoute("/login")({
   validateSearch: loginSearch,
   beforeLoad: ({ context: { me }, search }) => {
     if (me) {
-      throw redirect({ href: search.redirect, replace: true });
+      // An API address, such as an agent's authorization, is no page of the app: load it.
+      const reloadDocument = search.redirect.startsWith("/api/");
+      throw redirect({ href: search.redirect, replace: true, reloadDocument });
     }
   },
   component: () => (

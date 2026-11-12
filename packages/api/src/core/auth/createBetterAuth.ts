@@ -3,7 +3,7 @@ import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from "bette
 
 import type { Orm, OrmTransaction } from "../db";
 import type { Logger } from "../logger";
-import { account, session, user, verification } from "./schema";
+import * as schema from "./schema";
 
 export const PASSWORD_LENGTH = { min: 8, max: 128 } as const;
 
@@ -79,7 +79,7 @@ export function createBetterAuth({
 export function authDatabase(orm: Orm | OrmTransaction) {
   return drizzleAdapter(orm, {
     provider: "pg",
-    schema: { user, session, account, verification },
+    schema,
     transaction: true,
   });
 }

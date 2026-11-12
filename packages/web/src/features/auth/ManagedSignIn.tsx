@@ -8,13 +8,17 @@ type Props = {
   error: SignInError | undefined;
   /** The owner's way in; null offers both until the instance learns it. */
   method: OwnerSignInMethod | null;
+  /** Where to go once signed in; the API returns there. */
+  redirect: string;
 };
 
 /**
  * Sign-in on a managed instance: the Broccoli accounts service checks who you are. Plain
  * links, so nothing starts on its own and signing out does not bounce back in.
  */
-export function ManagedSignIn({ error, method }: Props) {
+export function ManagedSignIn({ error, method, redirect }: Props) {
+  const startLink = (method: OwnerSignInMethod) =>
+    `${START}?${new URLSearchParams({ method: METHOD_PARAMS[method], redirect }).toString()}`;
   return (
     <div className="flex flex-col gap-3">
       {error && (
@@ -23,22 +27,19 @@ export function ManagedSignIn({ error, method }: Props) {
         </p>
       )}
       {method ? (
-        <a
-          href={START_LINKS[method]}
-          className={buttonVariants({ size: "lg", className: "w-full" })}
-        >
+        <a href={startLink(method)} className={buttonVariants({ size: "lg", className: "w-full" })}>
           {t(BUTTON_LABELS[method])}
         </a>
       ) : (
         <>
           <a
-            href={START_LINKS.SIGN_IN_WITH_GOOGLE}
+            href={startLink("SIGN_IN_WITH_GOOGLE")}
             className={buttonVariants({ size: "lg", className: "w-full" })}
           >
             {t("auth.managed.google")}
           </a>
           <a
-            href={START_LINKS.SIGN_IN_WITH_EMAIL}
+            href={startLink("SIGN_IN_WITH_EMAIL")}
             className={buttonVariants({ size: "lg", variant: "outline", className: "w-full" })}
           >
             {t("auth.managed.email")}
@@ -52,9 +53,9 @@ export function ManagedSignIn({ error, method }: Props) {
 
 const START = "/api/auth/managed/start";
 
-const START_LINKS: Record<OwnerSignInMethod, string> = {
-  SIGN_IN_WITH_GOOGLE: `${START}?method=google`,
-  SIGN_IN_WITH_EMAIL: `${START}?method=email`,
+const METHOD_PARAMS: Record<OwnerSignInMethod, string> = {
+  SIGN_IN_WITH_GOOGLE: "google",
+  SIGN_IN_WITH_EMAIL: "email",
 };
 
 const BUTTON_LABELS: Record<OwnerSignInMethod, MessageKey> = {
