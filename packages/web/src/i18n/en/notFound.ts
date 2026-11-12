@@ -2,5 +2,5 @@
 export const notFoundEn = {
   "notFound.title": "Page not found",
   "notFound.description": "This page does not exist or has moved.",
-  "notFound.back": "Go to People",
+  "notFound.back": "Go to Today",
 } as const;

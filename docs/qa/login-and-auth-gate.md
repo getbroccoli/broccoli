@@ -13,7 +13,7 @@ A manual check of signing in and out against a development stack.
 - [ ] Submitting empty fields shows "Enter a valid email address." and "Enter your password."
 - [ ] A wrong password shows "The email or password is incorrect." and keeps the email.
 - [ ] The right password returns to `/people?q=a`.
-- [ ] `/login` while signed in goes to `/people`; `/login?redirect=https://example.com` goes to `/people` after signing in.
+- [ ] `/login` while signed in goes to Today (`/`); `/login?redirect=https://example.com` goes to Today after signing in.
 
 ## Managed sign-in by method
 
@@ -35,5 +35,5 @@ On a managed workspace created through the website (with the QA mock providers):
 ## Robustness
 
 - [ ] With the API stopped, a reload shows "Couldn’t reach Broccoli"; once it is back, "Try again" opens the page.
-- [ ] An unknown path such as `/foo` shows "Page not found" with "Go to People".
+- [ ] An unknown path such as `/foo` shows "Page not found" with "Go to Today".
 - [ ] At a narrow width the login card fits the screen with its side margin.

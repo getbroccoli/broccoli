@@ -8,7 +8,7 @@ import { AuthCard } from "./AuthCard";
 export function NotFoundPage() {
   return (
     <AuthCard title={t("notFound.title")} description={t("notFound.description")}>
-      <Link to="/people" className={buttonVariants()}>
+      <Link to="/" className={buttonVariants()}>
         {t("notFound.back")}
       </Link>
     </AuthCard>

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /** Where sign-in leads without a usable `redirect`. */
-export const DEFAULT_REDIRECT = "/tasks";
+export const DEFAULT_REDIRECT = "/";
 
 /**
  * `raw` as a path on `origin` (path, query and hash), or `DEFAULT_REDIRECT` when it

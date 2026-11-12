@@ -1,5 +1,7 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+
+import { TodayPage } from "@/features/today";
 
 export const Route = createFileRoute("/_authenticated/")({
-  beforeLoad: () => redirect({ to: "/tasks", replace: true, throw: true }),
+  component: TodayPage,
 });

@@ -1,0 +1,14 @@
+query AgentInvitation {
+  myAgentConnection {
+    id
+  }
+  agentInvitationClosed
+}
+
+mutation CloseAgentInvitation {
+  mcpAgents {
+    closeInvitation {
+      agentInvitationClosed
+    }
+  }
+}

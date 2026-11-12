@@ -14,11 +14,11 @@ it.each([
   ["COMPANY", "SELF_HOSTED", "/setup/company"],
   ["IMPORT", "SELF_HOSTED", "/setup/ai"],
   ["OWNER", "SELF_HOSTED", "/setup/time-off"],
-  ["DONE", "SELF_HOSTED", "/people"],
+  ["DONE", "SELF_HOSTED", "/"],
   ["COMPANY", "MANAGED", "/setup/company"],
   ["IMPORT", "MANAGED", "/setup/import"],
   ["READY", "MANAGED", "/setup/time-off"],
-  ["DONE", "MANAGED", "/people"],
+  ["DONE", "MANAGED", "/"],
 ] as const)("enters %s in %s through %s", (step, mode, expected) => {
   expect(setupStepPage(step, { mode, hasOwner: mode === "MANAGED" })).toBe(expected);
 });
@@ -48,13 +48,13 @@ it.each([
   ["review", "SELF_HOSTED", "/setup/time-off"],
   ["timeOff", "SELF_HOSTED", "/setup/who"],
   ["who", "SELF_HOSTED", "/setup"],
-  ["owner", "SELF_HOSTED", "/people"],
+  ["owner", "SELF_HOSTED", "/"],
   ["company", "MANAGED", "/setup/import"],
   ["import", "MANAGED", "/setup/import/review"],
   ["review", "MANAGED", "/setup/time-off"],
   ["timeOff", "MANAGED", "/setup/who"],
   ["who", "MANAGED", "/setup/ready"],
-  ["ready", "MANAGED", "/people"],
+  ["ready", "MANAGED", "/"],
 ] as const)("continues from %s in %s to %s", (page, mode, expected) => {
   expect(nextPage(page, { mode, hasOwner: mode === "MANAGED" })).toBe(expected);
 });
@@ -64,7 +64,7 @@ it.each([
   ["review", "/setup/time-off"],
   ["timeOff", "/setup/who"],
   ["who", "/setup/ready"],
-  ["ready", "/people"],
+  ["ready", "/"],
 ] as const)("continues from %s after reset to %s", (page, destination) => {
   expect(nextPage(page, { mode: "SELF_HOSTED", hasOwner: true })).toBe(destination);
 });
@@ -135,8 +135,8 @@ it.each([
 
 it.each([
   ["ai", "IMPORT", "MANAGED", { id: "owner" }, false, "/setup/import"],
-  ["company", "DONE", "SELF_HOSTED", { id: "owner" }, false, "/people"],
-  ["import", "DONE", "SELF_HOSTED", { id: "owner" }, false, "/people"],
+  ["company", "DONE", "SELF_HOSTED", { id: "owner" }, false, "/"],
+  ["import", "DONE", "SELF_HOSTED", { id: "owner" }, false, "/"],
   ["import", "OWNER", "SELF_HOSTED", null, true, "/setup/time-off"],
   ["company", "READY", "SELF_HOSTED", { id: "owner" }, false, "/setup/time-off"],
 ] as const)(

@@ -67,10 +67,10 @@ A manual check of the setup review step, between the import and Approve, on a de
 
 - [ ] The footer shows "← Back" and "Add N people →", N counting the people neither left out nor with a "Won’t be added" pill; beside it, "L left out.", "M people won’t be added: they are missing a name or work email." and "K values were not checked; the first source’s are used.", each only when it applies.
 - [ ] "Back" returns to `/setup/import` with the sources as they were.
-- [ ] "Add N people" shows "Adding people…" and lands on `/setup`, headed "Create owner account" in one centred column; `/setup/import/review` now goes there. Above the form, up to 7 of them circle the company's logo, those with a Slack photo first, the others as initials each in its own colour; with more than 7, one face flips to the next every few seconds. With reduced motion the ring stands still. Creating the account lands on `/people`, which lists exactly those N people, each once, with the values and photos review showed, and no demo people.
+- [ ] "Add N people" shows "Adding people…" and lands on `/setup`, headed "Create owner account" in one centred column; `/setup/import/review` now goes there. Above the form, up to 7 of them circle the company's logo, those with a Slack photo first, the others as initials each in its own colour; with more than 7, one face flips to the next every few seconds. With reduced motion the ring stands still. Creating the account lands on Today; `/people` lists exactly those N people, each once, with the values and photos review showed, and no demo people.
 - [ ] On `/setup`, "Back" (bottom left) lands on `/setup/import/review` with the same people, values, left-out choices and photos. Leave one more person out and "Add N people" again: the ring and, after the account, `/people` leave them out.
 - [ ] On a managed instance, "Add N people" lands on `/setup/ready`, headed "<Company> is ready", with the same ring, "N people" and where they came from, such as "From Slack and 2 files". The sidebar shows "Setup Company" and "Add your people" done and "Ready to start" current, with no "Create your account". `/people` and `/setup/import/review` now go to `/setup/ready`.
-- [ ] On `/setup/ready`, "Start using Broccoli" shows "Opening Broccoli…" and lands on `/people` with exactly those N people; `/setup/ready` then goes to `/people`.
+- [ ] On `/setup/ready`, "Start using Broccoli" shows "Opening Broccoli…" and lands on Today; `/people` lists exactly those N people; `/setup/ready` then goes to Today.
 - [ ] On `/setup/ready`, "Back" lands on `/setup/import/review` with everything as approved; adding a person back and "Add N people" shows the new count on Ready, and "Start using Broccoli" adds exactly those people.
 - [ ] With `/setup/ready` open in two tabs, "Back" in one, then "Start using Broccoli" in the other shows "Couldn’t continue. Try again." and adds no one; approving again from the first tab and starting adds each person once.
 - [ ] With `/setup/import/review` open in two tabs, "Add N people" in both adds each person once.
@@ -96,7 +96,7 @@ Upload a CSV with a manager column: `Employee #,First Name,Last Name,Supervisor,
 ## Guards
 
 - [ ] In a second browser profile, `/setup/import/review` goes to `/setup/in-progress`.
-- [ ] Before the company is named it goes to `/setup/company`; after setup it goes to `/people`.
+- [ ] Before the company is named it goes to `/setup/company`; after setup it goes to Today.
 
 ## Layout
 
