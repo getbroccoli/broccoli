@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, notInArray, or, sql } from "drizzle-orm";
 
-import { type Orm, ormOf, type Tx } from "../../../core/db";
+import { anyOf, type Orm, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
 import type {
   Assignment,
@@ -137,11 +137,9 @@ export function workingPatternRepository(db: Orm | Tx): WorkingPatternRepository
         .where(
           or(
             employeeIds.length > 0
-              ? inArray(workingPatternAssignments.employeeId, [...employeeIds])
+              ? anyOf(workingPatternAssignments.employeeId, employeeIds)
               : undefined,
-            termsIds.length > 0
-              ? inArray(workingPatternAssignments.termsId, [...termsIds])
-              : undefined,
+            termsIds.length > 0 ? anyOf(workingPatternAssignments.termsId, termsIds) : undefined,
           ),
         )
         .orderBy(asc(workingPatternAssignments.startDate));

@@ -1,4 +1,6 @@
-import { bigint, index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { bigint, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+
+import { jsonb } from "../../db";
 
 import type { AuthorKind, CauseKind, FieldChange, RecordOperation } from "../domain";
 

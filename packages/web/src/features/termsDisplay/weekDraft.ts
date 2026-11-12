@@ -65,7 +65,7 @@ export function weekHint(draft: WeekDraft, current: WeekMinutes): string {
 
 /** The start of the leave year after the one starting on `start`. */
 export function nextLeaveYear(start: string): string {
-  return `${calendarDayParts(start)[0] + 1}${start.slice(4)}`;
+  return `${String(calendarDayParts(start)[0] + 1).padStart(4, "0")}${start.slice(4)}`;
 }
 
 /** Hours as typed, in steps of 15 minutes from 0 to 24, as minutes; null when not. */

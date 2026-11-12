@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 
 import {
   changesOnlyDays,
+  longDate,
   peopleText,
   rulesChangeBox,
   rulesErrors,
@@ -9,7 +10,7 @@ import {
   weekChangeBox,
   type RulesDraft,
 } from "./termsDraft";
-import type { RuleText } from "@/features/termsDisplay";
+import { nextLeaveYear, type RuleText } from "@/features/termsDisplay";
 
 it("summarises a days-only change and the bank holidays that stay on top", () => {
   expect(rulesChangeBox("Annual leave", nextRules, currentRules, "2027-01-01")).toEqual({
@@ -155,6 +156,14 @@ it("keeps a saved unpublished offer marked as an offer when editing it again", (
     days: "22",
     onTop: true,
   });
+});
+
+it("keeps the year padded when moving to the next January", () => {
+  expect(nextLeaveYear("0001-01-01")).toBe("0002-01-01");
+});
+
+it("displays year 0001 as supplied", () => {
+  expect(longDate("0001-01-01")).toBe("1 January 1");
 });
 
 const rules: RulesDraft = {

@@ -1,6 +1,6 @@
 import type { TimeOffRulesInput } from "@/__generated__/graphql";
 import { t } from "@/i18n";
-import { calendarDayParts } from "@/lib/calendarDay";
+import { utcDay } from "@/lib/calendarDay";
 
 import {
   daysError,
@@ -134,7 +134,7 @@ function upperFirst(text: string): string {
 
 /** A `YYYY-MM-DD` day as "1 December 2026". */
 export function longDate(value: string): string {
-  return LONG_DATE.format(Date.UTC(...calendarDayParts(value)));
+  return LONG_DATE.format(utcDay(value));
 }
 
 const LONG_DATE = new Intl.DateTimeFormat("en-GB", {

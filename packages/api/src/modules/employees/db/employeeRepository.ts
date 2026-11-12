@@ -85,11 +85,14 @@ export interface EmployeeRepository {
 
 const EMAIL_UNIQUE_CONSTRAINT = "employees_email_unique";
 
+// Postgres text cannot hold NUL, so a cursor with one is no cursor this API issued.
+const sortText = z.string().refine((value) => !value.includes("\0"));
+
 /** The sort values of an employee in each order, as `findPage` returns them. */
 export const EMPLOYEE_SORT_VALUES: Record<EmployeeOrderField, z.ZodType<unknown[]>> = {
-  NAME: z.tuple([z.string(), z.string(), z.uuid()]),
-  EMAIL: z.tuple([z.string(), z.uuid()]),
-  START_DATE: z.tuple([z.boolean(), z.string(), z.uuid()]),
+  NAME: z.tuple([sortText, sortText, z.uuid()]),
+  EMAIL: z.tuple([sortText, z.uuid()]),
+  START_DATE: z.tuple([z.boolean(), sortText, z.uuid()]),
 };
 
 export interface EmployeePageQuery extends KeysetQuery<EmployeeOrderField, unknown[]> {

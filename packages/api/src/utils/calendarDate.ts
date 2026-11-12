@@ -27,19 +27,22 @@ export function parseCalendarDate(value: string, order?: DateOrder): CalendarDat
 
 /** The day `days` after `date`, or before it when negative. */
 export function addDays(date: CalendarDate, days: number): CalendarDate {
-  const [year, month, day] = date.split("-").map(Number);
   // In UTC every day has 24 hours, so adding days never lands on another hour.
-  return new Date(Date.UTC(year!, month! - 1, day! + days))
-    .toISOString()
-    .slice(0, 10) as CalendarDate;
+  const moved = utcMidnight(date);
+  moved.setUTCDate(moved.getUTCDate() + days);
+  return moved.toISOString().slice(0, 10) as CalendarDate;
 }
 
 /** The same day `years` later; 29 February becomes 1 March in other years. */
 export function addYears(date: CalendarDate, years: number): CalendarDate {
-  const [year, month, day] = date.split("-").map(Number);
-  return new Date(Date.UTC(year! + years, month! - 1, day))
-    .toISOString()
-    .slice(0, 10) as CalendarDate;
+  const moved = utcMidnight(date);
+  moved.setUTCFullYear(moved.getUTCFullYear() + years);
+  return moved.toISOString().slice(0, 10) as CalendarDate;
+}
+
+// Parsed rather than built with `Date.UTC`, which reads years 0 to 99 as 1900 to 1999.
+function utcMidnight(date: CalendarDate): Date {
+  return new Date(`${date}T00:00:00Z`);
 }
 
 /** How many days `until` is after `from`; negative when it is before. */

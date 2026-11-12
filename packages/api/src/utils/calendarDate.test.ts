@@ -108,3 +108,14 @@ it("covers inclusive boundaries and treats null boundaries as open", () => {
   expect(coversDate(range, "2026-10-01" as CalendarDate)).toBe(false);
   expect(coversDate({ startDate: null, endDate: null }, "2026-09-01" as CalendarDate)).toBe(true);
 });
+
+it("should leave 0000-01-01 unchanged when adding zero days", () => {
+  // Arrange
+  const date = parseCalendarDate("0000-01-01")!;
+
+  // Act
+  const result = addDays(date, 0);
+
+  // Assert
+  expect(result).toBe(date);
+});

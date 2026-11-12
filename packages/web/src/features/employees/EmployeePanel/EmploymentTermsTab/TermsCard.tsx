@@ -2,7 +2,7 @@ import type { EmploymentTermsTab_TermsFragment } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import { companyToday, shortDate } from "@/features/termsDisplay";
 import { t } from "@/i18n";
-import { calendarDayParts } from "@/lib/calendarDay";
+import { addDays } from "@/lib/calendarDay";
 import { cn } from "@/lib/class-names";
 
 import { ChangeTermsForm } from "../../ChangeTermsForm";
@@ -92,7 +92,7 @@ export function TermsCard({
               earliest={change.earliest}
               currentTermsId={current?.termsId}
               hint={[
-                t("changeTerms.hint", { terms: termsNameOn(dayBefore(changeDate)) }),
+                t("changeTerms.hint", { terms: termsNameOn(addDays(changeDate, -1)) }),
                 change.after && t("changeTerms.hintMarked", { date: shortDate(changeDate) }),
               ]
                 .filter(Boolean)
@@ -182,11 +182,6 @@ export function TermsCard({
       <TermsLastChange employeeId={employeeId} />
     </section>
   );
-}
-
-function dayBefore(day: string): string {
-  const [year, month, date] = calendarDayParts(day);
-  return new Date(Date.UTC(year, month, date - 1)).toISOString().slice(0, 10);
 }
 
 // Formatted in UTC from a UTC timestamp, so no time zone moves the calendar day.
