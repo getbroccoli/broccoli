@@ -151,4 +151,14 @@ CREATE INDEX "oauthConsent_userId_idx" ON "oauth_consent" USING btree ("user_id"
 CREATE INDEX "oauthRefreshToken_clientId_idx" ON "oauth_refresh_token" USING btree ("client_id");--> statement-breakpoint
 CREATE INDEX "oauthRefreshToken_sessionId_idx" ON "oauth_refresh_token" USING btree ("session_id");--> statement-breakpoint
 CREATE INDEX "oauthRefreshToken_userId_idx" ON "oauth_refresh_token" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "oauthRefreshToken_authorizationCodeId_idx" ON "oauth_refresh_token" USING btree ("authorization_code_id");
+CREATE INDEX "oauthRefreshToken_authorizationCodeId_idx" ON "oauth_refresh_token" USING btree ("authorization_code_id");--> statement-breakpoint
+CREATE TABLE "agent_connection_endings" (
+	"id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"client_id" text NOT NULL,
+	"connected_at" timestamp with time zone NOT NULL,
+	"ended_at" timestamp with time zone NOT NULL,
+	"reason" text NOT NULL
+);--> statement-breakpoint
+ALTER TABLE "agent_connection_endings" ADD CONSTRAINT "agent_connection_endings_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "agent_connection_endings_user_id_ended_at_idx" ON "agent_connection_endings" USING btree ("user_id","ended_at");

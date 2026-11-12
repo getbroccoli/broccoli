@@ -28,6 +28,17 @@ A manual check of connecting a person's own agent over MCP against a development
 - [ ] Resetting the person's password by email ends the connection: the agent's next call is refused.
 - [ ] Signing out in the browser does not end the connection: the agent keeps answering.
 
+## Your agent page
+
+- [ ] "Your agent" is in the menu for every signed-in person, and its page shows the address the browser is on plus `/api/mcp`, with Copy.
+- [ ] On a self-hosted instance, a line under the address says agents work only at the address they connected to, with a link to set `SELF_HOSTED_PUBLIC_URL`.
+- [ ] The Claude, ChatGPT and "Claude Code or Codex" tabs show their steps; each command's Copy copies it with this address.
+- [ ] Following the Claude Code tab connects it; coming back to the window shows the agent, "Connected …· Last active …" and a dot on the menu item.
+- [ ] Within an hour of connecting, the card opens with "Claude Code is connected. Nice."; × hides it. Each "Try asking" prompt's Copy copies it, and pasting it into a new session of the agent gets an answer (Codex loads Broccoli's tools only in a session started after login).
+- [ ] "Disconnect", then "Disconnect" in the confirm, shows "You disconnected Claude Code."; the agent's next call is refused.
+- [ ] After a password reset by email and signing in again, the page says the agent was disconnected when the password was reset.
+- [ ] At phone width the tabs scroll sideways, and the address and Copy stay on one line.
+
 ## Managed sign-in
 
 On a managed workspace created through the website (with the QA mock providers):

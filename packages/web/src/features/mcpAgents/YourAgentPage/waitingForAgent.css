@@ -1,0 +1,21 @@
+@keyframes waiting-for-agent-pulse {
+  0% {
+    box-shadow: 0 0 0 0 oklch(0.57 0.085 150 / 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 9px oklch(0.57 0.085 150 / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 oklch(0.57 0.085 150 / 0);
+  }
+}
+
+.waiting-for-agent-pulse {
+  animation: waiting-for-agent-pulse 1.8s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .waiting-for-agent-pulse {
+    animation: none;
+  }
+}

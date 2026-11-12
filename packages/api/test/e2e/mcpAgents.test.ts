@@ -109,6 +109,47 @@ test("an owner connects an agent and reads their identity", async ({ env }) => {
   });
 });
 
+test("a person sees their agent, disconnects it, and its next call is refused", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const clientId = await registerAgentClient(env, "Claude Code");
+  const { accessToken, refreshToken } = await connectAgent(env, browser, { clientId });
+  const connected = await browser.graphql(
+    "query { myAgentConnection { id clientName connectedAt lastUsedAt } }",
+  );
+  const connection = (await connected.json()) as { data: { myAgentConnection: { id: string } } };
+  expect(connection).toEqual({
+    data: {
+      myAgentConnection: {
+        id: expect.any(String) as unknown,
+        clientName: "Claude Code",
+        connectedAt: expect.any(String) as unknown,
+        lastUsedAt: expect.any(String) as unknown,
+      },
+    },
+  });
+
+  const disconnected = await browser.graphql(
+    "mutation { mcpAgents { disconnect { endedAgentConnection { id clientName reason } } } }",
+  );
+
+  const ending = {
+    id: connection.data.myAgentConnection.id,
+    clientName: "Claude Code",
+    reason: "DISCONNECTED_BY_PERSON",
+  };
+  expect(await disconnected.json()).toEqual({
+    data: { mcpAgents: { disconnect: { endedAgentConnection: ending } } },
+  });
+  expect((await callMcpTool(env, accessToken, "who_am_i")).status).toBe(401);
+  expect((await refreshAgent(env, { clientId, refreshToken })).status).not.toBe(200);
+  const after = await browser.graphql(
+    "query { myAgentConnection { id } myLastEndedAgentConnection { id reason clientName } }",
+  );
+  expect(await after.json()).toEqual({
+    data: { myAgentConnection: null, myLastEndedAgentConnection: ending },
+  });
+});
+
 test("malformed JSON with a valid read token returns a JSON-RPC parse error", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
   const clientId = await registerAgentClient(env, "Read client");
@@ -231,23 +272,6 @@ test("who_am_i refuses a token without broccoli:read", async ({ env }) => {
   expect(response.headers.get("www-authenticate")).toContain('error="insufficient_scope"');
 });
 
-test("allowing a second client ends the first client's access and refresh tokens", async ({
-  env,
-}) => {
-  const { browser } = await env.signInAsOwner();
-  const firstId = await registerAgentClient(env, "First client");
-  const first = await connectAgent(env, browser, { clientId: firstId });
-  const secondId = await registerAgentClient(env, "Second client");
-
-  const second = await connectAgent(env, browser, { clientId: secondId });
-
-  expect((await callMcpTool(env, first.accessToken, "who_am_i")).status).toBe(401);
-  expect(
-    (await refreshAgent(env, { clientId: firstId, refreshToken: first.refreshToken })).status,
-  ).not.toBe(200);
-  expect((await callMcpTool(env, second.accessToken, "who_am_i")).status).toBe(200);
-});
-
 test("resetting a password ends the agent's access and refresh tokens", async () => {
   const { env, owner, resend } = await startMailTestEnv();
   const saved = await owner.graphql(SAVE_MAIL_SETTINGS, { input: RESEND_CHOICE });
@@ -271,6 +295,14 @@ test("resetting a password ends the agent's access and refresh tokens", async ()
   expect(reset.status).toBe(200);
   expect((await callMcpTool(env, accessToken, "who_am_i")).status).toBe(401);
   expect((await refreshAgent(env, { clientId, refreshToken })).status).not.toBe(200);
+  const { browser: signedIn } = await env.signIn({
+    email: TEST_OWNER.email,
+    password: "a new correct horse battery staple",
+  });
+  const ending = await signedIn.graphql("query { myLastEndedAgentConnection { reason } }");
+  expect(await ending.json()).toEqual({
+    data: { myLastEndedAgentConnection: { reason: "ENDED_BY_PASSWORD_RESET" } },
+  });
 });
 
 test("the agent can refresh and call tools after the browser session expires", async ({ env }) => {

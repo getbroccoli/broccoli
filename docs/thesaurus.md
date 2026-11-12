@@ -20,7 +20,7 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **External agent one-time code**: the secret in the prompt "Add your files" shows for the owner's external agent; valid once, for two hours.
 - **External agent session**: what the external agent gets for an external agent one-time code: a secret token and the security context it acts as. It lasts two hours at most, works only while setup is at the import step with the external agent chosen, and ends on Disconnect or a new code.
 - **Connected agent**: a person's own AI client, such as Claude, ChatGPT, Claude Code or Codex, connected to Broccoli over MCP and acting as that person, with their permissions; one per person, shown as "Your agent".
-- **Agent connection**: a person's grant to their connected agent, from Allow until they connect another agent, reset their password, or leave it unused for 30 days.
+- **Agent connection**: a person's grant to their connected agent, from Allow until they disconnect it on Your agent, connect another agent, reset their password, or leave it unused for 30 days.
 - **Setup review step**: the setup page after the import step, "Review your people", where the owner sees every import employee, settles what its records disagree on, fixes values, leaves some out, and approves. Only the web app knows it: the instance stays at the `import` setup step until setup approve.
 - **Data folder**: `DATA_DIR`, the folder for files that must survive restarts, such as `secrets/`.
 - **File**: bytes with a MIME type that a module stores in the `files` table, such as the company logo. The module that references it decides who may see it.

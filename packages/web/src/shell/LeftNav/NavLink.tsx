@@ -5,7 +5,7 @@ import type { NavItem } from "./NavList";
 type Props = { item: NavItem };
 
 /** A menu link, filled while its page is open. */
-export function NavLink({ item: { to, label, icon: Icon, count, countLabel } }: Props) {
+export function NavLink({ item: { to, label, icon: Icon, count, countLabel, dotLabel } }: Props) {
   return (
     <Link
       to={to}
@@ -17,6 +17,13 @@ export function NavLink({ item: { to, label, icon: Icon, count, countLabel } }: 
         <>
           {Icon && <Icon size={16} weight={isActive ? "bold" : "regular"} />}
           <span className="flex-1 font-medium">{label}</span>
+          {dotLabel && (
+            <span
+              role="img"
+              aria-label={dotLabel}
+              className="size-1.5 rounded-full bg-brand-light"
+            />
+          )}
           {Boolean(count) && (
             <span
               aria-label={countLabel}

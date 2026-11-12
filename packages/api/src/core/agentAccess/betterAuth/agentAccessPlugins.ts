@@ -60,7 +60,10 @@ function agentConnectionPolicy(connections: AgentConnectionService): BetterAuthP
           enabled: true,
           // A reset may follow a stolen password, so it ends the agent's access as well.
           onPasswordReset: ({ user }) =>
-            connections.endConnections(system, { userId: user.id, reason: "PASSWORD_RESET" }),
+            connections.endConnections(system, {
+              userId: user.id,
+              reason: "ended_by_password_reset",
+            }),
         },
       },
     }),

@@ -23,6 +23,8 @@ export default defineConfig(({ mode }) => {
         "/readyz": apiTarget,
         // Keeps the browser's Host: sign-in only trusts the address the browser used.
         "/api": { target: apiTarget, changeOrigin: false },
+        // Agents find the MCP server's OAuth metadata here, at the address they connect to.
+        "/.well-known": { target: apiTarget, changeOrigin: false },
       },
     },
   };

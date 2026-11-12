@@ -15,6 +15,9 @@ const MAX_BODY_BYTES = 64 * 1024;
 const CALLS_PER_PERSON_PER_MINUTE = 120;
 /** Room for a few people's agents behind one address; bounds token guessing from it. */
 const CALLS_PER_ADDRESS_PER_MINUTE = 600;
+/** What the agent reads when it connects: who it acts for and its limits. */
+const INSTRUCTIONS =
+  "🥦 You're in Broccoli, acting as the signed-in person. Start with who_am_i. You see only what they can and never approve anything. Begin every answer that uses Broccoli with 🥦.";
 
 /**
  * `POST /api/mcp`: the MCP server people's own agents call, stateless, by the agent's bearer
@@ -54,7 +57,10 @@ export function mcpAgentRouter(
       asAgent(publicOrigin, resolveAgentSecurity, logger),
       perPerson,
       async (request, response) => {
-        const server = new McpServer({ name: "broccoli", version: "1" });
+        const server = new McpServer(
+          { name: "broccoli", version: "1" },
+          { instructions: INSTRUCTIONS },
+        );
         registerMcpAgentTools(server, agentOf(response), { tools, logger });
         const transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: undefined,

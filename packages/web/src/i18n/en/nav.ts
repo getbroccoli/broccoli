@@ -5,6 +5,8 @@ export const navEn = {
   "nav.tasksNeedYou": "{count} need you",
   "nav.people": "People",
   "nav.timeOff": "Time off",
+  "nav.yourAgent": "Your agent",
+  "nav.agentConnected": "Connected",
   "nav.myProfile": "My profile",
   "nav.backToApp": "Back to app",
 } as const;

@@ -20,6 +20,7 @@ export {
   refreshAgent,
   registerAgentClient,
 } from "./agentClient";
+export { agentConnectionService } from "./agentConnectionService";
 export { mcpAgentToolService } from "./mcpAgentToolService";
 export { startDisconnectingProxy, type DisconnectingProxy } from "./disconnectingProxy";
 export { test, slackTest } from "./fixture";

@@ -108,6 +108,7 @@
     ],
     "src/core/security": ["src/core/applicationError", "src/core/auth", "src/core/db"],
     "src/core/agentAccess": [
+      "src/core/applicationError",
       "src/core/auth",
       "src/core/db",
       "src/core/instance",

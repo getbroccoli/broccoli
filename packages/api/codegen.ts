@@ -6,6 +6,7 @@ import { codegenMappers as demoMappers } from "./src/modules/demo/codegen";
 import { codegenMappers as employeeMappers } from "./src/modules/employees/codegen";
 import { codegenMappers as externalAgentMappers } from "./src/modules/externalAgents/codegen";
 import { codegenMappers as importMappers } from "./src/modules/imports/codegen";
+import { codegenMappers as mcpAgentMappers } from "./src/modules/mcpAgents/codegen";
 import { codegenMappers as systemMappers } from "./src/modules/system/codegen";
 import { codegenMappers as taskMappers } from "./src/modules/tasks/codegen";
 import { codegenMappers as timeOffMappers } from "./src/modules/timeOff/codegen";
@@ -28,6 +29,7 @@ const config: CodegenConfig = {
           ...employeeMappers,
           ...externalAgentMappers,
           ...importMappers,
+          ...mcpAgentMappers,
           ...systemMappers,
           ...taskMappers,
           ...timeOffMappers,
