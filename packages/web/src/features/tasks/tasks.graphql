@@ -24,10 +24,10 @@ fragment TaskFields on Task {
   assignee {
     ...TaskPerson @unmask
   }
-  requestedBy {
+  askedBy {
     ...TaskPerson @unmask
   }
-  about {
+  subject {
     ...TaskPerson @unmask
   }
   doneBy {

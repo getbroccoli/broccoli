@@ -64,10 +64,7 @@ export function taskRepository(db: Orm | Tx): TaskRepository {
         .from(tasks)
         .where(
           and(
-            or(
-              eq(tasks.assigneeEmployeeId, employeeId),
-              eq(tasks.requestedByEmployeeId, employeeId),
-            ),
+            or(eq(tasks.assigneeEmployeeId, employeeId), eq(tasks.askedByEmployeeId, employeeId)),
             or(
               inArray(tasks.status, ["to_do", "waiting"]),
               gte(tasks.doneAt, closedSince),
@@ -82,14 +79,14 @@ export function taskRepository(db: Orm | Tx): TaskRepository {
 
 type TaskRow = typeof tasks.$inferSelect;
 
-function toRow({ processSource, subject, ...task }: NewTaskRow) {
+function toRow({ processSource, record, ...task }: NewTaskRow) {
   return {
     ...task,
     processKey: processSource?.processKey ?? null,
     processRunId: processSource?.processRunId ?? null,
     stepKey: processSource?.stepKey ?? null,
-    recordType: subject?.recordType ?? null,
-    recordId: subject?.recordId ?? null,
+    recordType: record?.recordType ?? null,
+    recordId: record?.recordId ?? null,
   };
 }
 
@@ -104,6 +101,6 @@ function toTask({
   return {
     ...row,
     processSource: processKey && stepKey ? { processKey, processRunId, stepKey } : null,
-    subject: recordType && recordId ? { recordType, recordId } : null,
+    record: recordType && recordId ? { recordType, recordId } : null,
   };
 }

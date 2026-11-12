@@ -70,11 +70,11 @@ export function MyTasks() {
       header: t("tasks.column.from"),
       cell: ({ task }) => (
         <span className="flex items-center gap-2">
-          {task.requestedBy && (
+          {task.askedBy && (
             <Avatar
-              url={task.requestedBy.avatarUrl}
-              firstName={task.requestedBy.firstName}
-              lastName={task.requestedBy.lastName}
+              url={task.askedBy.avatarUrl}
+              firstName={task.askedBy.firstName}
+              lastName={task.askedBy.lastName}
               className="size-6"
             />
           )}

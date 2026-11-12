@@ -26,7 +26,11 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **File**: bytes with a MIME type that a module stores in the `files` table, such as the company logo. The module that references it decides who may see it.
 - **Primitive**: one of the four building blocks every HR feature is made of: records, tasks, calendar and processes.
 - **Record**: a module's main entity, such as an employee or the company.
-- **Task**: work asked of one person, its holder, by the person who asked or a process step. To do, Waiting, Done or Cancelled; only its holder and the person who asked see it. **My tasks** is the Tasks page: Needs you, Waiting on others and Resolved recently.
+- **Task**: work asked of one person, its assignee, by its asker or a process step. To do, Waiting, Done or Cancelled; only its assignee and its asker see it.
+- **Assignee**: the person who does a task. Not "holder", which is the setup holder. Code: `assignee_employee_id`.
+- **Asker**: the person who asked for a task; none on a process step's task. Code: `asked_by_employee_id`.
+- **Subject**: the employee a record is about, which permission scopes are measured against (see [permissions](permissions.md)). A task's subject is shown and gives them no access. Code: `subject_employee_id`.
+- **Record** (of a task or process run): the record it acts on, of any type, such as a time off request. Code: `record_type`, `record_id`. **My tasks** is the Tasks page: Needs you, Waiting on others and Resolved recently.
 - **History**: every change to a record, kept as history lines in the `record_history` table and shown on the record. The product word; "audit" stays internal and means a separate security trail.
 - **History line**: one change to one record: its change author, when, its change cause, its change reason and each changed field's old and new value. Appended in the transaction of the change; only a purge, such as Exit demo or Reset setup, deletes lines.
 - **Change author**: who made a change to a record, from the security context: a signed-in user, Broccoli itself, the setup holder or the external agent.

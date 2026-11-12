@@ -6,7 +6,7 @@ import { TASK_STATUSES, TASK_TYPES } from "../domain";
 
 /**
  * Work asked of one person. The migration adds the foreign keys to employees, which another
- * module owns: deleting the holder or the person who asked deletes the task.
+ * module owns: deleting the assignee or the person who asked deletes the task.
  */
 export const tasks = pgTable(
   "tasks",
@@ -19,8 +19,8 @@ export const tasks = pgTable(
     title: text("title").notNull(),
     description: text("description"),
     assigneeEmployeeId: uuid("assignee_employee_id").notNull(),
-    requestedByEmployeeId: uuid("requested_by_employee_id"),
-    aboutEmployeeId: uuid("about_employee_id"),
+    askedByEmployeeId: uuid("asked_by_employee_id"),
+    subjectEmployeeId: uuid("subject_employee_id"),
     /** The process step that created it; no foreign key to runs until runs exist. */
     processKey: text("process_key"),
     processRunId: uuid("process_run_id"),
@@ -38,12 +38,12 @@ export const tasks = pgTable(
   },
   (table) => [
     index("tasks_assignee_idx").on(table.assigneeEmployeeId),
-    index("tasks_requested_by_idx").on(table.requestedByEmployeeId),
+    index("tasks_asked_by_idx").on(table.askedByEmployeeId),
     index("tasks_record_idx").on(table.recordType, table.recordId),
     check("tasks_title_not_blank", sql`btrim(${table.title}) <> ''`),
     check(
       "tasks_asked_by_someone",
-      sql`${table.requestedByEmployeeId} is not null or ${table.processKey} is not null`,
+      sql`${table.askedByEmployeeId} is not null or ${table.processKey} is not null`,
     ),
     check(
       "tasks_process_source_complete",

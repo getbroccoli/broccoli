@@ -1,16 +1,16 @@
 import { expect, signedIn, taskService, test } from "#test/support";
 
-test("lets the holder reopen a done task back into needs you", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+test("lets the assignee reopen a done task back into needs you", async ({ orm, seed }) => {
+  const assignee = await seed.employee();
   const asker = await seed.employee();
   const task = await seed.task({
-    assigneeEmployeeId: holder.id,
-    requestedByEmployeeId: asker.id,
+    assigneeEmployeeId: assignee.id,
+    askedByEmployeeId: asker.id,
     status: "done",
     doneAt: new Date("2026-11-08T12:00:00Z"),
-    doneByEmployeeId: holder.id,
+    doneByEmployeeId: assignee.id,
   });
-  const ctx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
+  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
   const tasks = taskService(orm);
 
   const { task: reopened } = await tasks.reopen(ctx, task.id);
@@ -24,14 +24,14 @@ test("lets the holder reopen a done task back into needs you", async ({ orm, see
 });
 
 test("refuses reopening by the person who asked", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
   const task = await seed.task({
-    assigneeEmployeeId: holder.id,
-    requestedByEmployeeId: asker.id,
+    assigneeEmployeeId: assignee.id,
+    askedByEmployeeId: asker.id,
     status: "done",
     doneAt: new Date("2026-11-08T12:00:00Z"),
-    doneByEmployeeId: holder.id,
+    doneByEmployeeId: assignee.id,
   });
   const ctx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
   const tasks = taskService(orm);
@@ -44,10 +44,10 @@ test("refuses reopening by the person who asked", async ({ orm, seed }) => {
 });
 
 test("refuses reopening a task that is already to do", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
-  const task = await seed.task({ assigneeEmployeeId: holder.id, requestedByEmployeeId: asker.id });
-  const ctx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
+  const task = await seed.task({ assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id });
+  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
 
   await expect(taskService(orm).reopen(ctx, task.id)).rejects.toMatchObject({
     code: "CONFLICT",
@@ -56,16 +56,16 @@ test("refuses reopening a task that is already to do", async ({ orm, seed }) => 
 });
 
 test("records reopening in the task's history", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
   const task = await seed.task({
-    assigneeEmployeeId: holder.id,
-    requestedByEmployeeId: asker.id,
+    assigneeEmployeeId: assignee.id,
+    askedByEmployeeId: asker.id,
     status: "done",
     doneAt: new Date("2026-11-08T12:00:00Z"),
-    doneByEmployeeId: holder.id,
+    doneByEmployeeId: assignee.id,
   });
-  const ctx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
+  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
 
   const { historyLine } = await taskService(orm).reopen(ctx, task.id);
 
@@ -78,16 +78,16 @@ test("records reopening in the task's history", async ({ orm, seed }) => {
 });
 
 test("hides a task from an unrelated caller trying to reopen it", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
   const other = await seed.employee();
   const task = await seed.task({
-    assigneeEmployeeId: holder.id,
-    requestedByEmployeeId: asker.id,
-    aboutEmployeeId: other.id,
+    assigneeEmployeeId: assignee.id,
+    askedByEmployeeId: asker.id,
+    subjectEmployeeId: other.id,
     status: "done",
     doneAt: new Date("2026-11-08T12:00:00Z"),
-    doneByEmployeeId: holder.id,
+    doneByEmployeeId: assignee.id,
   });
   const ctx = signedIn(orm, { employeeId: other.id, profiles: ["OWNER"] });
 

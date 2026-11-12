@@ -62,12 +62,11 @@ export function createResolvers(
     Task: {
       type: ({ type }) => toEnum(type),
       status: ({ status }) => toEnum(status),
-      // The holder's deletion deletes the task, so the holder is always there.
+      // The assignee's deletion deletes the task, so the assignee is always there.
       assignee: async ({ assigneeEmployeeId }, _args, context) =>
         (await loadEmployee(context, assigneeEmployeeId))!,
-      requestedBy: ({ requestedByEmployeeId }, _args, context) =>
-        loadEmployee(context, requestedByEmployeeId),
-      about: ({ aboutEmployeeId }, _args, context) => loadEmployee(context, aboutEmployeeId),
+      askedBy: ({ askedByEmployeeId }, _args, context) => loadEmployee(context, askedByEmployeeId),
+      subject: ({ subjectEmployeeId }, _args, context) => loadEmployee(context, subjectEmployeeId),
       doneBy: ({ doneByEmployeeId }, _args, context) => loadEmployee(context, doneByEmployeeId),
       history: ({ id }, { first, after }, context) =>
         tasks.readTaskHistory(context.getActor(), id, { first: first ?? undefined, after }),

@@ -13,7 +13,7 @@ type Props = { taskId: string; onClose: () => void };
 
 /**
  * One task over My tasks: what is asked and by whom on the left, what marking it done does and
- * where it came from on the right. Only its holder and the person who asked open it.
+ * where it came from on the right. Only its assignee and the person who asked open it.
  */
 export function TaskPanel({ taskId, onClose }: Props) {
   const { data, error, loading, refetch } = useQuery(TaskPanelDocument, {

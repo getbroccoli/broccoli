@@ -11,7 +11,7 @@ test("shows a manager's task as done to the person who asked after completion", 
   await env.seed.manager(asker.id, manager.id);
   const task = await env.seed.task({
     assigneeEmployeeId: manager.id,
-    requestedByEmployeeId: asker.id,
+    askedByEmployeeId: asker.id,
   });
   const { browser } = await env.signIn(managerCredentials);
 
@@ -109,14 +109,14 @@ test("returns a completion history line and restricts shared task history to its
 
 test("returns no task to an unrelated signed-in person", async ({ env }) => {
   await env.signInAsOwner();
-  const holder = await env.seed.employee();
+  const assignee = await env.seed.employee();
   const asker = await env.seed.employee();
   const credentials = { email: "other@example.com", password: TEST_OWNER.password };
   const user = await env.seed.user(credentials);
   await env.seed.employee({ userId: user.id });
   const task = await env.seed.task({
-    assigneeEmployeeId: holder.id,
-    requestedByEmployeeId: asker.id,
+    assigneeEmployeeId: assignee.id,
+    askedByEmployeeId: asker.id,
   });
   const { browser } = await env.signIn(credentials);
 

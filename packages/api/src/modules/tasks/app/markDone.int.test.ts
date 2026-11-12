@@ -1,18 +1,18 @@
 import { expect, signedIn, taskService, test } from "#test/support";
 
 test("marks a held task done and shows the asker who completed it", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
-  const task = await seed.task({ assigneeEmployeeId: holder.id, requestedByEmployeeId: asker.id });
-  const holderCtx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
+  const task = await seed.task({ assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id });
+  const assigneeCtx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
   const askerCtx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
   const tasks = taskService(orm);
 
-  const { task: done } = await tasks.markDone(holderCtx, task.id);
+  const { task: done } = await tasks.markDone(assigneeCtx, task.id);
 
   expect(done).toMatchObject({
     status: "done",
-    doneByEmployeeId: holder.id,
+    doneByEmployeeId: assignee.id,
     doneAt: expect.any(Date) as unknown,
   });
   expect(await tasks.readTask(askerCtx, task.id)).toEqual(done);
@@ -24,9 +24,9 @@ test("marks a held task done and shows the asker who completed it", async ({ orm
 });
 
 test("refuses completion by the person who asked", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
-  const task = await seed.task({ assigneeEmployeeId: holder.id, requestedByEmployeeId: asker.id });
+  const task = await seed.task({ assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id });
   const ctx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
   const tasks = taskService(orm);
 
@@ -38,14 +38,14 @@ test("refuses completion by the person who asked", async ({ orm, seed }) => {
 });
 
 test("refuses completion while a task is waiting", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
   const task = await seed.task({
-    assigneeEmployeeId: holder.id,
-    requestedByEmployeeId: asker.id,
+    assigneeEmployeeId: assignee.id,
+    askedByEmployeeId: asker.id,
     status: "waiting",
   });
-  const ctx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
+  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
   const tasks = taskService(orm);
 
   await expect(tasks.markDone(ctx, task.id)).rejects.toMatchObject({
@@ -56,10 +56,10 @@ test("refuses completion while a task is waiting", async ({ orm, seed }) => {
 });
 
 test("accepts only the first of two concurrent completions", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
-  const task = await seed.task({ assigneeEmployeeId: holder.id, requestedByEmployeeId: asker.id });
-  const ctx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
+  const task = await seed.task({ assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id });
+  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
   const tasks = taskService(orm);
 
   const results = await Promise.allSettled([
@@ -73,15 +73,15 @@ test("accepts only the first of two concurrent completions", async ({ orm, seed 
   ]);
   expect(await tasks.readTask(ctx, task.id)).toMatchObject({
     status: "done",
-    doneByEmployeeId: holder.id,
+    doneByEmployeeId: assignee.id,
   });
 });
 
 test("returns the history line appended by completion", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
-  const task = await seed.task({ assigneeEmployeeId: holder.id, requestedByEmployeeId: asker.id });
-  const ctx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
+  const task = await seed.task({ assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id });
+  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
 
   const { historyLine } = await taskService(orm).markDone(ctx, task.id);
 
@@ -94,13 +94,13 @@ test("returns the history line appended by completion", async ({ orm, seed }) =>
 });
 
 test("hides a task from an unrelated caller trying to complete it", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
   const other = await seed.employee();
   const task = await seed.task({
-    assigneeEmployeeId: holder.id,
-    requestedByEmployeeId: asker.id,
-    aboutEmployeeId: other.id,
+    assigneeEmployeeId: assignee.id,
+    askedByEmployeeId: asker.id,
+    subjectEmployeeId: other.id,
   });
   const ctx = signedIn(orm, { employeeId: other.id, profiles: ["OWNER"] });
 

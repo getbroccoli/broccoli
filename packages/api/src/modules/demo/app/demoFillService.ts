@@ -78,12 +78,12 @@ async function addDemoTasks(
   demo: readonly DemoTask[],
   idsByEmail: ReadonlyMap<string, string>,
 ) {
-  for (const { assigneeEmail, requestedByEmail, isWaiting, ...task } of demo) {
+  for (const { assigneeEmail, askedByEmail, isWaiting, ...task } of demo) {
     const created = await tasks.createTask(ctx, tx, {
       ...task,
       type: "manual_to_do",
       assigneeEmployeeId: idsByEmail.get(assigneeEmail)!,
-      requestedByEmployeeId: idsByEmail.get(requestedByEmail)!,
+      askedByEmployeeId: idsByEmail.get(askedByEmail)!,
     });
     if (isWaiting) {
       await tasks.markWaiting(ctx, tx, created.id);

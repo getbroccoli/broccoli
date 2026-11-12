@@ -2265,14 +2265,14 @@
           "primaryKey": false,
           "notNull": true
         },
-        "requested_by_employee_id": {
-          "name": "requested_by_employee_id",
+        "asked_by_employee_id": {
+          "name": "asked_by_employee_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
-        "about_employee_id": {
-          "name": "about_employee_id",
+        "subject_employee_id": {
+          "name": "subject_employee_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
@@ -2368,11 +2368,11 @@
           "method": "btree",
           "with": {}
         },
-        "tasks_requested_by_idx": {
-          "name": "tasks_requested_by_idx",
+        "tasks_asked_by_idx": {
+          "name": "tasks_asked_by_idx",
           "columns": [
             {
-              "expression": "requested_by_employee_id",
+              "expression": "asked_by_employee_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2416,7 +2416,7 @@
         },
         "tasks_asked_by_someone": {
           "name": "tasks_asked_by_someone",
-          "value": "\"tasks\".\"requested_by_employee_id\" is not null or \"tasks\".\"process_key\" is not null"
+          "value": "\"tasks\".\"asked_by_employee_id\" is not null or \"tasks\".\"process_key\" is not null"
         },
         "tasks_process_source_complete": {
           "name": "tasks_process_source_complete",

@@ -21,7 +21,7 @@ import {
   resolvedRecentlySince,
   type Task,
   type TaskProcessSource,
-  type TaskSubject,
+  type TaskRecord,
   type TaskType,
 } from "../domain";
 import { taskRecordType } from "./taskRecordType";
@@ -29,8 +29,8 @@ import { taskRecordType } from "./taskRecordType";
 /** A task a feature, a process step or the demo asks of someone: a person who asked, a process step, or both. */
 export type NewTask = NewTaskFields &
   (
-    | { requestedByEmployeeId: string; processSource?: TaskProcessSource | null }
-    | { requestedByEmployeeId?: null; processSource: TaskProcessSource }
+    | { askedByEmployeeId: string; processSource?: TaskProcessSource | null }
+    | { askedByEmployeeId?: null; processSource: TaskProcessSource }
   );
 
 interface NewTaskFields {
@@ -38,8 +38,8 @@ interface NewTaskFields {
   title: string;
   description?: string | null;
   assigneeEmployeeId: string;
-  aboutEmployeeId?: string | null;
-  subject?: TaskSubject | null;
+  subjectEmployeeId?: string | null;
+  record?: TaskRecord | null;
   dueDate?: CalendarDate | null;
 }
 
@@ -56,15 +56,15 @@ export interface TaskService {
   listMyTasks(ctx: SecurityContext): Promise<MyTasks>;
   /** A task the caller holds or asked for. */
   readTask(ctx: SecurityContext, taskId: string): Promise<Task>;
-  /** A task's history, newest first, for its holder and the person who asked; others get FORBIDDEN. */
+  /** A task's history, newest first, for its assignee and the person who asked; others get FORBIDDEN. */
   readTaskHistory(
     ctx: SecurityContext,
     taskId: string,
     args: PageArgs,
   ): Promise<Connection<HistoryLine>>;
-  /** The holder finishes a task to do. */
+  /** The assignee finishes a task to do. */
   markDone(ctx: SecurityContext, taskId: string): Promise<TaskChange>;
-  /** The holder takes a done task back to do. */
+  /** The assignee takes a done task back to do. */
   reopen(ctx: SecurityContext, taskId: string): Promise<TaskChange>;
   /** The person who asked withdraws an open task, saying why. */
   cancel(ctx: SecurityContext, taskId: string, reason: string): Promise<TaskChange>;
@@ -95,10 +95,10 @@ export function createTaskService({
         title: requireText(title, "title"),
         description: description?.trim() || null,
         assigneeEmployeeId: task.assigneeEmployeeId,
-        requestedByEmployeeId: task.requestedByEmployeeId ?? null,
-        aboutEmployeeId: task.aboutEmployeeId ?? null,
+        askedByEmployeeId: task.askedByEmployeeId ?? null,
+        subjectEmployeeId: task.subjectEmployeeId ?? null,
         processSource: task.processSource ?? null,
-        subject: task.subject ?? null,
+        record: task.record ?? null,
         dueDate: task.dueDate ?? null,
         doneAt: null,
         doneByEmployeeId: null,
@@ -154,7 +154,7 @@ export function createTaskService({
 
     async markDone(ctx, taskId) {
       const done = await changeTask(transact, ctx, taskId, (task, employeeId) => {
-        refuseUnlessHolder(
+        refuseUnlessAssignee(
           task,
           employeeId,
           "Only the person who holds this task can mark it done.",
@@ -167,7 +167,11 @@ export function createTaskService({
 
     async reopen(ctx, taskId) {
       const reopened = await changeTask(transact, ctx, taskId, (task, employeeId) => {
-        refuseUnlessHolder(task, employeeId, "Only the person who holds this task can reopen it.");
+        refuseUnlessAssignee(
+          task,
+          employeeId,
+          "Only the person who holds this task can reopen it.",
+        );
         return reopenTask(task);
       });
       logger.info({ taskId: reopened.task.id, type: reopened.task.type }, "Task reopened");
@@ -176,7 +180,7 @@ export function createTaskService({
 
     async cancel(ctx, taskId, reason) {
       const cancelled = await changeTask(transact, ctx, taskId, (task, employeeId) => {
-        if (task.requestedByEmployeeId !== employeeId) {
+        if (task.askedByEmployeeId !== employeeId) {
           throw new ApplicationError(
             "FORBIDDEN",
             "Only the person who asked can cancel this task.",
@@ -244,7 +248,7 @@ function requireVisible(
   return { task, employeeId };
 }
 
-function refuseUnlessHolder(task: Task, employeeId: string, message: string): void {
+function refuseUnlessAssignee(task: Task, employeeId: string, message: string): void {
   if (task.assigneeEmployeeId !== employeeId) {
     throw new ApplicationError("FORBIDDEN", message);
   }

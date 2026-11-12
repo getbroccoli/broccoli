@@ -5,7 +5,7 @@ enum TaskType {
 }
 
 enum TaskStatus {
-  "Its holder can do it now."
+  "Its assignee can do it now."
   TO_DO
   "It cannot be done until something else happens."
   WAITING
@@ -20,7 +20,7 @@ type TaskProcessSource {
   stepKey: String!
 }
 
-"Work asked of one person. Only its holder and the person who asked see it and its history."
+"Work asked of one person. Only its assignee and the person who asked see it and its history."
 type Task implements AnyRecord {
   id: ID!
   type: TaskType!
@@ -31,9 +31,9 @@ type Task implements AnyRecord {
   "Who holds it: the one person who can do it."
   assignee: Employee!
   "Who asked for it; null when a process step created it."
-  requestedBy: Employee
-  "Who it is about, when it is about someone."
-  about: Employee
+  askedBy: Employee
+  "Who it is about, when it is about someone; being its subject shows nobody the task."
+  subject: Employee
   processSource: TaskProcessSource
   doneAt: DateTime
   "Null once that person is removed."
@@ -79,7 +79,7 @@ input TaskReopenInput {
 
 input TaskCancelInput {
   id: ID!
-  "Required; the holder reads it."
+  "Required; the assignee reads it."
   reason: String!
 }
 
@@ -94,9 +94,9 @@ type TaskPayload {
 union TaskError = InvalidInputError | NotFoundError | ConflictError
 
 type TasksMutations {
-  "The holder finishes a task to do."
+  "The assignee finishes a task to do."
   markDone(input: TaskMarkDoneInput!): TaskPayload!
-  "The holder takes a done task back to do."
+  "The assignee takes a done task back to do."
   reopen(input: TaskReopenInput!): TaskPayload!
   "The person who asked withdraws an open task."
   cancel(input: TaskCancelInput!): TaskPayload!
