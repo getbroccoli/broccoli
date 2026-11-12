@@ -65,6 +65,22 @@ export interface EmployeeReadService {
     tx: Tx,
     employeeIds: readonly string[],
   ) => Promise<Map<string, { startDate: CalendarDate | null; endDate: CalendarDate | null }[]>>;
+  /**
+   * Trusted, for processes: the employees whose first employment starts from `from` to `until`, both
+   * included, with that date, in the caller's transaction.
+   */
+  readEmployeesStartingBetween: (
+    tx: Tx,
+    range: { from: CalendarDate; until: CalendarDate },
+  ) => Promise<Map<string, CalendarDate>>;
+  /**
+   * Trusted, for processes: each employee's direct manager on `date`, by id, in the caller's
+   * transaction; those without one on that date are left out.
+   */
+  readManagerIdsOn: (
+    tx: Tx,
+    input: { employeeIds: readonly string[]; date: CalendarDate },
+  ) => Promise<Map<string, string>>;
   /** Trusted: the employees among `employeeIds`, by first then last name, in the caller's transaction. */
   readEmployeesByName: (tx: Tx, employeeIds: readonly string[]) => Promise<Employee[]>;
   /**
@@ -148,6 +164,10 @@ export function createEmployeeReadService({
     lockEmployees: (tx, employeeIds) => employeeRepository(tx).lockByIds(employeeIds),
     holdEmployeeWrites: (tx) => employmentRepository(tx).lockForReads(),
     readEmploymentPeriods: (tx, employeeIds) => employmentRepository(tx).findPeriods(employeeIds),
+    readEmployeesStartingBetween: (tx, { from, until }) =>
+      employmentRepository(tx).findStartingBetween(from, until),
+    readManagerIdsOn: (tx, { employeeIds, date }) =>
+      employmentRepository(tx).findManagerIds(employeeIds, date),
     readEmployeesByName,
     readTermsMemberships: readMemberships,
     async readTermsMemberIds(tx, termsId) {

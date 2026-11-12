@@ -173,7 +173,7 @@ export async function storedTextProbe(
     const asker = await seed.employee();
     const holder = await seed.employee();
     const task = await seed.task({
-      requestedByEmployeeId: asker.id,
+      askedByEmployeeId: asker.id,
       assigneeEmployeeId: holder.id,
     });
     const ctx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });

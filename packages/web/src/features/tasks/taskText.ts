@@ -3,7 +3,7 @@ import { t } from "@/i18n";
 import { calendarDayOf, utcDay } from "@/lib/calendarDay";
 
 export type TaskRow = TaskFieldsFragment;
-type Person = NonNullable<TaskRow["requestedBy"]>;
+type Person = NonNullable<TaskRow["askedBy"]>;
 
 /** "Tue 10 Nov", from a `YYYY-MM-DD` calendar date or an ISO date-time. */
 export function formatTaskDay(value: string): string {
@@ -56,8 +56,8 @@ export function dueText(task: TaskRow, today: string): string {
 
 /** Who a task comes from: the person who asked, or its process step. */
 export function taskSource(task: TaskRow, viewerId: string | null): string {
-  if (task.requestedBy) {
-    return task.requestedBy.id === viewerId ? t("tasks.you") : personName(task.requestedBy);
+  if (task.askedBy) {
+    return task.askedBy.id === viewerId ? t("tasks.you") : personName(task.askedBy);
   }
   const { processKey, stepKey } = task.processSource!;
   // shortcut: shows the keys, as no process creates tasks yet; name them with the first one that does.

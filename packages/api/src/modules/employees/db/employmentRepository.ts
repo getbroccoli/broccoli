@@ -13,6 +13,8 @@ export interface EmploymentRepository {
   ): Promise<void>;
   /** Each employee's start date: the start of their first employment, an unknown one counting first. */
   findStartDates(employeeIds: readonly string[]): Promise<Map<string, CalendarDate | null>>;
+  /** The employees whose first employment starts from `from` to `until`, both included, with that date. */
+  findStartingBetween(from: CalendarDate, until: CalendarDate): Promise<Map<string, CalendarDate>>;
   /** Each employee's employments, oldest first, by employee id. */
   findPeriods(
     employeeIds: readonly string[],
@@ -72,6 +74,16 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
         // One array parameter: an import passes more ids than Postgres's 65,535 parameters.
         .where(sql`${employments.employeeId} = any(${sql.param([...employeeIds])}::uuid[])`)
         .orderBy(employments.employeeId, sql`${employments.startDate} nulls first`);
+      return new Map(rows.map(({ employeeId, startDate }) => [employeeId, startDate]));
+    },
+
+    findStartingBetween: async (from, until) => {
+      const firstStart = sql<CalendarDate>`min(${employments.startDate})`;
+      const rows = await orm()
+        .select({ employeeId: employments.employeeId, startDate: firstStart })
+        .from(employments)
+        .groupBy(employments.employeeId)
+        .having(sql`${firstStart} between ${from} and ${until}`);
       return new Map(rows.map(({ employeeId, startDate }) => [employeeId, startDate]));
     },
 

@@ -1,0 +1,5 @@
+# Processes have no API yet; their runs' changes to tasks show in the tasks' history with this cause.
+enum RecordChangeCauseKind {
+  "A process run made the change on its own, such as creating or cancelling a step's task; the ref is the run."
+  PROCESS_RUN
+}

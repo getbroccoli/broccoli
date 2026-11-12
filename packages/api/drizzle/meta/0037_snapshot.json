@@ -3335,14 +3335,14 @@
           "primaryKey": false,
           "notNull": true
         },
-        "requested_by_employee_id": {
-          "name": "requested_by_employee_id",
+        "asked_by_employee_id": {
+          "name": "asked_by_employee_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
-        "about_employee_id": {
-          "name": "about_employee_id",
+        "subject_employee_id": {
+          "name": "subject_employee_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
@@ -3438,11 +3438,11 @@
           "method": "btree",
           "with": {}
         },
-        "tasks_requested_by_idx": {
-          "name": "tasks_requested_by_idx",
+        "tasks_asked_by_idx": {
+          "name": "tasks_asked_by_idx",
           "columns": [
             {
-              "expression": "requested_by_employee_id",
+              "expression": "asked_by_employee_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3486,7 +3486,7 @@
         },
         "tasks_asked_by_someone": {
           "name": "tasks_asked_by_someone",
-          "value": "\"tasks\".\"requested_by_employee_id\" is not null or \"tasks\".\"process_key\" is not null"
+          "value": "\"tasks\".\"asked_by_employee_id\" is not null or \"tasks\".\"process_key\" is not null"
         },
         "tasks_process_source_complete": {
           "name": "tasks_process_source_complete",
@@ -4203,6 +4203,13 @@
           "notNull": true,
           "default": 1
         },
+        "stops": {
+          "name": "stops",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "balance": {
           "name": "balance",
           "type": "text",
@@ -4302,6 +4309,10 @@
           "name": "time_off_policy_versions_terms_only_on_draft",
           "value": "(\"time_off_policy_versions\".\"terms_id\" is not null) = (\"time_off_policy_versions\".\"status\" = 'draft')"
         },
+        "time_off_policy_versions_stops_only_on_draft": {
+          "name": "time_off_policy_versions_stops_only_on_draft",
+          "value": "not \"time_off_policy_versions\".\"stops\" or \"time_off_policy_versions\".\"status\" = 'draft'"
+        },
         "time_off_policy_versions_bank_holidays_with_allowance": {
           "name": "time_off_policy_versions_bank_holidays_with_allowance",
           "value": "(\"time_off_policy_versions\".\"bank_holidays\" is not null) = (\"time_off_policy_versions\".\"balance\" = 'balance_from_allowance')"
@@ -4359,6 +4370,19 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {

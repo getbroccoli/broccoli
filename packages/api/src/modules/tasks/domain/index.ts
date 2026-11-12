@@ -9,7 +9,7 @@ export {
   type Task,
   type TaskProcessSource,
   type TaskStatus,
-  type TaskSubject,
+  type TaskRecord,
   type TaskType,
 } from "./task";
 export { groupMyTasks, type MyTasks, resolvedRecentlySince } from "./myTasks";

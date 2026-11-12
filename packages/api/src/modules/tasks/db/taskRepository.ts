@@ -14,6 +14,8 @@ export interface TaskRepository {
   findByIds(ids: readonly string[]): Promise<Task[]>;
   /** The task with this id, or null, locked until the transaction ends, so the first change wins. */
   lockById(id: string): Promise<Task | null>;
+  /** The tasks among these ids, locked in id order until the transaction ends. */
+  lockByIds(ids: readonly string[]): Promise<Task[]>;
   /** Writes the task's status and the columns that follow it. */
   saveStatus(task: Task): Promise<Task>;
   /**
@@ -44,6 +46,17 @@ export function taskRepository(db: Orm | Tx): TaskRepository {
       return rows.map(toTask);
     },
 
+    async lockByIds(ids) {
+      if (ids.length === 0) return [];
+      const rows = await orm
+        .select()
+        .from(tasks)
+        .where(inArray(tasks.id, [...ids]))
+        .orderBy(tasks.id)
+        .for("update");
+      return rows.map(toTask);
+    },
+
     async lockById(id) {
       const [row] = await orm.select().from(tasks).where(eq(tasks.id, id)).for("update");
       return row ? toTask(row) : null;
@@ -64,10 +77,7 @@ export function taskRepository(db: Orm | Tx): TaskRepository {
         .from(tasks)
         .where(
           and(
-            or(
-              eq(tasks.assigneeEmployeeId, employeeId),
-              eq(tasks.requestedByEmployeeId, employeeId),
-            ),
+            or(eq(tasks.assigneeEmployeeId, employeeId), eq(tasks.askedByEmployeeId, employeeId)),
             or(
               inArray(tasks.status, ["to_do", "waiting"]),
               gte(tasks.doneAt, closedSince),
@@ -82,14 +92,14 @@ export function taskRepository(db: Orm | Tx): TaskRepository {
 
 type TaskRow = typeof tasks.$inferSelect;
 
-function toRow({ processSource, subject, ...task }: NewTaskRow) {
+function toRow({ processSource, record, ...task }: NewTaskRow) {
   return {
     ...task,
     processKey: processSource?.processKey ?? null,
     processRunId: processSource?.processRunId ?? null,
     stepKey: processSource?.stepKey ?? null,
-    recordType: subject?.recordType ?? null,
-    recordId: subject?.recordId ?? null,
+    recordType: record?.recordType ?? null,
+    recordId: record?.recordId ?? null,
   };
 }
 
@@ -104,6 +114,6 @@ function toTask({
   return {
     ...row,
     processSource: processKey && stepKey ? { processKey, processRunId, stepKey } : null,
-    subject: recordType && recordId ? { recordType, recordId } : null,
+    record: recordType && recordId ? { recordType, recordId } : null,
   };
 }

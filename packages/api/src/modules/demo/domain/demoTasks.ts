@@ -6,7 +6,7 @@ export interface DemoTask {
   title: string;
   description: string | null;
   assigneeEmail: string;
-  requestedByEmail: string;
+  askedByEmail: string;
   dueDate: CalendarDate | null;
   /** Shown as waiting on something else rather than to do. */
   isWaiting: boolean;
@@ -14,10 +14,10 @@ export interface DemoTask {
 
 /** The demo company's tasks, with due dates counted from `today`. */
 export function demoTasks(today: CalendarDate): DemoTask[] {
-  return DEMO_TASKS.map(({ assignee, requestedBy, dueInDays, ...task }) => ({
+  return DEMO_TASKS.map(({ assignee, askedBy, dueInDays, ...task }) => ({
     ...task,
     assigneeEmail: emailOf(assignee),
-    requestedByEmail: emailOf(requestedBy),
+    askedByEmail: emailOf(askedBy),
     dueDate: dueInDays === null ? null : addDays(today, dueInDays),
   }));
 }
@@ -27,7 +27,7 @@ const DEMO_TASKS = [
     title: "Approve the hiring plan for next quarter",
     description: "Two engineers and a designer; the budget is in the board pack.",
     assignee: "Oliver Bennett",
-    requestedBy: "Priya Shah",
+    askedBy: "Priya Shah",
     dueInDays: 3,
     isWaiting: false,
   },
@@ -35,7 +35,7 @@ const DEMO_TASKS = [
     title: "Sign James Whitfield's new contract",
     description: null,
     assignee: "Oliver Bennett",
-    requestedBy: "Priya Shah",
+    askedBy: "Priya Shah",
     dueInDays: -2,
     isWaiting: false,
   },
@@ -43,7 +43,7 @@ const DEMO_TASKS = [
     title: "Agree the updated expenses policy",
     description: "Waiting for the finance review before it can be agreed.",
     assignee: "Oliver Bennett",
-    requestedBy: "James Whitfield",
+    askedBy: "James Whitfield",
     dueInDays: null,
     isWaiting: true,
   },
@@ -51,7 +51,7 @@ const DEMO_TASKS = [
     title: "Check the laptop budget for new starters",
     description: null,
     assignee: "Priya Shah",
-    requestedBy: "Oliver Bennett",
+    askedBy: "Oliver Bennett",
     dueInDays: 5,
     isWaiting: false,
   },

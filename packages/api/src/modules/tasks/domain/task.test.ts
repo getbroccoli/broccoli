@@ -9,7 +9,7 @@ import {
   type TaskStatus,
 } from "./task";
 
-test("marks a task to do as done by its holder", () => {
+test("marks a task to do as done by its assignee", () => {
   const task = taskIn("to_do");
   const now = new Date("2026-11-09T12:00:00Z");
 
@@ -110,10 +110,10 @@ function taskIn(status: TaskStatus): Task {
     title: "Read the handbook",
     description: null,
     assigneeEmployeeId: "00000000-0000-4000-8000-000000000002",
-    requestedByEmployeeId: "00000000-0000-4000-8000-000000000003",
-    aboutEmployeeId: null,
+    askedByEmployeeId: "00000000-0000-4000-8000-000000000003",
+    subjectEmployeeId: null,
     processSource: null,
-    subject: null,
+    record: null,
     dueDate: null,
     doneAt: status === "done" ? closedAt : null,
     doneByEmployeeId: status === "done" ? "00000000-0000-4000-8000-000000000002" : null,

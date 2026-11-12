@@ -30,18 +30,18 @@ export function TaskDetails({ task }: Props) {
   const actions = useTaskActions();
   const [cancelling, setCancelling] = useState(false);
   const holds = task.assignee.id === viewerId;
-  const asked = task.requestedBy?.id === viewerId;
+  const asked = task.askedBy?.id === viewerId;
   const canReopen = holds && task.status === "DONE";
   const canCancel = asked && isOpen(task);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex items-center gap-4 border-b border-border px-6 py-5">
-        {task.requestedBy ? (
+        {task.askedBy ? (
           <Avatar
-            url={task.requestedBy.avatarUrl}
-            firstName={task.requestedBy.firstName}
-            lastName={task.requestedBy.lastName}
+            url={task.askedBy.avatarUrl}
+            firstName={task.askedBy.firstName}
+            lastName={task.askedBy.lastName}
             className="size-10"
           />
         ) : (
@@ -54,9 +54,9 @@ export function TaskDetails({ task }: Props) {
             <SheetTitle className="text-lg">{task.title}</SheetTitle>
             <TaskStatus status={task.status} />
           </div>
-          {task.about && (
+          {task.subject && (
             <p className="truncate text-[13px] text-muted-foreground">
-              {t("tasks.panel.about", { name: personName(task.about) })}
+              {t("tasks.panel.about", { name: personName(task.subject) })}
             </p>
           )}
         </div>
@@ -98,8 +98,8 @@ export function TaskDetails({ task }: Props) {
             <h3 className={SECTION_LABEL}>
               {asked
                 ? t("tasks.panel.youAsk")
-                : task.requestedBy
-                  ? t("tasks.panel.asks", { name: task.requestedBy.firstName })
+                : task.askedBy
+                  ? t("tasks.panel.asks", { name: task.askedBy.firstName })
                   : t("tasks.panel.asksProcess")}
             </h3>
             <p className="text-[15px] leading-relaxed whitespace-pre-line">
@@ -120,8 +120,8 @@ export function TaskDetails({ task }: Props) {
               <p>
                 {task.status === "WAITING"
                   ? t("tasks.panel.waitingNote")
-                  : task.requestedBy && !asked
-                    ? t("tasks.panel.ifDoneAsker", { name: task.requestedBy.firstName })
+                  : task.askedBy && !asked
+                    ? t("tasks.panel.ifDoneAsker", { name: task.askedBy.firstName })
                     : t("tasks.panel.ifDoneNobody")}
               </p>
             </section>
@@ -153,7 +153,7 @@ export function TaskDetails({ task }: Props) {
       <CancelTaskDialog
         open={cancelling}
         onOpenChange={setCancelling}
-        holderName={task.assignee.firstName}
+        assigneeName={task.assignee.firstName}
         isPending={actions.isPending}
         onCancel={(reason) => actions.cancel(task.id, reason)}
       />
@@ -164,8 +164,7 @@ export function TaskDetails({ task }: Props) {
 function originLine(task: TaskRow, asked: boolean, viewerId: string | null): string {
   const date = formatTaskDay(task.createdAt);
   if (asked) return t("tasks.panel.youAsked", { name: task.assignee.firstName, date });
-  if (task.requestedBy)
-    return t("tasks.panel.askedBy", { name: personName(task.requestedBy), date });
+  if (task.askedBy) return t("tasks.panel.askedBy", { name: personName(task.askedBy), date });
   return taskSource(task, viewerId);
 }
 

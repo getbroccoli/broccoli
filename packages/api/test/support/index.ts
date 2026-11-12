@@ -77,6 +77,7 @@ export {
   passwordResetEmail,
 } from "./services";
 export type { EmployeeServices } from "./services";
+export { processService } from "./processService";
 export {
   employeeSetup,
   fileStorage,

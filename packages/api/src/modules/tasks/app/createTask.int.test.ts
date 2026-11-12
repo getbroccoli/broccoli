@@ -1,13 +1,13 @@
 import { employeeServices, expect, OWNER, signedIn, taskService, test } from "#test/support";
 
-test("creates a task needing its holder and awaited by its asker", async ({
+test("creates a task needing its assignee and awaited by its asker", async ({
   orm,
   seed,
   transact,
 }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
-  const holderCtx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
+  const assigneeCtx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
   const askerCtx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
   const tasks = taskService(orm);
 
@@ -15,8 +15,8 @@ test("creates a task needing its holder and awaited by its asker", async ({
     tasks.createTask(askerCtx, tx, {
       type: "manual_to_do",
       title: "Read the handbook",
-      assigneeEmployeeId: holder.id,
-      requestedByEmployeeId: asker.id,
+      assigneeEmployeeId: assignee.id,
+      askedByEmployeeId: asker.id,
     }),
   );
 
@@ -27,7 +27,7 @@ test("creates a task needing its holder and awaited by its asker", async ({
     cancelledAt: null,
     cancelReason: null,
   });
-  expect(await tasks.listMyTasks(holderCtx)).toEqual({
+  expect(await tasks.listMyTasks(assigneeCtx)).toEqual({
     needsYou: [task],
     waitingOnOthers: [],
     resolvedRecently: [],
@@ -40,7 +40,7 @@ test("creates a task needing its holder and awaited by its asker", async ({
 });
 
 test("trims the title and description of a new task", async ({ orm, seed, transact }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
   const tasks = taskService(orm);
   const ctx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
@@ -50,8 +50,8 @@ test("trims the title and description of a new task", async ({ orm, seed, transa
       type: "manual_to_do",
       title: "  Read the handbook  ",
       description: "  Read before Monday.  ",
-      assigneeEmployeeId: holder.id,
-      requestedByEmployeeId: asker.id,
+      assigneeEmployeeId: assignee.id,
+      askedByEmployeeId: asker.id,
     }),
   );
 
@@ -62,7 +62,7 @@ test("trims the title and description of a new task", async ({ orm, seed, transa
 });
 
 test("stores a blank task description as null", async ({ orm, seed, transact }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
   const tasks = taskService(orm);
   const ctx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
@@ -72,8 +72,8 @@ test("stores a blank task description as null", async ({ orm, seed, transact }) 
       type: "manual_to_do",
       title: "Read the handbook",
       description: " \n\t ",
-      assigneeEmployeeId: holder.id,
-      requestedByEmployeeId: asker.id,
+      assigneeEmployeeId: assignee.id,
+      askedByEmployeeId: asker.id,
     }),
   );
 
@@ -81,18 +81,18 @@ test("stores a blank task description as null", async ({ orm, seed, transact }) 
 });
 
 test("refuses a blank title without creating a task", async ({ orm, seed, transact }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
   const tasks = taskService(orm);
-  const ctx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
+  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
 
   await expect(
     transact((tx) =>
       tasks.createTask(ctx, tx, {
         type: "manual_to_do",
         title: " \n\t ",
-        assigneeEmployeeId: holder.id,
-        requestedByEmployeeId: asker.id,
+        assigneeEmployeeId: assignee.id,
+        askedByEmployeeId: asker.id,
       }),
     ),
   ).rejects.toMatchObject({
@@ -106,30 +106,30 @@ test("refuses a blank title without creating a task", async ({ orm, seed, transa
   });
 });
 
-test("shows a process task without an asker only to its holder", async ({
+test("shows a process task without an asker only to its assignee", async ({
   orm,
   seed,
   transact,
 }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const about = await seed.employee();
-  const holderCtx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
+  const assigneeCtx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
   const aboutCtx = signedIn(orm, { employeeId: about.id, profiles: ["EMPLOYEE"] });
   const tasks = taskService(orm);
   const processSource = { processKey: "onboarding", processRunId: null, stepKey: "read_handbook" };
 
   const task = await transact((tx) =>
-    tasks.createTask(holderCtx, tx, {
+    tasks.createTask(assigneeCtx, tx, {
       type: "manual_to_do",
       title: "Read the handbook",
-      assigneeEmployeeId: holder.id,
-      aboutEmployeeId: about.id,
+      assigneeEmployeeId: assignee.id,
+      subjectEmployeeId: about.id,
       processSource,
     }),
   );
 
-  expect(task).toMatchObject({ requestedByEmployeeId: null, processSource });
-  expect(await tasks.listMyTasks(holderCtx)).toEqual({
+  expect(task).toMatchObject({ askedByEmployeeId: null, processSource });
+  expect(await tasks.listMyTasks(assigneeCtx)).toEqual({
     needsYou: [task],
     waitingOnOthers: [],
     resolvedRecently: [],
@@ -141,11 +141,15 @@ test("shows a process task without an asker only to its holder", async ({
   });
 });
 
-test("moves a task into its holder's waiting on others group", async ({ orm, seed, transact }) => {
-  const holder = await seed.employee();
+test("moves a task into its assignee's waiting on others group", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const assignee = await seed.employee();
   const asker = await seed.employee();
-  const task = await seed.task({ assigneeEmployeeId: holder.id, requestedByEmployeeId: asker.id });
-  const ctx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
+  const task = await seed.task({ assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id });
+  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
   const tasks = taskService(orm);
 
   const waiting = await transact((tx) => tasks.markWaiting(ctx, tx, task.id));
@@ -159,14 +163,14 @@ test("moves a task into its holder's waiting on others group", async ({ orm, see
 });
 
 test("deletes a person's held tasks when the person is deleted", async ({ orm, seed }) => {
-  const holder = await seed.employee();
+  const assignee = await seed.employee();
   const asker = await seed.employee();
-  const task = await seed.task({ assigneeEmployeeId: holder.id, requestedByEmployeeId: asker.id });
+  const task = await seed.task({ assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id });
   const ctx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
   const tasks = taskService(orm);
   expect(await tasks.readTask(ctx, task.id)).toEqual(task);
 
-  await employeeServices(orm).deleteEmployee(OWNER, { id: holder.id });
+  await employeeServices(orm).deleteEmployee(OWNER, { id: assignee.id });
 
   await expect(tasks.readTask(ctx, task.id)).rejects.toMatchObject({
     code: "NOT_FOUND",

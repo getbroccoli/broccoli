@@ -4,6 +4,7 @@ import type { ModuleDependencies } from "../../../core/moduleManifest";
 import {
   createRecordHistoryReaderService,
   createRecordHistoryService,
+  type CauseKinds,
   type HistoryLine,
 } from "../../../core/records";
 import type { Connection, PageArgs } from "../../../core/pagination";
@@ -21,7 +22,7 @@ import {
   resolvedRecentlySince,
   type Task,
   type TaskProcessSource,
-  type TaskSubject,
+  type TaskRecord,
   type TaskType,
 } from "../domain";
 import { taskRecordType } from "./taskRecordType";
@@ -29,8 +30,8 @@ import { taskRecordType } from "./taskRecordType";
 /** A task a feature, a process step or the demo asks of someone: a person who asked, a process step, or both. */
 export type NewTask = NewTaskFields &
   (
-    | { requestedByEmployeeId: string; processSource?: TaskProcessSource | null }
-    | { requestedByEmployeeId?: null; processSource: TaskProcessSource }
+    | { askedByEmployeeId: string; processSource?: TaskProcessSource | null }
+    | { askedByEmployeeId?: null; processSource: TaskProcessSource }
   );
 
 interface NewTaskFields {
@@ -38,10 +39,15 @@ interface NewTaskFields {
   title: string;
   description?: string | null;
   assigneeEmployeeId: string;
-  aboutEmployeeId?: string | null;
-  subject?: TaskSubject | null;
+  subjectEmployeeId?: string | null;
+  record?: TaskRecord | null;
   dueDate?: CalendarDate | null;
+  /** Why the task exists, for its history; a direct edit when left out. */
+  cause?: TaskCause;
 }
+
+/** The cause a task's history line records. */
+export type TaskCause = { kind: keyof CauseKinds; ref?: string | null };
 
 /**
  * Work asked of people: created by features, read and finished by the people who hold or asked
@@ -50,21 +56,33 @@ interface NewTaskFields {
 export interface TaskService {
   /** Trusted, for features and the demo fill: a new task to do in `tx`; the caller authorizes. */
   createTask(ctx: SecurityContext, tx: Tx, task: NewTask): Promise<Task>;
+  /** Trusted, for processes: the tasks among these ids, in `tx`; the caller authorizes. */
+  readTasksInTransaction(tx: Tx, taskIds: readonly string[]): Promise<Task[]>;
+  /** Trusted, for processes: its assignee marks a feature's task done in `tx`, first change winning. */
+  markDoneInTransaction(ctx: SecurityContext, tx: Tx, taskId: string): Promise<Task>;
+  /** Trusted, for processes: its assignee takes a feature's done task back to do, in `tx`. */
+  reopenInTransaction(ctx: SecurityContext, tx: Tx, taskId: string): Promise<Task>;
+  /** Trusted, for processes: cancels open tasks in `tx` with a reason their assignees read. */
+  cancelInTransaction(
+    ctx: SecurityContext,
+    tx: Tx,
+    input: { taskIds: readonly string[]; reason: string; cause: TaskCause },
+  ): Promise<void>;
   /** Trusted: puts a task to do on hold in `tx`, until what it waits for happens. */
   markWaiting(ctx: SecurityContext, tx: Tx, taskId: string): Promise<Task>;
   /** The signed-in caller's tasks by where the ball is; all empty for a caller with no employee. */
   listMyTasks(ctx: SecurityContext): Promise<MyTasks>;
   /** A task the caller holds or asked for. */
   readTask(ctx: SecurityContext, taskId: string): Promise<Task>;
-  /** A task's history, newest first, for its holder and the person who asked; others get FORBIDDEN. */
+  /** A task's history, newest first, for its assignee and the person who asked; others get FORBIDDEN. */
   readTaskHistory(
     ctx: SecurityContext,
     taskId: string,
     args: PageArgs,
   ): Promise<Connection<HistoryLine>>;
-  /** The holder finishes a task to do. */
+  /** The assignee finishes a task to do. */
   markDone(ctx: SecurityContext, taskId: string): Promise<TaskChange>;
-  /** The holder takes a done task back to do. */
+  /** The assignee takes a done task back to do. */
   reopen(ctx: SecurityContext, taskId: string): Promise<TaskChange>;
   /** The person who asked withdraws an open task, saying why. */
   cancel(ctx: SecurityContext, taskId: string, reason: string): Promise<TaskChange>;
@@ -88,17 +106,17 @@ export function createTaskService({
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger">): TaskService {
   const historyReader = createRecordHistoryReaderService(orm, { task: taskRecordType(orm) });
   return {
-    async createTask(ctx, tx, { title, description = null, ...task }) {
+    async createTask(ctx, tx, { title, description = null, cause = DIRECT_EDIT, ...task }) {
       const created = await taskRepository(tx).insert({
         type: task.type,
         status: "to_do",
         title: requireText(title, "title"),
         description: description?.trim() || null,
         assigneeEmployeeId: task.assigneeEmployeeId,
-        requestedByEmployeeId: task.requestedByEmployeeId ?? null,
-        aboutEmployeeId: task.aboutEmployeeId ?? null,
+        askedByEmployeeId: task.askedByEmployeeId ?? null,
+        subjectEmployeeId: task.subjectEmployeeId ?? null,
         processSource: task.processSource ?? null,
-        subject: task.subject ?? null,
+        record: task.record ?? null,
         dueDate: task.dueDate ?? null,
         doneAt: null,
         doneByEmployeeId: null,
@@ -108,7 +126,7 @@ export function createTaskService({
       await history.append(ctx, tx, {
         recordType: "task",
         operation: "CREATED",
-        cause: { kind: "EDITED_DIRECTLY" },
+        cause,
         records: [
           {
             recordId: created.id,
@@ -120,6 +138,35 @@ export function createTaskService({
         ],
       });
       return created;
+    },
+
+    readTasksInTransaction: (tx, taskIds) => taskRepository(tx).findByIds(taskIds),
+
+    async markDoneInTransaction(ctx, tx, taskId) {
+      const { task } = await changeLockedTask(ctx, tx, taskId, (locked, employeeId) => {
+        refuseUnlessAssignee(locked, employeeId, MARK_DONE_REFUSAL);
+        return markTaskDone(locked, employeeId, new Date());
+      });
+      return task;
+    },
+
+    async reopenInTransaction(ctx, tx, taskId) {
+      const { task } = await changeLockedTask(ctx, tx, taskId, (locked, employeeId) => {
+        refuseUnlessAssignee(locked, employeeId, REOPEN_REFUSAL);
+        return reopenTask(locked);
+      });
+      return task;
+    },
+
+    async cancelInTransaction(ctx, tx, { taskIds, reason, cause }) {
+      const tasks = taskRepository(tx);
+      for (const task of await tasks.lockByIds(taskIds)) {
+        if (task.status === "done" || task.status === "cancelled") continue;
+        const saved = await tasks.saveStatus(
+          cancelTask(task, requireText(reason, "reason"), new Date()),
+        );
+        await appendStatusChange(ctx, tx, task, saved, cause);
+      }
     },
 
     async markWaiting(ctx, tx, taskId) {
@@ -154,11 +201,8 @@ export function createTaskService({
 
     async markDone(ctx, taskId) {
       const done = await changeTask(transact, ctx, taskId, (task, employeeId) => {
-        refuseUnlessHolder(
-          task,
-          employeeId,
-          "Only the person who holds this task can mark it done.",
-        );
+        refuseFeatureTask(task);
+        refuseUnlessAssignee(task, employeeId, MARK_DONE_REFUSAL);
         return markTaskDone(task, employeeId, new Date());
       });
       logger.info({ taskId: done.task.id, type: done.task.type }, "Task marked done");
@@ -167,7 +211,8 @@ export function createTaskService({
 
     async reopen(ctx, taskId) {
       const reopened = await changeTask(transact, ctx, taskId, (task, employeeId) => {
-        refuseUnlessHolder(task, employeeId, "Only the person who holds this task can reopen it.");
+        refuseFeatureTask(task);
+        refuseUnlessAssignee(task, employeeId, REOPEN_REFUSAL);
         return reopenTask(task);
       });
       logger.info({ taskId: reopened.task.id, type: reopened.task.type }, "Task reopened");
@@ -176,7 +221,8 @@ export function createTaskService({
 
     async cancel(ctx, taskId, reason) {
       const cancelled = await changeTask(transact, ctx, taskId, (task, employeeId) => {
-        if (task.requestedByEmployeeId !== employeeId) {
+        refuseFeatureTask(task);
+        if (task.askedByEmployeeId !== employeeId) {
           throw new ApplicationError(
             "FORBIDDEN",
             "Only the person who asked can cancel this task.",
@@ -202,13 +248,21 @@ async function changeTask(
   taskId: string,
   change: (task: Task, employeeId: string) => Task,
 ): Promise<TaskChange> {
-  return transact(async (tx) => {
-    const tasks = taskRepository(tx);
-    const id = parseUuid(taskId);
-    const { task, employeeId } = requireVisible(ctx, id ? await tasks.lockById(id) : null);
-    const saved = await tasks.saveStatus(change(task, employeeId));
-    return { task: saved, historyLine: await appendStatusChange(ctx, tx, task, saved) };
-  });
+  return transact((tx) => changeLockedTask(ctx, tx, taskId, change));
+}
+
+/** Changes one task the caller may see, locked in `tx`, with the history line it appends. */
+async function changeLockedTask(
+  ctx: SecurityContext,
+  tx: Tx,
+  taskId: string,
+  change: (task: Task, employeeId: string) => Task,
+): Promise<TaskChange> {
+  const tasks = taskRepository(tx);
+  const id = parseUuid(taskId);
+  const { task, employeeId } = requireVisible(ctx, id ? await tasks.lockById(id) : null);
+  const saved = await tasks.saveStatus(change(task, employeeId));
+  return { task: saved, historyLine: await appendStatusChange(ctx, tx, task, saved) };
 }
 
 async function appendStatusChange(
@@ -216,11 +270,12 @@ async function appendStatusChange(
   tx: Tx,
   before: Task,
   after: Task,
+  cause: TaskCause = DIRECT_EDIT,
 ): Promise<HistoryLine> {
   const [line] = await history.append(ctx, tx, {
     recordType: "task",
     operation: "UPDATED",
-    cause: { kind: "EDITED_DIRECTLY" },
+    cause,
     reason: after.cancelReason,
     records: [
       {
@@ -244,9 +299,16 @@ function requireVisible(
   return { task, employeeId };
 }
 
-function refuseUnlessHolder(task: Task, employeeId: string, message: string): void {
+function refuseUnlessAssignee(task: Task, employeeId: string, message: string): void {
   if (task.assigneeEmployeeId !== employeeId) {
     throw new ApplicationError("FORBIDDEN", message);
+  }
+}
+
+/** A feature's own task is finished through the feature, never the generic commands. */
+function refuseFeatureTask(task: Task): void {
+  if (task.type === "process_step_to_do") {
+    throw new ApplicationError("CONFLICT", "This task belongs to a process.");
   }
 }
 
@@ -263,3 +325,7 @@ function notFound(): ApplicationError {
 }
 
 const history = createRecordHistoryService();
+
+const DIRECT_EDIT: TaskCause = { kind: "EDITED_DIRECTLY" };
+const MARK_DONE_REFUSAL = "Only the person who holds this task can mark it done.";
+const REOPEN_REFUSAL = "Only the person who holds this task can reopen it.";

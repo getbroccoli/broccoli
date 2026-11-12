@@ -1,8 +1,11 @@
 import { ApplicationError } from "../../../core/applicationError";
 import type { CalendarDate } from "../../../utils";
 
-/** A task finished by hand with Mark done; features add their own types. */
-export const TASK_TYPES = ["manual_to_do"] as const;
+/**
+ * `manual_to_do` is finished by hand with Mark done; `process_step_to_do` is a process step's to-do,
+ * finished through processes so its run keeps up. Features add their own types.
+ */
+export const TASK_TYPES = ["manual_to_do", "process_step_to_do"] as const;
 export type TaskType = (typeof TASK_TYPES)[number];
 
 export const TASK_STATUSES = ["to_do", "waiting", "done", "cancelled"] as const;
@@ -16,7 +19,7 @@ export interface TaskProcessSource {
 }
 
 /** The record a task acts on, as the records registry names it. */
-export interface TaskSubject {
+export interface TaskRecord {
   recordType: string;
   recordId: string;
 }
@@ -29,10 +32,10 @@ export interface Task {
   title: string;
   description: string | null;
   assigneeEmployeeId: string;
-  requestedByEmployeeId: string | null;
-  aboutEmployeeId: string | null;
+  askedByEmployeeId: string | null;
+  subjectEmployeeId: string | null;
   processSource: TaskProcessSource | null;
-  subject: TaskSubject | null;
+  record: TaskRecord | null;
   dueDate: CalendarDate | null;
   doneAt: Date | null;
   doneByEmployeeId: string | null;
@@ -42,9 +45,9 @@ export interface Task {
   updatedAt: Date;
 }
 
-/** Only the holder and the person who asked see a task; whom it is about does not count. */
+/** Only the assignee and the person who asked see a task; whom it is about does not count. */
 export function isTaskVisibleTo(task: Task, employeeId: string): boolean {
-  return task.assigneeEmployeeId === employeeId || task.requestedByEmployeeId === employeeId;
+  return task.assigneeEmployeeId === employeeId || task.askedByEmployeeId === employeeId;
 }
 
 export function markTaskDone(task: Task, byEmployeeId: string, now: Date): Task {

@@ -34,7 +34,7 @@ export async function seedPagingBoundary({
       type: "manual_to_do",
       title: "Read the handbook",
       assigneeEmployeeId: person.id,
-      requestedByEmployeeId: person.id,
+      askedByEmployeeId: person.id,
     }),
   );
   await tasks.markDone(ctx, task.id);
