@@ -93,7 +93,7 @@ export function useOwnRulesEdit({
   const shown = draft ?? closedDraft(today);
   const { terms, termsRules } = useTermsRules(opened, shown.startDate);
   const termsOffer = termsRules === undefined ? null : termsRules !== null;
-  const versions = useRulesSince(employeeId, opened);
+  const { versions, loadFailed } = useRulesSince(employeeId, opened);
   const formError =
     opened && formErrorOf(opened, shown, { versions, termsBalance: termsRules?.balance ?? null });
   const close = () => {
@@ -117,7 +117,9 @@ export function useOwnRulesEdit({
             termsOffer,
           })
         : null,
-    error: failure ?? formError ?? null,
+    error: loadFailed
+      ? t("ownRules.loadFailed", { name: firstName })
+      : (failure ?? formError ?? null),
     changed: isChanged(opened, draft),
     saving: setting.loading || returning.loading,
     open: (start) => {
@@ -174,8 +176,8 @@ function useTermsRules(opened: Opened | null, startDate: string) {
 }
 
 /**
- * The person's rules for the open type from the day before the earliest "Applies from" on;
- * undefined while loading.
+ * The person's rules for the open type from the day before the earliest "Applies from" on,
+ * undefined while loading or after the read failed; reopening the form reads them again.
  */
 function useRulesSince(employeeId: string, opened: Opened | null) {
   const read = useQuery(PersonRulesSinceDocument, {
@@ -183,9 +185,10 @@ function useRulesSince(employeeId: string, opened: Opened | null) {
     skip: !opened,
     fetchPolicy: "network-only",
   });
-  return read.data?.employee?.employmentTerms?.timeOff?.find(
+  const versions = read.data?.employee?.employmentTerms?.timeOff?.find(
     ({ timeOffType }) => timeOffType.id === opened?.timeOffType.id,
   )?.versions;
+  return { versions, loadFailed: read.error !== undefined };
 }
 
 /** What saving does; null while whether the terms offer the type is loading. */

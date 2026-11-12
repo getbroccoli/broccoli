@@ -131,6 +131,21 @@ it("refuses Unlimited rules from a past date after allowance rules mid-year", ()
   expect(error).toBe("How it counts changes only from the start of a leave year.");
 });
 
+it("shows the date error without crashing when the rules date is cleared", () => {
+  const versions = [{ startDate: "2026-01-01", endDate: null, balance: "BALANCE_FROM_ALLOWANCE" }];
+
+  const before = rulesBefore(versions, "");
+  const error = rulesDateError({
+    startDate: "",
+    earliest: "2026-01-01",
+    before: before?.balance ?? null,
+    balance: "UNLIMITED_BALANCE",
+  });
+
+  expect(before).toBeNull();
+  expect(error).toBe("Pick a date from 1 Jan 2026.");
+});
+
 it("reads no rules when the preceding day is in a gap", () => {
   const versions = [
     { startDate: "2026-11-09", endDate: "2026-12-31" },
