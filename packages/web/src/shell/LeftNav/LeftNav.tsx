@@ -41,7 +41,7 @@ export function LeftNav() {
     <aside className="shrink-0 md:h-full md:w-56 md:overflow-hidden">
       <div
         className={cn(
-          "md:flex md:h-full md:w-112 md:transition-transform md:duration-500 md:ease-[cubic-bezier(0.65,0,0.35,1)] motion-reduce:transition-none",
+          "md:flex md:h-full md:w-112 md:ease-[cubic-bezier(0.65,0,0.35,1)] md:motion-safe:transition-transform md:motion-safe:duration-500",
           inSettings && "md:-translate-x-1/2",
         )}
       >
