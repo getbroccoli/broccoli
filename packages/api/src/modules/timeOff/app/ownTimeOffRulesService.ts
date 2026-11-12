@@ -192,12 +192,10 @@ async function changeOwnRules(
     });
     const timeOffPolicyId = await saveOwnRules(tx, lane, versions, applied.stretches);
     await refuseCountsChangeFrom(employeeReads, tx, { employeeId, timeOffType, from, cancel });
-    await refuseLostBookings().catch((error: unknown) => {
-      logger.info(
-        { employeeId, timeOffTypeId: timeOffType.id, startDate: from },
-        "Refused an own time off rules change that leaves booked time off without rules",
-      );
-      throw error;
+    await refuseLostBookingsLogged(logger, refuseLostBookings, {
+      employeeId,
+      timeOffTypeId: timeOffType.id,
+      startDate: from,
     });
     await appendOwnRulesHistory(ctx, tx, { employeeId, timeOffType, from, applied });
     const ensured = await timeOff.ensureAllowances(ctx, tx, {
@@ -212,6 +210,25 @@ async function changeOwnRules(
       ...ensured,
     };
   });
+}
+
+/** Runs the booked time off check, logging a refusal with the change's ids before rethrowing it. */
+async function refuseLostBookingsLogged(
+  logger: Logger,
+  refuseLostBookings: () => Promise<void>,
+  change: { employeeId: string; timeOffTypeId: string; startDate: CalendarDate },
+): Promise<void> {
+  try {
+    await refuseLostBookings();
+  } catch (error) {
+    if (error instanceof ApplicationError && error.code === "CONFLICT") {
+      logger.info(
+        change,
+        "Refused an own time off rules change that leaves booked time off without rules",
+      );
+    }
+    throw error;
+  }
 }
 
 /**
