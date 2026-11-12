@@ -74,6 +74,7 @@ function runView(run: StoredRun, process: StoredProcess): ProcessRun {
     subjectEmployeeId: run.subjectEmployeeId,
     startCause: run.startCause,
     startedByEmployeeId: run.startedByEmployeeId,
+    triggerEvent: run.triggerEvent,
     startDay: run.startDay,
     status: run.status,
     finishedAt: run.finishedAt,

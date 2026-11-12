@@ -68,7 +68,8 @@ export interface HistoryAppend {
   operation: RecordOperation;
   cause: { kind: CauseKind; ref?: string | null };
   reason?: string | null;
-  records: { recordId: string; changes: FieldChange[] }[];
+  /** A record's own `cause` replaces the append's, such as tasks of different runs in one batch. */
+  records: { recordId: string; changes: FieldChange[]; cause?: HistoryAppend["cause"] }[];
 }
 
 /** The author of a change made with `ctx`. */

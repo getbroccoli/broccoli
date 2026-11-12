@@ -55,6 +55,7 @@ CREATE TABLE "process_runs" (
 	"started_by_employee_id" uuid,
 	"trigger_date" date,
 	"start_key" text,
+	"trigger_event" jsonb,
 	"start_day" date NOT NULL,
 	"status" text NOT NULL,
 	"finished_at" timestamp with time zone,
@@ -65,7 +66,8 @@ CREATE TABLE "process_runs" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "process_runs_status_known" CHECK ("process_runs"."status" in ('in_progress', 'finished', 'cancelled')),
-	CONSTRAINT "process_runs_start_cause_known" CHECK ("process_runs"."start_cause" in ('started_on_record_date', 'started_by_admin')),
+	CONSTRAINT "process_runs_start_cause_known" CHECK ("process_runs"."start_cause" in ('started_on_record_date', 'started_by_admin', 'started_on_event')),
+	CONSTRAINT "process_runs_trigger_event_follows_start_cause" CHECK (("process_runs"."start_cause" = 'started_on_event') = ("process_runs"."trigger_event" is not null)),
 	CONSTRAINT "process_runs_cancel_cause_known" CHECK ("process_runs"."cancel_cause" in ('cancelled_by_admin', 'cancelled_because_step_assignee_was_removed', 'cancelled_because_subject_was_removed')),
 	CONSTRAINT "process_runs_columns_follow_status" CHECK (("process_runs"."status" = 'finished') = ("process_runs"."finished_at" is not null)
         and ("process_runs"."status" = 'cancelled') = ("process_runs"."cancelled_at" is not null)

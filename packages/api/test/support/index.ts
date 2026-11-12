@@ -78,7 +78,8 @@ export {
   passwordResetEmail,
 } from "./services";
 export type { EmployeeServices } from "./services";
-export { processService } from "./processService";
+export { processService, transactWithProcesses } from "./processService";
+export { domainEvents } from "./domainEvents";
 export {
   employeeSetup,
   fileStorage,

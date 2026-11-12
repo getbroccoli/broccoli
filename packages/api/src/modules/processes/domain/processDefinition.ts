@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { isTriggeringEvent, TRIGGERING_EVENTS, type TriggeringEventType } from "./eventTrigger";
+
 /** The shape of `process_versions.definition` this code reads; a migration moves older shapes on. */
 export const PROCESS_DEFINITION_SCHEMA_VERSION = 1;
 
@@ -40,10 +42,24 @@ export interface RecordDateTrigger {
   maxDaysLate: number;
 }
 
+/**
+ * Starts a run for each record an event is about, inside the transaction that published it: the
+ * run commits with the change, and a run that fails fails the change.
+ */
+export interface EventTrigger {
+  kind: "on_event";
+  event: TriggeringEventType;
+  /** Only events whose payload field holds one of these values. */
+  when?: { field: string; in: (string | null)[] };
+  run: "in_same_transaction";
+  faultMode: "rollback_transaction";
+}
+
 /** What one version of a process does; its steps run in parallel, listed in display order. */
 export interface ProcessDefinition {
-  subject: { recordType: "employee" };
-  trigger: RecordDateTrigger;
+  /** The record a run is about, the trigger's record type. */
+  subject: { recordType: "employee" | "task" };
+  trigger: RecordDateTrigger | EventTrigger;
   startableByAdmin: boolean;
   steps: TaskStep[];
 }
@@ -56,21 +72,38 @@ export function parseProcessDefinition(
   if (schemaVersion !== PROCESS_DEFINITION_SCHEMA_VERSION) {
     throw new Error(`Process definition schema version ${schemaVersion} is not known.`);
   }
-  refuseEventTrigger(definition);
+  refuseUnbuiltTrigger(definition);
   const parsed: ProcessDefinition = definitionSchema.parse(definition);
+  refuseSubjectOtherThanTrigger(parsed);
   refuseRepeatedStepKeys(parsed.steps);
-  for (const offset of [parsed.trigger.offset, ...parsed.steps.map(({ due }) => due)]) {
+  const triggerOffsets = parsed.trigger.kind === "on_record_date" ? [parsed.trigger.offset] : [];
+  for (const offset of [...triggerOffsets, ...parsed.steps.map(({ due }) => due)]) {
     refuseOffsetBeyondLimit(offset);
   }
   return parsed;
 }
 
-const EVENT_TRIGGER_KINDS = new Set(["on_record_created", "on_record_changed", "on_schedule"]);
+const UNBUILT_TRIGGER_KINDS = new Set(["on_record_created", "on_record_changed", "on_schedule"]);
 
-function refuseEventTrigger(definition: unknown): void {
-  const kind = (definition as { trigger?: { kind?: unknown } } | null)?.trigger?.kind;
-  if (typeof kind === "string" && EVENT_TRIGGER_KINDS.has(kind)) {
-    throw new Error(`Trigger kind ${kind} needs durable record events, which are not built yet.`);
+function refuseUnbuiltTrigger(definition: unknown): void {
+  const trigger = (definition as { trigger?: { kind?: unknown; event?: unknown } } | null)?.trigger;
+  if (typeof trigger?.kind === "string" && UNBUILT_TRIGGER_KINDS.has(trigger.kind)) {
+    throw new Error(`Trigger kind ${trigger.kind} is not built.`);
+  }
+  if (trigger?.kind === "on_event" && !isTriggeringEvent(String(trigger.event))) {
+    throw new Error(`Event ${String(trigger.event)} cannot trigger a process.`);
+  }
+}
+
+function refuseSubjectOtherThanTrigger({ subject, trigger }: ProcessDefinition): void {
+  const [recordType, source] =
+    trigger.kind === "on_event"
+      ? [TRIGGERING_EVENTS[trigger.event].recordType, `event ${trigger.event}`]
+      : [trigger.recordType, `trigger ${trigger.kind}`];
+  if (subject.recordType !== recordType) {
+    throw new Error(
+      `The subject ${subject.recordType} differs from the record type ${recordType} of ${source}.`,
+    );
   }
 }
 
@@ -102,15 +135,31 @@ const assigneeRuleSchema: z.ZodType<AssigneeRule> = z.lazy(() =>
   }),
 );
 
-const definitionSchema = z.object({
-  subject: z.object({ recordType: z.literal("employee") }),
-  trigger: z.object({
+const triggerSchema = z.discriminatedUnion("kind", [
+  z.object({
     kind: z.literal("on_record_date"),
     recordType: z.literal("employee"),
     dateField: z.literal("startDate"),
     offset: offsetSchema,
     maxDaysLate: z.number().int().min(0),
   }),
+  z.object({
+    kind: z.literal("on_event"),
+    event: z.enum(Object.keys(TRIGGERING_EVENTS) as [TriggeringEventType]),
+    when: z
+      .object({
+        field: z.string().trim().min(1),
+        in: z.array(z.string().nullable()).min(1),
+      })
+      .optional(),
+    run: z.literal("in_same_transaction"),
+    faultMode: z.literal("rollback_transaction"),
+  }),
+]);
+
+const definitionSchema = z.object({
+  subject: z.object({ recordType: z.enum(["employee", "task"]) }),
+  trigger: triggerSchema,
   startableByAdmin: z.boolean(),
   steps: z
     .array(

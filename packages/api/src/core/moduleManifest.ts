@@ -3,7 +3,7 @@ import type express from "express";
 
 import type { AgentSecurityResolver } from "./agentAccess";
 
-import type { Orm, Transact } from "./db";
+import type { BeforeCommitHandler, Orm, Transact } from "./db";
 import type { AddApprovedPeople, PasswordResetEmailService, SetupDemo } from "./instance";
 import type { EventHandlers } from "./events";
 import type { JobHandlers, JobQueue } from "./jobs";
@@ -39,6 +39,8 @@ export interface ModuleManifest {
   resolvers: Resolvers;
   /** What the module does when another module's event happens. */
   events?: EventHandlers;
+  /** What the module does with a transaction's events inside it, committing with them or not at all. */
+  eventsBeforeCommit?: BeforeCommitHandler;
   /** The record types the module owns that keep history: who may read it and how to load them. */
   recordTypes?: RecordTypeRegistry;
   /** The module's background jobs, run as the system. */

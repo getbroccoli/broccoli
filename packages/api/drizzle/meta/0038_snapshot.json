@@ -3595,6 +3595,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "trigger_event": {
+          "name": "trigger_event",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
         "start_day": {
           "name": "start_day",
           "type": "date",
@@ -3797,7 +3803,11 @@
         },
         "process_runs_start_cause_known": {
           "name": "process_runs_start_cause_known",
-          "value": "\"process_runs\".\"start_cause\" in ('started_on_record_date', 'started_by_admin')"
+          "value": "\"process_runs\".\"start_cause\" in ('started_on_record_date', 'started_by_admin', 'started_on_event')"
+        },
+        "process_runs_trigger_event_follows_start_cause": {
+          "name": "process_runs_trigger_event_follows_start_cause",
+          "value": "(\"process_runs\".\"start_cause\" = 'started_on_event') = (\"process_runs\".\"trigger_event\" is not null)"
         },
         "process_runs_cancel_cause_known": {
           "name": "process_runs_cancel_cause_known",

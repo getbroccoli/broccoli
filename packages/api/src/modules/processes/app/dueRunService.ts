@@ -39,12 +39,13 @@ export function createDueRunService({
       for (const process of await processRepository(orm).listProcesses()) {
         if (!process.turnedOnAt) continue;
         const { activeVersion } = process;
-        const definition = parseProcessDefinition(
+        const { trigger } = parseProcessDefinition(
           activeVersion.schemaVersion,
           activeVersion.definition,
         );
+        if (trigger.kind !== "on_record_date") continue;
         const turnedOnDay = dateInLondon(process.turnedOnAt);
-        const due = await transact((tx) => starter.findDue(tx, definition, { today, turnedOnDay }));
+        const due = await transact((tx) => starter.findDue(tx, trigger, { today, turnedOnDay }));
         const withRuns = await processRepository(orm).findRecordsWithRuns(
           process.id,
           "employee",
@@ -84,14 +85,8 @@ async function startOne(
   today: CalendarDate,
 ): Promise<ProcessRun | null> {
   try {
-    const workspaceOwnerEmployeeId = await starter.readWorkspaceOwner();
     const run = await transact((tx) =>
-      startIfStillDue(
-        starter,
-        tx,
-        { processId: process.id, employeeId, today },
-        workspaceOwnerEmployeeId,
-      ),
+      startIfStillDue(starter, tx, { processId: process.id, employeeId, today }),
     );
     if (run) {
       logger.info(
@@ -117,7 +112,6 @@ async function startIfStillDue(
   starter: RunStarter,
   tx: Tx,
   { processId, employeeId, today }: { processId: string; employeeId: string; today: CalendarDate },
-  workspaceOwnerEmployeeId: string | null,
 ): Promise<ProcessRun | null> {
   const processes = processRepository(tx);
   await processes.lockProcess(processId);
@@ -126,6 +120,7 @@ async function startIfStillDue(
   if (!process?.turnedOnAt || !subject?.startDate) return null;
   const { activeVersion } = process;
   const definition = parseProcessDefinition(activeVersion.schemaVersion, activeVersion.definition);
+  if (definition.trigger.kind !== "on_record_date") return null;
   const triggerDate = dueTriggerDate(definition.trigger, subject.startDate, {
     today,
     turnedOnDay: dateInLondon(process.turnedOnAt),
@@ -133,17 +128,21 @@ async function startIfStillDue(
   const hasRun =
     (await processes.findRecordsWithRuns(processId, "employee", [employeeId])).size > 0;
   if (!triggerDate || hasRun) return null;
-  return starter.start(tx, {
-    process,
-    definition,
-    subject,
-    startCause: "started_on_record_date",
-    startedByEmployeeId: null,
-    triggerDate,
-    startKey: `on_record_date:employee:${employeeId}:${triggerDate}`,
-    startDay: today,
-    workspaceOwnerEmployeeId,
-  });
+  const [run] = await starter.startMany(tx, [
+    {
+      process,
+      definition,
+      record: { recordType: "employee", recordId: employeeId },
+      subject,
+      startCause: "started_on_record_date",
+      startedByEmployeeId: null,
+      triggerDate,
+      triggerEvent: null,
+      startKey: `on_record_date:employee:${employeeId}:${triggerDate}`,
+      startDay: today,
+    },
+  ]);
+  return run!;
 }
 
 function errorKind(error: unknown): string | undefined {

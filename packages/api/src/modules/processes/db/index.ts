@@ -1,1 +1,6 @@
-export { processRepository, type StoredProcess } from "./processRepository";
+export {
+  type NewProcessRow,
+  type NewRunRow,
+  processRepository,
+  type StoredProcess,
+} from "./processRepository";

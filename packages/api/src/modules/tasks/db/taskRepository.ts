@@ -9,7 +9,8 @@ export type NewTaskRow = Omit<Task, "id" | "createdAt" | "updatedAt">;
 
 /** Stored tasks. */
 export interface TaskRepository {
-  insert(task: NewTaskRow): Promise<Task>;
+  /** Inserts the tasks in one statement; returns them in the same order. */
+  insert(tasks: readonly NewTaskRow[]): Promise<Task[]>;
   findById(id: string): Promise<Task | null>;
   findByIds(ids: readonly string[]): Promise<Task[]>;
   /** The task with this id, or null, locked until the transaction ends, so the first change wins. */
@@ -28,9 +29,10 @@ export interface TaskRepository {
 export function taskRepository(db: Orm | Tx): TaskRepository {
   const orm = ormOf(db);
   return {
-    async insert(task) {
-      const [row] = await orm.insert(tasks).values(toRow(task)).returning();
-      return toTask(row!);
+    async insert(newTasks) {
+      if (newTasks.length === 0) return [];
+      const rows = await orm.insert(tasks).values(newTasks.map(toRow)).returning();
+      return rows.map(toTask);
     },
 
     async findById(id) {

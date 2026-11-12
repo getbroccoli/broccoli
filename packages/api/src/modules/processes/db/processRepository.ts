@@ -1,8 +1,8 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, type SQL, sql } from "drizzle-orm";
 
-import { ormOf, type Orm, type Tx } from "../../../core/db";
+import { ormOf, type Orm, type OrmTransaction, type Tx } from "../../../core/db";
 import { inRecordScope, type RecordScope } from "../../../core/security";
-import type { ProcessRun, RunStep } from "../domain";
+import { PROCESS_DEFINITION_SCHEMA_VERSION, type ProcessRun, type RunStep } from "../domain";
 import { processes, processVersions } from "./processesTable";
 import { processRuns, processRunSteps } from "./processRunsTable";
 
@@ -14,6 +14,15 @@ export interface StoredProcess {
   description: string;
   turnedOnAt: Date | null;
   activeVersion: { id: string; version: number; schemaVersion: number; definition: unknown };
+}
+
+/** A process to insert, with the definition of its first version. */
+export interface NewProcessRow {
+  key: string;
+  name: string;
+  description: string;
+  definition: unknown;
+  turnedOnAt: Date | null;
 }
 
 /** A run as it is stored before it has an id and timestamps. */
@@ -30,8 +39,17 @@ export interface ProcessRepository {
   lockProcess(id: string): Promise<void>;
   /** Every process, locked until the transaction ends, in id order. */
   lockAllProcesses(): Promise<void>;
+  /**
+   * The turned-on processes whose active version starts on one of these events, share-locked until
+   * the transaction ends: starts from concurrent changes never wait for each other, while turning
+   * a process off or a reset waits for them.
+   */
+  lockProcessesStartedBy(eventTypes: readonly string[]): Promise<StoredProcess[]>;
+  /** A new process with its first version, published and active; for tests and seeds. */
+  insertProcess(process: NewProcessRow): Promise<{ id: string; key: string }>;
   setTurnedOnAt(id: string, turnedOnAt: Date | null): Promise<void>;
-  insertRun(run: NewRunRow): Promise<ProcessRun>;
+  /** Inserts the runs in one statement; returns them in the same order. */
+  insertRuns(runs: readonly NewRunRow[]): Promise<ProcessRun[]>;
   insertSteps(steps: readonly RunStep[]): Promise<void>;
   findRun(id: string): Promise<ProcessRun | null>;
   /** The run, locked until the transaction ends, so step changes on it take turns. */
@@ -46,6 +64,12 @@ export interface ProcessRepository {
   listRunsInProgress(): Promise<ProcessRun[]>;
   /** The records among these that already had any run of the process. */
   findRecordsWithRuns(
+    processId: string,
+    recordType: string,
+    recordIds: readonly string[],
+  ): Promise<Set<string>>;
+  /** The records among these with a run of the process in progress. */
+  findRecordsWithRunInProgress(
     processId: string,
     recordType: string,
     recordIds: readonly string[],
@@ -112,6 +136,39 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
       await orm.select({ id: processes.id }).from(processes).orderBy(processes.id).for("update");
     },
 
+    async lockProcessesStartedBy(eventTypes) {
+      const rows = await selectProcesses()
+        .where(
+          and(
+            isNotNull(processes.turnedOnAt),
+            sql`${processVersions.definition} -> 'trigger' ->> 'kind' = 'on_event'`,
+            sql`${processVersions.definition} -> 'trigger' ->> 'event' = any(${sql.param([...eventTypes])}::text[])`,
+          ),
+        )
+        .orderBy(processes.id)
+        .for("share", { of: processes });
+      return rows.map(toStoredProcess);
+    },
+
+    async insertProcess({ definition, ...process }) {
+      const [inserted] = await orm.insert(processes).values(process).returning();
+      const [version] = await orm
+        .insert(processVersions)
+        .values({
+          processId: inserted!.id,
+          version: 1,
+          status: "published",
+          definitionSchemaVersion: PROCESS_DEFINITION_SCHEMA_VERSION,
+          definition,
+        })
+        .returning();
+      await orm
+        .update(processes)
+        .set({ activeVersionId: version!.id })
+        .where(eq(processes.id, inserted!.id));
+      return { id: inserted!.id, key: inserted!.key };
+    },
+
     async setTurnedOnAt(id, turnedOnAt) {
       await orm
         .update(processes)
@@ -119,9 +176,12 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
         .where(eq(processes.id, id));
     },
 
-    async insertRun(run) {
-      const [row] = await orm.insert(processRuns).values(run).returning();
-      return row!;
+    async insertRuns(runs) {
+      if (runs.length === 0) return [];
+      return await orm
+        .insert(processRuns)
+        .values([...runs])
+        .returning();
     },
 
     async insertSteps(steps) {
@@ -181,20 +241,15 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
       return await orm.select().from(processRuns).where(eq(processRuns.status, "in_progress"));
     },
 
-    async findRecordsWithRuns(processId, recordType, recordIds) {
-      if (recordIds.length === 0) return new Set();
-      const rows = await orm
-        .selectDistinct({ recordId: processRuns.recordId })
-        .from(processRuns)
-        .where(
-          and(
-            eq(processRuns.processId, processId),
-            eq(processRuns.recordType, recordType),
-            sql`${processRuns.recordId} = any(${sql.param([...recordIds])}::text[])`,
-          ),
-        );
-      return new Set(rows.map(({ recordId }) => recordId));
-    },
+    findRecordsWithRuns: (processId, recordType, recordIds) =>
+      findRecordsWithRunsWhere(orm, { processId, recordType, recordIds }),
+
+    findRecordsWithRunInProgress: (processId, recordType, recordIds) =>
+      findRecordsWithRunsWhere(
+        orm,
+        { processId, recordType, recordIds },
+        eq(processRuns.status, "in_progress"),
+      ),
 
     async findRunInProgress(processId, recordType, recordId) {
       const [row] = await orm
@@ -216,6 +271,31 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
       await orm.update(processes).set({ turnedOnAt: null, updatedAt: new Date() });
     },
   };
+}
+
+/** The records among these with a run of the process that also meets `condition`. */
+async function findRecordsWithRunsWhere(
+  orm: Orm | OrmTransaction,
+  {
+    processId,
+    recordType,
+    recordIds,
+  }: { processId: string; recordType: string; recordIds: readonly string[] },
+  condition?: SQL,
+): Promise<Set<string>> {
+  if (recordIds.length === 0) return new Set();
+  const rows = await orm
+    .selectDistinct({ recordId: processRuns.recordId })
+    .from(processRuns)
+    .where(
+      and(
+        eq(processRuns.processId, processId),
+        eq(processRuns.recordType, recordType),
+        sql`${processRuns.recordId} = any(${sql.param([...recordIds])}::text[])`,
+        condition,
+      ),
+    );
+  return new Set(rows.map(({ recordId }) => recordId));
 }
 
 type ProcessWithVersionRow = {

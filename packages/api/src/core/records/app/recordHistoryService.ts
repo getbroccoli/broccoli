@@ -57,12 +57,12 @@ export function createRecordHistoryService(): RecordHistoryService {
     async append(ctx, tx, { recordType, operation, cause, reason = null, records }) {
       const author = authorOf(ctx);
       const lines = await recordHistoryRepository(tx).insert(
-        records.map(({ recordId, changes }) => ({
+        records.map(({ recordId, changes, cause: own = cause }) => ({
           recordType,
           recordId,
           operation,
           author,
-          cause: { kind: cause.kind, ref: cause.ref ?? null },
+          cause: { kind: own.kind, ref: own.ref ?? null },
           reason,
           changes,
         })),
