@@ -1,11 +1,12 @@
 import { useForm } from "@tanstack/react-form";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { NewPasswordField } from "@/features/setup";
 import { t, type MessageKey } from "@/i18n";
+import { useFragmentToken } from "@/lib/useFragmentToken";
 
 import { DEFAULT_REDIRECT } from "./loginSearch";
 import { resetPassword, type PasswordResetResult } from "./authApi";
@@ -28,19 +29,10 @@ const FAILURE_MESSAGES: Record<Exclude<PasswordResetResult, "ok">, MessageKey> =
 /** A new password for the token in the link's fragment; then the person signs in with it. */
 export function ResetPasswordForm() {
   const navigate = useNavigate();
-  // The fragment never reaches the server; it is read once and then cleared from the address bar.
-  const [token] = useState(() => window.location.hash.slice(1));
+  const token = useFragmentToken();
   const [failure, setFailure] = useState<Exclude<PasswordResetResult, "ok"> | null>(
     token === "" ? "linkInvalid" : null,
   );
-  useEffect(() => {
-    window.history.replaceState(window.history.state, "", window.location.pathname);
-    const reopen = () => {
-      if (window.location.hash) window.location.reload();
-    };
-    window.addEventListener("hashchange", reopen);
-    return () => window.removeEventListener("hashchange", reopen);
-  }, []);
 
   const form = useForm({
     defaultValues: { password: "" },

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { useFragmentToken } from "@/lib/useFragmentToken";
+
 import { type InviteDetails, lookUpInvite } from "./inviteApi";
 
 /** The invite page's state: loading, the invite, or a link that does not open one. */
@@ -11,18 +13,10 @@ export type InviteLookup =
 
 /** Reads the token from the link's fragment, clears it from the address bar, and looks it up. */
 export function useInviteLookup(): InviteLookup {
-  const [token] = useState(() => window.location.hash.slice(1));
+  const token = useFragmentToken();
   const [lookup, setLookup] = useState<InviteLookup>(
     token ? { state: "loading" } : { state: "invalid" },
   );
-  useEffect(() => {
-    window.history.replaceState(window.history.state, "", window.location.pathname);
-    const reopen = () => {
-      if (window.location.hash) window.location.reload();
-    };
-    window.addEventListener("hashchange", reopen);
-    return () => window.removeEventListener("hashchange", reopen);
-  }, []);
   useEffect(() => {
     if (!token) return;
     let current = true;
