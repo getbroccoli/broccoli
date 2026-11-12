@@ -1,4 +1,7 @@
-import { expect, test, TEST_OWNER } from "#test/support";
+import { expect, giveTermsPolicies, test, TEST_OWNER, testTransactor } from "#test/support";
+
+import { connectDatabase } from "../../src/core/db";
+import { createLogger } from "../../src/core/logger";
 
 test("the owner sets own rules, returns to the terms and cancels that return through GraphQL", async ({
   env,
@@ -65,6 +68,52 @@ test("an employee cannot set own rules through GraphQL", async ({ env }) => {
   });
 
   expect(await response.json()).toMatchObject({ errors: [{ extensions: { code: "FORBIDDEN" } }] });
+});
+
+test("reads a person's time off rules from a past date through GraphQL", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const employee = await env.seed.employee({ startDate: "2024-03-01" });
+  const database = connectDatabase(env.db.url, createLogger("silent"));
+  try {
+    await giveTermsPolicies(database.orm, testTransactor(database.orm), {
+      termsId: await env.seed.defaultTermsId(),
+      policies: [{ key: "uk_20_days_plus_bank_holidays" }],
+      today: "2026-11-09",
+    });
+  } finally {
+    await database.close();
+  }
+
+  const response = await browser.graphql(
+    `query($id: ID!, $from: Date!) {
+      employee(id: $id) { employmentTerms { timeOff(from: $from) {
+        timeOffType { name }
+        versions { startDate source rules { balance } }
+      } } }
+    }`,
+    { id: employee.id, from: "2026-01-01" },
+  );
+
+  expect(await response.json()).toMatchObject({
+    data: {
+      employee: {
+        employmentTerms: {
+          timeOff: expect.arrayContaining([
+            {
+              timeOffType: { name: "Annual leave" },
+              versions: [
+                {
+                  startDate: "2026-01-01",
+                  source: "FROM_THEIR_TERMS",
+                  rules: { balance: "BALANCE_FROM_ALLOWANCE" },
+                },
+              ],
+            },
+          ]) as unknown,
+        },
+      },
+    },
+  });
 });
 
 const TIME_OFF_TYPES = `query { timeOffSettings { timeOffTypes { timeOffType { id name } } } }`;

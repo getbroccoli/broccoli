@@ -90,7 +90,7 @@ it("reads the planned rules that apply the day before a later date", () => {
   };
   const planned = { startDate: "2027-01-01", endDate: null, balance: "UNLIMITED_BALANCE" };
 
-  expect(rulesBefore([current, planned], "2027-07-01", "2026-11-09")).toBe(planned);
+  expect(rulesBefore([current, planned], "2027-07-01")).toBe(planned);
 });
 
 it("reads the previous rules on the exact day a planned change starts", () => {
@@ -101,16 +101,34 @@ it("reads the previous rules on the exact day a planned change starts", () => {
   };
   const planned = { startDate: "2027-01-01", endDate: null, balance: "UNLIMITED_BALANCE" };
 
-  expect(rulesBefore([current, planned], "2027-01-01", "2026-11-09")).toBe(current);
+  expect(rulesBefore([current, planned], "2027-01-01")).toBe(current);
 });
 
-it.each([
-  { when: "today", date: "2026-11-09" },
-  { when: "in the past", date: "2026-03-01" },
-])("leaves the preceding rules unknown for a date $when", ({ date }) => {
-  const current = { startDate: "2026-11-09", endDate: null, balance: "BALANCE_FROM_ALLOWANCE" };
+it("reads the rules that apply the day before a past date", () => {
+  const earlier = {
+    startDate: "2026-01-01",
+    endDate: "2026-12-31",
+    balance: "BALANCE_FROM_ALLOWANCE",
+  };
+  const own = { startDate: "2027-01-01", endDate: null, balance: "UNLIMITED_BALANCE" };
 
-  expect(rulesBefore([current], date, "2026-11-09")).toBeNull();
+  expect(rulesBefore([earlier, own], "2026-01-02")).toBe(earlier);
+});
+
+it("refuses Unlimited rules from a past date after allowance rules mid-year", () => {
+  const versions = [
+    { startDate: "2026-01-01", endDate: "2026-12-31", balance: "BALANCE_FROM_ALLOWANCE" },
+    { startDate: "2027-01-01", endDate: null, balance: "UNLIMITED_BALANCE" },
+  ];
+
+  const error = rulesDateError({
+    startDate: "2026-01-02",
+    earliest: "2026-01-01",
+    before: rulesBefore(versions, "2026-01-02")?.balance ?? null,
+    balance: "UNLIMITED_BALANCE",
+  });
+
+  expect(error).toBe("How it counts changes only from the start of a leave year.");
 });
 
 it("reads no rules when the preceding day is in a gap", () => {
@@ -119,9 +137,9 @@ it("reads no rules when the preceding day is in a gap", () => {
     { startDate: "2027-03-01", endDate: null },
   ];
 
-  expect(rulesBefore(versions, "2027-02-01", "2026-11-09")).toBeNull();
+  expect(rulesBefore(versions, "2027-02-01")).toBeNull();
 });
 
 it("reads no rules when the type has no versions", () => {
-  expect(rulesBefore([], "2027-01-01", "2026-11-09")).toBeNull();
+  expect(rulesBefore([], "2027-01-01")).toBeNull();
 });

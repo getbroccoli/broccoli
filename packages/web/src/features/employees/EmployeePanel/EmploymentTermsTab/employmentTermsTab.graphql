@@ -181,6 +181,29 @@ fragment OwnWorkingWeekPayload on EmployeeOwnWorkingWeekPayload {
   }
 }
 
+# The person's rules from a date on, for how a type counts before an earlier "Applies from".
+query PersonRulesSince($id: ID!, $from: Date!) {
+  employee(id: $id) {
+    id
+    employmentTerms {
+      timeOff(from: $from) {
+        timeOffType {
+          id
+        }
+        versions {
+          source
+          startDate
+          endDate
+          rules {
+            id
+            balance
+          }
+        }
+      }
+    }
+  }
+}
+
 # The terms' rules for a type over time, for what a return to them does.
 query TermsTypeOffer($termsId: ID!, $timeOffTypeId: ID!) {
   terms(id: $termsId) {
