@@ -3,9 +3,13 @@ import { sql } from "drizzle-orm";
 import {
   ADMIN,
   calendarDate,
+  deleteAllEmployees,
   eventProcess,
   expect,
+  expectBlockedBy,
   processService,
+  signedIn,
+  taskService,
   test,
   transactWithProcesses,
 } from "#test/support";
@@ -62,6 +66,56 @@ test(
     expect(await processService(orm).listRuns(ADMIN, process.key)).toMatchObject([
       { record: { recordType: "employee", recordId: employee.id } },
     ]);
+  },
+);
+
+test(
+  "a reset waits for a task change whose event starts a run, and removes that run",
+  { timeout: 5_000 },
+  async ({ orm, seed, transact }) => {
+    const employee = await seed.employee();
+    const task = await seed.task({
+      assigneeEmployeeId: employee.id,
+      askedByEmployeeId: employee.id,
+      subjectEmployeeId: employee.id,
+    });
+    const { key } = await seed.process({
+      key: "follow_up",
+      definition: eventProcess("tasks.task_status_changed", { field: "to", in: ["cancelled"] }),
+    });
+    const ctx = signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] });
+    const locked = Promise.withResolvers<number>();
+    const release = Promise.withResolvers<void>();
+    const changing = transactWithProcesses(orm, { today })(async (tx) => {
+      await taskService(orm, { transact: (work) => work(tx) }).cancel(
+        ctx,
+        task.id,
+        "No longer needed",
+      );
+      const { rows } = await ormOf(tx).execute<{ pid: number }>(
+        sql`select pg_backend_pid() as pid`,
+      );
+      locked.resolve(rows[0]!.pid);
+      await release.promise;
+    });
+    await Promise.race([locked.promise, changing]);
+    const resetting = transact((tx) => deleteAllEmployees(orm)(ADMIN, tx));
+    const results = Promise.allSettled([changing, resetting]);
+
+    try {
+      await expectBlockedBy(orm, await locked.promise);
+    } finally {
+      release.resolve();
+      await results;
+    }
+
+    expect(await results).toMatchObject([{ status: "fulfilled" }, { status: "fulfilled" }]);
+    expect(await processService(orm).listRuns(ADMIN, key)).toEqual([]);
+    expect(await taskService(orm).listMyTasks(ctx)).toEqual({
+      needsYou: [],
+      waitingOnOthers: [],
+      resolvedRecently: [],
+    });
   },
 );
 

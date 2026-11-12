@@ -17,6 +17,8 @@ export interface TaskRepository {
   lockById(id: string): Promise<Task | null>;
   /** The tasks among these ids, locked in id order until the transaction ends. */
   lockByIds(ids: readonly string[]): Promise<Task[]>;
+  /** Every task, locked in id order until the transaction ends. */
+  lockAll(): Promise<void>;
   /** Writes the task's status and the columns that follow it. */
   saveStatus(task: Task): Promise<Task>;
   /**
@@ -50,6 +52,10 @@ export function taskRepository(db: Orm | Tx): TaskRepository {
         .from(tasks)
         .where(inArray(tasks.id, [...ids]));
       return rows.map(toTask);
+    },
+
+    async lockAll() {
+      await orm.select({ id: tasks.id }).from(tasks).orderBy(tasks.id).for("update");
     },
 
     async lockByIds(ids) {

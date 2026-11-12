@@ -64,6 +64,11 @@ export interface TaskService {
   /** The person who asked withdraws an open task, saying why. */
   cancel(ctx: SecurityContext, taskId: string, reason: string): Promise<TaskChange>;
   /**
+   * Trusted, for resets: locks every task until the transaction ends, before the employees whose
+   * deletion takes their tasks, so a reset waits for a task change instead of deadlocking with it.
+   */
+  lockTasks(ctx: SecurityContext, tx: Tx): Promise<void>;
+  /**
    * Back to a fresh workspace when setup or the demo goes back to its start, after the employees,
    * whose deletion took their tasks: forgets the tasks' history.
    */
@@ -182,6 +187,11 @@ export function createTaskService({
       });
       logger.info({ taskId: cancelled.task.id, type: cancelled.task.type }, "Task cancelled");
       return cancelled;
+    },
+
+    async lockTasks(ctx, tx) {
+      ctx.requireSetupAccess("MANAGE_WORKSPACE");
+      await taskRepository(tx).lockAll();
     },
 
     async resetTasks(ctx, tx) {
