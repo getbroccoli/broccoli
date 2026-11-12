@@ -45,7 +45,7 @@ export function AgentInvitation({ otherwise }: Props) {
   return (
     <section
       aria-labelledby="agent-invitation-title"
-      className="relative flex flex-col gap-4 rounded-2xl border border-brand/20 bg-linear-to-br from-brand-soft to-background p-5 pr-14 motion-safe:animate-in motion-safe:fade-in sm:flex-row sm:items-center"
+      className="relative flex flex-col gap-4 rounded-2xl border border-brand/20 bg-linear-to-br from-brand-soft to-background p-5 motion-safe:animate-in motion-safe:fade-in sm:flex-row sm:items-center sm:pr-14"
     >
       <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-brand text-white">
         <Robot size={24} weight="fill" aria-hidden />
