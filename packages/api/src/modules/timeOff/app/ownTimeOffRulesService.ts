@@ -1,5 +1,6 @@
 import { ApplicationError } from "../../../core/applicationError";
 import type { Transact, Tx } from "../../../core/db";
+import type { Logger } from "../../../core/logger";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import { createRecordHistoryService } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
@@ -27,7 +28,7 @@ import {
   versionFromRules,
 } from "../domain";
 import { readPeople } from "./allowanceEngine";
-import { watchBookedTimeOff } from "./bookedTimeOffGuard";
+import { watchBookedTimeOff } from "./watchBookedTimeOff";
 import { readOwnRules, saveOwnRules } from "./ownRulesStore";
 import { existingType, rulesChanged } from "./policyRules";
 import type { TimeOffService } from "./timeOffService";
@@ -78,6 +79,7 @@ export function createOwnTimeOffRulesService({
 }): OwnTimeOffRulesService {
   const dependencies = {
     transact,
+    logger,
     today,
     timeOff,
     employeeReads: createEmployeeReadService({ orm }),
@@ -131,6 +133,7 @@ export function createOwnTimeOffRulesService({
 /** What own-rules changes need: their transaction, the people they read and the allowance engine. */
 interface Dependencies {
   transact: Transact;
+  logger: Logger;
   today: () => CalendarDate;
   timeOff: Pick<TimeOffService, "ensureAllowances">;
   employeeReads: EmployeeReadService;
@@ -161,7 +164,7 @@ interface ChangeStart {
  * adds the history line and works the person's allowances out again.
  */
 async function changeOwnRules(
-  { transact, today, timeOff, employeeReads }: Dependencies,
+  { transact, logger, today, timeOff, employeeReads }: Dependencies,
   ctx: SecurityContext,
   input: OwnRulesInput,
   apply: (start: ChangeStart) => Applied,
@@ -189,7 +192,13 @@ async function changeOwnRules(
     });
     const timeOffPolicyId = await saveOwnRules(tx, lane, versions, applied.stretches);
     await refuseCountsChangeFrom(employeeReads, tx, { employeeId, timeOffType, from, cancel });
-    await refuseLostBookings();
+    await refuseLostBookings().catch((error: unknown) => {
+      logger.info(
+        { employeeId, timeOffTypeId: timeOffType.id, startDate: from },
+        "Refused an own time off rules change that leaves booked time off without rules",
+      );
+      throw error;
+    });
     await appendOwnRulesHistory(ctx, tx, { employeeId, timeOffType, from, applied });
     const ensured = await timeOff.ensureAllowances(ctx, tx, {
       employeeIds: [employeeId],

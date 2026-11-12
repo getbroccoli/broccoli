@@ -11,7 +11,7 @@ import {
 } from "../../employees";
 import { timeOffPolicyRepository } from "../db";
 import { isPlannedStop, type PolicyVersion } from "../domain";
-import { watchBookedTimeOff } from "./bookedTimeOffGuard";
+import { watchBookedTimeOff } from "./watchBookedTimeOff";
 import type { PolicyPublish } from "./policyPublishPlan";
 import {
   appendRulesHistory,

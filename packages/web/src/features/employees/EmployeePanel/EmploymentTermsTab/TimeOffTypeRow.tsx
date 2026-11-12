@@ -20,7 +20,7 @@ import { describeRules, rowOf } from "./employmentTermsView";
 import { cancellableStarts, versionToEditFrom } from "./ownWeekText";
 import { RulesRowEditor } from "./RulesRowEditor";
 import { TermsRuleRow } from "./TermsRuleRow";
-import type { OwnRulesEdit, TermsOn } from "./useOwnRulesEdit";
+import type { OwnRulesEdit, OwnRulesFailure, TermsOn } from "./useOwnRulesEdit";
 
 type TimeOff = NonNullable<EmploymentTermsTab_TermsFragment["timeOff"]>[number];
 type Version = TimeOff["versions"][number];
@@ -89,11 +89,9 @@ export function TimeOffTypeRow({
       toast(t("people.panel.terms.cancelled"));
     } catch (error) {
       const refused =
-        error instanceof PayloadFailure
-          ? (error.payloadError as { __typename?: string; message?: string })
-          : null;
+        error instanceof PayloadFailure ? (error.payloadError as OwnRulesFailure) : null;
       toast.error(
-        refused?.__typename === "ConflictError" && refused.message
+        refused?.__typename === "ConflictError"
           ? refused.message
           : t("people.panel.terms.cancelFailed"),
       );
