@@ -24,13 +24,17 @@ export async function balancesAfter(
     const inYear = booked.filter(
       ({ date }) => allowance.leaveYearStart <= date && date <= allowance.leaveYearEnd,
     );
-    const cost = totalCost(inYear);
-    const version = person.timelineOf(timeOffTypeId).getVersionOnDate(inYear[0]!.date);
-    // A year kept from before its policy stopped counting has no balance to show.
-    if (!version || version.balance === "no_balance") {
+    // A year can change how the type counts partway through: days booked under allowance rules
+    // show the allowance's figures and cost only those days, as the ledger does. A year with no
+    // day counted at all, such as one kept from before its policy stopped counting, shows none.
+    const timeline = person.timelineOf(timeOffTypeId);
+    const balanceOn = ({ date }: CostedDay) => timeline.getVersionOnDate(date)?.balance;
+    if (!inYear.some((day) => balanceOn(day) && balanceOn(day) !== "no_balance")) {
       return [];
     }
-    const counted = version.balance === "balance_from_allowance";
+    const fromAllowance = inYear.filter((day) => balanceOn(day) === "balance_from_allowance");
+    const counted = fromAllowance.length > 0;
+    const cost = totalCost(counted ? fromAllowance : inYear);
     return {
       periodStart: allowance.leaveYearStart,
       periodEnd: allowance.leaveYearEnd,

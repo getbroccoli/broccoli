@@ -249,14 +249,19 @@ async function readFigures(
   return { weeks, holidayDates, sums };
 }
 
-/** What each day booked in the allowance's leave year costs it, under the week of that day. */
+/**
+ * What each day booked in the allowance's leave year costs it, under the week of that day. In a
+ * year that counts from the allowance on some day, a day booked under other rules costs nothing.
+ */
 function bookedLines(
   allowance: Allowance,
   bookedDays: BookedDaysByPersonAndType,
-  { workingWeeks, bankHolidays }: AllowanceInputs,
+  { workingWeeks, bankHolidays, policies }: AllowanceInputs,
 ): BookedDayLine[] {
+  const counted = policies.filter(({ balance }) => balance === "balance_from_allowance");
   return (bookedDays.get(`${allowance.employeeId}:${allowance.timeOffTypeId}`) ?? [])
     .filter(({ date }) => allowance.leaveYearStart <= date && date <= allowance.leaveYearEnd)
+    .filter(({ date }) => counted.length === 0 || counted.some((policy) => covers(policy, date)))
     .map(({ timeOffDayId, date, dayPart }) => {
       const { cost } = costOn({
         date,
@@ -273,6 +278,10 @@ function bookedLines(
         firstDate: date,
       };
     });
+}
+
+function covers({ startDate, endDate }: DatedPolicy, date: CalendarDate): boolean {
+  return (startDate === null || startDate <= date) && (endDate === null || date <= endDate);
 }
 
 /** A start correction's calculation from the previous start, so grants change from the right date. */

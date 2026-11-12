@@ -1,6 +1,9 @@
 import {
   expect,
   seedAnnualLeaveEmployee,
+  seedTermsPeriods,
+  seedTermsPolicy,
+  seedTermsWeek,
   giveDefaultTermsStatutoryMinimum,
   giveTermsPolicies,
   OWNER,
@@ -69,6 +72,56 @@ test("books two full days and a morning and deducts 2.5 days", async ({ orm, see
     employeeIds: [person.employeeId],
   });
   expect(rows.get(person.employeeId)).toMatchObject([{ used: 2.5, remaining: 17.5 }]);
+});
+
+test("charges only the allowance day when a booking starts on Unlimited rules", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const person = await seedAnnualLeaveEmployee(orm, seed, transact);
+  const unlimitedTermsId = await seed.terms("Unlimited leave");
+  await seedTermsWeek(orm, { termsId: unlimitedTermsId, startDate: "2025-01-01" });
+  await seedTermsPolicy(orm, {
+    termsId: unlimitedTermsId,
+    timeOffTypeId: person.timeOffTypeId,
+    startDate: "2025-01-01",
+    version: {
+      balance: "unlimited_balance",
+      bankHolidays: null,
+      leaveYear: { kind: "leave_year_from_fixed_date", month: 1, day: 1 },
+      rules: [],
+    },
+  });
+  await seedTermsPeriods(orm, person.employeeId, [
+    { termsId: unlimitedTermsId, startDate: null, endDate: "2027-06-30" },
+    { termsId: await seed.defaultTermsId(), startDate: "2027-07-01", endDate: null },
+  ]);
+  const service = timeOffService(orm, { today: "2027-07-01" });
+  const employeeIds = [person.employeeId];
+  await transact((tx) =>
+    service.ensureAllowances(OWNER, tx, {
+      employeeIds,
+      cause: { kind: "DAILY_CHECK", ref: null },
+    }),
+  );
+  const before = await service.readTimeOffTypes(OWNER, { employeeIds });
+  expect(before.get(person.employeeId)).toMatchObject([
+    { periodStart: "2027-01-01", balance: "balance_from_allowance", used: 0 },
+  ]);
+  const remainingBefore = before.get(person.employeeId)![0]!.remaining;
+  expect(remainingBefore).toBeTypeOf("number");
+
+  await bookTimeOffService(orm, { today: "2026-11-09" }).bookTimeOff(OWNER, {
+    ...person,
+    startDate: "2027-06-30",
+    endDate: "2027-07-01",
+  });
+
+  const after = await service.readTimeOffTypes(OWNER, { employeeIds });
+  expect(after.get(person.employeeId)).toMatchObject([
+    { periodStart: "2027-01-01", used: 1, remaining: remainingBefore! - 1 },
+  ]);
 });
 
 test("books working days over Christmas", async ({ orm, seed, transact }) => {

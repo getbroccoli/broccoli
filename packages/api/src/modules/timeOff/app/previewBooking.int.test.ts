@@ -1,6 +1,9 @@
 import {
   expect,
   seedAnnualLeaveEmployee,
+  seedTermsPeriods,
+  seedTermsPolicy,
+  seedTermsWeek,
   giveTermsPolicies,
   OWNER,
   readAllowances,
@@ -46,6 +49,50 @@ test("previews no balance for a year whose policy stops counting", async ({
   });
 
   expect(preview).toMatchObject({ cost: 1, balances: [], refusal: null });
+});
+
+test("previews allowance figures when a booking starts on Unlimited rules and ends on allowance rules", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const person = await seedAnnualLeaveEmployee(orm, seed, transact);
+  const unlimitedTermsId = await seed.terms("Unlimited leave");
+  await seedTermsWeek(orm, { termsId: unlimitedTermsId, startDate: "2025-01-01" });
+  await seedTermsPolicy(orm, {
+    termsId: unlimitedTermsId,
+    timeOffTypeId: person.timeOffTypeId,
+    startDate: "2025-01-01",
+    version: {
+      balance: "unlimited_balance",
+      bankHolidays: null,
+      leaveYear: { kind: "leave_year_from_fixed_date", month: 1, day: 1 },
+      rules: [],
+    },
+  });
+  await seedTermsPeriods(orm, person.employeeId, [
+    { termsId: unlimitedTermsId, startDate: null, endDate: "2027-06-30" },
+    { termsId: await seed.defaultTermsId(), startDate: "2027-07-01", endDate: null },
+  ]);
+
+  const preview = await bookTimeOffService(orm, { today: "2026-11-09" }).previewBooking(OWNER, {
+    ...person,
+    startDate: "2027-06-30",
+    endDate: "2027-07-01",
+  });
+
+  expect(preview.refusal).toBeNull();
+  expect(preview.balances).toMatchObject([
+    {
+      periodStart: "2027-01-01",
+      periodEnd: "2027-12-31",
+      balance: "balance_from_allowance",
+    },
+  ]);
+  const [balance] = preview.balances;
+  expect(balance!.remainingBefore).toBeTypeOf("number");
+  expect(balance!.remainingAfter).toBeTypeOf("number");
+  expect(balance!.remainingAfter).toBe(balance!.remainingBefore! - 1);
 });
 
 test("previews two full days and a morning without booking or changing the balance", async ({
