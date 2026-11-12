@@ -21,6 +21,7 @@ import {
   type AllowanceInputs,
   type BookedDayLine,
   calculateAllowance,
+  chargedDays,
   costOn,
   type DatedPolicy,
   leaveYearContaining,
@@ -250,38 +251,33 @@ async function readFigures(
 }
 
 /**
- * What each day booked in the allowance's leave year costs it, under the week of that day. In a
- * year that counts from the allowance on some day, a day booked under other rules costs nothing.
+ * What each day booked in the allowance's leave year costs it, under the week of that day; only
+ * the days the year charges.
  */
 function bookedLines(
   allowance: Allowance,
   bookedDays: BookedDaysByPersonAndType,
   { workingWeeks, bankHolidays, policies }: AllowanceInputs,
 ): BookedDayLine[] {
-  const counted = policies.filter(({ balance }) => balance === "balance_from_allowance");
-  return (bookedDays.get(`${allowance.employeeId}:${allowance.timeOffTypeId}`) ?? [])
-    .filter(({ date }) => allowance.leaveYearStart <= date && date <= allowance.leaveYearEnd)
-    .filter(({ date }) => counted.length === 0 || counted.some((policy) => covers(policy, date)))
-    .map(({ timeOffDayId, date, dayPart }) => {
-      const { cost } = costOn({
-        date,
-        dayPart,
-        workingWeeks,
-        isBankHoliday: (calendar, day) => bankHolidays.get(calendar)?.includes(day) ?? false,
-      });
-      return {
-        kind: "time_off_booked",
-        allowanceRuleId: null,
-        bankHolidayDate: null,
-        timeOffDayId,
-        amount: (-cost).toFixed(6),
-        firstDate: date,
-      };
+  const inYear = (
+    bookedDays.get(`${allowance.employeeId}:${allowance.timeOffTypeId}`) ?? []
+  ).filter(({ date }) => allowance.leaveYearStart <= date && date <= allowance.leaveYearEnd);
+  return chargedDays(inYear, policies).map(({ timeOffDayId, date, dayPart }) => {
+    const { cost } = costOn({
+      date,
+      dayPart,
+      workingWeeks,
+      isBankHoliday: (calendar, day) => bankHolidays.get(calendar)?.includes(day) ?? false,
     });
-}
-
-function covers({ startDate, endDate }: DatedPolicy, date: CalendarDate): boolean {
-  return (startDate === null || startDate <= date) && (endDate === null || date <= endDate);
+    return {
+      kind: "time_off_booked",
+      allowanceRuleId: null,
+      bankHolidayDate: null,
+      timeOffDayId,
+      amount: (-cost).toFixed(6),
+      firstDate: date,
+    };
+  });
 }
 
 /** A start correction's calculation from the previous start, so grants change from the right date. */
@@ -327,7 +323,11 @@ function newAllowance(
 }
 
 /** The policy versions that apply to the person over the allowance's leave year. */
-function datedPolicies(person: Person, allowance: Allowance): DatedPolicy[] {
+/** The person's policies for the allowance's type over its leave year. */
+export function datedPolicies(
+  person: Person,
+  allowance: Pick<Allowance, "timeOffTypeId" | "leaveYearStart" | "leaveYearEnd">,
+): DatedPolicy[] {
   return person
     .timelineOf(allowance.timeOffTypeId)
     .getVersions(allowance.leaveYearStart, allowance.leaveYearEnd)
