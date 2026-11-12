@@ -26,7 +26,7 @@
     "format": "prettier --write . --ignore-path .gitignore --ignore-path packages/config/.prettierignore",
     "format:check": "prettier --check . --ignore-path .gitignore --ignore-path packages/config/.prettierignore",
     "duplicates": "jscpd packages/api/src packages/web/src",
-    "check": "pnpm format:check && pnpm duplicates && turbo run lint typecheck test",
+    "check": "pnpm format:check && pnpm duplicates && turbo run lint typecheck test --concurrency=2",
     "codegen": "turbo run codegen",
     "postinstall": "pnpm codegen"
   },

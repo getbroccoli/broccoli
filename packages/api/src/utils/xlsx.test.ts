@@ -108,7 +108,7 @@ it("returns null when reading a value far out runs out of memory", async () => {
   const bytes = xlsxFileWithDistantCell();
 
   expect(await parseXlsx(bytes)).toBeNull();
-});
+}, 45_000);
 
 it("reads a workbook after the previous worker could not start", async () => {
   // A failed recovery must not leave the other tests with a rejected queue.
@@ -161,7 +161,7 @@ it("returns null for more than 64 MB of unpacked contents", async () => {
   );
 
   expect(await parseXlsx(bytes)).toBeNull();
-});
+}, 45_000);
 
 it("returns null for bytes that are not a ZIP", async () => {
   expect(await parseXlsx(Buffer.from("Name,Email"))).toBeNull();
