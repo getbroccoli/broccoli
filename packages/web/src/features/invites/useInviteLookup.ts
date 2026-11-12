@@ -17,6 +17,13 @@ export function useInviteLookup(): InviteLookup {
   );
   useEffect(() => {
     window.history.replaceState(window.history.state, "", window.location.pathname);
+    const reopen = () => {
+      if (window.location.hash) window.location.reload();
+    };
+    window.addEventListener("hashchange", reopen);
+    return () => window.removeEventListener("hashchange", reopen);
+  }, []);
+  useEffect(() => {
     if (!token) return;
     let current = true;
     void lookUpInvite(token).then((result) => {
