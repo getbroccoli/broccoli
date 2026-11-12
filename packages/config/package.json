@@ -10,7 +10,7 @@
     "./tsconfig.base.json": "./tsconfig.base.json"
   },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run --maxWorkers=2"
   },
   "dependencies": {
     "@eslint/js": "10.0.1",
