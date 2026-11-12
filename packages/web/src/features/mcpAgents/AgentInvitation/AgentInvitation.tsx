@@ -21,10 +21,15 @@ type Props = {
  * Shows nothing until the server has answered, so neither the card nor `otherwise` flashes.
  */
 export function AgentInvitation({ otherwise }: Props) {
-  // An agent connects on Your agent or in another tab, so an earlier visit's answer may be stale.
-  const { data, error } = useQuery(AgentInvitationDocument, { fetchPolicy: "cache-and-network" });
+  // An agent connects or the card closes in another tab, so only this visit's answer counts.
+  const { data, error } = useQuery(AgentInvitationDocument, { fetchPolicy: "network-only" });
   const cache = useCache();
-  const [closeInvitation] = usePayloadMutation(CloseAgentInvitationDocument);
+  // A read that answered while the close was on its way may have reopened the card.
+  const [closeInvitation] = usePayloadMutation(CloseAgentInvitationDocument, {
+    update: (updated, { data: closed }) =>
+      closed &&
+      showAgentInvitationClosed(updated, closed.mcpAgents.closeInvitation.agentInvitationClosed),
+  });
 
   if (error && !data) return otherwise;
   if (!data) return null;
