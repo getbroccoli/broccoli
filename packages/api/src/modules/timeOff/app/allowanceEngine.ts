@@ -153,6 +153,23 @@ export function laneKey({
   return `${ownerKey}:${timeOffTypeId}`;
 }
 
+/** The person's policies for the allowance's type over its leave year. */
+export function datedPolicies(
+  person: Person,
+  allowance: Pick<Allowance, "timeOffTypeId" | "leaveYearStart" | "leaveYearEnd">,
+): DatedPolicy[] {
+  return person
+    .timelineOf(allowance.timeOffTypeId)
+    .getVersions(allowance.leaveYearStart, allowance.leaveYearEnd)
+    .map(({ version, startDate, endDate }) => ({
+      startDate,
+      endDate,
+      balance: version.balance,
+      bankHolidays: version.bankHolidays,
+      rules: version.rules,
+    }));
+}
+
 /**
  * The allowances to create: one per person and type that has none for the year needed, which is
  * the year they are in or start in, and each later year they have a day booked in.
@@ -320,22 +337,4 @@ function newAllowance(
       (startDate === null || startDate <= end) && (endDate === null || endDate >= start),
   );
   return overlaps || !employed ? null : { timeOffTypeId, leaveYearStart: start, leaveYearEnd: end };
-}
-
-/** The policy versions that apply to the person over the allowance's leave year. */
-/** The person's policies for the allowance's type over its leave year. */
-export function datedPolicies(
-  person: Person,
-  allowance: Pick<Allowance, "timeOffTypeId" | "leaveYearStart" | "leaveYearEnd">,
-): DatedPolicy[] {
-  return person
-    .timelineOf(allowance.timeOffTypeId)
-    .getVersions(allowance.leaveYearStart, allowance.leaveYearEnd)
-    .map(({ version, startDate, endDate }) => ({
-      startDate,
-      endDate,
-      balance: version.balance,
-      bankHolidays: version.bankHolidays,
-      rules: version.rules,
-    }));
 }
