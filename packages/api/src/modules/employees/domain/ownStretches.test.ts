@@ -1,13 +1,71 @@
 import { expect, it } from "vitest";
 
 import type { CalendarDate } from "../../../utils";
+import type { Assignment } from "./assignment";
 import {
   cancelOwnChange,
   type OwnStretch,
+  ownStretchesOf,
   withOwnStretch,
   withoutOwnStretches,
 } from "./ownStretches";
 import type { PatternWeek } from "./workingPattern";
+
+it("joins adjacent own assignments of the same version into one stretch", () => {
+  const assignments: Assignment[] = [
+    {
+      id: "first",
+      versionId: "week-a",
+      owner: { employeeId: "person" },
+      startDate: "2027-01-01" as CalendarDate,
+      endDate: "2027-06-30" as CalendarDate,
+    },
+    {
+      id: "second",
+      versionId: "week-a",
+      owner: { employeeId: "person" },
+      startDate: "2027-07-01" as CalendarDate,
+      endDate: null,
+    },
+  ];
+
+  const stretches = ownStretchesOf(assignments, () => weekA);
+
+  expect(stretches).toEqual([{ startDate: "2027-01-01", endDate: null, value: weekA }]);
+});
+
+it.each([
+  { reason: "a gap", firstEnd: "2027-06-29", secondVersion: "week-a" },
+  {
+    reason: "different versions with equal values",
+    firstEnd: "2027-06-30",
+    secondVersion: "week-b",
+  },
+])("keeps own assignments separate when they have $reason", ({ firstEnd, secondVersion }) => {
+  const assignments: Assignment[] = [
+    {
+      id: "first",
+      versionId: "week-a",
+      owner: { employeeId: "person" },
+      startDate: "2027-01-01" as CalendarDate,
+      endDate: firstEnd as CalendarDate,
+    },
+    {
+      id: "second",
+      versionId: secondVersion,
+      owner: { employeeId: "person" },
+      startDate: "2027-07-01" as CalendarDate,
+      endDate: null,
+    },
+  ];
+
+  const stretches = ownStretchesOf(assignments, () => weekA);
+
+  expect(stretches).toEqual([
+    { startDate: "2027-01-01", endDate: firstEnd, value: weekA },
+    { startDate: "2027-07-01", endDate: null, value: weekA },
+  ]);
+});
 
 it("ends the covering own week the day before and runs the new week to its end", () => {
   const weeks: OwnStretch<PatternWeek>[] = [
