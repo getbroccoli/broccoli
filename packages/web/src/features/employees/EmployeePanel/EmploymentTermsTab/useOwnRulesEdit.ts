@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import {
+  PersonRulesSinceDocument,
   SetOwnRulesDocument,
   type RuleSource,
   type TimeOffBalanceKind,
@@ -20,6 +21,7 @@ import {
   versionOn,
 } from "@/features/termsDisplay";
 import { t } from "@/i18n";
+import { addDays } from "@/lib/calendarDay";
 
 import { forgetHistory } from "../../cache";
 import {
@@ -64,8 +66,6 @@ export interface OwnRulesEdit {
     timeOffType: { id: string; name: string; defaultRules: TimeOffRulesInput };
     /** The rules the form starts from; null to start from the type's default rules. */
     current: TimeOffRulesInput | null;
-    /** The person's rules for the type from today on, as the row shows them. */
-    versions: readonly PersonRules[];
     earliest: string;
     termsOn: TermsOn;
   }) => void;
@@ -90,16 +90,12 @@ export function useOwnRulesEdit({
     update: forgetHistory,
   });
   const today = companyToday();
-  const shown = draft ?? {
-    balance: "NO_BALANCE" as const,
-    days: "",
-    onTop: true,
-    startDate: today,
-  };
+  const shown = draft ?? closedDraft(today);
   const { terms, termsRules } = useTermsRules(opened, shown.startDate);
   const termsOffer = termsRules === undefined ? null : termsRules !== null;
+  const { versions, loadFailed } = useRulesSince(employeeId, opened);
   const formError =
-    opened && formErrorOf(opened, shown, { today, termsBalance: termsRules?.balance ?? null });
+    opened && formErrorOf(opened, shown, { versions, termsBalance: termsRules?.balance ?? null });
   const close = () => {
     setOpened(null);
     setDraft(null);
@@ -111,23 +107,32 @@ export function useOwnRulesEdit({
     draft: shown,
     earliest: opened?.earliest ?? today,
     line:
-      opened && !formError
-        ? saveLineOf(opened, { firstName, startDate: shown.startDate, today, terms, termsOffer })
+      opened && versions && !formError
+        ? saveLineOf(opened, {
+            firstName,
+            startDate: shown.startDate,
+            today,
+            versions,
+            terms,
+            termsOffer,
+          })
         : null,
-    error: failure ?? formError ?? null,
-    changed:
-      opened !== null &&
-      draft !== null &&
-      JSON.stringify(draft) !== JSON.stringify(startDraftOf(opened)),
+    error: loadFailed
+      ? t("ownRules.loadFailed", { name: firstName })
+      : (failure ?? formError ?? null),
+    changed: isChanged(opened, draft),
     saving: setting.loading || returning.loading,
     open: (start) => {
       setOpened(start);
       setDraft(startDraftOf(start));
     },
-    edit: setDraft,
+    edit: (changed) => {
+      setDraft(changed);
+      setFailure(null);
+    },
     close,
     save: async () => {
-      if (!opened || formError) return;
+      if (!opened || !versions || formError) return;
       setFailure(null);
       const input = {
         employeeId,
@@ -170,6 +175,22 @@ function useTermsRules(opened: Opened | null, startDate: string) {
   return { terms, termsRules: versions && versionOn(versions, startDate) };
 }
 
+/**
+ * The person's rules for the open type from the day before the earliest "Applies from" on,
+ * undefined while loading or after the read failed; reopening the form reads them again.
+ */
+function useRulesSince(employeeId: string, opened: Opened | null) {
+  const read = useQuery(PersonRulesSinceDocument, {
+    variables: { id: employeeId, from: addDays(opened?.earliest ?? companyToday(), -1) },
+    skip: !opened,
+    fetchPolicy: "network-only",
+  });
+  const versions = read.data?.employee?.employmentTerms?.timeOff?.find(
+    ({ timeOffType }) => timeOffType.id === opened?.timeOffType.id,
+  )?.versions;
+  return { versions, loadFailed: read.error !== undefined };
+}
+
 /** What saving does; null while whether the terms offer the type is loading. */
 function saveLineOf(
   start: Opened,
@@ -177,19 +198,21 @@ function saveLineOf(
     firstName,
     startDate,
     today,
+    versions,
     terms,
     termsOffer,
   }: {
     firstName: string;
     startDate: string;
     today: string;
+    versions: readonly PersonRules[];
     terms: { termsName: string } | null;
     termsOffer: boolean | null;
   },
 ): string | null {
   const values = { firstName, typeName: start.timeOffType.name, startDate, today };
   if (start.mode === "own") {
-    const onDate = versionOn(start.versions, startDate > today ? startDate : today);
+    const onDate = versionOn(versions, startDate);
     return ownRulesSaveLine({
       ...values,
       alreadyOwn: onDate?.source === "THEIR_OWN",
@@ -228,6 +251,20 @@ function savedToastOf(
       });
 }
 
+/** What the form holds while closed. */
+function closedDraft(today: string): OwnRulesDraft {
+  return { balance: "NO_BALANCE", days: "", onTop: true, startDate: today };
+}
+
+/** Whether the open form differs from how it opened. */
+function isChanged(opened: Opened | null, draft: OwnRulesDraft | null): boolean {
+  return (
+    opened !== null &&
+    draft !== null &&
+    JSON.stringify(draft) !== JSON.stringify(startDraftOf(opened))
+  );
+}
+
 /** The form as it opens: the rules it starts from, from the start of this leave year. */
 function startDraftOf(start: Opened): OwnRulesDraft {
   return {
@@ -243,14 +280,17 @@ function startDraftOf(start: Opened): OwnRulesDraft {
 function formErrorOf(
   start: Opened,
   draft: OwnRulesDraft,
-  { today, termsBalance }: { today: string; termsBalance: TimeOffBalanceKind | null },
+  {
+    versions,
+    termsBalance,
+  }: { versions: readonly PersonRules[] | undefined; termsBalance: TimeOffBalanceKind | null },
 ): string | null {
   const days = start.mode === "own" ? daysError(draft) : undefined;
   return (
     rulesDateError({
       startDate: draft.startDate,
       earliest: start.earliest,
-      before: rulesBefore(start.versions, draft.startDate, today)?.rules.balance ?? null,
+      before: (versions && rulesBefore(versions, draft.startDate)?.rules.balance) ?? null,
       balance: start.mode === "own" ? draft.balance : termsBalance,
     }) ??
     days ??

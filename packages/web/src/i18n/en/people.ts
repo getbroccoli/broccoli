@@ -94,6 +94,7 @@ export const peopleEn = {
   "ownWeek.history.back": "put them back on their terms’ working week from {date}",
   "ownWeek.history.cancelled": "cancelled the change to their working week from {date}",
   "ownRules.offer": "Offer to {name}",
+  "ownRules.loadFailed": "Couldn’t load {name}’s rules. Close the form and try again.",
   "ownRules.useTerms": "Use {terms}’s rules",
   "ownRules.saveGives": "Saving gives {name} their own {type} rules from {date}.",
   "ownRules.saveChanges": "Saving changes {name}’s own {type} rules from {date}.",

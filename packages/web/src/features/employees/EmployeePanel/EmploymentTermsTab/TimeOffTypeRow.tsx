@@ -78,7 +78,6 @@ export function TimeOffTypeRow({
       mode,
       timeOffType,
       current: base && rulesInputOf(base.rules),
-      versions,
       earliest,
       termsOn,
     });

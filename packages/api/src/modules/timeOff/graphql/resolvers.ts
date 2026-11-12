@@ -22,6 +22,7 @@ import {
   type TimeOffTypeIdentityInput,
   type TimeOffTypeIcon,
 } from "../domain";
+import type { CalendarDate } from "../../../utils";
 import { bookingResolvers } from "./bookingResolvers";
 import { BALANCE_KINDS, toGraphqlType } from "./graphqlValues";
 import { ownRulesResolvers, type OwnRulesServices } from "./ownRulesResolvers";
@@ -147,10 +148,13 @@ export function createResolvers(
       ...bookings.Employee,
     },
     EmployeeEmploymentTerms: {
-      timeOff: ({ employeeId, move, from }, _args, context) =>
-        from
-          ? loaders(context).previewTimeOff.load({ employeeId, move, from })
-          : loaders(context).personTimeOff.load(employeeId),
+      timeOff: ({ employeeId, move, from }, args, context) => {
+        // The Date scalar has checked the argument.
+        const date = from ?? (args.from as CalendarDate | null | undefined);
+        return date
+          ? loaders(context).previewTimeOff.load({ employeeId, move, from: date })
+          : loaders(context).personTimeOff.load(employeeId);
+      },
     },
     PersonTimeOff: {
       timeOffType: ({ timeOffType }) => toGraphqlType(timeOffType),

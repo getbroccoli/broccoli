@@ -697,8 +697,8 @@ type TimeOffTypeDeletePayload {
 union TimeOffTypeDeleteError = NotFoundError | ConflictError
 
 extend type EmployeeEmploymentTerms {
-  "Every company time off type in list order, with the person's rules for it from today on; null for callers who may not read the person's time off."
-  timeOff: [PersonTimeOff!]
+  "Every company time off type in list order, with the person's rules for it from `from` (default: today) on; null for callers who may not read the person's time off."
+  timeOff(from: Date): [PersonTimeOff!]
 }
 
 "A company time off type with a person's rules for it from today on."
