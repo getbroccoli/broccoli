@@ -25,6 +25,39 @@ test("cancels a planned own week", async ({ orm, seed }) => {
   ]);
 });
 
+test("cancels identical own weeks saved twice and restores the terms' week", async ({
+  orm,
+  seed,
+}) => {
+  const employee = await seed.employee({ startDate: "2024-03-01" });
+  const service = workingPatternService(orm, { today: "2026-11-09" });
+  await service.setOwnWorkingWeek(OWNER, {
+    employeeId: employee.id,
+    startDate: "2027-01-01",
+    ...fourDays,
+  });
+  await service.setOwnWorkingWeek(OWNER, {
+    employeeId: employee.id,
+    startDate: "2027-07-01",
+    ...fourDays,
+  });
+
+  await service.cancelOwnWorkingWeekChange(OWNER, {
+    employeeId: employee.id,
+    startDate: "2027-01-01",
+  });
+
+  const terms = await service.readEmploymentTerms(OWNER, { employeeIds: [employee.id] });
+  expect(terms.get(employee.id)?.workingWeek).toMatchObject([
+    {
+      source: "from_their_terms",
+      startDate: "2026-11-09",
+      endDate: null,
+      version: { minutes: [450, 450, 450, 450, 450, 0, 0] },
+    },
+  ]);
+});
+
 test("cancels a planned change to an own week", async ({ orm, seed }) => {
   const employee = await seed.employee({ startDate: "2024-03-01" });
   const service = workingPatternService(orm, { today: "2026-11-09" });

@@ -12,17 +12,29 @@ export interface OwnStretch<V> {
   value: V;
 }
 
-/** A person's own stretches, oldest first, from their assignments and the value each gives. */
+/**
+ * A person's own stretches, oldest first, from their assignments and the value each gives. An
+ * assignment that carries on the one before to the same version joins it, as one change.
+ */
 export function ownStretchesOf<V>(
   assignments: readonly Assignment[],
   valueOf: (versionId: string) => V | undefined,
 ): OwnStretch<V>[] {
-  return assignments
-    .flatMap(({ versionId, startDate, endDate }) => {
-      const value = valueOf(versionId);
-      return value ? [{ startDate, endDate, value }] : [];
-    })
-    .toSorted(byStart);
+  const joined: (Assignment & { value: V })[] = [];
+  for (const assignment of assignments.toSorted(byStart)) {
+    const value = valueOf(assignment.versionId);
+    if (!value) continue;
+    const last = joined.at(-1);
+    if (
+      last?.versionId === assignment.versionId &&
+      last.endDate === addDays(assignment.startDate, -1)
+    ) {
+      last.endDate = assignment.endDate;
+    } else {
+      joined.push({ ...assignment, value });
+    }
+  }
+  return joined.map(({ startDate, endDate, value }) => ({ startDate, endDate, value }));
 }
 
 /** The own stretch covering `date`; null when the terms' apply. */
@@ -114,6 +126,6 @@ function endedBefore<V>(
   });
 }
 
-function byStart<V>(a: OwnStretch<V>, b: OwnStretch<V>): number {
+function byStart(a: { startDate: CalendarDate }, b: { startDate: CalendarDate }): number {
   return a.startDate.localeCompare(b.startDate);
 }
