@@ -1,16 +1,16 @@
-import { Check, Robot } from "@phosphor-icons/react";
+import { Robot } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import type { YourAgentQuery } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
-import { t, type MessageKey } from "@/i18n";
+import { t } from "@/i18n";
 
+import { AgentWelcome } from "./AgentWelcome";
 import { DisconnectAgentDialog } from "./DisconnectAgentDialog";
+import { PromptIdeas } from "./PromptIdeas";
 
-const PROMISES: readonly MessageKey[] = [
-  "mcpAgents.connected.reads",
-  "mcpAgents.connected.neverApproves",
-];
+/** How long after connecting the page congratulates the person. */
+const WELCOME_MS = 60 * 60 * 1000;
 
 type Props = {
   connection: NonNullable<YourAgentQuery["myAgentConnection"]>;
@@ -18,17 +18,22 @@ type Props = {
   personName: string;
 };
 
-/** The person's connected agent, what it may do, and Disconnect. */
+/** The person's connected agent with Disconnect, a welcome right after connecting, and prompts to try. */
 export function ConnectedAgentCard({ connection, personName }: Props) {
   const [confirming, setConfirming] = useState(false);
+  // Decided once per visit, so the welcome stays put while the person reads it.
+  const [welcoming, setWelcoming] = useState(
+    () => Date.now() - new Date(connection.connectedAt).getTime() < WELCOME_MS,
+  );
   const client = connection.clientName ?? t("mcpAgents.unnamedClient");
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-7">
       <section
         aria-label={t("mcpAgents.connected.label")}
-        className="flex flex-col gap-4 rounded-2xl border p-5"
+        className="overflow-hidden rounded-2xl border"
       >
-        <div className="flex flex-wrap items-center gap-3">
+        {welcoming && <AgentWelcome client={client} onDismiss={() => setWelcoming(false)} />}
+        <div className="flex flex-wrap items-center gap-3 p-5">
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand-deep">
             <Robot size={20} aria-hidden />
           </span>
@@ -42,6 +47,7 @@ export function ConnectedAgentCard({ connection, personName }: Props) {
             </div>
             <span className="text-xs text-muted-foreground">
               {t("mcpAgents.connected.since", {
+                name: personName,
                 date: dateAndTimeOf(connection.connectedAt),
                 lastActive: timeAgo(connection.lastUsedAt),
               })}
@@ -55,21 +61,8 @@ export function ConnectedAgentCard({ connection, personName }: Props) {
             {t("mcpAgents.disconnect.open")}
           </Button>
         </div>
-        <ul className="flex flex-col gap-2 border-t pt-4 text-sm">
-          {[
-            t("mcpAgents.connected.actsAs", { name: personName }),
-            ...PROMISES.map((key) => t(key)),
-          ].map((promise) => (
-            <li key={promise} className="flex gap-2.5">
-              <Check size={16} weight="bold" className="mt-0.5 shrink-0 text-brand" aria-hidden />
-              {promise}
-            </li>
-          ))}
-        </ul>
       </section>
-      <p className="text-xs text-muted-foreground">
-        {t("mcpAgents.connected.replaces", { client })}
-      </p>
+      <PromptIdeas client={client} />
       <DisconnectAgentDialog
         open={confirming}
         onOpenChange={setConfirming}
