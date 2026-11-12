@@ -1,4 +1,5 @@
 import type { Tx } from "../../../core/db";
+import { addDays } from "../../../utils";
 import { type OwnStretch, ownStretchesOf } from "../../employees";
 import { timeOffPolicyRepository } from "../db";
 import type { NewPolicyVersion } from "../domain";
@@ -48,7 +49,7 @@ export async function saveOwnRules(
   }
   const saved = [...versions];
   let timeOffPolicyId = saved[0]?.timeOffPolicyId;
-  for (const { startDate, endDate, value } of stretches) {
+  for (const { startDate, endDate, value } of joinSameRules(stretches)) {
     let version = saved.find((candidate) => isSameRules(candidate, value));
     if (!version) {
       timeOffPolicyId ??= await repository.insertPolicy({ timeOffTypeId });
@@ -66,6 +67,23 @@ export async function saveOwnRules(
     });
   }
   return timeOffPolicyId!;
+}
+
+/** The stretches with each one that carries on the one before with the same rules joined to it. */
+function joinSameRules(stretches: readonly OwnStretch<NewPolicyVersion>[]) {
+  const joined: OwnStretch<NewPolicyVersion>[] = [];
+  for (const stretch of stretches) {
+    const last = joined.at(-1);
+    if (
+      last?.endDate === addDays(stretch.startDate, -1) &&
+      isSameRules(last.value, stretch.value)
+    ) {
+      joined[joined.length - 1] = { ...last, endDate: stretch.endDate };
+    } else {
+      joined.push(stretch);
+    }
+  }
+  return joined;
 }
 
 function isSameRules(a: NewPolicyVersion, b: NewPolicyVersion): boolean {

@@ -3,6 +3,7 @@ import {
   giveTermsPolicies,
   OWNER,
   readTermsPolicies,
+  seedTermsPolicy,
   test,
   ownTimeOffRulesService,
   timeOffService,
@@ -129,7 +130,7 @@ test("cancels a planned return and runs the own rules to the next own rules", as
   ]);
 });
 
-test("refuses a cancellation that exposes a mid-year counts change and keeps the rules", async ({
+test("cancels identical own rules saved twice and restores the terms' rules", async ({
   orm,
   seed,
   transact,
@@ -153,7 +154,50 @@ test("refuses a cancellation that exposes a mid-year counts change and keeps the
     startDate: "2027-07-01",
     rules: { balance: "unlimited_balance" },
   });
+
+  await service.cancelOwnRulesChange(OWNER, { ...input, startDate: "2027-01-01" });
+
+  const result = await timeOffService(orm, { today: "2026-11-09" }).readPersonTimeOff(OWNER, {
+    employeeIds: [employee.id],
+  });
+  expect(result.get(employee.id)?.[0]?.versions).toMatchObject([
+    {
+      source: "from_their_terms",
+      startDate: "2026-11-09",
+      endDate: null,
+      version: { balance: "balance_from_allowance", rules: [{ entitlementDays: 20 }] },
+    },
+  ]);
+});
+
+test("refuses a cancellation that exposes a mid-year counts change and keeps the rules", async ({
+  orm,
+  seed,
+}) => {
+  const employee = await seed.employee({ startDate: "2024-03-01" });
+  const termsId = await seed.defaultTermsId();
   const timeOff = timeOffService(orm, { today: "2026-11-09" });
+  const { timeOffTypes } = await timeOff.listTimeOffTypes(OWNER);
+  const annual = timeOffTypes.find(({ timeOffType }) => timeOffType.typeKey === "annual_leave")!;
+  await seedTermsPolicy(orm, {
+    termsId,
+    timeOffTypeId: annual.timeOffType.id,
+    startDate: "2026-01-01",
+    version: {
+      balance: "unlimited_balance",
+      bankHolidays: null,
+      leaveYear: { kind: "leave_year_from_fixed_date", month: 1, day: 1 },
+      rules: [],
+    },
+  });
+  const service = ownTimeOffRulesService(orm, { today: "2026-11-09" });
+  const input = { employeeId: employee.id, timeOffTypeId: annual.timeOffType.id };
+  await service.setOwnRules(OWNER, { ...input, startDate: "2027-01-01", rules: twentyFiveDays });
+  await service.setOwnRules(OWNER, {
+    ...input,
+    startDate: "2027-07-01",
+    rules: { ...twentyFiveDays, entitlementDays: 30 },
+  });
   const before = await timeOff.readPersonTimeOff(OWNER, { employeeIds: [employee.id] });
 
   await expect(
