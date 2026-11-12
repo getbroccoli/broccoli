@@ -24,6 +24,14 @@ export interface EventRunService {
   startRunsOnEvents(ctx: SecurityContext, tx: Tx, events: readonly PublishedEvent[]): Promise<void>;
 }
 
+interface EventRunDependencies {
+  logger: Logger;
+  tasks: TaskService;
+  starter: RunStarter;
+  /** Today in London: the start day of the runs. */
+  today: () => CalendarDate;
+}
+
 export function createEventRunService(dependencies: EventRunDependencies): EventRunService {
   return {
     async startRunsOnEvents(ctx, tx, events) {
@@ -38,14 +46,6 @@ export function createEventRunService(dependencies: EventRunDependencies): Event
       }
     },
   };
-}
-
-interface EventRunDependencies {
-  logger: Logger;
-  tasks: TaskService;
-  starter: RunStarter;
-  /** Today in London: the start day of the runs. */
-  today: () => CalendarDate;
 }
 
 type Start = EventStart<PublishedEvent>;
