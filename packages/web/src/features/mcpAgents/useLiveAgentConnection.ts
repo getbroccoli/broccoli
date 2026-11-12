@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-restricted-imports -- A nudge refetches open queries, which the cache alone cannot.
 import { useApolloClient } from "@apollo/client/react";
 import { useEffect } from "react";
 
