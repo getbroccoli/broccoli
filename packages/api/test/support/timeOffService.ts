@@ -257,6 +257,7 @@ export function deleteAllEmployees(orm: Orm) {
   return async (ctx: SecurityContext, tx: Tx) => {
     await timeOff.lockPolicies(ctx, tx);
     await processes.lockProcesses(ctx, tx);
+    await tasks.lockTasks(ctx, tx);
     await employeeSetup.deleteAllEmployees(ctx, tx);
     await timeOff.resetTimeOff(ctx, tx);
     await processes.resetProcesses(ctx, tx);

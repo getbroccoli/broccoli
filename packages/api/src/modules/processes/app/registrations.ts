@@ -18,4 +18,11 @@ declare module "../../../core/jobs" {
   }
 }
 
+declare module "../../../core/events" {
+  interface DomainEvents {
+    /** Runs started in the transaction whose events triggered them; after-commit handlers get it only once it commits. */
+    "processes.runs_started_on_event": { processKey: string; runIds: string[]; eventIds: string[] };
+  }
+}
+
 export {};

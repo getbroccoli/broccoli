@@ -14,6 +14,7 @@ import type { TaskService } from "../../tasks";
 import { processRepository, type StoredProcess } from "../db";
 import { parseProcessDefinition } from "../domain";
 import { createDueRunService } from "./dueRunService";
+import { createEventRunService, type EventRunService } from "./eventRunService";
 import { processRecordType } from "./processRecordType";
 import type {
   Process,
@@ -74,6 +75,11 @@ export interface ProcessService {
   lockProcesses(ctx: SecurityContext, tx: Tx): Promise<void>;
   /** Back to a fresh workspace: deletes every run with its tasks, turns every process off, forgets their history. */
   resetProcesses(ctx: SecurityContext, tx: Tx): Promise<void>;
+  /**
+   * Trusted, as the system, before a transaction commits: starts the runs its events trigger, so
+   * they commit with the change or not at all.
+   */
+  startRunsOnEvents: EventRunService["startRunsOnEvents"];
 }
 
 export function createProcessService({
@@ -94,6 +100,7 @@ export function createProcessService({
   const reader = createRunReader({ transact, tasks, starter });
   const lifecycle = createRunLifecycleService({ orm, transact, logger, tasks, starter, reader });
   const dueRuns = createDueRunService({ orm, transact, logger, starter, lifecycle });
+  const eventRuns = createEventRunService({ logger, tasks, starter, today });
   const historyReader = createRecordHistoryReaderService(orm, { process: processRecordType(orm) });
 
   return {
@@ -132,10 +139,9 @@ export function createProcessService({
       const subjectId = parseUuid(employeeId);
       if (!subjectId) throw employeeNotFound();
       await ctx.requireInScope("process_run", "create", subjectId);
-      if (!definition.startableByAdmin) {
+      if (!definition.startableByAdmin || definition.subject.recordType !== "employee") {
         throw new ApplicationError("FORBIDDEN", "This process starts only by itself.");
       }
-      const workspaceOwnerEmployeeId = await starter.readWorkspaceOwner();
       const run = await transact(async (tx) => {
         await processRepository(tx).lockProcess(process.id);
         const subject = await starter.readSubject(tx, subjectId);
@@ -147,17 +153,21 @@ export function createProcessService({
           );
         }
         const startDay = laterOf(today(), subject.startDate);
-        return starter.start(tx, {
-          process,
-          definition,
-          subject,
-          startCause: "started_by_admin",
-          startedByEmployeeId: ctx.user?.employeeId ?? null,
-          triggerDate: null,
-          startKey: null,
-          startDay,
-          workspaceOwnerEmployeeId,
-        });
+        const [started] = await starter.startMany(tx, [
+          {
+            process,
+            definition,
+            record: { recordType: "employee", recordId: subjectId },
+            subject,
+            startCause: "started_by_admin",
+            startedByEmployeeId: ctx.user?.employeeId ?? null,
+            triggerDate: null,
+            triggerEvent: null,
+            startKey: null,
+            startDay,
+          },
+        ]);
+        return started!;
       });
       logger.info({ runId: run.id, processKey, startCause: run.startCause }, "Process run started");
       return reader.readDetails(run);
@@ -190,6 +200,8 @@ export function createProcessService({
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       await processRepository(tx).lockAllProcesses();
     },
+
+    startRunsOnEvents: (ctx, tx, events) => eventRuns.startRunsOnEvents(ctx, tx, events),
 
     async resetProcesses(ctx, tx) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");

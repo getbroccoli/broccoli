@@ -2,4 +2,11 @@
 export { createEventBus } from "./eventBus";
 
 // Public types.
-export type { DomainEvents, EventBus, EventHandlers, EventType, DomainEvent } from "./eventBus";
+export type {
+  DomainEvents,
+  EventBus,
+  EventHandlers,
+  EventType,
+  DomainEvent,
+  PublishedEvent,
+} from "./eventBus";

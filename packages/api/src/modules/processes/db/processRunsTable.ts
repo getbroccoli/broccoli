@@ -12,6 +12,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+import { jsonb } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
 import {
   ASSIGNEE_NOTES,
@@ -20,6 +21,7 @@ import {
   SKIP_REASONS,
   START_CAUSES,
   STEP_STATUSES,
+  type TriggerEvent,
 } from "../domain";
 import { processes, processVersions } from "./processesTable";
 
@@ -43,6 +45,7 @@ export const processRuns = pgTable(
     startedByEmployeeId: uuid("started_by_employee_id"),
     triggerDate: date("trigger_date", { mode: "string" }).$type<CalendarDate>(),
     startKey: text("start_key"),
+    triggerEvent: jsonb("trigger_event").$type<TriggerEvent>(),
     startDay: date("start_day", { mode: "string" }).$type<CalendarDate>().notNull(),
     status: text("status", { enum: RUN_STATUSES }).notNull(),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
@@ -80,7 +83,11 @@ export const processRuns = pgTable(
     ),
     check(
       "process_runs_start_cause_known",
-      sql`${table.startCause} in ('started_on_record_date', 'started_by_admin')`,
+      sql`${table.startCause} in ('started_on_record_date', 'started_by_admin', 'started_on_event')`,
+    ),
+    check(
+      "process_runs_trigger_event_follows_start_cause",
+      sql`(${table.startCause} = 'started_on_event') = (${table.triggerEvent} is not null)`,
     ),
     check(
       "process_runs_cancel_cause_known",

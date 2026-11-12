@@ -63,6 +63,8 @@ export function createModules(
     await timeOff.lockPolicies(ctx, tx);
     // Then the processes: a step command locks its process before its run and task.
     await processes.lockProcesses(ctx, tx);
+    // Then the tasks: a task change can create tasks for employees before it commits.
+    await tasks.lockTasks(ctx, tx);
     // Employees next: their assignments, allowances and ledger lines point at the policies.
     await employeeSetup.deleteAllEmployees(ctx, tx);
     await timeOff.resetTimeOff(ctx, tx);

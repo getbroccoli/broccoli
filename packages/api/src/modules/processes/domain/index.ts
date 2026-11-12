@@ -1,9 +1,18 @@
 export { addDayOffset, type IsWorkingDay, MAX_SEARCH_DAYS, workingDaysOf } from "./dayOffset";
 export { dueTriggerDate } from "./recordDateTrigger";
 export {
+  eventAboutRecord,
+  type EventStart,
+  isTriggeringEvent,
+  matchEventStarts,
+  type TriggerEvent,
+} from "./eventTrigger";
+export {
   type DayOffset,
   parseProcessDefinition,
+  PROCESS_DEFINITION_SCHEMA_VERSION,
   type ProcessDefinition,
+  type RecordDateTrigger,
   type TaskStep,
   WELCOME_NEW_STARTER,
 } from "./processDefinition";
@@ -18,6 +27,7 @@ export {
   removalCancellation,
   reopenStep,
   resolveAssignee,
+  type ResolvedAssignee,
   RUN_STATUSES,
   type RunStatus,
   type RunStep,

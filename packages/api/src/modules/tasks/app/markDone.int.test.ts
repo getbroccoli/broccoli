@@ -1,4 +1,4 @@
-import { expect, signedIn, taskService, test } from "#test/support";
+import { domainEvents, expect, signedIn, taskService, test } from "#test/support";
 
 test("marks a held task done and shows the asker who completed it", async ({ orm, seed }) => {
   const assignee = await seed.employee();
@@ -117,4 +117,29 @@ test("reports an unknown task as not found when completing it", async ({ orm, se
   await expect(
     taskService(orm).markDone(ctx, "00000000-0000-4000-8000-000000000001"),
   ).rejects.toMatchObject({ code: "NOT_FOUND", message: "No task has this id." });
+});
+
+test("publishes a status change with the assignee who marked the task done", async ({
+  orm,
+  seed,
+}) => {
+  const assignee = await seed.employee();
+  const asker = await seed.employee();
+  const task = await seed.task({ assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id });
+  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
+  const { transact, events } = domainEvents(orm);
+
+  await taskService(orm, { transact }).markDone(ctx, task.id);
+
+  expect(events).toEqual([
+    {
+      type: "tasks.task_status_changed",
+      payload: {
+        taskId: task.id,
+        from: "to_do",
+        to: "done",
+        byEmployeeId: assignee.id,
+      },
+    },
+  ]);
 });

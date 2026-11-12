@@ -173,6 +173,8 @@
       "src/modules/employees/db",
       "src/modules/imports/db",
       "src/modules/imports/domain",
+      "src/modules/processes/db",
+      "src/modules/processes/domain",
       "src/modules/slack/db",
       "src/modules/tasks/db",
       "src/modules/tasks/domain",

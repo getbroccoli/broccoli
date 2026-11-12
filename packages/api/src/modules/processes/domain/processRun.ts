@@ -1,11 +1,16 @@
 import { ApplicationError } from "../../../core/applicationError";
 import type { CalendarDate } from "../../../utils";
+import type { TriggerEvent } from "./eventTrigger";
 import type { AssigneeRule } from "./processDefinition";
 
 export const RUN_STATUSES = ["in_progress", "finished", "cancelled"] as const;
 export type RunStatus = (typeof RUN_STATUSES)[number];
 
-export const START_CAUSES = ["started_on_record_date", "started_by_admin"] as const;
+export const START_CAUSES = [
+  "started_on_record_date",
+  "started_by_admin",
+  "started_on_event",
+] as const;
 export type StartCause = (typeof START_CAUSES)[number];
 
 export const CANCEL_CAUSES = [
@@ -49,6 +54,8 @@ export interface ProcessRun {
   /** The date the trigger fired for; with the process, `startKey` keeps it from starting twice. */
   triggerDate: CalendarDate | null;
   startKey: string | null;
+  /** The event that started the run, for `started_on_event`; steps read who acted from it. */
+  triggerEvent: TriggerEvent | null;
   /** The day due dates count from. */
   startDay: CalendarDate;
   status: RunStatus;

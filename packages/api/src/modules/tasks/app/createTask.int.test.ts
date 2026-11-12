@@ -1,4 +1,12 @@
-import { employeeServices, expect, OWNER, signedIn, taskService, test } from "#test/support";
+import {
+  domainEvents,
+  employeeServices,
+  expect,
+  OWNER,
+  signedIn,
+  taskService,
+  test,
+} from "#test/support";
 
 test("creates a task needing its assignee and awaited by its asker", async ({
   orm,
@@ -176,4 +184,79 @@ test("deletes a person's held tasks when the person is deleted", async ({ orm, s
     code: "NOT_FOUND",
     message: "No task has this id.",
   });
+});
+
+test("publishes the created task's ids and the person who created it", async ({ orm, seed }) => {
+  const assignee = await seed.employee();
+  const asker = await seed.employee();
+  const subject = await seed.employee();
+  const ctx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
+  const { transact, events } = domainEvents(orm);
+  const tasks = taskService(orm, { transact });
+
+  const task = await transact((tx) =>
+    tasks.createTask(ctx, tx, {
+      type: "manual_to_do",
+      title: "Read the handbook",
+      assigneeEmployeeId: assignee.id,
+      askedByEmployeeId: asker.id,
+      subjectEmployeeId: subject.id,
+      processSource: { processKey: "onboarding", processRunId: null, stepKey: "handbook" },
+    }),
+  );
+
+  expect(events).toEqual([
+    {
+      type: "tasks.task_created",
+      payload: {
+        taskId: task.id,
+        assigneeEmployeeId: assignee.id,
+        askedByEmployeeId: asker.id,
+        subjectEmployeeId: subject.id,
+        processKey: "onboarding",
+        byEmployeeId: asker.id,
+      },
+    },
+  ]);
+});
+
+test("returns bulk-created tasks in input order and publishes each task", async ({ orm, seed }) => {
+  const assignee = await seed.employee();
+  const asker = await seed.employee();
+  const ctx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
+  const { transact, events } = domainEvents(orm);
+  const tasks = taskService(orm, { transact });
+
+  const created = await transact((tx) =>
+    tasks.createTasks(ctx, tx, [
+      {
+        type: "manual_to_do",
+        title: "Read the handbook",
+        assigneeEmployeeId: assignee.id,
+        askedByEmployeeId: asker.id,
+      },
+      {
+        type: "manual_to_do",
+        title: "Arrange a meeting",
+        assigneeEmployeeId: asker.id,
+        askedByEmployeeId: asker.id,
+      },
+    ]),
+  );
+
+  expect(created.map(({ title }) => title)).toEqual(["Read the handbook", "Arrange a meeting"]);
+  expect(created[0]!.id).not.toBe(created[1]!.id);
+  expect(events).toEqual(
+    created.map((task) => ({
+      type: "tasks.task_created",
+      payload: {
+        taskId: task.id,
+        assigneeEmployeeId: task.assigneeEmployeeId,
+        askedByEmployeeId: asker.id,
+        subjectEmployeeId: null,
+        processKey: null,
+        byEmployeeId: asker.id,
+      },
+    })),
+  );
 });
