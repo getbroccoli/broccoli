@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -20,23 +20,19 @@ import { SourceIcon } from "./SourceIcon";
 
 type Choice = Pick<ImportChooseEmployeeValueInput, "recordId" | "value">;
 
-/**
- * Picks one source's value with one click, as the setup design does, or takes a typed one.
- * A pick shows a toast whose Undo puts the previous choice back.
- */
-export function EmployeeValuePopover({
-  employeeId,
-  employeeName,
-  field,
-  value,
-  onDone,
-}: {
+type Props = {
   employeeId: string;
   employeeName: string;
   field: EmployeeFieldKey;
   value: EmployeeValueCell_ValueFragment;
   onDone: () => void;
-}) {
+};
+
+/**
+ * Picks one source's value with one click, as the setup design does, or takes a typed one.
+ * A pick shows a toast whose Undo puts the previous choice back.
+ */
+export function EmployeeValuePopover({ employeeId, employeeName, field, value, onDone }: Props) {
   const [chooseValue, { loading, payloadError, error }] = usePayloadMutation(
     ChooseEmployeeValueDocument,
     { refetch: [ImportReviewDocument] },
@@ -47,6 +43,14 @@ export function EmployeeValuePopover({
   const [typed, setTyped] = useState(
     value.choice === "TYPED" || !disagree ? (value.value ?? "") : "",
   );
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const choose = (choice: Choice) =>
     chooseValue({ variables: { input: { employeeId, field: FIELD_ENUMS[field], ...choice } } });
@@ -55,7 +59,7 @@ export function EmployeeValuePopover({
     const previous = previousChoice(value);
     void choose(choice).then(
       () => {
-        onDone();
+        if (mounted.current) onDone();
         toast(
           t("setup.review.valueSet", {
             field: fieldLabel(field),
@@ -144,7 +148,7 @@ export function EmployeeValuePopover({
             chooseAndOfferUndo({ value: typed }, typed);
           }}
         >
-          <div className="flex gap-2">
+          <fieldset className="flex min-w-0 gap-2" disabled={loading}>
             {field === "startDate" ? (
               <DatePicker
                 autoFocus
@@ -168,7 +172,7 @@ export function EmployeeValuePopover({
             <Button type="submit" disabled={loading}>
               {t("setup.review.save")}
             </Button>
-          </div>
+          </fieldset>
           {value.choice === "TYPED" && (
             <p className="text-xs text-muted-foreground">{t("setup.review.typed")}</p>
           )}
