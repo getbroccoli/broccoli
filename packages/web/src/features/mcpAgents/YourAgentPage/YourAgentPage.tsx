@@ -38,18 +38,17 @@ export function YourAgentPage() {
         <ConnectedAgentCard
           connection={connection}
           personName={employee ? `${employee.firstName} ${employee.lastName}` : me.email}
-          address={address}
         />
       )}
       {data && !connection && (
         <div className="flex flex-col gap-6">
-          {data.setup.mode === "SELF_HOSTED" && <SelfHostedNote />}
           {ending && <LastEndingNote ending={ending} />}
           <section aria-labelledby="your-agent-address" className="flex flex-col gap-2">
             <span id="your-agent-address" className="text-sm font-semibold">
               {t("mcpAgents.address.label")}
             </span>
             <CopyableText text={address} />
+            {data.setup.mode === "SELF_HOSTED" && <SelfHostedNote />}
           </section>
           <ConnectAgentSteps address={address} />
           <WaitingForAgent />

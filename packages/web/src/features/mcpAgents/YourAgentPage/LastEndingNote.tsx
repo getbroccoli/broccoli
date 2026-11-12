@@ -12,17 +12,13 @@ type Props = {
   ending: NonNullable<YourAgentQuery["myLastEndedAgentConnection"]>;
 };
 
-/** That no agent is connected, and why the last one ended. */
+/** Why the person's last agent connection ended. */
 export function LastEndingNote({ ending }: Props) {
   const why = ENDINGS[ending.reason];
   if (!why) return null;
   return (
-    <div role="status" className="flex flex-col gap-0.5 rounded-xl border px-4 py-3 text-sm">
-      <span className="font-medium">{t("mcpAgents.ended.title")}</span>
-      <span className="text-muted-foreground">
-        {t(why, { client: ending.clientName ?? t("mcpAgents.unnamedClient") })}{" "}
-        {t("mcpAgents.ended.again")}
-      </span>
-    </div>
+    <p role="status" className="rounded-xl bg-app-backdrop px-4 py-3 text-sm">
+      {t(why, { client: ending.clientName ?? t("mcpAgents.unnamedClient") })}
+    </p>
   );
 }

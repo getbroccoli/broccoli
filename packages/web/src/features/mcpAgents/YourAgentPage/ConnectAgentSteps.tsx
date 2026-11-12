@@ -26,13 +26,17 @@ export function ConnectAgentSteps({ address }: Props) {
       </TabsList>
       <TabsPanel value="claude" className="flex flex-col gap-3">
         <StepList
-          steps={["mcpAgents.claude.step1", "mcpAgents.claude.step2", "mcpAgents.claude.step3"]}
+          steps={["mcpAgents.claude.step1", "mcpAgents.claude.step2", "mcpAgents.allowInBroccoli"]}
         />
         <p className={noteClass}>{t("mcpAgents.claude.note")}</p>
       </TabsPanel>
       <TabsPanel value="chatgpt" className="flex flex-col gap-3">
         <StepList
-          steps={["mcpAgents.chatgpt.step1", "mcpAgents.chatgpt.step2", "mcpAgents.chatgpt.step3"]}
+          steps={[
+            "mcpAgents.chatgpt.step1",
+            "mcpAgents.chatgpt.step2",
+            "mcpAgents.allowInBroccoli",
+          ]}
         />
         <p className={noteClass}>{t("mcpAgents.chatgpt.note")}</p>
       </TabsPanel>

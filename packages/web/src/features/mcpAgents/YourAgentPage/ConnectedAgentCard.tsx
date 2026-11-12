@@ -16,11 +16,10 @@ type Props = {
   connection: NonNullable<YourAgentQuery["myAgentConnection"]>;
   /** Who the agent acts as: the person's name, or their email without an employee. */
   personName: string;
-  address: string;
 };
 
 /** The person's connected agent, what it may do, and Disconnect. */
-export function ConnectedAgentCard({ connection, personName, address }: Props) {
+export function ConnectedAgentCard({ connection, personName }: Props) {
   const [confirming, setConfirming] = useState(false);
   const client = connection.clientName ?? t("mcpAgents.unnamedClient");
   return (
@@ -69,7 +68,7 @@ export function ConnectedAgentCard({ connection, personName, address }: Props) {
         </ul>
       </section>
       <p className="text-xs text-muted-foreground">
-        {t("mcpAgents.connected.replaces", { address, client })}
+        {t("mcpAgents.connected.replaces", { client })}
       </p>
       <DisconnectAgentDialog
         open={confirming}
