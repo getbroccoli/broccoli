@@ -22,7 +22,6 @@
       "src/features/auth",
       "src/features/demo",
       "src/features/employees",
-      "src/features/mcpAgents",
       "src/features/setup",
       "src/features/tasks",
       "src/i18n",

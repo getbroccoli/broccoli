@@ -24,6 +24,7 @@ export interface LiveNudges {
 
 export function createLiveNudges(resolveSecurity: SecurityResolver): LiveNudges {
   const streams = new Map<string, Set<express.Response>>();
+  let closed = false;
 
   const router = express.Router().get("/live", async (request, response) => {
     let userId: string;
@@ -38,6 +39,11 @@ export function createLiveNudges(resolveSecurity: SecurityResolver): LiveNudges 
       if (renewedCookies.length > 0) response.set("Set-Cookie", renewedCookies);
     } catch (error) {
       sendApplicationError(error, response);
+      return;
+    }
+    // The tab may have gone, or the server begun stopping, while the session was read.
+    if (closed || response.destroyed) {
+      response.end();
       return;
     }
     response
@@ -69,6 +75,7 @@ export function createLiveNudges(resolveSecurity: SecurityResolver): LiveNudges 
       },
     },
     close() {
+      closed = true;
       for (const stream of [...streams.values()].flatMap((own) => [...own])) stream.end();
     },
   };

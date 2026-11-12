@@ -2,13 +2,13 @@ import { useRef, type ReactNode } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
 import { DemoBanner } from "@/features/demo";
-import { useLiveAgentConnection } from "@/features/mcpAgents";
 
 import { cn } from "@/lib/class-names";
 
 import { LeftNav } from "./LeftNav";
 import { useFocusHeadingOnNavigation } from "./useFocusHeadingOnNavigation";
 import { useInSettings } from "./useInSettings";
+import { useLiveAgentConnection } from "./useLiveAgentConnection";
 
 /**
  * The window-sized app frame: navigation above or beside the Canvas, a card that
