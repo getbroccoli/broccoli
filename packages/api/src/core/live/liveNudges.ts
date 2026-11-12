@@ -48,7 +48,8 @@ export function createLiveNudges(resolveSecurity: SecurityResolver): LiveNudges 
         // Tells a buffering proxy to pass each message on at once.
         "X-Accel-Buffering": "no",
       })
-      .flushHeaders();
+      // A proxy may hold the headers back until the first bytes, so the stream opens with a comment.
+      .write(": open\n\n");
     const own = streams.get(userId) ?? new Set();
     streams.set(userId, own.add(response));
     const heartbeat = setInterval(() => response.write(": heartbeat\n\n"), HEARTBEAT_MS);
