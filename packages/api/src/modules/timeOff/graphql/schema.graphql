@@ -589,9 +589,9 @@ type TimeOffMutations {
   publishTerms(input: TermsPublishInput!): TermsPublishPayload!
   "Gives a person their own rules for a type from a date no earlier than this leave year's start or their start, over their terms', until their next own rules change if one is planned; changes them when they have their own then. How the type counts changes only from the start of a leave year (`rules.balance` / `not_leave_year_start`). Admins only."
   setOwnRules(input: TimeOffOwnRulesSetInput!): TimeOffOwnRulesPayload!
-  "Puts a person back on their terms' rules for a type from a date: their own rules covering it end the day before, later ones go. The type is not offered to them where their terms don't offer it. Admins only."
+  "Puts a person back on their terms' rules for a type from a date: their own rules covering it end the day before, later ones go. The type is not offered to them where their terms don't offer it; refused with a ConflictError while that would leave their booked time off of the type without rules. Admins only."
   useTermsRules(input: TimeOffTermsRulesUseInput!): TimeOffOwnRulesPayload!
-  "Removes a change to a person's own rules for a type that has not started: new own rules, a change to them, or a return to their terms. Refused with a ConflictError once it has started. Admins only."
+  "Removes a change to a person's own rules for a type that has not started: new own rules, a change to them, or a return to their terms. Refused with a ConflictError once it has started, or while cancelling it would leave their booked time off of the type without rules. Admins only."
   cancelOwnRulesChange(input: TimeOffOwnRulesCancelChangeInput!): TimeOffOwnRulesPayload!
 }
 

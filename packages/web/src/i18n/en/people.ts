@@ -106,6 +106,8 @@ export const peopleEn = {
   "ownRules.back": "{name} is back on {terms}’s {type} from {date}.",
   "ownRules.noLongerOffered": "{type} is no longer offered to {name} from {date}.",
   "ownRules.failed": "The rules could not be saved. Try again.",
+  "ownRules.booked":
+    "{name} has {type} booked from that date. Cancel that time off or pick a later date.",
   "ownRules.countsDate": "How it counts changes only from the start of a leave year.",
   "ownRules.backHint": "Earlier days keep {name}’s {type} as it is.",
   "ownRules.cancelBody": "{name}’s {type} stays as it was.",

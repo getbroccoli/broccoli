@@ -4,6 +4,7 @@ import { toast } from "sonner";
 
 import {
   PersonRulesSinceDocument,
+  type OwnRulesPayloadFragment,
   SetOwnRulesDocument,
   type RuleSource,
   type TimeOffBalanceKind,
@@ -31,6 +32,9 @@ import {
   termsRulesSaveLine,
 } from "./ownRulesText";
 import { rulesBefore, rulesDateError } from "./ownRulesForm";
+
+/** Why the server refused an own rules save, as the payload says. */
+export type OwnRulesFailure = NonNullable<OwnRulesPayloadFragment["error"]>;
 
 /** What a type row edits: the person's own rules, or a return to their terms' rules. */
 export type OwnRulesMode = "own" | "terms";
@@ -153,7 +157,7 @@ export function useOwnRulesEdit({
         );
         close();
       } catch (error) {
-        setFailure(failureOf(error));
+        setFailure(failureOf(error, { name: firstName, type: opened.timeOffType.name }));
       }
     },
   };
@@ -299,12 +303,10 @@ function formErrorOf(
 }
 
 /** What the form says when the server refuses the save. */
-function failureOf(error: unknown): string {
-  const refused =
-    error instanceof PayloadFailure
-      ? (error.payloadError as { fields?: { code: string }[] })
-      : null;
-  const fields = refused?.fields ?? [];
+function failureOf(error: unknown, { name, type }: { name: string; type: string }): string {
+  const refused = error instanceof PayloadFailure ? (error.payloadError as OwnRulesFailure) : null;
+  if (refused?.__typename === "ConflictError") return t("ownRules.booked", { name, type });
+  const fields = refused?.__typename === "InvalidInputError" ? refused.fields : [];
   return fields.some(({ code }) => code === "not_leave_year_start")
     ? t("ownRules.countsDate")
     : t("ownRules.failed");

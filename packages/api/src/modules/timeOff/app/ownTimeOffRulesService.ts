@@ -1,5 +1,6 @@
 import { ApplicationError } from "../../../core/applicationError";
 import type { Transact, Tx } from "../../../core/db";
+import type { Logger } from "../../../core/logger";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import { createRecordHistoryService } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
@@ -27,6 +28,7 @@ import {
   versionFromRules,
 } from "../domain";
 import { readPeople } from "./allowanceEngine";
+import { watchBookedTimeOff } from "./watchBookedTimeOff";
 import { readOwnRules, saveOwnRules } from "./ownRulesStore";
 import { existingType, rulesChanged } from "./policyRules";
 import type { TimeOffService } from "./timeOffService";
@@ -45,11 +47,15 @@ export interface OwnTimeOffRulesService {
     ctx: SecurityContext,
     input: OwnRulesInput & { rules: TimeOffRulesInput },
   ) => Promise<void>;
-  /** Their terms' rules for the type from `startDate`: own rules covering it end the day before, later ones go. */
+  /**
+   * Their terms' rules for the type from `startDate`: own rules covering it end the day before,
+   * later ones go. CONFLICT while that leaves their booked time off of the type without rules.
+   */
   useTermsRules: (ctx: SecurityContext, input: OwnRulesInput) => Promise<void>;
   /**
    * Removes an own-rules change starting on `startDate` after today: new own rules, a change to
-   * them, or a return to the terms. CONFLICT otherwise.
+   * them, or a return to the terms. CONFLICT otherwise, or while that leaves their booked time
+   * off of the type without rules.
    */
   cancelOwnRulesChange: (ctx: SecurityContext, input: OwnRulesInput) => Promise<void>;
 }
@@ -73,6 +79,7 @@ export function createOwnTimeOffRulesService({
 }): OwnTimeOffRulesService {
   const dependencies = {
     transact,
+    logger,
     today,
     timeOff,
     employeeReads: createEmployeeReadService({ orm }),
@@ -126,6 +133,7 @@ export function createOwnTimeOffRulesService({
 /** What own-rules changes need: their transaction, the people they read and the allowance engine. */
 interface Dependencies {
   transact: Transact;
+  logger: Logger;
   today: () => CalendarDate;
   timeOff: Pick<TimeOffService, "ensureAllowances">;
   employeeReads: EmployeeReadService;
@@ -156,7 +164,7 @@ interface ChangeStart {
  * adds the history line and works the person's allowances out again.
  */
 async function changeOwnRules(
-  { transact, today, timeOff, employeeReads }: Dependencies,
+  { transact, logger, today, timeOff, employeeReads }: Dependencies,
   ctx: SecurityContext,
   input: OwnRulesInput,
   apply: (start: ChangeStart) => Applied,
@@ -177,8 +185,18 @@ async function changeOwnRules(
     const timeline = await timelineOf(employeeReads, tx, employeeId, timeOffType);
     const onDate = timeline.getVersionOnDate(from);
     const applied = apply({ stretches, from, onDate });
+    const refuseLostBookings = await watchBookedTimeOff(employeeReads, tx, {
+      employeeIds: [employeeId],
+      timeOffTypeId: timeOffType.id,
+      from,
+    });
     const timeOffPolicyId = await saveOwnRules(tx, lane, versions, applied.stretches);
     await refuseCountsChangeFrom(employeeReads, tx, { employeeId, timeOffType, from, cancel });
+    await refuseLostBookingsLogged(logger, refuseLostBookings, {
+      employeeId,
+      timeOffTypeId: timeOffType.id,
+      startDate: from,
+    });
     await appendOwnRulesHistory(ctx, tx, { employeeId, timeOffType, from, applied });
     const ensured = await timeOff.ensureAllowances(ctx, tx, {
       employeeIds: [employeeId],
@@ -192,6 +210,25 @@ async function changeOwnRules(
       ...ensured,
     };
   });
+}
+
+/** Runs the booked time off check, logging a refusal with the change's ids before rethrowing it. */
+async function refuseLostBookingsLogged(
+  logger: Logger,
+  refuseLostBookings: () => Promise<void>,
+  change: { employeeId: string; timeOffTypeId: string; startDate: CalendarDate },
+): Promise<void> {
+  try {
+    await refuseLostBookings();
+  } catch (error) {
+    if (error instanceof ApplicationError && error.code === "CONFLICT") {
+      logger.info(
+        change,
+        "Refused an own time off rules change that leaves booked time off without rules",
+      );
+    }
+    throw error;
+  }
 }
 
 /**
