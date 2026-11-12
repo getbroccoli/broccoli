@@ -10,7 +10,7 @@ import {
   type RunStep,
   settleRun,
 } from "../domain";
-import { type Deps, type StepChange, requireRun, runIdOf, toRunView } from "./processReads";
+import { type Deps, type StepChange, requireRun, runIdOf, toRunView } from "./processRunDetails";
 
 /**
  * Locks the task's run, cancels it when it can no longer run, else applies the step change and

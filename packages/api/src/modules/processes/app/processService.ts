@@ -29,9 +29,9 @@ import {
   subjectOf,
   toProcess,
   toRunView,
-} from "./processReads";
-import { cancel, cancelIfCannotRun, changeStep } from "./runChanges";
-import { errorKind, startDue } from "./dueRuns";
+} from "./processRunDetails";
+import { cancel, cancelIfCannotRun, changeStep } from "./changeStep";
+import { errorKind, startDue } from "./startDue";
 import { createRunStarter } from "./runStarter";
 
 /** A process as admins see it. */

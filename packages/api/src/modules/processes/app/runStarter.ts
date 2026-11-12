@@ -265,6 +265,7 @@ async function workingDaysAround(
   });
 }
 
+/** How far a trigger date can be from its record's date: business days stretch by weekends and holidays. */
 function spanOf({ amount, unit }: DayOffset): number {
   return unit === "calendar_days" ? Math.abs(amount) : Math.abs(amount) * 2 + 14;
 }

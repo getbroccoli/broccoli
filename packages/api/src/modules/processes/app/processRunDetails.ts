@@ -90,44 +90,6 @@ export async function readDetails(deps: Deps, run: StoredRun): Promise<ProcessRu
   return deps.transact((tx) => readDetailsIn(deps, tx, run));
 }
 
-async function readDetailsIn(
-  { tasks, starter }: Deps,
-  tx: Tx,
-  run: StoredRun,
-): Promise<ProcessRunDetails> {
-  const runs = processRepository(tx);
-  const [process] = await runs.findProcessesByIds([run.processId]);
-  const steps = await runs.findSteps(run.id);
-  const taskIds = steps.flatMap(({ taskId }) => (taskId ? [taskId] : []));
-  const runTasks = new Map((await tasks.readTasksInTransaction(tx, taskIds)).map((t) => [t.id, t]));
-  const titles = await starter.stepTitles(tx, run);
-  const ordered = [...titles.keys()].flatMap((key) =>
-    steps.filter(({ stepKey }) => stepKey === key),
-  );
-  return {
-    run: toRunView(run, process!),
-    steps: ordered.map((step) => {
-      const task = step.taskId ? runTasks.get(step.taskId) : undefined;
-      return {
-        key: step.stepKey,
-        title: task?.title ?? titles.get(step.stepKey)!,
-        status: step.status,
-        assigneeNote: step.assigneeNote,
-        skipReason: step.skipReason,
-        finishedAt: step.finishedAt,
-        task: task
-          ? {
-              id: task.id,
-              assigneeEmployeeId: task.assigneeEmployeeId,
-              dueDate: task.dueDate,
-              status: task.status,
-            }
-          : null,
-      };
-    }),
-  };
-}
-
 export async function requireProcess(db: Orm | Tx, processKey: string): Promise<StoredProcess> {
   const process = await processRepository(db).findProcessByKey(processKey);
   if (!process) throw new ApplicationError("NOT_FOUND", "No process has this key.");
@@ -191,5 +153,43 @@ export function toRunView(run: StoredRun, process: StoredProcess): ProcessRun {
     cancelCause: run.cancelCause,
     cancelReason: run.cancelReason,
     createdAt: run.createdAt,
+  };
+}
+
+async function readDetailsIn(
+  { tasks, starter }: Deps,
+  tx: Tx,
+  run: StoredRun,
+): Promise<ProcessRunDetails> {
+  const runs = processRepository(tx);
+  const [process] = await runs.findProcessesByIds([run.processId]);
+  const steps = await runs.findSteps(run.id);
+  const taskIds = steps.flatMap(({ taskId }) => (taskId ? [taskId] : []));
+  const runTasks = new Map((await tasks.readTasksInTransaction(tx, taskIds)).map((t) => [t.id, t]));
+  const titles = await starter.stepTitles(tx, run);
+  const ordered = [...titles.keys()].flatMap((key) =>
+    steps.filter(({ stepKey }) => stepKey === key),
+  );
+  return {
+    run: toRunView(run, process!),
+    steps: ordered.map((step) => {
+      const task = step.taskId ? runTasks.get(step.taskId) : undefined;
+      return {
+        key: step.stepKey,
+        title: task?.title ?? titles.get(step.stepKey)!,
+        status: step.status,
+        assigneeNote: step.assigneeNote,
+        skipReason: step.skipReason,
+        finishedAt: step.finishedAt,
+        task: task
+          ? {
+              id: task.id,
+              assigneeEmployeeId: task.assigneeEmployeeId,
+              dueDate: task.dueDate,
+              status: task.status,
+            }
+          : null,
+      };
+    }),
   };
 }
