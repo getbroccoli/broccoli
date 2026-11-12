@@ -97,8 +97,9 @@ async function handBeforeCommit(transaction: Transaction, beforeCommit: BeforeCo
   let handed = 0;
   for (let round = 0; handed < transaction.events.length; round += 1) {
     if (round === MAX_BEFORE_COMMIT_ROUNDS) {
+      const types = [...new Set(transaction.events.slice(handed).map(({ type }) => type))];
       throw new Error(
-        `Events kept publishing more events before the commit after ${MAX_BEFORE_COMMIT_ROUNDS} rounds.`,
+        `Events kept publishing more events before the commit after ${MAX_BEFORE_COMMIT_ROUNDS} rounds. The last round published ${types.join(", ")}.`,
       );
     }
     const events = transaction.events.slice(handed);

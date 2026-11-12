@@ -33,24 +33,8 @@ export function createEventRunService(dependencies: EventRunDependencies): Event
       const processes = await processRepository(tx).lockProcessesStartedBy([
         ...new Set(triggering.map(({ type }) => type)),
       ]);
-      const definitions = new Map(
-        processes.map(({ id, activeVersion }) => [
-          id,
-          parseProcessDefinition(activeVersion.schemaVersion, activeVersion.definition),
-        ]),
-      );
-      const starts = matchEventStarts(
-        processes.map(({ id }) => ({ processId: id, trigger: definitions.get(id)!.trigger })),
-        triggering,
-      );
       for (const process of processes) {
-        const own = starts.filter(({ processId }) => processId === process.id);
-        if (own.length === 0) continue;
-        await startProcessRuns(dependencies, tx, {
-          process,
-          definition: definitions.get(process.id)!,
-          starts: own,
-        });
+        await startRunsOf(dependencies, tx, process, triggering);
       }
     },
   };
@@ -65,6 +49,38 @@ interface EventRunDependencies {
 }
 
 type Start = EventStart<PublishedEvent>;
+
+/** Starts the runs one process's trigger matches; a failure is logged with the process and rethrown. */
+async function startRunsOf(
+  dependencies: EventRunDependencies,
+  tx: Tx,
+  process: StoredProcess,
+  events: readonly PublishedEvent[],
+): Promise<void> {
+  try {
+    const { activeVersion } = process;
+    const definition = parseProcessDefinition(
+      activeVersion.schemaVersion,
+      activeVersion.definition,
+    );
+    const starts = matchEventStarts(
+      [{ processId: process.id, trigger: definition.trigger }],
+      events,
+    );
+    if (starts.length > 0)
+      await startProcessRuns(dependencies, tx, { process, definition, starts });
+  } catch (error) {
+    dependencies.logger.error(
+      {
+        processKey: process.key,
+        eventIds: events.map(({ id }) => id),
+        kind: (error as Error | undefined)?.constructor?.name,
+      },
+      "Process runs not started, so the change that triggered them rolls back",
+    );
+    throw error;
+  }
+}
 
 /**
  * Starts one process's runs in waves, each record at most once a wave, so a second event for a
