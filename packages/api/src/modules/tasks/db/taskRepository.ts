@@ -9,7 +9,7 @@ export type NewTaskRow = Omit<Task, "id" | "createdAt" | "updatedAt">;
 
 /** Stored tasks. */
 export interface TaskRepository {
-  /** Inserts the tasks in one statement; returns them in the same order. */
+  /** Inserts the tasks in batches; returns them in the same order. */
   insert(tasks: readonly NewTaskRow[]): Promise<Task[]>;
   findById(id: string): Promise<Task | null>;
   findByIds(ids: readonly string[]): Promise<Task[]>;
@@ -30,9 +30,13 @@ export function taskRepository(db: Orm | Tx): TaskRepository {
   const orm = ormOf(db);
   return {
     async insert(newTasks) {
-      if (newTasks.length === 0) return [];
-      const rows = await orm.insert(tasks).values(newTasks.map(toRow)).returning();
-      return rows.map(toTask);
+      const inserted: Task[] = [];
+      for (let start = 0; start < newTasks.length; start += INSERT_BATCH_SIZE) {
+        const batch = newTasks.slice(start, start + INSERT_BATCH_SIZE);
+        const rows = await orm.insert(tasks).values(batch.map(toRow)).returning();
+        inserted.push(...rows.map(toTask));
+      }
+      return inserted;
     },
 
     async findById(id) {
@@ -93,6 +97,9 @@ export function taskRepository(db: Orm | Tx): TaskRepository {
 }
 
 type TaskRow = typeof tasks.$inferSelect;
+
+/** Rows per insert, well below Postgres's limit of 65,535 parameters. */
+const INSERT_BATCH_SIZE = 1_000;
 
 function toRow({ processSource, record, ...task }: NewTaskRow) {
   return {

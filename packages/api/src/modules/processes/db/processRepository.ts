@@ -35,20 +35,20 @@ export interface ProcessRepository {
   findProcessesByIds(ids: readonly string[]): Promise<StoredProcess[]>;
   /** A version's stored definition, not yet parsed; null when no version has the id. */
   findVersion(id: string): Promise<{ schemaVersion: number; definition: unknown } | null>;
-  /** The process, locked until the transaction ends, so every way of starting a run takes turns. */
-  lockProcess(id: string): Promise<void>;
-  /** Every process, locked until the transaction ends, in id order. */
-  lockAllProcesses(): Promise<void>;
   /**
-   * The turned-on processes whose active version starts on one of these events, share-locked until
-   * the transaction ends: starts from concurrent changes never wait for each other, while turning
-   * a process off or a reset waits for them.
+   * The process, locked until the transaction ends, so the daily job, an admin's start, step
+   * commands and resets take turns. The lock leaves new runs' foreign keys free, so a change that
+   * starts a run from an event never waits for it.
    */
-  lockProcessesStartedBy(eventTypes: readonly string[]): Promise<StoredProcess[]>;
+  lockProcess(id: string): Promise<void>;
+  /** Every process, locked as `lockProcess` does, in id order. */
+  lockAllProcesses(): Promise<void>;
+  /** The turned-on processes whose active version starts on one of these events, unlocked. */
+  findProcessesStartedBy(eventTypes: readonly string[]): Promise<StoredProcess[]>;
   /** A new process with its first version, published and active; for tests and seeds. */
   insertProcess(process: NewProcessRow): Promise<{ id: string; key: string }>;
   setTurnedOnAt(id: string, turnedOnAt: Date | null): Promise<void>;
-  /** Inserts the runs in one statement; returns them in the same order. */
+  /** Inserts the runs in batches; returns them in the same order. */
   insertRuns(runs: readonly NewRunRow[]): Promise<ProcessRun[]>;
   insertSteps(steps: readonly RunStep[]): Promise<void>;
   findRun(id: string): Promise<ProcessRun | null>;
@@ -129,14 +129,18 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
         .select({ id: processes.id })
         .from(processes)
         .where(eq(processes.id, id))
-        .for("update");
+        .for("no key update");
     },
 
     async lockAllProcesses() {
-      await orm.select({ id: processes.id }).from(processes).orderBy(processes.id).for("update");
+      await orm
+        .select({ id: processes.id })
+        .from(processes)
+        .orderBy(processes.id)
+        .for("no key update");
     },
 
-    async lockProcessesStartedBy(eventTypes) {
+    async findProcessesStartedBy(eventTypes) {
       const rows = await selectProcesses()
         .where(
           and(
@@ -145,8 +149,7 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
             sql`${processVersions.definition} -> 'trigger' ->> 'event' = any(${sql.param([...eventTypes])}::text[])`,
           ),
         )
-        .orderBy(processes.id)
-        .for("share", { of: processes });
+        .orderBy(processes.id);
       return rows.map(toStoredProcess);
     },
 
@@ -177,15 +180,18 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
     },
 
     async insertRuns(runs) {
-      if (runs.length === 0) return [];
-      return await orm
-        .insert(processRuns)
-        .values([...runs])
-        .returning();
+      const inserted: ProcessRun[] = [];
+      for (let start = 0; start < runs.length; start += INSERT_BATCH_SIZE) {
+        const batch = runs.slice(start, start + INSERT_BATCH_SIZE);
+        inserted.push(...(await orm.insert(processRuns).values(batch).returning()));
+      }
+      return inserted;
     },
 
     async insertSteps(steps) {
-      if (steps.length > 0) await orm.insert(processRunSteps).values([...steps]);
+      for (let start = 0; start < steps.length; start += INSERT_BATCH_SIZE) {
+        await orm.insert(processRunSteps).values(steps.slice(start, start + INSERT_BATCH_SIZE));
+      }
     },
 
     async findRun(id) {
@@ -297,6 +303,9 @@ async function findRecordsWithRunsWhere(
     );
   return new Set(rows.map(({ recordId }) => recordId));
 }
+
+/** Rows per insert, well below Postgres's limit of 65,535 parameters. */
+const INSERT_BATCH_SIZE = 1_000;
 
 type ProcessWithVersionRow = {
   process: typeof processes.$inferSelect;

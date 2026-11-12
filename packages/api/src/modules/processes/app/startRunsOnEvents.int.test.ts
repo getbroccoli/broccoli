@@ -10,9 +10,8 @@ import {
   taskService,
   test,
   transactWithProcesses,
+  eventProcess,
 } from "#test/support";
-
-import type { ProcessDefinition } from "../domain";
 
 test("adding a person commits exactly one process run and a task for their manager", async ({
   orm,
@@ -99,6 +98,10 @@ test("one event for three people starts three runs", async ({ orm, seed }) => {
   const runs = await processService(orm).listRuns(ADMIN, key);
   expect(runs.map(({ record }) => record.recordId).sort()).toEqual([...ids].sort());
   expect(new Set(runs.map(({ triggerEvent }) => triggerEvent!.id)).size).toBe(1);
+  for (const run of runs) {
+    expect(run.triggerEvent!.type).toBe("employees.added");
+    expect(run.triggerEvent!.payload).toEqual({ employeeIds: [run.record.recordId] });
+  }
 });
 
 test("three events in one transaction start three runs", async ({ orm, seed }) => {
@@ -311,30 +314,3 @@ test("a matching event during a run in progress is skipped and the save commits"
 });
 
 const today = () => calendarDate("2026-12-03");
-
-function eventProcess(
-  event: "employees.added" | "tasks.task_created" | "tasks.task_status_changed",
-  when?: { field: string; in: (string | null)[] },
-): ProcessDefinition {
-  return {
-    subject: { recordType: event === "employees.added" ? "employee" : "task" },
-    trigger: {
-      kind: "on_event",
-      event,
-      run: "in_same_transaction",
-      faultMode: "rollback_transaction",
-      ...(when && { when }),
-    },
-    startableByAdmin: false,
-    steps: [
-      {
-        key: "follow_up",
-        kind: "task",
-        title: "Follow up",
-        description: null,
-        assignee: { kind: "subject" },
-        due: { amount: 0, unit: "calendar_days" },
-      },
-    ],
-  };
-}

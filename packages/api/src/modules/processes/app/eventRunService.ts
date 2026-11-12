@@ -6,6 +6,7 @@ import type { CalendarDate } from "../../../utils";
 import type { TaskService } from "../../tasks";
 import { processRepository, type StoredProcess } from "../db";
 import {
+  eventAboutRecord,
   type EventStart,
   isTriggeringEvent,
   matchEventStarts,
@@ -38,7 +39,7 @@ export function createEventRunService(dependencies: EventRunDependencies): Event
       ctx.requireSystem();
       const triggering = events.filter(({ type }) => isTriggeringEvent(type));
       if (triggering.length === 0) return;
-      const processes = await processRepository(tx).lockProcessesStartedBy([
+      const processes = await processRepository(tx).findProcessesStartedBy([
         ...new Set(triggering.map(({ type }) => type)),
       ]);
       for (const process of processes) {
@@ -119,12 +120,18 @@ async function startProcessRuns(
         startCause: "started_on_event",
         startedByEmployeeId: null,
         triggerDate: null,
-        triggerEvent: event,
+        triggerEvent: eventAboutRecord(event, recordId),
         startKey: `on_event:${event.id}:${recordId}`,
         startDay: today(),
       })),
     );
-    if (started.length > 0) logStarted(logger, process, started, ready);
+    if (started.length > 0) {
+      tx.publish("processes.runs_started_on_event", {
+        processKey: process.key,
+        runIds: started.map(({ id }) => id),
+        eventIds: [...new Set(ready.map(({ event }) => event.id))],
+      });
+    }
   }
 }
 
@@ -168,12 +175,11 @@ async function readRecordSubjects(
 /** The starts split so each record appears at most once a wave, keeping their order. */
 function wavesOf(starts: readonly Start[]): Start[][] {
   const waves: Start[][] = [];
+  const seen = new Map<string, number>();
   for (const start of starts) {
-    const wave = waves.find((candidate) =>
-      candidate.every(({ recordId }) => recordId !== start.recordId),
-    );
-    if (wave) wave.push(start);
-    else waves.push([start]);
+    const wave = seen.get(start.recordId) ?? 0;
+    seen.set(start.recordId, wave + 1);
+    (waves[wave] ??= []).push(start);
   }
   return waves;
 }
@@ -187,21 +193,5 @@ function logSkip(
   logger.info(
     { processKey: process.key, eventId: event.id, eventType: event.type, recordId, reason },
     "Process run not started for an event",
-  );
-}
-
-function logStarted(
-  logger: Logger,
-  process: StoredProcess,
-  runs: readonly { id: string }[],
-  starts: readonly Start[],
-): void {
-  logger.info(
-    {
-      processKey: process.key,
-      runIds: runs.map(({ id }) => id),
-      eventIds: [...new Set(starts.map(({ event }) => event.id))],
-    },
-    "Process runs started with the change that triggered them",
   );
 }

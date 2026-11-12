@@ -1,6 +1,7 @@
 export { addDayOffset, type IsWorkingDay, MAX_SEARCH_DAYS, workingDaysOf } from "./dayOffset";
 export { dueTriggerDate } from "./recordDateTrigger";
 export {
+  eventAboutRecord,
   type EventStart,
   isTriggeringEvent,
   matchEventStarts,

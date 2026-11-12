@@ -2,22 +2,27 @@ import type { DomainEvents } from "../../../core/events";
 import type { EventTrigger, ProcessDefinition } from "./processDefinition";
 
 /**
- * The events that may start a process, with the record type each is about and the ids of those
- * records in its payload: one run per record.
+ * The events that may start a process, with the record type each is about, the ids of those
+ * records in its payload (one run per record), and the payload a run keeps for its own record.
  */
 // shortcut: the list lives here; move it to the publishing modules' registrations when modules become dynamic.
 export const TRIGGERING_EVENTS = {
   "employees.added": {
     recordType: "employee",
     recordIds: ({ employeeIds }: DomainEvents["employees.added"]) => employeeIds,
+    payloadFor: (_: DomainEvents["employees.added"], employeeId: string) => ({
+      employeeIds: [employeeId],
+    }),
   },
   "tasks.task_created": {
     recordType: "task",
     recordIds: ({ taskId }: DomainEvents["tasks.task_created"]) => [taskId],
+    payloadFor: (payload: DomainEvents["tasks.task_created"]) => payload,
   },
   "tasks.task_status_changed": {
     recordType: "task",
     recordIds: ({ taskId }: DomainEvents["tasks.task_status_changed"]) => [taskId],
+    payloadFor: (payload: DomainEvents["tasks.task_status_changed"]) => payload,
   },
 } as const;
 
@@ -54,6 +59,14 @@ export function matchEventStarts<Event extends TriggerEvent>(
   );
 }
 
+/** The event as it concerns one of its records, as that record's run keeps it. */
+export function eventAboutRecord(
+  { id, type, payload }: TriggerEvent,
+  recordId: string,
+): TriggerEvent {
+  return { id, type, payload: entryOf(type).payloadFor(payload, recordId) };
+}
+
 export function isTriggeringEvent(type: string): type is TriggeringEventType {
   return Object.hasOwn(TRIGGERING_EVENTS, type);
 }
@@ -66,8 +79,13 @@ function isTriggeredBy(trigger: EventTrigger, { type, payload }: TriggerEvent): 
 }
 
 function recordIdsOf({ type, payload }: TriggerEvent): readonly string[] {
-  if (!isTriggeringEvent(type)) return [];
-  // Each entry reads its own event's payload, which `type` names.
-  const { recordIds } = TRIGGERING_EVENTS[type] as { recordIds: (payload: unknown) => string[] };
-  return recordIds(payload);
+  return isTriggeringEvent(type) ? entryOf(type).recordIds(payload) : [];
+}
+
+/** An event's entry, typed for any payload: each entry reads its own event's, which `type` names. */
+function entryOf(type: string) {
+  return TRIGGERING_EVENTS[type as TriggeringEventType] as {
+    recordIds: (payload: unknown) => string[];
+    payloadFor: (payload: unknown, recordId: string) => unknown;
+  };
 }

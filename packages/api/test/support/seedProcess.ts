@@ -26,3 +26,31 @@ export function seedProcess(
     }),
   );
 }
+
+/** A process on `event`, with one task step for its subject, due the day it starts. */
+export function eventProcess(
+  event: "employees.added" | "tasks.task_created" | "tasks.task_status_changed",
+  when?: { field: string; in: (string | null)[] },
+): ProcessDefinition {
+  return {
+    subject: { recordType: event === "employees.added" ? "employee" : "task" },
+    trigger: {
+      kind: "on_event",
+      event,
+      run: "in_same_transaction",
+      faultMode: "rollback_transaction",
+      ...(when && { when }),
+    },
+    startableByAdmin: false,
+    steps: [
+      {
+        key: "follow_up",
+        kind: "task",
+        title: "Follow up",
+        description: null,
+        assignee: { kind: "subject" },
+        due: { amount: 0, unit: "calendar_days" },
+      },
+    ],
+  };
+}

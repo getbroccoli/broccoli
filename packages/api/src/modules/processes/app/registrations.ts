@@ -18,4 +18,11 @@ declare module "../../../core/jobs" {
   }
 }
 
+declare module "../../../core/events" {
+  interface DomainEvents {
+    /** Runs of the process started with the change whose events triggered them, now committed. */
+    "processes.runs_started_on_event": { processKey: string; runIds: string[]; eventIds: string[] };
+  }
+}
+
 export {};
