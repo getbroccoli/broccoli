@@ -20,7 +20,6 @@ import { defaultTermsId, insertTerms, leaveTerms, moveToTerms } from "./seedTerm
 import { seedUser } from "./seedUser";
 import { seedAgentConnection } from "./seedAgentConnection";
 import { seedTask } from "./seedTask";
-import { seedProcess } from "./seedProcess";
 import { testTransactor } from "./testTransactor";
 
 type SeedEmployee = Partial<
@@ -186,9 +185,6 @@ export class TestSeed {
   /** A person's agent connection, as Allow leaves it. */
   agentConnection = (options: Parameters<typeof seedAgentConnection>[1]) =>
     seedAgentConnection(this.orm, options);
-
-  /** A process with its first version published and active. */
-  process = (options: Parameters<typeof seedProcess>[1]) => seedProcess(this.orm, options);
 
   /** The id of the seeded "England and Wales" terms, which every new employee joins. */
   defaultTermsId = () => defaultTermsId(this.orm);

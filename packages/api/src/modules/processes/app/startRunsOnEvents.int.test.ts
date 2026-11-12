@@ -6,6 +6,7 @@ import {
   employeeServices,
   expect,
   processService,
+  seedProcess,
   signedIn,
   taskService,
   test,
@@ -24,7 +25,7 @@ test("adding a person commits exactly one process run and a task for their manag
   const manager = await seed.employee();
   const definition = eventProcess("employees.added");
   definition.steps[0]!.assignee = { kind: "subjects_manager" };
-  const { key } = await seed.process({ key: "welcome", definition });
+  const { key } = await seedProcess(orm, { key: "welcome", definition });
   const transact = transactWithProcesses(orm, { today });
 
   const employee = await transact(async (tx) => {
@@ -63,7 +64,7 @@ test("adding a person commits exactly one process run and a task for their manag
 
 test("a failed transaction leaves no event-started run", async ({ orm, seed }) => {
   const employee = await seed.employee();
-  const { key } = await seed.process({
+  const { key } = await seedProcess(orm, {
     key: "welcome",
     definition: eventProcess("employees.added"),
   });
@@ -84,7 +85,7 @@ test("a failed transaction leaves no event-started run", async ({ orm, seed }) =
 test("one event for three people starts three runs", async ({ orm, seed }) => {
   const people = await seed.employees(3);
   const ids = people.map(({ id }) => id);
-  const { key } = await seed.process({
+  const { key } = await seedProcess(orm, {
     key: "welcome",
     definition: eventProcess("employees.added"),
   });
@@ -107,7 +108,7 @@ test("one event for three people starts three runs", async ({ orm, seed }) => {
 test("three events in one transaction start three runs", async ({ orm, seed }) => {
   const people = await seed.employees(3);
   const ids = people.map(({ id }) => id);
-  const { key } = await seed.process({
+  const { key } = await seedProcess(orm, {
     key: "welcome",
     definition: eventProcess("employees.added"),
   });
@@ -123,13 +124,10 @@ test("three events in one transaction start three runs", async ({ orm, seed }) =
   expect(new Set(runs.map(({ triggerEvent }) => triggerEvent!.id)).size).toBe(3);
 });
 
-test("a run that cannot calculate its due date rolls back adding the person", async ({
-  orm,
-  seed,
-}) => {
+test("a run that cannot calculate its due date rolls back adding the person", async ({ orm }) => {
   const definition = eventProcess("employees.added");
   definition.steps[0]!.due = { amount: 1, unit: "business_days" };
-  const { key } = await seed.process({ key: "welcome", definition });
+  const { key } = await seedProcess(orm, { key: "welcome", definition });
   const transact = transactWithProcesses(orm, { today: () => calendarDate("2031-06-02") });
   const employees = employeeServices(orm, { transact });
 
@@ -145,8 +143,8 @@ test("a run that cannot calculate its due date rolls back adding the person", as
   expect(await processService(orm).listRuns(ADMIN, key)).toEqual([]);
 });
 
-test("an off process starts nothing when its event happens", async ({ orm, seed }) => {
-  const { key } = await seed.process({
+test("an off process starts nothing when its event happens", async ({ orm }) => {
+  const { key } = await seedProcess(orm, {
     key: "welcome",
     definition: eventProcess("employees.added"),
     turnedOn: false,
@@ -162,9 +160,9 @@ test("an off process starts nothing when its event happens", async ({ orm, seed 
   expect(await processService(orm).listRuns(ADMIN, key)).toEqual([]);
 });
 
-test("an unmatched event condition starts nothing", async ({ orm, seed }) => {
+test("an unmatched event condition starts nothing", async ({ orm }) => {
   const definition = eventProcess("employees.added", { field: "source", in: ["import"] });
-  const { key } = await seed.process({ key: "welcome", definition });
+  const { key } = await seedProcess(orm, { key: "welcome", definition });
   const transact = transactWithProcesses(orm, { today });
 
   await employeeServices(orm, { transact }).createEmployee(ADMIN, {
@@ -191,7 +189,7 @@ test("marking a task done starts a process carrying the person who acted", async
     field: "to",
     in: ["done", "cancelled"],
   });
-  const { key } = await seed.process({ key: "follow_up", definition });
+  const { key } = await seedProcess(orm, { key: "follow_up", definition });
   const transact = transactWithProcesses(orm, { today });
   const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
 
@@ -222,7 +220,7 @@ test("marking a task waiting does not start a done-or-cancelled process", async 
     field: "to",
     in: ["done", "cancelled"],
   });
-  const { key } = await seed.process({ key: "follow_up", definition });
+  const { key } = await seedProcess(orm, { key: "follow_up", definition });
   const transact = transactWithProcesses(orm, { today });
   const tasks = taskService(orm, { transact });
   const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
@@ -233,10 +231,13 @@ test("marking a task waiting does not start a done-or-cancelled process", async 
   expect(await processService(orm).listRuns(ADMIN, key)).toEqual([]);
 });
 
-test("a run's tasks start another process in the same transaction", async ({ orm, seed }) => {
-  const first = await seed.process({ key: "welcome", definition: eventProcess("employees.added") });
+test("a run's tasks start another process in the same transaction", async ({ orm }) => {
+  const first = await seedProcess(orm, {
+    key: "welcome",
+    definition: eventProcess("employees.added"),
+  });
   const definition = eventProcess("tasks.task_created", { field: "processKey", in: [first.key] });
-  const second = await seed.process({ key: "follow_up", definition });
+  const second = await seedProcess(orm, { key: "follow_up", definition });
   const transact = transactWithProcesses(orm, { today });
 
   const added = await employeeServices(orm, { transact }).createEmployee(ADMIN, {
@@ -268,7 +269,7 @@ test("two matching events start two runs when every step is skipped", async ({ o
   const employee = await seed.employee();
   const definition = eventProcess("employees.added");
   definition.steps[0]!.assignee = { kind: "subjects_manager" };
-  const { key } = await seed.process({ key: "welcome", definition });
+  const { key } = await seedProcess(orm, { key: "welcome", definition });
   const transact = transactWithProcesses(orm, { today });
 
   await transact((tx) => {
@@ -287,7 +288,7 @@ test("a matching event during a run in progress is skipped and the save commits"
   seed,
 }) => {
   const employee = await seed.employee();
-  const { key } = await seed.process({
+  const { key } = await seedProcess(orm, {
     key: "welcome",
     definition: eventProcess("employees.added"),
   });

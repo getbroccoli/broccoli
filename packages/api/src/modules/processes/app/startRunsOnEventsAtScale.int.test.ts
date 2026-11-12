@@ -8,6 +8,7 @@ import {
   expect,
   expectBlockedBy,
   processService,
+  seedProcess,
   signedIn,
   taskService,
   test,
@@ -24,7 +25,7 @@ test("one event for more people than one insert can hold starts a run for each",
   const people = await seed.employees(5_000);
   const definition = eventProcess("employees.added");
   definition.steps.push({ ...definition.steps[0]!, key: "second_follow_up" });
-  const { key } = await seed.process({ key: "welcome", definition });
+  const { key } = await seedProcess(orm, { key: "welcome", definition });
   const transact = transactWithProcesses(orm, { today });
 
   await transact((tx) => {
@@ -40,7 +41,7 @@ test(
   { timeout: 5_000 },
   async ({ orm, seed, transact }) => {
     const employee = await seed.employee();
-    const process = await seed.process({
+    const process = await seedProcess(orm, {
       key: "welcome",
       definition: eventProcess("employees.added"),
     });
@@ -79,7 +80,7 @@ test(
       askedByEmployeeId: employee.id,
       subjectEmployeeId: employee.id,
     });
-    const { key } = await seed.process({
+    const { key } = await seedProcess(orm, {
       key: "follow_up",
       definition: eventProcess("tasks.task_status_changed", { field: "to", in: ["cancelled"] }),
     });
