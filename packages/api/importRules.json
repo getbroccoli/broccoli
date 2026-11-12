@@ -111,6 +111,7 @@
       "src/core/applicationError",
       "src/core/auth",
       "src/core/db",
+      "src/core/events",
       "src/core/instance",
       "src/core/logger",
       "src/core/security"

@@ -81,6 +81,7 @@ export type { EmployeeServices } from "./services";
 export { processService, transactWithProcesses } from "./processService";
 export { eventProcess, seedProcess } from "./seedProcess";
 export { domainEvents } from "./domainEvents";
+export { sseMessages } from "./sseMessages";
 export {
   employeeSetup,
   fileStorage,

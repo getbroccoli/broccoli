@@ -8,6 +8,7 @@ import { cn } from "@/lib/class-names";
 import { LeftNav } from "./LeftNav";
 import { useFocusHeadingOnNavigation } from "./useFocusHeadingOnNavigation";
 import { useInSettings } from "./useInSettings";
+import { useLiveAgentConnection } from "./useLiveAgentConnection";
 
 /**
  * The window-sized app frame: navigation above or beside the Canvas, a card that
@@ -17,6 +18,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const main = useRef<HTMLElement>(null);
   const inSettings = useInSettings();
   useFocusHeadingOnNavigation(main);
+  useLiveAgentConnection();
 
   return (
     <>
