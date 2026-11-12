@@ -34,7 +34,8 @@ A manual check of connecting a person's own agent over MCP against a development
 - [ ] On a self-hosted instance, a line under the address says agents work only at the address they connected to, with a link to set `SELF_HOSTED_PUBLIC_URL`.
 - [ ] The Claude, ChatGPT and "Claude Code or Codex" tabs show their steps; each command's Copy copies it with this address.
 - [ ] Following the Claude Code tab connects it; while the agent's Allow is chosen, Your agent (left open, not focused) turns to the agent, "Connected …· Last active …" and a dot on the menu item within a second.
-- [ ] With Your agent open in two tabs, Disconnect in one turns the other to "You disconnected Claude Code." within a second; so does a password reset in another browser.
+- [ ] With Your agent open in two tabs, Disconnect in one turns the other to "You disconnected Claude Code." within a second.
+- [ ] With Your agent open, a password reset in another browser turns it to "Claude Code was disconnected when your password was reset." within a second.
 - [ ] After the network drops and comes back (DevTools offline, then online), a Disconnect made meanwhile shows without a reload.
 - [ ] Within an hour of connecting, the card opens with "Claude Code is connected. Nice."; × hides it. Each "Try asking" prompt's Copy copies it, and pasting it into a new session of the agent gets an answer (Codex loads Broccoli's tools only in a session started after login).
 - [ ] "Disconnect", then "Disconnect" in the confirm, shows "You disconnected Claude Code."; the agent's next call is refused.

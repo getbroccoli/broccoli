@@ -17,7 +17,15 @@ export function useLiveAgentConnection(): void {
     const refetch = () =>
       void apolloClient.refetchQueries({
         include: "active",
-        onQueryUpdated: (query) => AGENT_CONNECTION_QUERIES.has(query.queryName ?? ""),
+        onQueryUpdated: (query) =>
+          AGENT_CONNECTION_QUERIES.has(query.queryName ?? "") &&
+          // A new read: one already in flight may have read the state before the change.
+          apolloClient.query({
+            query: query.query,
+            variables: query.variables,
+            fetchPolicy: "network-only",
+            context: { queryDeduplication: false },
+          }),
       });
     const stream = new EventSource("/api/live");
     stream.onmessage = refetch;
