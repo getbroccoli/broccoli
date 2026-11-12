@@ -87,6 +87,21 @@ it("has no working week without an own assignment or terms", () => {
   ]);
 });
 
+it("should return one week for an open assignment on the final calendar day", () => {
+  // Arrange
+  const date = day("9999-12-31");
+  const timeline = timelineOf({
+    direct: [assignment("a", "9999-12-31")],
+    versions: { a: version("a", [480, 0, 0, 0, 0, 0, 0]) },
+  });
+
+  // Act
+  const weeks = workingWeeksOf(timeline, date, date);
+
+  // Assert
+  expect(weeks.map((week) => week.startDate)).toEqual([date]);
+});
+
 function timelineOf({
   direct = [],
   terms = [],

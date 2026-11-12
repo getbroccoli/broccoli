@@ -15,3 +15,7 @@ it("returns null without a date", () => {
 
   expect(formatted).toBeNull();
 });
+
+it("displays year 0001 as year 1 rather than 1901", () => {
+  expect(Number(formatCalendarDate("0001-01-01")!.split("/")[2])).toBe(1);
+});

@@ -4,10 +4,12 @@ import {
   annualLeaveSummary,
   plannedLine,
   ruleLine,
+  shortDate,
   splitVersions,
   versionBefore,
   weekSummary,
 } from "./termsText";
+import { nextLeaveYear } from "./weekDraft";
 
 it("summarises consecutive working days with equal hours as a run", () => {
   expect(weekSummary(week)).toBe("Mon–Fri, 7.5 hours");
@@ -200,6 +202,17 @@ it("has no predecessor when cancelling the first offered version", () => {
   const first = { startDate: "2026-01-01", endDate: null };
 
   expect(versionBefore([first], "2026-01-01")).toBeNull();
+});
+
+it("displays the supplied first-century year", () => {
+  expect(shortDate("0001-01-01")).toBe("1 Jan 1");
+});
+
+it("displays the next leave year for an employee starting in year 9999", () => {
+  const nextYear = nextLeaveYear("9999-01-01");
+
+  expect(nextYear).toBe("10000-01-01");
+  expect(shortDate(nextYear)).toBe("1 Jan 10000");
 });
 
 const week = {
