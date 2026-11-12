@@ -1,7 +1,13 @@
+import { ApplicationError } from "../../applicationError";
 import type { Orm, Transact } from "../../db";
 import type { Logger } from "../../logger";
 import type { SecurityContext } from "../../security";
-import { agentConnectionRepository, type StoredAgentConnection } from "../db";
+import {
+  agentConnectionRepository,
+  type StoredAgentConnection,
+  type StoredEndedAgentConnection,
+} from "../db";
+import type { AgentConnectionEnding } from "../domain";
 
 /** A connection unused this long ends. */
 const UNUSED_CONNECTION_DAYS = 30;
@@ -36,10 +42,11 @@ export interface AgentConnectionService {
   detachExpiredSessions: (ctx: SecurityContext) => Promise<void>;
   /** The caller's own connection; null without one, or for a caller who is no user. */
   readMyAgentConnection: (ctx: SecurityContext) => Promise<StoredAgentConnection | null>;
+  /** Ends the caller's own connection, so its next call is refused; null when none was connected. */
+  disconnectMyAgent: (ctx: SecurityContext) => Promise<StoredEndedAgentConnection | null>;
+  /** The caller's most recently ended connection; null without one, or for a caller who is no user. */
+  readMyLastEndedConnection: (ctx: SecurityContext) => Promise<StoredEndedAgentConnection | null>;
 }
-
-/** Why Broccoli ended a person's agent connections. */
-export type AgentConnectionEnding = "PASSWORD_RESET";
 
 export function createAgentConnectionService({
   orm,
@@ -61,13 +68,16 @@ export function createAgentConnectionService({
           return { ended: [], allowed: null };
         }
         return {
-          ended: await connections.deleteConnections(userId, clientId),
+          ended: await connections.endConnections(userId, clientId, {
+            reason: "replaced_by_another_agent",
+            endedAt: new Date(),
+          }),
           allowed: await connections.findConnection(userId),
         };
       });
       if (allowed) {
         logger.info(
-          { userId, connectionId: allowed.id, endedConnectionIds: ended },
+          { userId, connectionId: allowed.id, endedConnectionIds: ended.map(({ id }) => id) },
           "Agent connection allowed",
         );
       }
@@ -89,14 +99,7 @@ export function createAgentConnectionService({
     },
     async endConnections(ctx, { userId, reason }) {
       ctx.requireSystem();
-      const ended = await transact(async (tx) => {
-        const connections = agentConnectionRepository(tx);
-        await connections.lockPerson(userId);
-        return connections.deleteConnections(userId, null);
-      });
-      if (ended.length > 0) {
-        logger.info({ userId, endedConnectionIds: ended, reason }, "Agent connections ended");
-      }
+      await endAllConnections({ transact, logger }, { userId, reason });
     },
     async ensureAgentResource(ctx, resource) {
       ctx.requireSystem();
@@ -109,7 +112,46 @@ export function createAgentConnectionService({
     async readMyAgentConnection(ctx) {
       return ctx.user ? agentConnectionRepository(orm).findConnection(ctx.user.userId) : null;
     },
+    async disconnectMyAgent(ctx) {
+      if (!ctx.user) {
+        throw new ApplicationError(
+          "FORBIDDEN",
+          "Only a signed-in person can disconnect their agent.",
+        );
+      }
+      const ended = await endAllConnections(
+        { transact, logger },
+        { userId: ctx.user.userId, reason: "disconnected_by_person" },
+      );
+      return latestOf(ended);
+    },
+    async readMyLastEndedConnection(ctx) {
+      return ctx.user ? agentConnectionRepository(orm).findLastEnding(ctx.user.userId) : null;
+    },
   };
+}
+
+/** Ends every connection of the person, for `reason`, and returns them. */
+async function endAllConnections(
+  { transact, logger }: { transact: Transact; logger: Logger },
+  { userId, reason }: { userId: string; reason: AgentConnectionEnding },
+): Promise<StoredEndedAgentConnection[]> {
+  const ended = await transact(async (tx) => {
+    const connections = agentConnectionRepository(tx);
+    await connections.lockPerson(userId);
+    return connections.endConnections(userId, null, { reason, endedAt: new Date() });
+  });
+  if (ended.length > 0) {
+    logger.info(
+      { userId, endedConnectionIds: ended.map(({ id }) => id), reason },
+      "Agent connections ended",
+    );
+  }
+  return ended;
+}
+
+function latestOf(ended: StoredEndedAgentConnection[]): StoredEndedAgentConnection | null {
+  return ended.toSorted((a, b) => b.connectedAt.getTime() - a.connectedAt.getTime())[0] ?? null;
 }
 
 /** Ends the unused connection of this client only, so a replacement allowed meanwhile stays. */
@@ -120,11 +162,14 @@ async function endUnusedConnection(
   const ended = await transact(async (tx) => {
     const connections = agentConnectionRepository(tx);
     await connections.lockPerson(userId);
-    return connections.deleteConnection(userId, clientId);
+    return connections.endConnection(userId, clientId, {
+      reason: "ended_after_30_days_unused",
+      endedAt: new Date(),
+    });
   });
   if (ended) {
     logger.info(
-      { userId, endedConnectionIds: [ended], reason: "UNUSED" },
+      { userId, endedConnectionIds: [ended.id], reason: ended.reason },
       "Agent connections ended",
     );
   }

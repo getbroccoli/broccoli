@@ -1,2 +1,5 @@
 export { agentConnectionRepository } from "./agentConnectionRepository";
-export type { StoredAgentConnection } from "./agentConnectionRepository";
+export type {
+  StoredAgentConnection,
+  StoredEndedAgentConnection,
+} from "./agentConnectionRepository";

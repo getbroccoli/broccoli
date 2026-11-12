@@ -10,7 +10,32 @@ import {
   refreshAgent,
   registerAgentClient,
   test,
+  TEST_OWNER,
 } from "#test/support";
+
+test("a person never sees another person's agent connection", async ({ env }) => {
+  const { browser: owner } = await env.signInAsOwner();
+  const clientId = await registerAgentClient(env, "Claude Code");
+  const { accessToken } = await connectAgent(env, owner, { clientId });
+  const credentials = { email: "another@example.com", password: TEST_OWNER.password };
+  await env.seed.user(credentials);
+  const { browser } = await env.signIn(credentials);
+
+  const connections = await browser.graphql(
+    "query { myAgentConnection { id } myLastEndedAgentConnection { id } }",
+  );
+  const disconnected = await browser.graphql(
+    "mutation { mcpAgents { disconnect { endedAgentConnection { id } } } }",
+  );
+
+  expect(await connections.json()).toEqual({
+    data: { myAgentConnection: null, myLastEndedAgentConnection: null },
+  });
+  expect(await disconnected.json()).toEqual({
+    data: { mcpAgents: { disconnect: { endedAgentConnection: null } } },
+  });
+  expect((await callMcpTool(env, accessToken, "who_am_i")).status).toBe(200);
+});
 
 test("refuses an MCP batch without returning tool results", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
@@ -32,6 +57,23 @@ test("refuses an MCP batch without returning tool results", async ({ env }) => {
 
   expect(response.status).toBe(400);
   expect(await response.text()).not.toMatch(/"result"\s*:/);
+});
+
+test("allowing a second client ends the first client's access and refresh tokens", async ({
+  env,
+}) => {
+  const { browser } = await env.signInAsOwner();
+  const firstId = await registerAgentClient(env, "First client");
+  const first = await connectAgent(env, browser, { clientId: firstId });
+  const secondId = await registerAgentClient(env, "Second client");
+
+  const second = await connectAgent(env, browser, { clientId: secondId });
+
+  expect((await callMcpTool(env, first.accessToken, "who_am_i")).status).toBe(401);
+  expect(
+    (await refreshAgent(env, { clientId: firstId, refreshToken: first.refreshToken })).status,
+  ).not.toBe(200);
+  expect((await callMcpTool(env, second.accessToken, "who_am_i")).status).toBe(200);
 });
 
 test("a code issued before allowing another client cannot restore the first client's access", async ({
@@ -163,6 +205,10 @@ test("a connection unused for 31 days loses access and cannot refresh", async ({
 
   expect(response.status).toBe(401);
   expect(refreshed.status).not.toBe(200);
+  const ending = await browser.graphql("query { myLastEndedAgentConnection { reason } }");
+  expect(await ending.json()).toEqual({
+    data: { myLastEndedAgentConnection: { reason: "ENDED_AFTER_30_DAYS_UNUSED" } },
+  });
 });
 
 test("a connection used 29 days ago can still call tools", async ({ env }) => {

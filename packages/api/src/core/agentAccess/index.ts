@@ -7,4 +7,5 @@ export { agentDiscoveryRouter } from "./http";
 // Public types.
 export type { AgentConnectionService } from "./app";
 export type { AgentSecurityResolver } from "./betterAuth";
+export type { StoredEndedAgentConnection } from "./db";
 export type { AgentScope } from "./domain";
