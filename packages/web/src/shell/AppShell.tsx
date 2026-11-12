@@ -2,6 +2,7 @@ import { useRef, type ReactNode } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
 import { DemoBanner } from "@/features/demo";
+import { useLiveAgentConnection } from "@/features/mcpAgents";
 
 import { cn } from "@/lib/class-names";
 
@@ -17,6 +18,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const main = useRef<HTMLElement>(null);
   const inSettings = useInSettings();
   useFocusHeadingOnNavigation(main);
+  useLiveAgentConnection();
 
   return (
     <>

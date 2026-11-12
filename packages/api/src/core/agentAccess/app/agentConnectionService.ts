@@ -67,6 +67,7 @@ export function createAgentConnectionService({
         if (!(await connections.findConnectionOf(userId, clientId))) {
           return { ended: [], allowed: null };
         }
+        tx.publish("agentAccess.connection_changed", { userId });
         return {
           ended: await connections.endConnections(userId, clientId, {
             reason: "replaced_by_another_agent",
@@ -141,7 +142,9 @@ async function endAllConnections(
   const ended = await transact(async (tx) => {
     const connections = agentConnectionRepository(tx);
     await connections.lockPerson(userId);
-    return connections.endConnections(userId, null, { reason, endedAt: new Date() });
+    const ended = await connections.endConnections(userId, null, { reason, endedAt: new Date() });
+    if (ended.length > 0) tx.publish("agentAccess.connection_changed", { userId });
+    return ended;
   });
   if (ended.length > 0) {
     logger.info(
@@ -160,10 +163,12 @@ async function endUnusedConnection(
   const ended = await transact(async (tx) => {
     const connections = agentConnectionRepository(tx);
     await connections.lockPerson(userId);
-    return connections.endConnection(userId, clientId, {
+    const ended = await connections.endConnection(userId, clientId, {
       reason: "ended_after_30_days_unused",
       endedAt: new Date(),
     });
+    if (ended) tx.publish("agentAccess.connection_changed", { userId });
+    return ended;
   });
   if (ended) {
     logger.info(

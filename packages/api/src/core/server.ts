@@ -20,6 +20,7 @@ import { createEventBus } from "./events";
 import { type GraphqlApi, startGraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
 import { createJobRunner } from "./jobs";
+import { createLiveNudges, type LiveNudges } from "./live";
 import { refuseBearerAuth, resolveSecurityContext, selfHostedServer } from "./instance";
 import type { Logger } from "./logger";
 import { managedServer } from "./managedSignIn";
@@ -71,6 +72,7 @@ export async function startServer(
   let resolveAgentSecurity: AgentSecurityResolver;
   const agentConnections = createAgentConnectionService({ orm: database.orm, transact, logger });
   let graphql: GraphqlApi;
+  let live: LiveNudges;
   try {
     const { manifests, setupDemo, addApprovedPeople, employeeDirectory, passwordResetEmail } =
       createModules({
@@ -106,6 +108,8 @@ export async function startServer(
     const auth = deployment.auth;
     resolveSecurity = (headers) =>
       resolveSecurityContext(auth, database.orm, employeeDirectory, headers);
+    live = createLiveNudges(resolveSecurity);
+    eventBus.subscribe(live.events);
     resolveAgentSecurity = agentSecurityResolver(
       auth,
       database.orm,
@@ -143,6 +147,7 @@ export async function startServer(
         );
       }
     }
+    app.use("/api", live.router);
     app.all("/api/auth/{*path}", authHandler(deployment.auth));
     app.use(graphql.router);
     if (webApp) {
@@ -166,6 +171,7 @@ export async function startServer(
     stop: () => {
       stopping ??= (async () => {
         stopped.abort();
+        live.close();
         // Drains in-flight requests, then closes the HTTP server.
         await graphql.stop();
         await jobRunner.stop();
