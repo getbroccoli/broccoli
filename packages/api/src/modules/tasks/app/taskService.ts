@@ -160,9 +160,8 @@ export function createTaskService({
 
     async cancelInTransaction(ctx, tx, { taskIds, reason, cause }) {
       const tasks = taskRepository(tx);
-      for (const taskId of taskIds) {
-        const task = await tasks.lockById(taskId);
-        if (!task || task.status === "done" || task.status === "cancelled") continue;
+      for (const task of await tasks.lockByIds(taskIds)) {
+        if (task.status === "done" || task.status === "cancelled") continue;
         const saved = await tasks.saveStatus(
           cancelTask(task, requireText(reason, "reason"), new Date()),
         );

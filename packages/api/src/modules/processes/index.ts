@@ -5,9 +5,6 @@ import { type ProcessService, startDueRunsJob } from "./app";
 // Public values.
 export { createProcessService } from "./app";
 
-// Public types.
-export type { ProcessService } from "./app";
-
 /** Processes that give people tasks when something happens to a record, and their runs. */
 export function processesModule({
   logger,

@@ -8,7 +8,7 @@ import { createResolvers } from "./graphql";
 export { createTaskService } from "./app";
 
 // Public types.
-export type { NewTask, TaskCause, TaskService } from "./app";
+export type { NewTask, TaskService } from "./app";
 export type { Task, TaskStatus } from "./domain";
 
 /** Work asked of people, and each person's My tasks. */
