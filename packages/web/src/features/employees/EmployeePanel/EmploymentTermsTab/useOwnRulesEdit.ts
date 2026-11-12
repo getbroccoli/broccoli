@@ -153,7 +153,7 @@ export function useOwnRulesEdit({
         );
         close();
       } catch (error) {
-        setFailure(failureOf(error));
+        setFailure(failureOf(error, { name: firstName, type: opened.timeOffType.name }));
       }
     },
   };
@@ -299,11 +299,12 @@ function formErrorOf(
 }
 
 /** What the form says when the server refuses the save. */
-function failureOf(error: unknown): string {
+function failureOf(error: unknown, { name, type }: { name: string; type: string }): string {
   const refused =
     error instanceof PayloadFailure
-      ? (error.payloadError as { fields?: { code: string }[] })
+      ? (error.payloadError as { __typename?: string; fields?: { code: string }[] })
       : null;
+  if (refused?.__typename === "ConflictError") return t("ownRules.booked", { name, type });
   const fields = refused?.fields ?? [];
   return fields.some(({ code }) => code === "not_leave_year_start")
     ? t("ownRules.countsDate")

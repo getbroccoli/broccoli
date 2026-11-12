@@ -27,6 +27,7 @@ import {
   versionFromRules,
 } from "../domain";
 import { readPeople } from "./allowanceEngine";
+import { watchBookedTimeOff } from "./bookedTimeOffGuard";
 import { readOwnRules, saveOwnRules } from "./ownRulesStore";
 import { existingType, rulesChanged } from "./policyRules";
 import type { TimeOffService } from "./timeOffService";
@@ -45,11 +46,15 @@ export interface OwnTimeOffRulesService {
     ctx: SecurityContext,
     input: OwnRulesInput & { rules: TimeOffRulesInput },
   ) => Promise<void>;
-  /** Their terms' rules for the type from `startDate`: own rules covering it end the day before, later ones go. */
+  /**
+   * Their terms' rules for the type from `startDate`: own rules covering it end the day before,
+   * later ones go. CONFLICT while that leaves their booked time off of the type without rules.
+   */
   useTermsRules: (ctx: SecurityContext, input: OwnRulesInput) => Promise<void>;
   /**
    * Removes an own-rules change starting on `startDate` after today: new own rules, a change to
-   * them, or a return to the terms. CONFLICT otherwise.
+   * them, or a return to the terms. CONFLICT otherwise, or while that leaves their booked time
+   * off of the type without rules.
    */
   cancelOwnRulesChange: (ctx: SecurityContext, input: OwnRulesInput) => Promise<void>;
 }
@@ -177,8 +182,14 @@ async function changeOwnRules(
     const timeline = await timelineOf(employeeReads, tx, employeeId, timeOffType);
     const onDate = timeline.getVersionOnDate(from);
     const applied = apply({ stretches, from, onDate });
+    const refuseLostBookings = await watchBookedTimeOff(employeeReads, tx, {
+      employeeIds: [employeeId],
+      timeOffTypeId: timeOffType.id,
+      from,
+    });
     const timeOffPolicyId = await saveOwnRules(tx, lane, versions, applied.stretches);
     await refuseCountsChangeFrom(employeeReads, tx, { employeeId, timeOffType, from, cancel });
+    await refuseLostBookings();
     await appendOwnRulesHistory(ctx, tx, { employeeId, timeOffType, from, applied });
     const ensured = await timeOff.ensureAllowances(ctx, tx, {
       employeeIds: [employeeId],

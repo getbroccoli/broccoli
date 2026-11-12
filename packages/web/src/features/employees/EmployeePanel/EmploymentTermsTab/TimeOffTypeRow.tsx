@@ -5,7 +5,7 @@ import {
   CancelOwnRulesChangeDocument,
   type EmploymentTermsTab_TermsFragment,
 } from "@/__generated__/graphql";
-import { usePayloadMutation } from "@/apollo";
+import { PayloadFailure, usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import {
   CancelChangeDialog,
@@ -87,8 +87,16 @@ export function TimeOffTypeRow({
         variables: { input: { employeeId, timeOffTypeId: timeOffType.id, startDate } },
       });
       toast(t("people.panel.terms.cancelled"));
-    } catch {
-      toast.error(t("people.panel.terms.cancelFailed"));
+    } catch (error) {
+      const refused =
+        error instanceof PayloadFailure
+          ? (error.payloadError as { __typename?: string; message?: string })
+          : null;
+      toast.error(
+        refused?.__typename === "ConflictError" && refused.message
+          ? refused.message
+          : t("people.panel.terms.cancelFailed"),
+      );
     }
     setCancelling(null);
   };
