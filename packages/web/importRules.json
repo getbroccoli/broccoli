@@ -36,6 +36,7 @@
       "src/features/setup",
       "src/i18n",
       "src/lib/postJson",
+      "src/lib/useFragmentToken",
       "src/lib/useSessionChange"
     ],
     "src/features/ai": [
@@ -144,6 +145,7 @@
       "src/lib/class-names",
       "src/lib/postJson",
       "src/lib/useCopyToClipboard",
+      "src/lib/useFragmentToken",
       "src/lib/useSessionChange"
     ],
     "src/features/records": [
@@ -207,7 +209,8 @@
     "src/lib/useSessionChange": ["src/lib/useRouteAction"],
     "src/lib/calendarDay": [],
     "src/lib/sentenceCase": [],
-    "src/lib/tenure": ["src/i18n", "src/lib/calendarDay"]
+    "src/lib/tenure": ["src/i18n", "src/lib/calendarDay"],
+    "src/lib/useFragmentToken": []
   },
   "deepImports": ["src/components/ui", "src/__generated__"]
 }
