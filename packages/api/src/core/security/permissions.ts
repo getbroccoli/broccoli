@@ -15,6 +15,8 @@ export interface PermissionObjects {
   time_off: true;
   /** A set of terms; about nobody, so public, and only admins have a grant on it. */
   terms: true;
+  /** A run of a process; its subject is the employee the run is about. */
+  process_run: true;
 }
 
 /** A kind of record permissions apply to. */
@@ -97,6 +99,13 @@ const ADMIN: ProfileDefinition = {
     {
       key: "terms.manage.all",
       object: "terms",
+      actions: ["create", "read", "update", "delete"],
+      scope: "all",
+      fields: "*",
+    },
+    {
+      key: "process_run.manage.all",
+      object: "process_run",
       actions: ["create", "read", "update", "delete"],
       scope: "all",
       fields: "*",

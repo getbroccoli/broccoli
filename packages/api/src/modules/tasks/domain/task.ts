@@ -1,8 +1,11 @@
 import { ApplicationError } from "../../../core/applicationError";
 import type { CalendarDate } from "../../../utils";
 
-/** A task finished by hand with Mark done; features add their own types. */
-export const TASK_TYPES = ["manual_to_do"] as const;
+/**
+ * `manual_to_do` is finished by hand with Mark done; `process_step_to_do` is a process step's to-do,
+ * finished through processes so its run keeps up. Features add their own types.
+ */
+export const TASK_TYPES = ["manual_to_do", "process_step_to_do"] as const;
 export type TaskType = (typeof TASK_TYPES)[number];
 
 export const TASK_STATUSES = ["to_do", "waiting", "done", "cancelled"] as const;

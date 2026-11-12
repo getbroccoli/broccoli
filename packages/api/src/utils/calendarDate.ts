@@ -87,8 +87,13 @@ export function todayInUtc(): CalendarDate {
  * shortcut: every company's "today" is London's; take the company's timezone once it has one.
  */
 export function todayInLondon(): CalendarDate {
+  return dateInLondon(new Date());
+}
+
+/** The calendar day it was in London at `moment`. */
+export function dateInLondon(moment: Date): CalendarDate {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(
-    new Date(),
+    moment,
   ) as CalendarDate;
 }
 

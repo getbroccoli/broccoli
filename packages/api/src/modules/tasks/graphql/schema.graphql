@@ -2,6 +2,8 @@
 enum TaskType {
   "Finished by hand with Mark done; it produces nothing else."
   MANUAL_TO_DO
+  "A process step's to-do, finished through its process so the run keeps up."
+  PROCESS_STEP_TO_DO
 }
 
 enum TaskStatus {
