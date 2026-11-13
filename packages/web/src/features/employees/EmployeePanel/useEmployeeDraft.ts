@@ -1,6 +1,6 @@
 // eslint-disable-next-line no-restricted-imports -- A permission change needs resetStore(), not just the cache.
 import { useApolloClient } from "@apollo/client/react";
-import { useRouter } from "@tanstack/react-router";
+import { useRouteContext, useRouter } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 
 import {
@@ -35,18 +35,16 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
   const saved = valuesOf(employee);
   const { edits, setEdits, edit, revert } = useEdits();
   const [reason, setReason] = useState("");
-  // A discarded save must not clear or report field errors in a later draft.
-  const editing = useRef(0);
   const { saving, failure, reset, saveChanges } = useSaveEmployee(employee.id);
   const announceLocation = useLocationSavedToast({
     firstName: employee.firstName,
     periods: employee.employmentTerms?.periods ?? [],
   });
   const draft = mapEdits(edits, ({ value }) => value);
+  const fieldErrors = mapEdits(edits, ({ error }) => error);
   const changed = changedFields(saved, draft);
 
   const cancel = () => {
-    editing.current++;
     setEdits({});
     setReason("");
     reset();
@@ -55,16 +53,14 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
   const save = async () => {
     // The draft is what gets saved, so it stays still until the save ends.
     if (saving) return;
-    const submittedEditing = editing.current;
     setEdits((current) => mapEdits(current, ({ value }) => ({ value })));
     try {
-      await saveChanges(saved, draft, reason);
-      if (submittedEditing !== editing.current) return;
+      if (!(await saveChanges(saved, draft, reason))) return;
       if (draft.location && changed.includes("location")) announceLocation(draft.location);
       cancel();
     } catch (failed) {
       const messages = refusedFieldMessages(failed);
-      if (!messages || submittedEditing !== editing.current) return;
+      if (!messages) return;
       setEdits((current) =>
         mapEdits(current, ({ value }, key) => ({ value, error: messages.get(key) })),
       );
@@ -77,7 +73,7 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
     changed,
     reason,
     setReason,
-    fieldErrors: mapEdits(edits, ({ error }) => error),
+    fieldErrors,
     failure,
     saving,
     edit,
@@ -90,56 +86,74 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
 /**
  * Saves an employee's changed fields, then their permission profile, so a refused field leaves
  * the profile unsaved with the rest. A refused save rejects with a `PayloadFailure`.
+ * Discarded saves finish their writes but return false, without affecting the current draft.
  */
 function useSaveEmployee(employeeId: string) {
   const apolloClient = useApolloClient();
   const router = useRouter();
-  const [updateEmployee, update] = usePayloadMutation(UpdateEmployeeDocument, {
+  const { me } = useRouteContext({ from: "/_authenticated" });
+  const [updateEmployee] = usePayloadMutation(UpdateEmployeeDocument, {
     // The saved employee updates in the cache by itself; its new line joins its history.
     update: (cache, { data }) => {
       const line = data?.employees.update.historyLine;
       if (line) addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: employeeId, line });
     },
   });
-  const [setPermissionProfiles, profileChange] = usePayloadMutation(SetPermissionProfilesDocument, {
+  const [setPermissionProfiles] = usePayloadMutation(SetPermissionProfilesDocument, {
     update: (cache, { data }) => {
       const line = data?.employees.setPermissionProfiles.historyLine;
       if (line) addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: employeeId, line });
     },
   });
-  const error = update.error ?? profileChange.error;
-  const payloadError = update.payloadError ?? profileChange.payloadError;
-  // Refused fields show beside themselves; any other failed save shows in the edit bar.
-  const failure: SaveFailure | null =
-    payloadError?.__typename === "NotFoundError"
-      ? "removed"
-      : error || (payloadError && payloadError.__typename !== "InvalidInputError")
-        ? "failed"
-        : null;
+  const [state, setState] = useState<{ saving: boolean; failure: SaveFailure | null }>({
+    saving: false,
+    failure: null,
+  });
+  // Both mutations belong to one save; only its current lifetime may update the draft.
+  const latestSave = useRef(0);
   return {
-    saving: update.loading || profileChange.loading,
-    failure,
+    ...state,
     reset: () => {
-      update.reset();
-      profileChange.reset();
+      latestSave.current++;
+      setState({ saving: false, failure: null });
     },
     saveChanges: async (saved: EmployeeValues, draft: Partial<EmployeeValues>, reason: string) => {
-      const changed = changedFields(saved, draft);
-      if (changed.some((key) => key !== "permissionProfiles")) {
-        await updateEmployee({
-          variables: { input: toUpdateInput(employeeId, saved, draft, reason) },
-        });
-      }
-      if (changed.includes("permissionProfiles")) {
-        const changeReason = reason.trim() || null;
-        const profiles = (draft.permissionProfiles ?? "").split(",") as PermissionProfile[];
-        await setPermissionProfiles({
-          variables: { input: { id: employeeId, profiles, changeReason } },
-        });
-        // The change may be the caller's own, so what they may do is read again, the route
-        // first: a query they may no longer run is refused while the cache refetches.
-        await router.invalidate();
-        await apolloClient.resetStore().catch(() => undefined);
+      const thisSave = ++latestSave.current;
+      let failure: SaveFailure | null = null;
+      setState({ saving: true, failure: null });
+      try {
+        const changed = changedFields(saved, draft);
+        if (changed.some((key) => key !== "permissionProfiles")) {
+          await updateEmployee({
+            variables: { input: toUpdateInput(employeeId, saved, draft, reason) },
+          });
+        }
+        if (changed.includes("permissionProfiles")) {
+          const changeReason = reason.trim() || null;
+          const profiles = (draft.permissionProfiles ?? "").split(",") as PermissionProfile[];
+          await setPermissionProfiles({
+            variables: { input: { id: employeeId, profiles, changeReason } },
+          });
+          // Changing the caller's access needs fresh route permissions before refetching.
+          if (me.employee?.id === employeeId) {
+            await router.invalidate();
+            await apolloClient.resetStore().catch(() => undefined);
+          }
+        }
+        return thisSave === latestSave.current;
+      } catch (failed) {
+        if (thisSave !== latestSave.current) return false;
+        const refused =
+          failed instanceof PayloadFailure ? (failed.payloadError as SaveError) : null;
+        failure =
+          refused?.__typename === "NotFoundError"
+            ? "removed"
+            : refused?.__typename === "InvalidInputError"
+              ? null
+              : "failed";
+        throw failed;
+      } finally {
+        if (thisSave === latestSave.current) setState({ saving: false, failure });
       }
     },
   };

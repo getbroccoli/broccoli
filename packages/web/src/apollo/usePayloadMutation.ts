@@ -34,21 +34,18 @@ export function usePayloadMutation<Data, Variables extends OperationVariables>(
   const client = useApolloClient();
   const refetch = options?.refetch;
   // Only `update` reaches Apollo: its other options could treat a payload error as success.
-  const [mutate, state] = useMutation(document, {
+  const [mutate, { reset: resetMutation, ...state }] = useMutation(document, {
     update: options?.update,
   });
   const [payloadError, setPayloadError] = useState<PayloadErrorOf<Data> | null>(null);
   const [refetching, setRefetching] = useState(false);
-  const [cleared, setCleared] = useState(false);
   // Only the latest run, and none after `reset`, may show its payload error.
   const latestRun = useRef(0);
 
   const run = useCallback(
     async (...[runOptions]: RunOptions<Variables>) => {
       const thisRun = ++latestRun.current;
-      setCleared(false);
       setPayloadError(null);
-      setRefetching(false);
       // A fresh object, so only the variables reach Apollo, whatever else `runOptions` holds.
       // The cast bridges Apollo's generic tuple type, which `RunOptions` matches for variables.
       const apolloOptions = { variables: runOptions?.variables };
@@ -63,10 +60,10 @@ export function usePayloadMutation<Data, Variables extends OperationVariables>(
         throw new PayloadFailure(failure);
       }
       if (refetch) {
-        if (thisRun === latestRun.current) setRefetching(true);
+        setRefetching(true);
         // The mutation succeeded; a failed refetch shows as its own query's error.
         await client.refetchQueries({ include: refetch }).catch(() => undefined);
-        if (thisRun === latestRun.current) setRefetching(false);
+        setRefetching(false);
       }
       return payload as PayloadOf<Data>;
     },
@@ -76,15 +73,11 @@ export function usePayloadMutation<Data, Variables extends OperationVariables>(
   const reset = useCallback(() => {
     latestRun.current++;
     setPayloadError(null);
-    // Apollo's reset reuses request IDs, so an earlier response could unlock a newer save.
-    setCleared(true);
-  }, []);
+    resetMutation();
+  }, [resetMutation]);
 
-  const result = { ...state, loading: state.loading || refetching, ...(cleared && CLEARED_RESULT) };
-  return [run, { ...result, payloadError, reset }] as const;
+  return [run, { ...state, loading: state.loading || refetching, payloadError, reset }] as const;
 }
-
-const CLEARED_RESULT = { called: false, loading: false, data: undefined, error: undefined };
 
 /** The variables; required when the mutation has a required one, which `Record<string, never>` lacks. */
 type RunOptions<Variables> =
