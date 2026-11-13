@@ -1,7 +1,7 @@
 // eslint-disable-next-line no-restricted-imports -- A permission change needs resetStore(), not just the cache.
 import { useApolloClient } from "@apollo/client/react";
 import { useRouter } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   SetPermissionProfilesDocument,
@@ -35,16 +35,18 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
   const saved = valuesOf(employee);
   const { edits, setEdits, edit, revert } = useEdits();
   const [reason, setReason] = useState("");
+  // A discarded save must not clear or report field errors in a later draft.
+  const editing = useRef(0);
   const { saving, failure, reset, saveChanges } = useSaveEmployee(employee.id);
   const announceLocation = useLocationSavedToast({
     firstName: employee.firstName,
     periods: employee.employmentTerms?.periods ?? [],
   });
   const draft = mapEdits(edits, ({ value }) => value);
-  const fieldErrors = mapEdits(edits, ({ error }) => error);
   const changed = changedFields(saved, draft);
 
   const cancel = () => {
+    editing.current++;
     setEdits({});
     setReason("");
     reset();
@@ -53,14 +55,16 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
   const save = async () => {
     // The draft is what gets saved, so it stays still until the save ends.
     if (saving) return;
+    const submittedEditing = editing.current;
     setEdits((current) => mapEdits(current, ({ value }) => ({ value })));
     try {
       await saveChanges(saved, draft, reason);
+      if (submittedEditing !== editing.current) return;
       if (draft.location && changed.includes("location")) announceLocation(draft.location);
       cancel();
     } catch (failed) {
       const messages = refusedFieldMessages(failed);
-      if (!messages) return;
+      if (!messages || submittedEditing !== editing.current) return;
       setEdits((current) =>
         mapEdits(current, ({ value }, key) => ({ value, error: messages.get(key) })),
       );
@@ -73,7 +77,7 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
     changed,
     reason,
     setReason,
-    fieldErrors,
+    fieldErrors: mapEdits(edits, ({ error }) => error),
     failure,
     saving,
     edit,
