@@ -4,9 +4,14 @@ import {
   SYSTEM,
   calendarDate,
   employeeServices,
+  eventProcess,
   expect,
   processService,
+  seedProcess,
+  signedIn,
+  taskService,
   test,
+  transactWithProcesses,
 } from "#test/support";
 
 import { WELCOME_NEW_STARTER } from "../domain";
@@ -120,6 +125,46 @@ test("the daily pass cancels a run whose outstanding assignee was removed even w
     cancelCause: "cancelled_because_step_assignee_was_removed",
   });
   expect(cancelled.steps[1]!.task!.status).toBe("cancelled");
+});
+
+test("the daily pass cancels a run whose subject task was deleted", async ({ orm, seed }) => {
+  const asker = await seed.employee();
+  const employee = await seed.employee();
+  const askerCtx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
+  const today = calendarDate("2026-12-03");
+  const { key } = await seedProcess(orm, {
+    key: "follow_up",
+    definition: eventProcess("tasks.task_created", { field: "type", in: ["manual_to_do"] }),
+  });
+  const transact = transactWithProcesses(orm, { today: () => today });
+  const processes = processService(orm, { today: () => today, transact });
+  const tasks = taskService(orm, { transact });
+  const task = await transact((tx) =>
+    tasks.createTask(askerCtx, tx, {
+      type: "manual_to_do",
+      title: "Read the handbook",
+      askedByEmployeeId: asker.id,
+      assigneeEmployeeId: employee.id,
+      subjectEmployeeId: employee.id,
+    }),
+  );
+  const [run] = await processes.listRuns(ADMIN, key);
+  const started = await processes.readRun(ADMIN, run!.id);
+  expect(started.run).toMatchObject({
+    status: "in_progress",
+    record: { recordType: "task", recordId: task.id },
+  });
+  expect(started.steps).toMatchObject([{ task: { status: "to_do" } }]);
+  await tasks.deleteTask(askerCtx, task.id);
+
+  await processes.startDueRuns(SYSTEM, today);
+
+  const cancelled = await processes.readRun(ADMIN, run!.id);
+  expect(cancelled.run).toMatchObject({
+    status: "cancelled",
+    cancelCause: "cancelled_because_subject_was_removed",
+  });
+  expect(cancelled.steps).toMatchObject([{ task: { status: "cancelled" } }]);
 });
 
 test("only the system may run the daily pass", async ({ orm }) => {

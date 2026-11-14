@@ -160,11 +160,12 @@ export function createProcessService({
       }
       const run = await transact(async (tx) => {
         await processRepository(tx).lockProcess(process.id);
-        const subjects = await starter.readRecordSubjects(tx, recordType, [recordId]);
-        if (!subjects.has(recordId)) throw recordNotFound();
-        const subject = subjects.get(recordId)!;
+        // Keyed by the record's own id, such as an employee's lowercase uuid.
+        const [found] = await starter.readRecordSubjects(tx, recordType, [recordId]);
+        if (!found) throw recordNotFound();
+        const [canonicalId, subject] = found;
         await ctx.requireInScope("process_run", "create", subject?.id ?? "public");
-        if (await processRepository(tx).findRunInProgress(process.id, recordType, recordId)) {
+        if (await processRepository(tx).findRunInProgress(process.id, recordType, canonicalId)) {
           throw new ApplicationError(
             "CONFLICT",
             `${process.name} is already running for ${subject?.firstName ?? "this record"}.`,
@@ -175,7 +176,7 @@ export function createProcessService({
           {
             process,
             definition,
-            record: { recordType, recordId },
+            record: { recordType, recordId: canonicalId },
             subject,
             startCause: "started_by_admin",
             startedByEmployeeId: ctx.user?.employeeId ?? null,

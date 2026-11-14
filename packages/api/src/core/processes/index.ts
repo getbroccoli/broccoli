@@ -5,8 +5,8 @@ import { type ProcessService, startDueRunsJob } from "./app";
 import { createResolvers } from "./graphql";
 
 // Public values.
-export { createProcessService, PROCESS_STEP_TO_DO, TASK_TRIGGERING_EVENTS } from "./app";
-export { triggeringEvent, type IsWorkingDay, MAX_SEARCH_DAYS, workingDaysOf } from "./domain";
+export { createProcessService, PROCESS_STEP_TO_DO } from "./app";
+export { type IsWorkingDay, MAX_SEARCH_DAYS, workingDaysOf } from "./domain";
 
 // Public types.
 export type { PeoplePort, ProcessService, RunSubject, WorkingCalendarsPort } from "./app";

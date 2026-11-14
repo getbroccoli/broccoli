@@ -5,7 +5,6 @@ export {
   type EventStart,
   matchEventStarts,
   type TriggerEvent,
-  triggeringEvent,
   type TriggeringEventRegistration,
   type TriggeringEvents,
 } from "./eventTrigger";

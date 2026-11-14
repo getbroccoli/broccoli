@@ -11,6 +11,7 @@ import {
   PROCESS_CANCELLED,
   type ProcessRun as StoredRun,
   removalCancellation,
+  type RunStep,
   settleRun,
   SUBJECT_REMOVED,
 } from "../domain";
@@ -71,7 +72,10 @@ export function createRunLifecycleService({
         );
         const completed = steps.filter(({ taskId }) => taskId && doneTaskIds.has(taskId));
         await runs.saveSteps(completed);
-        const settled = settleRun(run, steps, now);
+        // A run that can no longer run stays in progress for the daily check, which cancels it.
+        const settled = (await removalOf(starter, tx, run, steps))
+          ? run
+          : settleRun(run, steps, now);
         if (settled !== run) await runs.saveRun(settled);
         tx.publish("processes.steps_completed", {
           runId,
@@ -105,14 +109,11 @@ export function createRunLifecycleService({
 
     async cancelIfCannotRun(tx, run) {
       if (run.status !== "in_progress") return run;
-      const steps = await processRepository(tx).findSteps(run.id);
-      const subject = run.subjectEmployeeId
-        ? await starter.readSubject(tx, run.subjectEmployeeId)
-        : null;
-      const removal = removalCancellation(
+      const removal = await removalOf(
+        starter,
+        tx,
         run,
-        steps,
-        run.subjectEmployeeId === null || subject !== null,
+        await processRepository(tx).findSteps(run.id),
       );
       if (!removal) return run;
       const reason =
@@ -127,6 +128,18 @@ export function createRunLifecycleService({
       });
     },
   };
+}
+
+/**
+ * Why the run can no longer run, or null: its record or the person it is about is gone, or a step
+ * still waiting lost its task with its assignee.
+ */
+async function removalOf(starter: RunStarter, tx: Tx, run: StoredRun, steps: readonly RunStep[]) {
+  const subjects = await starter.readRecordSubjects(tx, run.recordType, [run.recordId]);
+  const subjectExists =
+    subjects.has(run.recordId) &&
+    (run.subjectEmployeeId === null || subjects.get(run.recordId) !== null);
+  return removalCancellation(run, steps, subjectExists);
 }
 
 /** Cancels the locked run: its open tasks with `taskReason`, the run with its cause and reason. */

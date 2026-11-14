@@ -22,10 +22,19 @@ import {
 import { externalAgentsModule } from "./externalAgents";
 import { createImportServices, importsModule } from "./imports";
 import { mcpAgentsModule } from "./mcpAgents";
-import { createProcessService, processesModule, TASK_TRIGGERING_EVENTS } from "../core/processes";
+import {
+  createProcessService,
+  processesModule,
+  type TriggeringEventRegistration,
+} from "../core/processes";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
-import { createTaskService, taskRecordType, tasksModule } from "../core/tasks";
+import {
+  createTaskService,
+  TASK_TRIGGERING_EVENTS,
+  taskRecordType,
+  tasksModule,
+} from "../core/tasks";
 import { collectRegistrations } from "../utils";
 import { createTimeOffSetupService, createTimeOffService, timeOffModule } from "./timeOff";
 
@@ -67,7 +76,7 @@ export function createModules(
     workingCalendars: createWorkingCalendarsAdapter({ ...core, bankHolidays }),
     // The record types a process may run on, registered by the modules that own them.
     recordTypes: { employee: employeeRecordType(core.orm), task: taskRecordType(core.orm) },
-    triggeringEvents: collectRegistrations("triggering event", [
+    triggeringEvents: collectRegistrations<TriggeringEventRegistration>("triggering event", [
       EMPLOYEE_TRIGGERING_EVENTS,
       TASK_TRIGGERING_EVENTS,
     ]),

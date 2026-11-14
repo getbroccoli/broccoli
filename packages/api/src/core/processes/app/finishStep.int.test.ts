@@ -133,6 +133,37 @@ test("completing a task after the subject was removed leaves the run for the dai
   expect(progress.steps[0]).toMatchObject({ status: "step_completed" });
 });
 
+test("completing the last task after the subject was removed leaves the run for the daily check", async ({
+  orm,
+  seed,
+}) => {
+  const manager = await seed.employee();
+  const employee = await seed.employee();
+  await seed.manager(employee.id, manager.id);
+  const managerCtx = signedIn(orm, { employeeId: manager.id, profiles: ["EMPLOYEE"] });
+  const ctx = signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] });
+  const transact = transactWithProcesses(orm, { today });
+  const processes = processService(orm, { today, transact });
+  const tasks = taskService(orm, { transact });
+  const started = await processes.startRun(ADMIN, {
+    processKey: WELCOME_NEW_STARTER,
+    recordId: employee.id,
+  });
+  const meetingId = started.steps[0]!.task!.id;
+  await tasks.markDone(ctx, started.steps[1]!.task!.id);
+  await employeeServices(orm).deleteEmployee(ADMIN, { id: employee.id });
+
+  await tasks.markDone(managerCtx, meetingId);
+
+  expect(await tasks.readTask(managerCtx, meetingId)).toMatchObject({
+    status: "done",
+    doneByEmployeeId: manager.id,
+  });
+  const progress = await processes.readRun(ADMIN, started.run.id);
+  expect(progress.run).toMatchObject({ status: "in_progress", finishedAt: null });
+  expect(progress.steps[0]).toMatchObject({ status: "step_completed" });
+});
+
 test("two assignees completing their tasks concurrently both succeed and finish one run", async ({
   orm,
   seed,

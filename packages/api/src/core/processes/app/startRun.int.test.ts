@@ -70,6 +70,21 @@ test("an admin starts two parallel tasks with their assignees and due dates", as
   });
 });
 
+test("starts a welcome for an employee id written in uppercase", async ({ orm, seed }) => {
+  const employee = await seed.employee();
+  const processes = processService(orm, { today: () => calendarDate("2026-12-03") });
+
+  const started = await processes.startRun(ADMIN, {
+    processKey: WELCOME_NEW_STARTER,
+    recordId: employee.id.toUpperCase(),
+  });
+
+  expect(started.run).toMatchObject({
+    status: "in_progress",
+    record: { recordType: "employee", recordId: employee.id },
+  });
+});
+
 test("tasks from an admin's welcome are authored by Broccoli with the run as cause", async ({
   orm,
   seed,

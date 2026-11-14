@@ -1,4 +1,3 @@
-import type { DomainEvents } from "../../events";
 import type { EventTrigger, ProcessDefinition } from "./processDefinition";
 
 /**
@@ -14,15 +13,6 @@ export interface TriggeringEventRegistration {
 
 /** The events that may start a process, by type. */
 export type TriggeringEvents = Readonly<Record<string, TriggeringEventRegistration>>;
-
-/** A registration for one event, typed by its payload. */
-export function triggeringEvent<Type extends keyof DomainEvents>(registration: {
-  recordType: string;
-  recordIds(payload: DomainEvents[Type]): readonly string[];
-  payloadFor(payload: DomainEvents[Type], recordId: string): unknown;
-}): TriggeringEventRegistration {
-  return registration;
-}
 
 /** An event as a trigger reads it. */
 export interface TriggerEvent {

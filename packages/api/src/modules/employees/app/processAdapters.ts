@@ -1,11 +1,10 @@
 import { ApplicationError } from "../../../core/applicationError";
+import type { DomainEvents } from "../../../core/events";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import {
   type IsWorkingDay,
   MAX_SEARCH_DAYS,
   type PeoplePort,
-  triggeringEvent,
-  type TriggeringEvents,
   type WorkingCalendarsPort,
   workingDaysOf,
 } from "../../../core/processes";
@@ -22,11 +21,11 @@ export function createPeopleAdapter(): PeoplePort {
   return {
     async readPeople(tx, employeeIds) {
       const found = await readEmployeesByName(tx, employeeIds);
-      const periods = await employmentRepository(tx).findPeriods(found.map(({ id }) => id));
+      const startDates = await employmentRepository(tx).findStartDates(found.map(({ id }) => id));
       return new Map(
         found.map(({ id, firstName }) => [
           id,
-          { id, firstName, startDate: periods.get(id)?.[0]?.startDate ?? null },
+          { id, firstName, startDate: startDates.get(id) ?? null },
         ]),
       );
     },
@@ -78,12 +77,14 @@ export function createWorkingCalendarsAdapter({
 }
 
 /** Employees' events that may start a process: one run per employee added. */
-export const EMPLOYEE_TRIGGERING_EVENTS: TriggeringEvents = {
-  "employees.added": triggeringEvent<"employees.added">({
+export const EMPLOYEE_TRIGGERING_EVENTS = {
+  "employees.added": {
     recordType: "employee",
-    recordIds: ({ employeeIds }) => employeeIds,
-    payloadFor: (_, employeeId) => ({ employeeIds: [employeeId] }),
-  }),
+    recordIds: ({ employeeIds }: DomainEvents["employees.added"]) => employeeIds,
+    payloadFor: (_: DomainEvents["employees.added"], employeeId: string) => ({
+      employeeIds: [employeeId],
+    }),
+  },
 };
 
 function isBankHolidayIn(

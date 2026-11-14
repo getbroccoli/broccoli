@@ -4,9 +4,9 @@ import { createLogger } from "../../src/core/logger";
 import {
   createProcessService,
   processesModule,
-  TASK_TRIGGERING_EVENTS,
+  type TriggeringEventRegistration,
 } from "../../src/core/processes";
-import { taskRecordType } from "../../src/core/tasks";
+import { TASK_TRIGGERING_EVENTS, taskRecordType } from "../../src/core/tasks";
 import {
   createPeopleAdapter,
   createWorkingCalendarsAdapter,
@@ -43,7 +43,7 @@ export function processService(
       bankHolidays: bankHolidayService(),
     }),
     recordTypes: { employee: employeeRecordType(orm), task: taskRecordType(orm) },
-    triggeringEvents: collectRegistrations("triggering event", [
+    triggeringEvents: collectRegistrations<TriggeringEventRegistration>("triggering event", [
       EMPLOYEE_TRIGGERING_EVENTS,
       TASK_TRIGGERING_EVENTS,
     ]),
