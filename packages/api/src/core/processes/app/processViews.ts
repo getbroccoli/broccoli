@@ -1,6 +1,6 @@
 import type { CalendarDate } from "../../../utils";
 import type { TaskStatus } from "../../tasks";
-import type { ProcessRun as StoredRun, RunStatus, RunStep } from "../domain";
+import type { ProcessRunFields as StoredRun, RunStatus, RunStep } from "../domain";
 
 // The shapes the process service returns.
 

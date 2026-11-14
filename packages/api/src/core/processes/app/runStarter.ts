@@ -10,7 +10,7 @@ import {
   dueTriggerDate,
   type IsWorkingDay,
   type ProcessDefinition,
-  type ProcessRun,
+  type ProcessRunFields,
   type RecordDateTrigger,
   resolveAssignee,
   type ResolvedAssignee,
@@ -64,7 +64,7 @@ export interface RunStarter {
    * its tasks' cause, in a fixed number of statements; a run whose steps are all skipped is
    * finished at once. Returns the runs in the order of `starts`.
    */
-  startMany(tx: Tx, starts: readonly RunStart[]): Promise<ProcessRun[]>;
+  startMany(tx: Tx, starts: readonly RunStart[]): Promise<ProcessRunFields[]>;
   /** The records whose date triggers a run today, with the date it triggered on. */
   findDue(
     tx: Tx,
@@ -72,7 +72,7 @@ export interface RunStarter {
     days: { today: CalendarDate; turnedOnDay: CalendarDate },
   ): Promise<{ recordId: string; triggerDate: CalendarDate }[]>;
   /** Each step's title as its task gets it, in the order the run's version lists the steps. */
-  stepTitles(tx: Tx, run: ProcessRun): Promise<Map<string, string>>;
+  stepTitles(tx: Tx, run: ProcessRunFields): Promise<Map<string, string>>;
 }
 
 export function createRunStarter({
@@ -159,7 +159,7 @@ export function createRunStarter({
 
 /** One run being started, with what its steps need. */
 interface RunPlan {
-  run: ProcessRun;
+  run: ProcessRunFields;
   start: RunStart;
   /** Each step's assignee, in the definition's order; null for a step skipped for want of one. */
   assignees: (ResolvedAssignee | null)[];

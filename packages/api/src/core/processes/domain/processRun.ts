@@ -39,8 +39,8 @@ export const SUBJECT_REMOVED = "The person this process is about was removed fro
 /** What the tasks of a run cancelled for a removal tell their assignees; the detail stays on the run. */
 export const PROCESS_CANCELLED = "This process was cancelled.";
 
-/** One run of a process version for one record. */
-export interface ProcessRun {
+/** One run of a process version for one record, as stored. */
+export interface ProcessRunFields {
   id: string;
   processId: string;
   processVersionId: string;
@@ -104,69 +104,114 @@ export function resolveAssignee(
   return fallback;
 }
 
-/** A run whose steps are all completed or skipped is finished; one with an open step is in progress. */
-export function settleRun(run: ProcessRun, steps: readonly RunStep[], now: Date): ProcessRun {
-  const allDone = steps.every(
-    ({ status }) => status === "step_completed" || status === "step_skipped",
-  );
-  if (allDone) {
-    return run.status === "finished" ? run : { ...run, status: "finished", finishedAt: now };
-  }
-  return { ...run, status: "in_progress", finishedAt: null };
-}
-
-export function completeStep(run: ProcessRun, step: RunStep, now: Date): RunStep {
-  refuseUnlessOpen(run);
-  return { ...step, status: "step_completed", finishedAt: now };
-}
-
-/** A run cancelled: open steps cancelled, done steps kept. */
-export function cancelRun(
-  run: ProcessRun,
-  steps: readonly RunStep[],
-  cancellation: { cause: CancelCause; reason: string; byEmployeeId: string | null; now: Date },
-): { run: ProcessRun; steps: RunStep[] } {
-  if (run.status !== "in_progress") {
-    throw new ApplicationError("CONFLICT", "Only a run in progress can be cancelled.");
-  }
-  return {
-    run: {
-      ...run,
-      status: "cancelled",
-      cancelledAt: cancellation.now,
-      cancelledByEmployeeId: cancellation.byEmployeeId,
-      cancelCause: cancellation.cause,
-      cancelReason: cancellation.reason,
-    },
-    steps: steps.map((step) =>
-      step.status === "step_awaiting_task_completion"
-        ? { ...step, status: "step_cancelled", finishedAt: cancellation.now }
-        : step,
-    ),
-  };
-}
-
 /**
- * Why a run in progress can no longer run, if it cannot: its subject is gone, or a step still
- * awaiting its task lost it with its assignee. A step done before its assignee left changes nothing.
+ * A run with its steps, and the rules of its life: its steps complete as their tasks are done, it
+ * finishes when none awaits a task, and it is cancelled when it can no longer run. Every change
+ * returns a new run; the original stays.
  */
-export function removalCancellation(
-  run: ProcessRun,
-  steps: readonly RunStep[],
-  subjectExists: boolean,
-): { cause: CancelCause; stepKey: string | null } | null {
-  if (run.status !== "in_progress") return null;
-  if (!subjectExists) return { cause: "cancelled_because_subject_was_removed", stepKey: null };
-  const orphan = steps.find(
-    ({ status, taskId }) => status === "step_awaiting_task_completion" && taskId === null,
-  );
-  return orphan
-    ? { cause: "cancelled_because_step_assignee_was_removed", stepKey: orphan.stepKey }
-    : null;
-}
+export class ProcessRun implements Readonly<ProcessRunFields> {
+  declare readonly id: string;
+  declare readonly processId: string;
+  declare readonly processVersionId: string;
+  declare readonly recordType: string;
+  declare readonly recordId: string;
+  declare readonly subjectEmployeeId: string | null;
+  declare readonly startCause: StartCause;
+  declare readonly startedByEmployeeId: string | null;
+  declare readonly triggerDate: CalendarDate | null;
+  declare readonly startKey: string | null;
+  declare readonly triggerEvent: TriggerEvent | null;
+  declare readonly startDay: CalendarDate;
+  declare readonly status: RunStatus;
+  declare readonly finishedAt: Date | null;
+  declare readonly cancelledAt: Date | null;
+  declare readonly cancelledByEmployeeId: string | null;
+  declare readonly cancelCause: CancelCause | null;
+  declare readonly cancelReason: string | null;
+  declare readonly createdAt: Date;
+  declare readonly updatedAt: Date;
 
-function refuseUnlessOpen(run: ProcessRun): void {
-  if (run.status === "cancelled") {
-    throw new ApplicationError("CONFLICT", PROCESS_CANCELLED);
+  readonly steps: readonly RunStep[];
+
+  private constructor(fields: ProcessRunFields, steps: readonly RunStep[]) {
+    Object.assign(this, fields);
+    this.steps = steps;
+  }
+
+  /** The run and its steps, as stored. */
+  static restore(fields: ProcessRunFields, steps: readonly RunStep[]): ProcessRun {
+    return new ProcessRun(fields, steps);
+  }
+
+  /** The tasks of steps still awaiting them. */
+  openTaskIds(): string[] {
+    return this.steps.flatMap(({ status, taskId }) =>
+      status === "step_awaiting_task_completion" && taskId ? [taskId] : [],
+    );
+  }
+
+  /**
+   * Completes the steps awaiting these tasks, and finishes the run once no step awaits a task; a
+   * run that cannot go on stays in progress, for the daily check to cancel.
+   */
+  completeTasks(taskIds: ReadonlySet<string>, now: Date, canGoOn: boolean): ProcessRun {
+    if (this.status === "cancelled") {
+      throw new ApplicationError("CONFLICT", PROCESS_CANCELLED);
+    }
+    const steps = this.steps.map((step) =>
+      step.status === "step_awaiting_task_completion" && step.taskId && taskIds.has(step.taskId)
+        ? { ...step, status: "step_completed" as const, finishedAt: now }
+        : step,
+    );
+    const allDone = steps.every(
+      ({ status }) => status === "step_completed" || status === "step_skipped",
+    );
+    if (!canGoOn || !allDone || this.status === "finished") return this.with({}, steps);
+    return this.with({ status: "finished", finishedAt: now }, steps);
+  }
+
+  /**
+   * Why a run in progress can no longer run, if it cannot: its subject is gone, or a step still
+   * awaiting its task lost it with its assignee. A step done before its assignee left changes nothing.
+   */
+  removal(subjectExists: boolean): { cause: CancelCause; stepKey: string | null } | null {
+    if (this.status !== "in_progress") return null;
+    if (!subjectExists) return { cause: "cancelled_because_subject_was_removed", stepKey: null };
+    const orphan = this.steps.find(
+      ({ status, taskId }) => status === "step_awaiting_task_completion" && taskId === null,
+    );
+    return orphan
+      ? { cause: "cancelled_because_step_assignee_was_removed", stepKey: orphan.stepKey }
+      : null;
+  }
+
+  /** Cancels a run in progress: its awaiting steps are cancelled, done steps stay. */
+  cancel(cancellation: {
+    cause: CancelCause;
+    reason: string;
+    byEmployeeId: string | null;
+    now: Date;
+  }): ProcessRun {
+    if (this.status !== "in_progress") {
+      throw new ApplicationError("CONFLICT", "Only a run in progress can be cancelled.");
+    }
+    return this.with(
+      {
+        status: "cancelled",
+        cancelledAt: cancellation.now,
+        cancelledByEmployeeId: cancellation.byEmployeeId,
+        cancelCause: cancellation.cause,
+        cancelReason: cancellation.reason,
+      },
+      this.steps.map((step) =>
+        step.status === "step_awaiting_task_completion"
+          ? { ...step, status: "step_cancelled", finishedAt: cancellation.now }
+          : step,
+      ),
+    );
+  }
+
+  private with(changes: Partial<ProcessRunFields>, steps: readonly RunStep[]): ProcessRun {
+    return new ProcessRun({ ...this, ...changes }, steps);
   }
 }

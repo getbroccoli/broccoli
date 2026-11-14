@@ -4,17 +4,7 @@ import type { PublishedEvent } from "../../events";
 import { PrincipalSecurityContext, type SecurityContext } from "../../security";
 import type { TaskService } from "../../tasks";
 import { processRepository } from "../db";
-import {
-  type CancelCause,
-  cancelRun,
-  completeStep,
-  PROCESS_CANCELLED,
-  type ProcessRun as StoredRun,
-  removalCancellation,
-  type RunStep,
-  settleRun,
-  SUBJECT_REMOVED,
-} from "../domain";
+import { PROCESS_CANCELLED, type ProcessRun, SUBJECT_REMOVED } from "../domain";
 import type { StepProgress } from "./processViews";
 import type { RunStarter } from "./runStarter";
 
@@ -36,7 +26,7 @@ export interface RunLifecycleService {
    * else as it was. The run cancels itself, so Broccoli is the author. The caller holds the run's
    * open tasks before the run.
    */
-  cancelIfCannotRun(tx: Tx, run: StoredRun): Promise<StoredRun>;
+  cancelIfCannotRun(tx: Tx, run: ProcessRun): Promise<ProcessRun>;
 }
 
 export function createRunLifecycleService({
@@ -65,22 +55,14 @@ export function createRunLifecycleService({
       const now = new Date();
       for (const runId of [...new Set(awaiting.map((step) => step.runId))].sort()) {
         const run = (await runs.lockRun(runId))!;
-        const steps = (await runs.findSteps(runId)).map((step) =>
-          step.status === "step_awaiting_task_completion" && doneTaskIds.has(step.taskId!)
-            ? completeStep(run, step, now)
-            : step,
-        );
-        const completed = steps.filter(({ taskId }) => taskId && doneTaskIds.has(taskId));
-        await runs.saveSteps(completed);
         // A run that can no longer run stays in progress for the daily check, which cancels it.
-        const settled = (await removalOf(starter, tx, run, steps))
-          ? run
-          : settleRun(run, steps, now);
-        if (settled !== run) await runs.saveRun(settled);
+        const canGoOn = (await removalOf(starter, tx, run)) === null;
+        const changed = run.completeTasks(doneTaskIds, now, canGoOn);
+        await runs.saveRun(changed);
         tx.publish("processes.steps_completed", {
           runId,
-          taskIds: completed.map(({ taskId }) => taskId!),
-          runStatus: settled.status,
+          taskIds: run.openTaskIds().filter((taskId) => doneTaskIds.has(taskId)),
+          runStatus: changed.status,
         });
       }
     },
@@ -94,9 +76,7 @@ export function createRunLifecycleService({
         // Locked, so a step change committing meanwhile cannot pair its steps with the old status.
         const run = (await runs.lockRun(step.runId))!;
         const [process] = await runs.findProcessesByIds([run.processId]);
-        const steps = (await runs.findSteps(run.id)).filter(
-          ({ status }) => status !== "step_skipped",
-        );
+        const steps = run.steps.filter(({ status }) => status !== "step_skipped");
         return {
           processName: process!.name,
           subjectEmployeeId: run.subjectEmployeeId,
@@ -109,23 +89,25 @@ export function createRunLifecycleService({
 
     async cancelIfCannotRun(tx, run) {
       if (run.status !== "in_progress") return run;
-      const removal = await removalOf(
-        starter,
-        tx,
-        run,
-        await processRepository(tx).findSteps(run.id),
-      );
+      const removal = await removalOf(starter, tx, run);
       if (!removal) return run;
       const reason =
         removal.cause === "cancelled_because_subject_was_removed"
           ? SUBJECT_REMOVED
           : `The assignee of '${(await starter.stepTitles(tx, run)).get(removal.stepKey!)}' was removed from Broccoli.`;
-      return cancelAndSave(tasks, PrincipalSecurityContext.system(), tx, run, {
+      const cancelled = run.cancel({
         cause: removal.cause,
         reason,
-        taskReason: PROCESS_CANCELLED,
         byEmployeeId: null,
+        now: new Date(),
       });
+      await tasks.cancelInTransaction(PrincipalSecurityContext.system(), tx, {
+        taskIds: run.openTaskIds(),
+        reason: PROCESS_CANCELLED,
+        cause: { kind: "PROCESS_RUN", ref: run.id },
+      });
+      await processRepository(tx).saveRun(cancelled);
+      return cancelled;
     },
   };
 }
@@ -134,40 +116,10 @@ export function createRunLifecycleService({
  * Why the run can no longer run, or null: its record or the person it is about is gone, or a step
  * still waiting lost its task with its assignee.
  */
-async function removalOf(starter: RunStarter, tx: Tx, run: StoredRun, steps: readonly RunStep[]) {
+async function removalOf(starter: RunStarter, tx: Tx, run: ProcessRun) {
   const subjects = await starter.readRecordSubjects(tx, run.recordType, [run.recordId]);
   const subjectExists =
     subjects.has(run.recordId) &&
     (run.subjectEmployeeId === null || subjects.get(run.recordId) !== null);
-  return removalCancellation(run, steps, subjectExists);
-}
-
-/** Cancels the locked run: its open tasks with `taskReason`, the run with its cause and reason. */
-async function cancelAndSave(
-  tasks: TaskService,
-  ctx: SecurityContext,
-  tx: Tx,
-  run: StoredRun,
-  how: Cancellation,
-): Promise<StoredRun> {
-  const runs = processRepository(tx);
-  const steps = await runs.findSteps(run.id);
-  const cancelled = cancelRun(run, steps, { ...how, now: new Date() });
-  await tasks.cancelInTransaction(ctx, tx, {
-    taskIds: steps.flatMap(({ status, taskId }) =>
-      status === "step_awaiting_task_completion" && taskId ? [taskId] : [],
-    ),
-    reason: how.taskReason,
-    cause: { kind: "PROCESS_RUN", ref: run.id },
-  });
-  await runs.saveSteps(cancelled.steps);
-  return runs.saveRun(cancelled.run);
-}
-
-/** How a run is cancelled: its own cause and reason, and the reason its open tasks get. */
-interface Cancellation {
-  cause: CancelCause;
-  reason: string;
-  taskReason: string;
-  byEmployeeId: string | null;
+  return run.removal(subjectExists);
 }

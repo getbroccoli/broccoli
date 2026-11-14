@@ -3,7 +3,7 @@ import type { Orm, Transact, Tx } from "../../db";
 import { parseUuid } from "../../../utils";
 import type { Task, TaskService } from "../../tasks";
 import { processRepository, type StoredProcess } from "../db";
-import type { ProcessRun as StoredRun, RunStep } from "../domain";
+import type { ProcessRunFields as StoredRun, RunStep } from "../domain";
 import type { ProcessRun, ProcessRunDetails, ProcessRunStep } from "./processViews";
 import type { RunStarter } from "./runStarter";
 
@@ -47,7 +47,7 @@ export function createRunReader({
         const runs = processRepository(tx);
         const current = (await runs.lockRun(run.id))!;
         const [process] = await runs.findProcessesByIds([current.processId]);
-        const steps = await runs.findSteps(current.id);
+        const { steps } = current;
         const taskIds = steps.flatMap(({ taskId }) => (taskId ? [taskId] : []));
         const runTasks = await tasks.readTasksInTransaction(tx, taskIds);
         const titles = await starter.stepTitles(tx, current);

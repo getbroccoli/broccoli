@@ -4,7 +4,12 @@ import type { SecurityContext } from "../../security";
 import { addDays, type CalendarDate, dateInLondon } from "../../../utils";
 import { processRepository, type StoredProcess } from "../db";
 import type { TaskService } from "../../tasks";
-import { dueTriggerDate, type ProcessRun, type RecordDateTrigger } from "../domain";
+import {
+  dueTriggerDate,
+  type ProcessRun,
+  type ProcessRunFields,
+  type RecordDateTrigger,
+} from "../domain";
 import type { RunLifecycleService } from "./runLifecycleService";
 import type { DefinitionReader, ProcessRecordTypes, RunStarter } from "./runStarter";
 
@@ -80,14 +85,12 @@ async function checkRun(
   runId: string,
 ): Promise<ProcessRun | null> {
   const runs = processRepository(tx);
-  const openTaskIds = async () =>
-    (await runs.findSteps(runId)).flatMap(({ status, taskId }) =>
-      status === "step_awaiting_task_completion" && taskId ? [taskId] : [],
-    );
-  const locked = await openTaskIds();
+  const locked = (await runs.findSteps(runId)).flatMap(({ status, taskId }) =>
+    status === "step_awaiting_task_completion" && taskId ? [taskId] : [],
+  );
   await tasks.lockInTransaction(tx, locked);
   const run = (await runs.lockRun(runId))!;
-  if (String(await openTaskIds()) !== String(locked)) return null;
+  if (String(run.openTaskIds()) !== String(locked)) return null;
   return lifecycle.cancelIfCannotRun(tx, run);
 }
 
@@ -97,7 +100,7 @@ async function startOne(
   process: StoredProcess,
   recordId: string,
   today: CalendarDate,
-): Promise<ProcessRun | null> {
+): Promise<ProcessRunFields | null> {
   const { transact, logger } = dependencies;
   try {
     const run = await transact((tx) =>
@@ -127,7 +130,7 @@ async function startIfStillDue(
   { starter, recordTypes, definitionOf }: DueRunDependencies,
   tx: Tx,
   { processId, recordId, today }: { processId: string; recordId: string; today: CalendarDate },
-): Promise<ProcessRun | null> {
+): Promise<ProcessRunFields | null> {
   const processes = processRepository(tx);
   await processes.lockProcess(processId);
   const [process] = await processes.findProcessesByIds([processId]);

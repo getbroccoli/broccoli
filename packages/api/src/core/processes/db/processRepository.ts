@@ -2,7 +2,12 @@ import { and, desc, eq, inArray, isNotNull, type SQL, sql } from "drizzle-orm";
 
 import { ormOf, type Orm, type OrmTransaction, type Tx } from "../../db";
 import { inRecordScope, type RecordScope } from "../../security";
-import { PROCESS_DEFINITION_SCHEMA_VERSION, type ProcessRun, type RunStep } from "../domain";
+import {
+  PROCESS_DEFINITION_SCHEMA_VERSION,
+  ProcessRun,
+  type ProcessRunFields,
+  type RunStep,
+} from "../domain";
 import { processes, processVersions } from "./processesTable";
 import { processRuns, processRunSteps } from "./processRunsTable";
 
@@ -26,7 +31,7 @@ export interface NewProcessRow {
 }
 
 /** A run as it is stored before it has an id and timestamps. */
-export type NewRunRow = Omit<ProcessRun, "id" | "createdAt" | "updatedAt">;
+export type NewRunRow = Omit<ProcessRunFields, "id" | "createdAt" | "updatedAt">;
 
 /** Stored processes, their versions, runs and run steps. */
 export interface ProcessRepository {
@@ -49,13 +54,13 @@ export interface ProcessRepository {
   insertProcess(process: NewProcessRow): Promise<{ id: string; key: string }>;
   setTurnedOnAt(id: string, turnedOnAt: Date | null): Promise<void>;
   /** Inserts the runs in batches; returns them in the same order. */
-  insertRuns(runs: readonly NewRunRow[]): Promise<ProcessRun[]>;
+  insertRuns(runs: readonly NewRunRow[]): Promise<ProcessRunFields[]>;
   insertSteps(steps: readonly RunStep[]): Promise<void>;
-  findRun(id: string): Promise<ProcessRun | null>;
-  /** The run, locked until the transaction ends, so step changes on it take turns. */
+  findRun(id: string): Promise<ProcessRunFields | null>;
+  /** The run with its steps, locked until the transaction ends, so changes to it take turns. */
   lockRun(id: string): Promise<ProcessRun | null>;
-  saveRun(run: ProcessRun): Promise<ProcessRun>;
-  saveSteps(steps: readonly RunStep[]): Promise<void>;
+  /** Writes the run and its steps. */
+  saveRun(run: ProcessRun): Promise<void>;
   /** The run's steps, in no particular order. */
   findSteps(runId: string): Promise<RunStep[]>;
   /** The steps whose tasks are among these, whatever their run. */
@@ -65,9 +70,9 @@ export interface ProcessRepository {
     taskIds: readonly string[],
   ): Promise<Map<string, { processKey: string; stepKey: string }>>;
   /** The runs of the process whose subject is in `scope`, newest first; FORBIDDEN for "none". */
-  listRuns(processId: string, scope: RecordScope): Promise<ProcessRun[]>;
+  listRuns(processId: string, scope: RecordScope): Promise<ProcessRunFields[]>;
   /** Every run in progress, of every process. */
-  listRunsInProgress(): Promise<ProcessRun[]>;
+  listRunsInProgress(): Promise<ProcessRunFields[]>;
   /** The records among these that already had any run of the process. */
   findRecordsWithRuns(
     processId: string,
@@ -85,7 +90,7 @@ export interface ProcessRepository {
     processId: string,
     recordType: string,
     recordId: string,
-  ): Promise<ProcessRun | null>;
+  ): Promise<ProcessRunFields | null>;
   /** Back to a fresh workspace: deletes every run (their steps and tasks with them), turns every process off. */
   reset(): Promise<void>;
 }
@@ -186,7 +191,7 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
     },
 
     async insertRuns(runs) {
-      const inserted: ProcessRun[] = [];
+      const inserted: ProcessRunFields[] = [];
       for (let start = 0; start < runs.length; start += INSERT_BATCH_SIZE) {
         const batch = runs.slice(start, start + INSERT_BATCH_SIZE);
         inserted.push(...(await orm.insert(processRuns).values(batch).returning()));
@@ -211,19 +216,16 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
         .from(processRuns)
         .where(eq(processRuns.id, id))
         .for("update");
-      return row ?? null;
+      if (!row) return null;
+      const steps = await orm.select().from(processRunSteps).where(eq(processRunSteps.runId, id));
+      return ProcessRun.restore(row, steps);
     },
 
-    async saveRun(run) {
-      const [row] = await orm
+    async saveRun({ steps, ...run }) {
+      await orm
         .update(processRuns)
         .set({ ...run, updatedAt: new Date() })
-        .where(eq(processRuns.id, run.id))
-        .returning();
-      return row!;
-    },
-
-    async saveSteps(steps) {
+        .where(eq(processRuns.id, run.id));
       for (const { runId, stepKey, ...step } of steps) {
         await orm
           .update(processRunSteps)
