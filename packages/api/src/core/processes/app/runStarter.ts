@@ -50,8 +50,6 @@ export interface RunStart {
 
 /** Starts runs: their steps' assignees, tasks and due dates. */
 export interface RunStarter {
-  /** The person with this id, or null when there is none. */
-  readSubject(tx: Tx, employeeId: string): Promise<RunSubject | null>;
   /**
    * The subject of each record among these that still exists, by record id: the person it is
    * about, null for nobody. A record that is gone is left out.
@@ -94,9 +92,6 @@ export function createRunStarter({
     ids.length === 0 ? Promise.resolve(new Map<string, RunSubject>()) : people.readPeople(tx, ids);
 
   return {
-    readSubject: async (tx, employeeId) =>
-      (await readPeople(tx, [employeeId])).get(employeeId) ?? null,
-
     async readRecordSubjects(tx, recordType, recordIds) {
       const subjectIds = await recordTypes[recordType]!.readSubjects(tx, [...new Set(recordIds)]);
       const found = await readPeople(

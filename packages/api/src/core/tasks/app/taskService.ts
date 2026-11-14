@@ -1,5 +1,5 @@
 import { ApplicationError } from "../../applicationError";
-import type { Transact, Tx } from "../../db";
+import type { Tx } from "../../db";
 import type { ModuleDependencies } from "../../moduleManifest";
 import {
   createRecordHistoryReaderService,
@@ -145,9 +145,13 @@ export function createTaskService({
     readTaskHistory: (ctx, taskId, args) => historyReader.readHistory(ctx, "task", taskId, args),
 
     async markDone(ctx, taskId) {
-      const done = await changeTask(transact, ctx, taskId, (task, employeeId) => {
+      const done = await transact(async (tx) => {
+        const { task, employeeId } = await lockVisible(ctx, tx, taskId);
         refuseUnlessAssignee(task, employeeId, MARK_DONE_REFUSAL);
-        return markTaskDone(task, employeeId, new Date());
+        const saved = await taskRepository(tx).saveStatus(
+          markTaskDone(task, employeeId, new Date()),
+        );
+        return { task: saved, historyLine: await appendStatusChange(ctx, tx, task, saved) };
       });
       logger.info({ taskId: done.task.id, type: done.task.type }, "Task marked done");
       return done;
@@ -155,9 +159,7 @@ export function createTaskService({
 
     async deleteTask(ctx, taskId) {
       const deleted = await transact(async (tx) => {
-        const tasks = taskRepository(tx);
-        const id = parseUuid(taskId);
-        const { task, employeeId } = requireVisible(ctx, id ? await tasks.lockById(id) : null);
+        const { task, employeeId } = await lockVisible(ctx, tx, taskId);
         if (task.askedByEmployeeId !== employeeId) {
           throw new ApplicationError(
             "FORBIDDEN",
@@ -165,7 +167,7 @@ export function createTaskService({
           );
         }
         refuseClosed(task);
-        await tasks.delete(task.id);
+        await taskRepository(tx).delete(task.id);
         await history.append(ctx, tx, {
           recordType: "task",
           operation: "DELETED",
@@ -198,28 +200,14 @@ export function createTaskService({
   };
 }
 
-/** Changes one task the caller may see, inside one transaction, with its history line. */
-async function changeTask(
-  transact: Transact,
-  ctx: SecurityContext,
-  taskId: string,
-  change: (task: Task, employeeId: string) => Task,
-): Promise<TaskChange> {
-  return transact((tx) => changeLockedTask(ctx, tx, taskId, change));
-}
-
-/** Changes one task the caller may see, locked in `tx`, with the history line it appends. */
-async function changeLockedTask(
+/** The task, locked in `tx` so the first change wins, if the caller holds or asked for it. */
+async function lockVisible(
   ctx: SecurityContext,
   tx: Tx,
   taskId: string,
-  change: (task: Task, employeeId: string) => Task,
-): Promise<TaskChange> {
-  const tasks = taskRepository(tx);
+): Promise<{ task: Task; employeeId: string }> {
   const id = parseUuid(taskId);
-  const { task, employeeId } = requireVisible(ctx, id ? await tasks.lockById(id) : null);
-  const saved = await tasks.saveStatus(change(task, employeeId));
-  return { task: saved, historyLine: await appendStatusChange(ctx, tx, task, saved) };
+  return requireVisible(ctx, id ? await taskRepository(tx).lockById(id) : null);
 }
 
 /** Appends the status change to the task's history and publishes it. */

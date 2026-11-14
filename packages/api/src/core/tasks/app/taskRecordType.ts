@@ -25,7 +25,7 @@ export function taskRecordType(orm: Orm): RecordTypeRegistration {
     // A process on a task is about the task's subject, who gains no access to the task by it.
     processes: {
       readSubjects: async (tx, ids) => {
-        const tasks = await taskRepository(tx).findByIds(ids);
+        const tasks = await taskRepository(tx).findByIds(ids.flatMap((id) => parseUuid(id) ?? []));
         return new Map(tasks.map(({ id, subjectEmployeeId }) => [id, subjectEmployeeId]));
       },
     },

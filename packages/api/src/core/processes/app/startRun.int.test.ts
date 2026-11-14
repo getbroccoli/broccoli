@@ -4,9 +4,11 @@ import {
   SYSTEM,
   employeeServices,
   calendarDate,
+  eventProcess,
   expect,
   processService,
   seedOwnWeek,
+  seedProcess,
   seedWorkingPattern,
   signedIn,
   taskService,
@@ -235,6 +237,16 @@ test("refuses a manual welcome without a create grant", async ({ orm, seed }) =>
       recordId: employee.id,
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
+});
+
+test("refuses a malformed task record id as not found", async ({ orm }) => {
+  const definition = eventProcess("tasks.task_created");
+  definition.startableByAdmin = true;
+  const { key } = await seedProcess(orm, { key: "follow_up", definition });
+
+  await expect(
+    processService(orm).startRun(ADMIN, { processKey: key, recordId: "not-a-uuid" }),
+  ).rejects.toMatchObject({ code: "NOT_FOUND", message: "No record has this id." });
 });
 
 test("refuses a due date beyond the bank holiday data without leaving a run or tasks", async ({
