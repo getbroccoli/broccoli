@@ -2,9 +2,15 @@ import { readSdl } from "../graphql";
 import { PrincipalSecurityContext } from "../security";
 import type { ModuleDependencies, ModuleManifest } from "../moduleManifest";
 import { type ProcessService, startDueRunsJob } from "./app";
+import { createResolvers } from "./graphql";
 
 // Public values.
-export { createProcessService } from "./app";
+export { createProcessService, PROCESS_STEP_TO_DO, TASK_TRIGGERING_EVENTS } from "./app";
+export { triggeringEvent, type IsWorkingDay, MAX_SEARCH_DAYS, workingDaysOf } from "./domain";
+
+// Public types.
+export type { PeoplePort, ProcessService, RunSubject, WorkingCalendarsPort } from "./app";
+export type { TriggeringEventRegistration, TriggeringEvents } from "./domain";
 
 /** Processes that give people tasks when something happens to a record, and their runs. */
 export function processesModule({
@@ -14,7 +20,7 @@ export function processesModule({
   return {
     name: "processes",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
-    resolvers: {},
+    resolvers: createResolvers(processes),
     jobs: startDueRunsJob({ processes, logger }),
     events: {
       // Logged once the change commits, never for runs a rollback dropped.
@@ -22,8 +28,13 @@ export function processesModule({
         Promise.resolve(
           logger.info(started, "Process runs started with the change that triggered them"),
         ),
+      "processes.steps_completed": (completed) =>
+        Promise.resolve(logger.info(completed, "Process step done")),
     },
-    eventsBeforeCommit: (tx, events) =>
-      processes.startRunsOnEvents(PrincipalSecurityContext.system(), tx, events),
+    // A run follows its done tasks first, so the events that start runs see it settled.
+    eventsBeforeCommit: async (tx, events) => {
+      await processes.completeStepsOfDoneTasks(tx, events);
+      await processes.startRunsOnEvents(PrincipalSecurityContext.system(), tx, events);
+    },
   };
 }

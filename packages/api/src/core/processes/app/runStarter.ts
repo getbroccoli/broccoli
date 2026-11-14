@@ -1,13 +1,7 @@
-import type { Orm, Transact, Tx } from "../../db";
+import type { Tx } from "../../db";
+import type { RecordProcessCapabilities } from "../../records";
 import { PrincipalSecurityContext } from "../../security";
 import { addDays, type CalendarDate } from "../../../utils";
-import type { BankHolidayService } from "../../../modules/bankHolidays";
-import {
-  createEmployeeReadService,
-  createEmployeeWorkingPatternService,
-  employeeDirectory,
-  type EmployeeReadService,
-} from "../../../modules/employees";
 import type { NewTask, TaskService } from "../../tasks";
 import { type NewRunRow, processRepository, type StoredProcess } from "../db";
 import {
@@ -15,7 +9,6 @@ import {
   type DayOffset,
   dueTriggerDate,
   type IsWorkingDay,
-  parseProcessDefinition,
   type ProcessDefinition,
   type ProcessRun,
   type RecordDateTrigger,
@@ -25,22 +18,26 @@ import {
   type StartCause,
   type TriggerEvent,
 } from "../domain";
-import { createWorkingCalendars } from "./workingCalendars";
+import type { PeoplePort, RunSubject, WorkingCalendarsPort } from "./ports";
 
-/** The person a run is about, as starting it needs them. */
-export interface RunSubject {
-  id: string;
-  firstName: string;
-  /** Their first employment's start. */
-  startDate: CalendarDate | null;
-}
+/** A process's own task type: a step's to-do, whose done step processes follows. */
+export const PROCESS_STEP_TO_DO = "process_step_to_do";
+
+/** What processes may do with each record type that registered its process capabilities. */
+export type ProcessRecordTypes = Readonly<Record<string, RecordProcessCapabilities>>;
+
+/** A stored version's definition, parsed against what the modules registered. */
+export type DefinitionReader = (version: {
+  schemaVersion: number;
+  definition: unknown;
+}) => ProcessDefinition;
 
 /** What starting one run needs; the caller holds the process's lock and has checked it may start. */
 export interface RunStart {
   process: StoredProcess;
   definition: ProcessDefinition;
   /** The record the run is about. */
-  record: { recordType: ProcessDefinition["subject"]["recordType"]; recordId: string };
+  record: { recordType: string; recordId: string };
   /** The person the run is about: the employee, or a task's subject; null for nobody. */
   subject: RunSubject | null;
   startCause: StartCause;
@@ -55,52 +52,69 @@ export interface RunStart {
 export interface RunStarter {
   /** The person with this id, or null when there is none. */
   readSubject(tx: Tx, employeeId: string): Promise<RunSubject | null>;
-  /** The people among these ids that exist, by id. */
-  readSubjects(tx: Tx, employeeIds: readonly string[]): Promise<Map<string, RunSubject>>;
+  /**
+   * The subject of each record among these that still exists, by record id: the person it is
+   * about, null for nobody. A record that is gone is left out.
+   */
+  readRecordSubjects(
+    tx: Tx,
+    recordType: string,
+    recordIds: readonly string[],
+  ): Promise<Map<string, RunSubject | null>>;
   /**
    * Trusted: creates the runs, their steps and their tasks in `tx`, as Broccoli, with each run as
    * its tasks' cause, in a fixed number of statements; a run whose steps are all skipped is
    * finished at once. Returns the runs in the order of `starts`.
    */
   startMany(tx: Tx, starts: readonly RunStart[]): Promise<ProcessRun[]>;
-  /** The people whose start date triggers a run today, with the date it triggered on. */
+  /** The records whose date triggers a run today, with the date it triggered on. */
   findDue(
     tx: Tx,
     trigger: RecordDateTrigger,
     days: { today: CalendarDate; turnedOnDay: CalendarDate },
-  ): Promise<{ employeeId: string; triggerDate: CalendarDate }[]>;
+  ): Promise<{ recordId: string; triggerDate: CalendarDate }[]>;
   /** Each step's title as its task gets it, in the order the run's version lists the steps. */
   stepTitles(tx: Tx, run: ProcessRun): Promise<Map<string, string>>;
 }
 
 export function createRunStarter({
-  orm,
-  transact,
   tasks,
-  bankHolidays,
+  people,
+  workingCalendars,
+  recordTypes,
+  definitionOf,
 }: {
-  orm: Orm;
-  transact: Transact;
   tasks: TaskService;
-  bankHolidays: BankHolidayService;
+  people: PeoplePort;
+  workingCalendars: WorkingCalendarsPort;
+  recordTypes: ProcessRecordTypes;
+  definitionOf: DefinitionReader;
 }): RunStarter {
-  const employees = createEmployeeReadService({ orm });
-  const calendars = createWorkingCalendars({
-    workingPatterns: createEmployeeWorkingPatternService({ transact }),
-    bankHolidays,
-  });
-  const readSubjects = (tx: Tx, ids: readonly string[]) => readSubjectsOf(employees, tx, ids);
+  const readPeople = (tx: Tx, ids: readonly string[]) =>
+    ids.length === 0 ? Promise.resolve(new Map<string, RunSubject>()) : people.readPeople(tx, ids);
 
   return {
     readSubject: async (tx, employeeId) =>
-      (await readSubjects(tx, [employeeId])).get(employeeId) ?? null,
+      (await readPeople(tx, [employeeId])).get(employeeId) ?? null,
 
-    readSubjects,
+    async readRecordSubjects(tx, recordType, recordIds) {
+      const subjectIds = await recordTypes[recordType]!.readSubjects(tx, [...new Set(recordIds)]);
+      const found = await readPeople(
+        tx,
+        [...subjectIds.values()].flatMap((id) => (id ? [id] : [])),
+      );
+      return new Map(
+        [...subjectIds].map(([recordId, subjectId]) => [
+          recordId,
+          subjectId ? (found.get(subjectId) ?? null) : null,
+        ]),
+      );
+    },
 
     async startMany(tx, starts) {
       if (starts.length === 0) return [];
-      const assignees = await resolveAssignees(employees, tx, starts);
-      const workingDays = await calendars.readWorkingDays(tx, {
+      const assignees = await resolveAssignees(people, tx, starts);
+      const workingDays = await workingCalendars.readWorkingDays(tx, {
         employeeIds: subjectsCountingBusinessDays(starts),
         days: starts.map(({ startDay }) => startDay),
       });
@@ -124,23 +138,24 @@ export function createRunStarter({
     },
 
     async findDue(tx, trigger, days) {
-      // A start date's trigger date is at most the offset's span away from it.
+      // A record's trigger date is at most the offset's span away from its date.
       const span = spanOf(trigger.offset) + trigger.maxDaysLate;
-      const starts = await employees.readEmployeesStartingBetween(tx, {
+      const dates = await recordTypes[trigger.recordType]!.findByDateBetween!(tx, {
+        field: trigger.dateField,
         from: addDays(days.today, -span),
         until: addDays(days.today, span),
       });
-      return [...starts].flatMap(([employeeId, startDate]) => {
-        const triggerDate = dueTriggerDate(trigger, startDate, days);
-        return triggerDate ? [{ employeeId, triggerDate }] : [];
+      return [...dates].flatMap(([recordId, date]) => {
+        const triggerDate = dueTriggerDate(trigger, date, days);
+        return triggerDate ? [{ recordId, triggerDate }] : [];
       });
     },
 
     async stepTitles(tx, run) {
       const version = (await processRepository(tx).findVersion(run.processVersionId))!;
-      const { steps } = parseProcessDefinition(version.schemaVersion, version.definition);
+      const { steps } = definitionOf(version);
       const subject = run.subjectEmployeeId
-        ? ((await readSubjects(tx, [run.subjectEmployeeId])).get(run.subjectEmployeeId) ?? null)
+        ? ((await readPeople(tx, [run.subjectEmployeeId])).get(run.subjectEmployeeId) ?? null)
         : null;
       return new Map(steps.map(({ key, title }) => [key, filled(title, subject)]));
     },
@@ -156,39 +171,19 @@ interface RunPlan {
   isWorkingDay: IsWorkingDay | null;
 }
 
-/** The people among these ids that exist, with their first employment's start, by id. */
-async function readSubjectsOf(
-  employees: EmployeeReadService,
-  tx: Tx,
-  employeeIds: readonly string[],
-): Promise<Map<string, RunSubject>> {
-  if (employeeIds.length === 0) return new Map();
-  const found = await employees.readEmployeesByName(tx, employeeIds);
-  const periods = await employees.readEmploymentPeriods(
-    tx,
-    found.map(({ id }) => id),
-  );
-  return new Map(
-    found.map(({ id, firstName }) => [
-      id,
-      { id, firstName, startDate: periods.get(id)?.[0]?.startDate ?? null },
-    ]),
-  );
-}
-
 /** Each start's step assignees, with each subject's manager on its start day and the owner. */
 async function resolveAssignees(
-  employees: EmployeeReadService,
+  people: PeoplePort,
   tx: Tx,
   starts: readonly RunStart[],
 ): Promise<(ResolvedAssignee | null)[][]> {
-  const owner = await employeeDirectory(tx).ownersEmployeeId();
+  const owner = await people.readOwner(tx);
   const managersByDay = new Map<CalendarDate, Map<string, string>>();
   for (const day of new Set(starts.map(({ startDay }) => startDay))) {
     const employeeIds = starts.flatMap((start) =>
       start.startDay === day && start.subject ? [start.subject.id] : [],
     );
-    managersByDay.set(day, await employees.readManagerIdsOn(tx, { employeeIds, date: day }));
+    managersByDay.set(day, await people.readManagersOn(tx, { employeeIds, date: day }));
   }
   return starts.map(({ definition, subject, startDay }) => {
     const candidates = {
@@ -238,11 +233,11 @@ function newTasksOf({ run, start, assignees, isWorkingDay }: RunPlan): NewTask[]
     if (!assignee) return [];
     return [
       {
-        type: "process_step_to_do",
+        type: PROCESS_STEP_TO_DO,
+        sourceKey: start.process.key,
         title: filled(step.title, start.subject),
         description: step.description === null ? null : filled(step.description, start.subject),
         assigneeEmployeeId: assignee.employeeId,
-        processSource: { processKey: start.process.key, processRunId: run.id, stepKey: step.key },
         subjectEmployeeId: start.subject?.id ?? null,
         record: { recordType: run.recordType, recordId: run.recordId },
         dueDate: addDayOffset(start.startDay, step.due, isWorkingDay),

@@ -21,6 +21,7 @@ export { parseXlsx } from "./xlsx";
 export { parseOrigin } from "./origin";
 export { readCookie } from "./readCookie";
 export { urlUnder } from "./urlUnder";
+export { collectRegistrations } from "./collectRegistrations";
 export { parseUuid } from "./uuid";
 
 // Public types.

@@ -1,22 +1,11 @@
 import { ApplicationError } from "../../applicationError";
 import type { CalendarDate } from "../../../utils";
 
-/**
- * `manual_to_do` is finished by hand with Mark done; `process_step_to_do` is a process step's to-do,
- * finished through processes so its run keeps up. Features add their own types.
- */
-export const TASK_TYPES = ["manual_to_do", "process_step_to_do"] as const;
-export type TaskType = (typeof TASK_TYPES)[number];
+/** A task a person asked for; features that create tasks, such as processes, name their own types. */
+export const MANUAL_TO_DO = "manual_to_do";
 
 export const TASK_STATUSES = ["to_do", "waiting", "done", "cancelled"] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
-
-/** The process step that created a task, when no person asked for it. */
-export interface TaskProcessSource {
-  processKey: string;
-  processRunId: string | null;
-  stepKey: string;
-}
 
 /** The record a task acts on, as the records registry names it. */
 export interface TaskRecord {
@@ -27,14 +16,14 @@ export interface TaskRecord {
 /** Work asked of one person, and where it stands. */
 export interface Task {
   id: string;
-  type: TaskType;
+  /** `manual_to_do`, or the type of the feature that created it. */
+  type: string;
   status: TaskStatus;
   title: string;
   description: string | null;
   assigneeEmployeeId: string;
   askedByEmployeeId: string | null;
   subjectEmployeeId: string | null;
-  processSource: TaskProcessSource | null;
   record: TaskRecord | null;
   dueDate: CalendarDate | null;
   doneAt: Date | null;
@@ -58,13 +47,6 @@ export function markTaskDone(task: Task, byEmployeeId: string, now: Date): Task 
   return { ...task, status: "done", doneAt: now, doneByEmployeeId: byEmployeeId };
 }
 
-export function reopenTask(task: Task): Task {
-  if (task.status !== "done") {
-    throw new ApplicationError("CONFLICT", "Only a done task can be reopened.");
-  }
-  return { ...task, status: "to_do", doneAt: null, doneByEmployeeId: null };
-}
-
 /** `reason` is the trimmed, non-blank reason the caller checked. */
 export function cancelTask(task: Task, reason: string, now: Date): Task {
   refuseClosed(task);
@@ -81,7 +63,8 @@ export function markTaskWaiting(task: Task): Task {
   return { ...task, status: "waiting" };
 }
 
-function refuseClosed(task: Task): void {
+/** Done and cancelled are final: nothing changes such a task again. */
+export function refuseClosed(task: Task): void {
   if (task.status === "done") {
     throw new ApplicationError("CONFLICT", "This task is already done.");
   }

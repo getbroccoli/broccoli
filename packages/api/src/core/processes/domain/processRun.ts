@@ -14,7 +14,6 @@ export const START_CAUSES = [
 export type StartCause = (typeof START_CAUSES)[number];
 
 export const CANCEL_CAUSES = [
-  "cancelled_by_admin",
   "cancelled_because_step_assignee_was_removed",
   "cancelled_because_subject_was_removed",
 ] as const;
@@ -34,7 +33,7 @@ export type AssigneeNote = (typeof ASSIGNEE_NOTES)[number];
 export const SKIP_REASONS = ["no_assignee_for_step"] as const;
 export type SkipReason = (typeof SKIP_REASONS)[number];
 
-/** Why a run whose subject was removed stops: on the run for admins, and refusing a reopen. */
+/** Why a run whose subject was removed stops, on the run for admins. */
 export const SUBJECT_REMOVED = "The person this process is about was removed from Broccoli.";
 
 /** What the tasks of a run cancelled for a removal tell their assignees; the detail stays on the run. */
@@ -119,36 +118,6 @@ export function settleRun(run: ProcessRun, steps: readonly RunStep[], now: Date)
 export function completeStep(run: ProcessRun, step: RunStep, now: Date): RunStep {
   refuseUnlessOpen(run);
   return { ...step, status: "step_completed", finishedAt: now };
-}
-
-/** Takes a completed step back to awaiting its task, in a run not cancelled or superseded. */
-export function reopenStep(
-  run: ProcessRun,
-  step: RunStep,
-  {
-    processName,
-    subjectFirstName,
-    isSuperseded,
-  }: {
-    processName: string;
-    /** Null once the person the run is about was removed. */
-    subjectFirstName: string | null;
-    isSuperseded: boolean;
-  },
-): RunStep {
-  if (run.status === "cancelled") {
-    throw new ApplicationError("CONFLICT", PROCESS_CANCELLED);
-  }
-  if (run.subjectEmployeeId !== null && subjectFirstName === null) {
-    throw new ApplicationError("CONFLICT", SUBJECT_REMOVED);
-  }
-  if (isSuperseded) {
-    throw new ApplicationError(
-      "CONFLICT",
-      `${processName} was started again for ${subjectFirstName}; this run is closed.`,
-    );
-  }
-  return { ...step, status: "step_awaiting_task_completion", finishedAt: null };
 }
 
 /** A run cancelled: open steps cancelled, done steps kept. */

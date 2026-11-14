@@ -43,6 +43,11 @@ export {
 } from "./employmentTerms/ownWorkingWeekService";
 export { employeeRecordType } from "./employeeRecordType";
 export {
+  createPeopleAdapter,
+  createWorkingCalendarsAdapter,
+  EMPLOYEE_TRIGGERING_EVENTS,
+} from "./processAdapters";
+export {
   type CopyTermsParts,
   createTermsService,
   type LockTermsParts,

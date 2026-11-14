@@ -3,17 +3,16 @@ import type { PublishedEvent } from "../../events";
 import type { Logger } from "../../logger";
 import type { SecurityContext } from "../../security";
 import type { CalendarDate } from "../../../utils";
-import type { TaskService } from "../../tasks";
 import { processRepository, type StoredProcess } from "../db";
 import {
   eventAboutRecord,
   type EventStart,
-  isTriggeringEvent,
   matchEventStarts,
-  parseProcessDefinition,
   type ProcessDefinition,
+  type TriggeringEvents,
 } from "../domain";
-import type { RunStarter, RunSubject } from "./runStarter";
+import type { RunSubject } from "./ports";
+import type { DefinitionReader, RunStarter } from "./runStarter";
 
 /** Starts the runs that a transaction's events trigger, inside that transaction. */
 export interface EventRunService {
@@ -27,8 +26,9 @@ export interface EventRunService {
 
 interface EventRunDependencies {
   logger: Logger;
-  tasks: TaskService;
   starter: RunStarter;
+  triggeringEvents: TriggeringEvents;
+  definitionOf: DefinitionReader;
   /** Today in London: the start day of the runs. */
   today: () => CalendarDate;
 }
@@ -37,7 +37,9 @@ export function createEventRunService(dependencies: EventRunDependencies): Event
   return {
     async startRunsOnEvents(ctx, tx, events) {
       ctx.requireSystem();
-      const triggering = events.filter(({ type }) => isTriggeringEvent(type));
+      const triggering = events.filter(({ type }) =>
+        Object.hasOwn(dependencies.triggeringEvents, type),
+      );
       if (triggering.length === 0) return;
       const processes = await processRepository(tx).findProcessesStartedBy([
         ...new Set(triggering.map(({ type }) => type)),
@@ -59,14 +61,11 @@ async function startRunsOf(
   events: readonly PublishedEvent[],
 ): Promise<void> {
   try {
-    const { activeVersion } = process;
-    const definition = parseProcessDefinition(
-      activeVersion.schemaVersion,
-      activeVersion.definition,
-    );
+    const definition = dependencies.definitionOf(process.activeVersion);
     const starts = matchEventStarts(
       [{ processId: process.id, trigger: definition.trigger }],
       events,
+      dependencies.triggeringEvents,
     );
     if (starts.length > 0)
       await startProcessRuns(dependencies, tx, { process, definition, starts });
@@ -88,7 +87,7 @@ async function startRunsOf(
  * record finds the first one's run when it is still in progress.
  */
 async function startProcessRuns(
-  { logger, tasks, starter, today }: EventRunDependencies,
+  { logger, starter, today, triggeringEvents }: EventRunDependencies,
   tx: Tx,
   {
     process,
@@ -97,7 +96,11 @@ async function startProcessRuns(
   }: { process: StoredProcess; definition: ProcessDefinition; starts: readonly Start[] },
 ): Promise<void> {
   const { recordType } = definition.subject;
-  const subjects = await readRecordSubjects({ tasks, starter }, tx, recordType, starts);
+  const subjects = await starter.readRecordSubjects(
+    tx,
+    recordType,
+    starts.map(({ recordId }) => recordId),
+  );
   const runs = processRepository(tx);
   for (const wave of wavesOf(starts)) {
     const inProgress = await runs.findRecordsWithRunInProgress(
@@ -120,19 +123,27 @@ async function startProcessRuns(
         startCause: "started_on_event",
         startedByEmployeeId: null,
         triggerDate: null,
-        triggerEvent: eventAboutRecord(event, recordId),
+        triggerEvent: eventAboutRecord(event, recordId, triggeringEvents),
         startKey: `on_event:${event.id}:${recordId}`,
         startDay: today(),
       })),
     );
-    if (started.length > 0) {
-      tx.publish("processes.runs_started_on_event", {
-        processKey: process.key,
-        runIds: started.map(({ id }) => id),
-        eventIds: [...new Set(ready.map(({ event }) => event.id))],
-      });
-    }
+    publishStarted(tx, process, started, ready);
   }
+}
+
+function publishStarted(
+  tx: Tx,
+  process: StoredProcess,
+  started: readonly { id: string }[],
+  ready: readonly Start[],
+): void {
+  if (started.length === 0) return;
+  tx.publish("processes.runs_started_on_event", {
+    processKey: process.key,
+    runIds: started.map(({ id }) => id),
+    eventIds: [...new Set(ready.map(({ event }) => event.id))],
+  });
 }
 
 /** Why a start is skipped: its record is gone or already has a run of the process in progress. */
@@ -145,31 +156,6 @@ function skipReasonOf(
 ): "record_gone" | "run_in_progress" | null {
   if (!subjects.has(recordId)) return "record_gone";
   return inProgress.has(recordId) ? "run_in_progress" : null;
-}
-
-/**
- * The subject of each record that still exists, by record id: the employee itself, or a task's
- * subject, null for a task about nobody.
- */
-async function readRecordSubjects(
-  { tasks, starter }: Pick<EventRunDependencies, "tasks" | "starter">,
-  tx: Tx,
-  recordType: ProcessDefinition["subject"]["recordType"],
-  starts: readonly Start[],
-): Promise<Map<string, RunSubject | null>> {
-  const recordIds = [...new Set(starts.map(({ recordId }) => recordId))];
-  if (recordType === "employee") return starter.readSubjects(tx, recordIds);
-  const found = await tasks.readTasksInTransaction(tx, recordIds);
-  const subjects = await starter.readSubjects(
-    tx,
-    found.flatMap(({ subjectEmployeeId }) => (subjectEmployeeId ? [subjectEmployeeId] : [])),
-  );
-  return new Map(
-    found.map(({ id, subjectEmployeeId }) => [
-      id,
-      subjectEmployeeId ? (subjects.get(subjectEmployeeId) ?? null) : null,
-    ]),
-  );
 }
 
 /** The starts split so each record appears at most once a wave, keeping their order. */

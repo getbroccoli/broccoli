@@ -22,6 +22,8 @@ declare module "../../events" {
   interface DomainEvents {
     /** Runs started in the transaction whose events triggered them; after-commit handlers get it only once it commits. */
     "processes.runs_started_on_event": { processKey: string; runIds: string[]; eventIds: string[] };
+    /** A run's steps completed as their tasks were marked done; logged once the change commits. */
+    "processes.steps_completed": { runId: string; taskIds: string[]; runStatus: string };
   }
 }
 

@@ -1,9 +1,8 @@
 import { toast } from "sonner";
 
 import {
-  CancelTaskDocument,
+  DeleteTaskDocument,
   MarkTaskDoneDocument,
-  ReopenTaskDocument,
   type TaskErrorFragment,
 } from "@/__generated__/graphql";
 import { PayloadFailure, useCache, usePayloadMutation } from "@/apollo";
@@ -12,21 +11,16 @@ import { t } from "@/i18n";
 import { addTaskHistoryLine, forgetStaleTask } from "./cache";
 
 /**
- * Mark done, with Undo for a few seconds, Reopen and Cancel. Each payload returns the task, which
- * updates in place; the groups it belongs to change when Tasks next loads. A refusal, such as a
- * change someone made first, shows its reason and loads the task again as it now stands.
+ * Mark done, and Delete for the person who asked. Mark done returns the task, which updates in
+ * place; the groups it belongs to change when Tasks next loads. A refusal, such as a change someone
+ * made first, shows its reason and loads the task again as it now stands.
  */
 export function useTaskActions() {
   const cache = useCache();
   const [markDone, markDoneState] = usePayloadMutation(MarkTaskDoneDocument, {
     update: (cache, { data }) => addTaskHistoryLine(cache, data?.tasks.markDone),
   });
-  const [reopen, reopenState] = usePayloadMutation(ReopenTaskDocument, {
-    update: (cache, { data }) => addTaskHistoryLine(cache, data?.tasks.reopen),
-  });
-  const [cancel, cancelState] = usePayloadMutation(CancelTaskDocument, {
-    update: (cache, { data }) => addTaskHistoryLine(cache, data?.tasks.cancel),
-  });
+  const [deleteTask, deleteState] = usePayloadMutation(DeleteTaskDocument);
 
   const refused = (id: string) => (failure: unknown) => {
     const payloadError =
@@ -34,24 +28,22 @@ export function useTaskActions() {
     toast.error(payloadError ? payloadError.message : t("tasks.actionFailed"));
     if (payloadError) forgetStaleTask(cache, id);
   };
-  const reopenTask = (id: string) =>
-    reopen({ variables: { input: { id } } }).then(() => undefined, refused(id));
 
   return {
-    isPending: markDoneState.loading || reopenState.loading || cancelState.loading,
+    isPending: markDoneState.loading || deleteState.loading,
     markDone: (id: string) =>
       markDone({ variables: { input: { id } } }).then(
-        () =>
-          void toast(t("tasks.markedDone"), {
-            action: { label: t("tasks.undo"), onClick: () => void reopenTask(id) },
-          }),
+        () => void toast(t("tasks.markedDone")),
         refused(id),
       ),
-    reopen: reopenTask,
-    /** Resolves true once cancelled; a refusal shows and resolves false. */
-    cancel: (id: string, reason: string) =>
-      cancel({ variables: { input: { id, reason } } }).then(
-        () => true,
+    /** Resolves true once deleted, the task gone from the cache; a refusal shows and resolves false. */
+    delete: (id: string) =>
+      deleteTask({ variables: { input: { id } } }).then(
+        () => {
+          forgetStaleTask(cache, id);
+          toast(t("tasks.deleted"));
+          return true;
+        },
         (failure: unknown) => {
           refused(id)(failure);
           return false;

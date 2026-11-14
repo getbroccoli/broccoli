@@ -26,15 +26,10 @@
       "src/core/records",
       "src/core/processes",
       "src/core/tasks",
-      "src/modules/*"
-    ],
-    "src/modules/bankHolidays": [
-      "src/core/*",
-      "!src/core/server",
-      "!src/core/processes",
-      "!src/core/tasks",
+      "src/modules/*",
       "src/utils"
     ],
+    "src/modules/bankHolidays": ["src/core/*", "!src/core/server", "src/utils"],
     "src/modules/company": [
       "src/core/*",
       "!src/core/server",
@@ -51,8 +46,6 @@
     "src/modules/employees": [
       "src/core/*",
       "!src/core/server",
-      "!src/core/processes",
-      "!src/core/tasks",
       "src/integrations/mail",
       "src/modules/bankHolidays",
       "src/utils"
@@ -149,7 +142,8 @@
       "src/core/graphql",
       "src/core/logger",
       "src/core/pagination",
-      "src/core/security"
+      "src/core/security",
+      "src/utils"
     ],
     "src/core/jobs": ["src/core/db", "src/core/logger"],
     "src/core/db": ["src/core/applicationError", "src/core/events", "src/core/logger"],
@@ -193,8 +187,7 @@
       "src/core/pagination",
       "src/core/records",
       "src/core/security",
-      "src/utils",
-      "src/modules/employees"
+      "src/utils"
     ],
     "src/core/processes": [
       "src/core/applicationError",
@@ -208,9 +201,7 @@
       "src/core/records",
       "src/core/security",
       "src/core/tasks",
-      "src/utils",
-      "src/modules/bankHolidays",
-      "src/modules/employees"
+      "src/utils"
     ]
   },
   "layers": {

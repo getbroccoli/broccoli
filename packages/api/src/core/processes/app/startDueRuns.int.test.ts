@@ -61,12 +61,15 @@ test("does not start automatically after a cancelled manual welcome", async ({ o
   const today = calendarDate("2026-12-03");
   const processes = processService(orm, { today: () => today });
   await processes.turnOn(ADMIN, WELCOME_NEW_STARTER);
+  const manager = await seed.employee();
   const employee = await seed.employee({ startDate: today });
+  await seed.manager(employee.id, manager.id);
   const manual = await processes.startRun(ADMIN, {
     processKey: WELCOME_NEW_STARTER,
-    employeeId: employee.id,
+    recordId: employee.id,
   });
-  await processes.cancelRun(ADMIN, manual.run.id, "Already welcomed");
+  await employeeServices(orm).deleteEmployee(ADMIN, { id: manager.id });
+  expect(await processes.startDueRuns(SYSTEM, today)).toEqual({ runsStarted: 0, runsCancelled: 1 });
 
   expect(await processes.startDueRuns(SYSTEM, today)).toEqual({ runsStarted: 0, runsCancelled: 0 });
   expect(await processes.listRuns(ADMIN, WELCOME_NEW_STARTER)).toMatchObject([
@@ -104,7 +107,7 @@ test("the daily pass cancels a run whose outstanding assignee was removed even w
   const processes = processService(orm, { today: () => today });
   const started = await processes.startRun(ADMIN, {
     processKey: WELCOME_NEW_STARTER,
-    employeeId: employee.id,
+    recordId: employee.id,
   });
   await employeeServices(orm).deleteEmployee(ADMIN, { id: manager.id });
   expect((await processes.readRun(ADMIN, started.run.id)).run.status).toBe("in_progress");

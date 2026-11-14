@@ -58,6 +58,12 @@ export interface ProcessRepository {
   saveSteps(steps: readonly RunStep[]): Promise<void>;
   /** The run's steps, in no particular order. */
   findSteps(runId: string): Promise<RunStep[]>;
+  /** The steps whose tasks are among these, whatever their run. */
+  findStepsByTaskIds(taskIds: readonly string[]): Promise<RunStep[]>;
+  /** The process key and step key behind each of these tasks that a step created, by task id. */
+  findTaskSources(
+    taskIds: readonly string[],
+  ): Promise<Map<string, { processKey: string; stepKey: string }>>;
   /** The runs of the process whose subject is in `scope`, newest first; FORBIDDEN for "none". */
   listRuns(processId: string, scope: RecordScope): Promise<ProcessRun[]>;
   /** Every run in progress, of every process. */
@@ -228,6 +234,29 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
 
     async findSteps(runId) {
       return orm.select().from(processRunSteps).where(eq(processRunSteps.runId, runId));
+    },
+
+    async findStepsByTaskIds(taskIds) {
+      if (taskIds.length === 0) return [];
+      return orm
+        .select()
+        .from(processRunSteps)
+        .where(inArray(processRunSteps.taskId, [...taskIds]));
+    },
+
+    async findTaskSources(taskIds) {
+      if (taskIds.length === 0) return new Map();
+      const rows = await orm
+        .select({
+          taskId: processRunSteps.taskId,
+          processKey: processes.key,
+          stepKey: processRunSteps.stepKey,
+        })
+        .from(processRunSteps)
+        .innerJoin(processRuns, eq(processRuns.id, processRunSteps.runId))
+        .innerJoin(processes, eq(processes.id, processRuns.processId))
+        .where(inArray(processRunSteps.taskId, [...taskIds]));
+      return new Map(rows.map(({ taskId, ...source }) => [taskId!, source]));
     },
 
     async listRuns(processId, scope) {

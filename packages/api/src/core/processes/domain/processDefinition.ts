@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import { isTriggeringEvent, TRIGGERING_EVENTS, type TriggeringEventType } from "./eventTrigger";
-
 /** The shape of `process_versions.definition` this code reads; a migration moves older shapes on. */
 export const PROCESS_DEFINITION_SCHEMA_VERSION = 1;
 
@@ -35,8 +33,9 @@ export interface TaskStep {
 /** Starts a run on a date of the subject record, plus an offset, by a daily pass. */
 export interface RecordDateTrigger {
   kind: "on_record_date";
-  recordType: "employee";
-  dateField: "startDate";
+  recordType: string;
+  /** One of the date fields its record type registered, such as an employee's `startDate`. */
+  dateField: string;
   offset: DayOffset;
   /** How many days after that date a missed run still starts. */
   maxDaysLate: number;
@@ -48,7 +47,8 @@ export interface RecordDateTrigger {
  */
 export interface EventTrigger {
   kind: "on_event";
-  event: TriggeringEventType;
+  /** An event a module registered as triggering. */
+  event: string;
   /** Only events whose payload field holds one of these values. */
   when?: { field: string; in: (string | null)[] };
   run: "in_same_transaction";
@@ -58,23 +58,33 @@ export interface EventTrigger {
 /** What one version of a process does; its steps run in parallel, listed in display order. */
 export interface ProcessDefinition {
   /** The record a run is about, the trigger's record type. */
-  subject: { recordType: "employee" | "task" };
+  subject: { recordType: string };
   trigger: RecordDateTrigger | EventTrigger;
   startableByAdmin: boolean;
   steps: TaskStep[];
 }
 
-/** Reads a stored definition, refusing a shape, trigger or step this code cannot run. */
+/** What the modules registered that a definition may name. */
+export interface ProcessCatalog {
+  /** Record types a run may be about, with the date fields an `on_record_date` trigger may name. */
+  recordTypes: Readonly<Record<string, { dateFields: readonly string[] }>>;
+  /** Events that may start a run, with the record type each is about. */
+  triggeringEvents: Readonly<Record<string, { recordType: string }>>;
+}
+
+/** Reads a stored definition, refusing a shape, trigger, record type or step this code cannot run. */
 export function parseProcessDefinition(
   schemaVersion: number,
   definition: unknown,
+  catalog: ProcessCatalog,
 ): ProcessDefinition {
   if (schemaVersion !== PROCESS_DEFINITION_SCHEMA_VERSION) {
     throw new Error(`Process definition schema version ${schemaVersion} is not known.`);
   }
-  refuseUnbuiltTrigger(definition);
+  refuseUnbuiltTrigger(definition, catalog);
   const parsed: ProcessDefinition = definitionSchema.parse(definition);
-  refuseSubjectOtherThanTrigger(parsed);
+  refuseUnregisteredRecord(parsed, catalog);
+  refuseSubjectOtherThanTrigger(parsed, catalog);
   refuseRepeatedStepKeys(parsed.steps);
   const triggerOffsets = parsed.trigger.kind === "on_record_date" ? [parsed.trigger.offset] : [];
   for (const offset of [...triggerOffsets, ...parsed.steps.map(({ due }) => due)]) {
@@ -85,20 +95,38 @@ export function parseProcessDefinition(
 
 const UNBUILT_TRIGGER_KINDS = new Set(["on_record_created", "on_record_changed", "on_schedule"]);
 
-function refuseUnbuiltTrigger(definition: unknown): void {
+function refuseUnbuiltTrigger(definition: unknown, { triggeringEvents }: ProcessCatalog): void {
   const trigger = (definition as { trigger?: { kind?: unknown; event?: unknown } } | null)?.trigger;
   if (typeof trigger?.kind === "string" && UNBUILT_TRIGGER_KINDS.has(trigger.kind)) {
     throw new Error(`Trigger kind ${trigger.kind} is not built.`);
   }
-  if (trigger?.kind === "on_event" && !isTriggeringEvent(String(trigger.event))) {
+  if (trigger?.kind === "on_event" && !Object.hasOwn(triggeringEvents, String(trigger.event))) {
     throw new Error(`Event ${String(trigger.event)} cannot trigger a process.`);
   }
 }
 
-function refuseSubjectOtherThanTrigger({ subject, trigger }: ProcessDefinition): void {
+function refuseUnregisteredRecord(
+  { subject, trigger }: ProcessDefinition,
+  { recordTypes }: ProcessCatalog,
+): void {
+  if (!Object.hasOwn(recordTypes, subject.recordType)) {
+    throw new Error(`Record type ${subject.recordType} cannot be the subject of a process.`);
+  }
+  if (
+    trigger.kind === "on_record_date" &&
+    !recordTypes[trigger.recordType]?.dateFields.includes(trigger.dateField)
+  ) {
+    throw new Error(`Record type ${trigger.recordType} has no date field ${trigger.dateField}.`);
+  }
+}
+
+function refuseSubjectOtherThanTrigger(
+  { subject, trigger }: ProcessDefinition,
+  { triggeringEvents }: ProcessCatalog,
+): void {
   const [recordType, source] =
     trigger.kind === "on_event"
-      ? [TRIGGERING_EVENTS[trigger.event].recordType, `event ${trigger.event}`]
+      ? [triggeringEvents[trigger.event]!.recordType, `event ${trigger.event}`]
       : [trigger.recordType, `trigger ${trigger.kind}`];
   if (subject.recordType !== recordType) {
     throw new Error(
@@ -138,14 +166,14 @@ const assigneeRuleSchema: z.ZodType<AssigneeRule> = z.lazy(() =>
 const triggerSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("on_record_date"),
-    recordType: z.literal("employee"),
-    dateField: z.literal("startDate"),
+    recordType: z.string().min(1),
+    dateField: z.string().min(1),
     offset: offsetSchema,
     maxDaysLate: z.number().int().min(0),
   }),
   z.object({
     kind: z.literal("on_event"),
-    event: z.enum(Object.keys(TRIGGERING_EVENTS) as [TriggeringEventType]),
+    event: z.string().min(1),
     when: z
       .object({
         field: z.string().trim().min(1),
@@ -158,7 +186,7 @@ const triggerSchema = z.discriminatedUnion("kind", [
 ]);
 
 const definitionSchema = z.object({
-  subject: z.object({ recordType: z.enum(["employee", "task"]) }),
+  subject: z.object({ recordType: z.string().min(1) }),
   trigger: triggerSchema,
   startableByAdmin: z.boolean(),
   steps: z

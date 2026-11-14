@@ -3,3 +3,19 @@ enum RecordChangeCauseKind {
   "A process run made the change on its own, such as creating or cancelling a step's task; the ref is the run."
   PROCESS_RUN
 }
+
+extend enum TaskType {
+  "A process step's to-do; marking it done completes the step, and the run once every step is done."
+  PROCESS_STEP_TO_DO
+}
+
+"The process step that created a task, by key: `welcome_new_starter` and `welcome_one_to_one`."
+type TaskProcessSource {
+  processKey: String!
+  stepKey: String!
+}
+
+extend type Task {
+  "The process step that created it; null for a task a person asked for."
+  processSource: TaskProcessSource
+}

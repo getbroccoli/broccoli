@@ -2,6 +2,7 @@ export {
   createRecordHistoryReaderService,
   type LoadedRecord,
   type RecordHistoryReaderService,
+  type RecordProcessCapabilities,
   type RecordTypeRegistration,
   type RecordTypeRegistry,
   type VisibleFieldChange,

@@ -4,17 +4,17 @@ import { createRecordHistoryService, type CauseKinds } from "../../records";
 import type { SecurityContext } from "../../security";
 import type { CalendarDate } from "../../../utils";
 import { type NewTaskRow, taskRepository } from "../db";
-import type { Task, TaskProcessSource, TaskRecord, TaskType } from "../domain";
+import type { Task, TaskRecord } from "../domain";
 
-/** A task a feature, a process step or the demo asks of someone: a person who asked, a process step, or both. */
-export type NewTask = NewTaskFields &
-  (
-    | { askedByEmployeeId: string; processSource?: TaskProcessSource | null }
-    | { askedByEmployeeId?: null; processSource: TaskProcessSource }
-  );
-
-interface NewTaskFields {
-  type: TaskType;
+/**
+ * A task a person, a feature or the demo asks of someone. A `manual_to_do` has the person who
+ * asked; a feature's own type has none.
+ */
+export interface NewTask {
+  type: string;
+  askedByEmployeeId?: string | null;
+  /** What created it, such as a process's key, published with its creation and never stored. */
+  sourceKey?: string | null;
   title: string;
   description?: string | null;
   assigneeEmployeeId: string;
@@ -48,16 +48,17 @@ export async function createTasks(
       ],
     })),
   });
-  for (const task of created) {
+  created.forEach((task, index) =>
     tx.publish("tasks.task_created", {
       taskId: task.id,
+      type: task.type,
       assigneeEmployeeId: task.assigneeEmployeeId,
       askedByEmployeeId: task.askedByEmployeeId,
       subjectEmployeeId: task.subjectEmployeeId,
-      processKey: task.processSource?.processKey ?? null,
+      sourceKey: newTasks[index]!.sourceKey ?? null,
       byEmployeeId: ctx.user?.employeeId ?? null,
-    });
-  }
+    }),
+  );
   return created;
 }
 
@@ -70,7 +71,6 @@ function newTaskRow({ title, description = null, ...task }: NewTask): NewTaskRow
     assigneeEmployeeId: task.assigneeEmployeeId,
     askedByEmployeeId: task.askedByEmployeeId ?? null,
     subjectEmployeeId: task.subjectEmployeeId ?? null,
-    processSource: task.processSource ?? null,
     record: task.record ?? null,
     dueDate: task.dueDate ?? null,
     doneAt: null,

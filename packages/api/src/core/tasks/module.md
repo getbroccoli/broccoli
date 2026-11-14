@@ -1,18 +1,18 @@
 # Tasks
 
-A task is work asked of one person, its assignee. The person who asked, or the process step that created it, is its source. Only the assignee and the person who asked see a task; anyone else gets "No task has this id.", so a task's existence does not leak. The person a task is about never sees it for that reason alone.
+A task is work asked of one person, its assignee: by a person who asked (`manual_to_do`), or by a feature such as a process step, which names its own type and has nobody who asked. Tasks know no feature: a feature follows its tasks through their events. Only the assignee and the person who asked see a task; anyone else gets "No task has this id.", so a task's existence does not leak. The person a task is about never sees it for that reason alone.
 
 ## Rules
 
-- A task asks for work and never grants authority. A feature creates its tasks with `TaskService.createTask` in its own transaction and finishes them with its own command, under the caller's permissions.
-- Statuses: `to_do`, `waiting`, `done` and `cancelled`. Only the assignee marks a to-do done or reopens it; only the person who asked cancels it, with a reason. A process step's to-do refuses these generic commands ("This task belongs to a process."): processes finishes, reopens and cancels it with the trusted operations that join its transaction. A task created by a process step, with no person who asked, is cancelled only by its feature.
+- A task asks for work and never grants authority. A feature creates its tasks with `TaskService.createTasks` in its own transaction, passing an unstored `sourceKey` that `tasks.task_created` publishes.
+- Statuses: `to_do`, `waiting`, `done` and `cancelled`; done and cancelled are final. Only the assignee marks a to-do done, whatever created it; a feature follows from `tasks.task_status_changed` before the commit. Only the person who asked deletes an open task. Only the feature that created a task cancels it, with a reason its assignee reads (`cancelInTransaction`).
 - The first change wins: each change locks the task's row, so a second Mark done gets "This task is already done."
 - Every change appends a history line for record type `task`, in its transaction, and returns it. Tasks register their own reading rule with core's records: `recordHistory` and `Task.history` serve a task's lines to its assignee and the person who asked, and refuse anyone else.
-- Deleting the assignee or the person who asked deletes the task; deleting the person it is about or who finished it leaves it, without them. Reset setup and Exit demo forget the tasks' history.
+- Deleting the assignee or the person who asked deletes the task; deleting the person it is about or who finished it leaves it, without them. Reset setup and Exit demo forget the tasks' history. A deleted task's history line records its deletion.
 
 ## Data model
 
-- **`tasks`:** `type` (`manual_to_do`, finished by hand; `process_step_to_do`, a process step's to-do finished through processes), `status`, `title`, `description`, `assignee_employee_id` (the assignee), `asked_by_employee_id`, `subject_employee_id`, the process source (`process_key`, `process_run_id`, `step_key`; deleting the run deletes its tasks, one per step), the record it acts on (`record_type`, `record_id`), `due_date`, and the done and cancelled columns that follow the status. Checks keep a task asked by someone (a person or a process step) and the columns matching its status.
+- **`tasks`:** `type` (`manual_to_do`, or a feature's own type such as `process_step_to_do`), `status`, `title`, `description`, `assignee_employee_id` (the assignee), `asked_by_employee_id`, `subject_employee_id`, the record it acts on (`record_type`, `record_id`), `due_date`, and the done and cancelled columns that follow the status. Checks keep a manual to-do, and only it, with someone who asked, and the columns matching its status.
 
 ## My tasks
 

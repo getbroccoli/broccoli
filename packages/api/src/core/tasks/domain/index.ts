@@ -3,13 +3,11 @@ export {
   isTaskVisibleTo,
   markTaskDone,
   markTaskWaiting,
-  reopenTask,
   TASK_STATUSES,
-  TASK_TYPES,
+  MANUAL_TO_DO,
+  refuseClosed,
   type Task,
-  type TaskProcessSource,
   type TaskStatus,
   type TaskRecord,
-  type TaskType,
 } from "./task";
 export { groupMyTasks, type MyTasks, resolvedRecentlySince } from "./myTasks";

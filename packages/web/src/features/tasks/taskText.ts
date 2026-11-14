@@ -11,17 +11,13 @@ export function formatTaskDay(value: string): string {
   return DAY_FORMAT.format(utcDay(day));
 }
 
-/**
- * The tasks to do the viewer holds, in whichever group the cache has them: a task reopened on this
- * page still sits under Resolved recently until Tasks next loads.
- */
+/** The tasks to do the viewer holds: one marked done on this page stays listed until Tasks next loads. */
 export function countTasksNeedingYou(
-  groups: { needsYou: TaskRow[]; waitingOnOthers: TaskRow[]; resolvedRecently: TaskRow[] },
+  groups: { needsYou: TaskRow[] },
   viewerId: string | null,
 ): number {
-  return [...groups.needsYou, ...groups.waitingOnOthers, ...groups.resolvedRecently].filter(
-    (task) => task.status === "TO_DO" && task.assignee.id === viewerId,
-  ).length;
+  return groups.needsYou.filter((task) => task.status === "TO_DO" && task.assignee.id === viewerId)
+    .length;
 }
 
 /** Whether a task still open was due before `today`. */

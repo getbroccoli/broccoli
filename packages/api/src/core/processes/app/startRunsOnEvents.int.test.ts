@@ -57,7 +57,7 @@ test("adding a person commits exactly one process run and a task for their manag
   expect((await taskService(orm).listMyTasks(ctx)).needsYou).toMatchObject([
     {
       subjectEmployeeId: employee.id,
-      processSource: { processKey: key },
+      type: "process_step_to_do",
     },
   ]);
 });
@@ -236,7 +236,7 @@ test("a run's tasks start another process in the same transaction", async ({ orm
     key: "welcome",
     definition: eventProcess("employees.added"),
   });
-  const definition = eventProcess("tasks.task_created", { field: "processKey", in: [first.key] });
+  const definition = eventProcess("tasks.task_created", { field: "sourceKey", in: [first.key] });
   const second = await seedProcess(orm, { key: "follow_up", definition });
   const transact = transactWithProcesses(orm, { today });
 
@@ -257,7 +257,7 @@ test("a run's tasks start another process in the same transaction", async ({ orm
       record: { recordType: "task", recordId: task.id },
       triggerEvent: {
         type: "tasks.task_created",
-        payload: { taskId: task.id, processKey: first.key },
+        payload: { taskId: task.id, sourceKey: first.key },
       },
     },
   ]);

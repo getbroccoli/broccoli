@@ -82,17 +82,13 @@ test(
     });
     const { key } = await seedProcess(orm, {
       key: "follow_up",
-      definition: eventProcess("tasks.task_status_changed", { field: "to", in: ["cancelled"] }),
+      definition: eventProcess("tasks.task_status_changed", { field: "to", in: ["done"] }),
     });
     const ctx = signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] });
     const locked = Promise.withResolvers<number>();
     const release = Promise.withResolvers<void>();
     const changing = transactWithProcesses(orm, { today })(async (tx) => {
-      await taskService(orm, { transact: (work) => work(tx) }).cancel(
-        ctx,
-        task.id,
-        "No longer needed",
-      );
+      await taskService(orm, { transact: (work) => work(tx) }).markDone(ctx, task.id);
       const { rows } = await ormOf(tx).execute<{ pid: number }>(
         sql`select pg_backend_pid() as pid`,
       );

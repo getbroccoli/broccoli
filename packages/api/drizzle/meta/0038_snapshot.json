@@ -3811,7 +3811,7 @@
         },
         "process_runs_cancel_cause_known": {
           "name": "process_runs_cancel_cause_known",
-          "value": "\"process_runs\".\"cancel_cause\" in ('cancelled_by_admin', 'cancelled_because_step_assignee_was_removed', 'cancelled_because_subject_was_removed')"
+          "value": "\"process_runs\".\"cancel_cause\" in ('cancelled_because_step_assignee_was_removed', 'cancelled_because_subject_was_removed')"
         },
         "process_runs_columns_follow_status": {
           "name": "process_runs_columns_follow_status",
@@ -3923,24 +3923,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "process_key": {
-          "name": "process_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "process_run_id": {
-          "name": "process_run_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "step_key": {
-          "name": "step_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "record_type": {
           "name": "record_type",
           "type": "text",
@@ -4049,27 +4031,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "tasks_one_per_run_step": {
-          "name": "tasks_one_per_run_step",
-          "columns": [
-            {
-              "expression": "process_run_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "step_key",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {},
@@ -4083,15 +4044,7 @@
         },
         "tasks_asked_by_someone": {
           "name": "tasks_asked_by_someone",
-          "value": "\"tasks\".\"asked_by_employee_id\" is not null or \"tasks\".\"process_key\" is not null"
-        },
-        "tasks_process_source_complete": {
-          "name": "tasks_process_source_complete",
-          "value": "(\"tasks\".\"process_key\" is null) = (\"tasks\".\"step_key\" is null)\n        and (\"tasks\".\"process_run_id\" is null or \"tasks\".\"process_key\" is not null)"
-        },
-        "tasks_process_step_from_a_run": {
-          "name": "tasks_process_step_from_a_run",
-          "value": "\"tasks\".\"type\" <> 'process_step_to_do'\n        or (\"tasks\".\"process_run_id\" is not null and \"tasks\".\"asked_by_employee_id\" is null)"
+          "value": "(\"tasks\".\"type\" = 'manual_to_do') = (\"tasks\".\"asked_by_employee_id\" is not null)"
         },
         "tasks_record_complete": {
           "name": "tasks_record_complete",

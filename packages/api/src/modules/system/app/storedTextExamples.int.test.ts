@@ -8,7 +8,6 @@ test.for([
   "type.create",
   "employee.create.firstName",
   "employee.reason.update",
-  "task.cancelReason",
   "invite.note",
   "setup.inviteNote",
 ])("%s refuses NUL without changing storage", async (entry, { orm, seed }) => {
@@ -29,7 +28,6 @@ test.for([
   "type.create",
   "employee.create.firstName",
   "employee.reason.update",
-  "task.cancelReason",
   "invite.note",
   "setup.inviteNote",
   "mail.secret",

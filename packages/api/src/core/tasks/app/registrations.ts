@@ -13,11 +13,13 @@ declare module "../../events" {
     /** A task to do was created; `byEmployeeId` is the person who created it, null for Broccoli. */
     "tasks.task_created": {
       taskId: string;
+      /** `manual_to_do`, or the type of the feature that created it. */
+      type: string;
       assigneeEmployeeId: string;
       askedByEmployeeId: string | null;
       subjectEmployeeId: string | null;
-      /** The process whose step created it, else null. */
-      processKey: string | null;
+      /** What created it, as its creator named it, such as a process's key; null for a person. */
+      sourceKey: string | null;
       byEmployeeId: string | null;
     };
     /** A task's status changed; `byEmployeeId` is the person who changed it, null for Broccoli. */

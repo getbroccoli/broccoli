@@ -1,32 +1,10 @@
-import DataLoader from "dataloader";
-
 import { ApplicationError } from "../../applicationError";
-import {
-  type GraphqlContext,
-  mutationPayload,
-  perRequest,
-  toEnum,
-  type Resolvers,
-  type ResolversTypes,
-} from "../../graphql";
-import type { EmployeeReadService } from "../../../modules/employees";
+import { mutationPayload, toEnum, type Resolvers, type ResolversTypes } from "../../graphql";
 import type { TaskService } from "../app";
 
 const EXPECTED_ERRORS = ["INVALID_INPUT", "NOT_FOUND", "CONFLICT"] as const;
 
-export function createResolvers(
-  tasks: TaskService,
-  employees: Pick<EmployeeReadService, "readEmployees">,
-): Resolvers {
-  // The people a list of tasks names, read in one query with the caller's access.
-  const loaders = perRequest((context) => ({
-    employee: new DataLoader(async (ids: readonly string[]) => {
-      const found = await employees.readEmployees(context.getActor(), ids);
-      return ids.map((id) => found.get(id) ?? null);
-    }),
-  }));
-  const loadEmployee = (context: GraphqlContext, id: string | null) =>
-    id === null ? null : loaders(context).employee.load(id);
+export function createResolvers(tasks: TaskService): Resolvers {
   return {
     Query: {
       myTasks: (_parent, _args, context) => tasks.listMyTasks(context.getActor()),
@@ -48,26 +26,15 @@ export function createResolvers(
           () => tasks.markDone(context.getActor(), input.id),
           EXPECTED_ERRORS,
         ),
-      reopen: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["TaskPayload"]>(
-          () => tasks.reopen(context.getActor(), input.id),
-          EXPECTED_ERRORS,
-        ),
-      cancel: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["TaskPayload"]>(
-          () => tasks.cancel(context.getActor(), input.id, input.reason),
+      delete: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TaskDeletePayload"]>(
+          () => tasks.deleteTask(context.getActor(), input.id),
           EXPECTED_ERRORS,
         ),
     },
     Task: {
-      type: ({ type }) => toEnum(type),
+      type: ({ type }) => toEnum(type) as ResolversTypes["TaskType"],
       status: ({ status }) => toEnum(status),
-      // The assignee's deletion deletes the task, so the assignee is always there.
-      assignee: async ({ assigneeEmployeeId }, _args, context) =>
-        (await loadEmployee(context, assigneeEmployeeId))!,
-      askedBy: ({ askedByEmployeeId }, _args, context) => loadEmployee(context, askedByEmployeeId),
-      subject: ({ subjectEmployeeId }, _args, context) => loadEmployee(context, subjectEmployeeId),
-      doneBy: ({ doneByEmployeeId }, _args, context) => loadEmployee(context, doneByEmployeeId),
       history: ({ id }, { first, after }, context) =>
         tasks.readTaskHistory(context.getActor(), id, { first: first ?? undefined, after }),
     },

@@ -3,13 +3,16 @@ export { dueTriggerDate } from "./recordDateTrigger";
 export {
   eventAboutRecord,
   type EventStart,
-  isTriggeringEvent,
   matchEventStarts,
   type TriggerEvent,
+  triggeringEvent,
+  type TriggeringEventRegistration,
+  type TriggeringEvents,
 } from "./eventTrigger";
 export {
   type DayOffset,
   parseProcessDefinition,
+  type ProcessCatalog,
   PROCESS_DEFINITION_SCHEMA_VERSION,
   type ProcessDefinition,
   type RecordDateTrigger,
@@ -25,7 +28,6 @@ export {
   PROCESS_CANCELLED,
   type ProcessRun,
   removalCancellation,
-  reopenStep,
   resolveAssignee,
   type ResolvedAssignee,
   RUN_STATUSES,

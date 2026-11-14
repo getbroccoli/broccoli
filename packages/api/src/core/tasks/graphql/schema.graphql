@@ -1,9 +1,7 @@
-"What kind of work a task asks for, and how it is finished."
+"What created a task; every task is finished with Mark done. Features that create tasks add their own."
 enum TaskType {
-  "Finished by hand with Mark done; it produces nothing else."
+  "Asked by a person, who may delete it while it is open."
   MANUAL_TO_DO
-  "A process step's to-do, finished through its process so the run keeps up."
-  PROCESS_STEP_TO_DO
 }
 
 enum TaskStatus {
@@ -12,14 +10,8 @@ enum TaskStatus {
   "It cannot be done until something else happens."
   WAITING
   DONE
-  "Withdrawn by the person who asked; cancelling keeps the task and its reason."
+  "Stopped by the feature that created it, such as a process; the task keeps its reason."
   CANCELLED
-}
-
-"The process step that created a task, by key: `leave_request` and `manager_approves`."
-type TaskProcessSource {
-  processKey: String!
-  stepKey: String!
 }
 
 "Work asked of one person. Only its assignee and the person who asked see it and its history."
@@ -30,18 +22,9 @@ type Task implements AnyRecord {
   title: String!
   description: String
   dueDate: Date
-  "Who holds it: the one person who can do it."
-  assignee: Employee!
-  "Who asked for it; null when a process step created it."
-  askedBy: Employee
-  "Who it is about, when it is about someone; being its subject shows nobody the task."
-  subject: Employee
-  processSource: TaskProcessSource
   doneAt: DateTime
-  "Null once that person is removed."
-  doneBy: Employee
   cancelledAt: DateTime
-  "Why the person who asked cancelled it."
+  "Why the feature that created it cancelled it."
   cancelReason: String
   createdAt: DateTime!
   "Changes to this task, newest first."
@@ -75,14 +58,8 @@ input TaskMarkDoneInput {
   id: ID!
 }
 
-input TaskReopenInput {
+input TaskDeleteInput {
   id: ID!
-}
-
-input TaskCancelInput {
-  id: ID!
-  "Required; the assignee reads it."
-  reason: String!
 }
 
 "The task after a change, or why it was refused."
@@ -93,15 +70,19 @@ type TaskPayload {
   error: TaskError
 }
 
+"The deleted task's id, or why it was refused."
+type TaskDeletePayload {
+  deletedTaskId: ID
+  error: TaskError
+}
+
 union TaskError = InvalidInputError | NotFoundError | ConflictError
 
 type TasksMutations {
-  "The assignee finishes a task to do."
+  "The assignee finishes a task to do, whatever created it."
   markDone(input: TaskMarkDoneInput!): TaskPayload!
-  "The assignee takes a done task back to do."
-  reopen(input: TaskReopenInput!): TaskPayload!
-  "The person who asked withdraws an open task."
-  cancel(input: TaskCancelInput!): TaskPayload!
+  "The person who asked deletes an open task, with its place in everyone's tasks."
+  delete(input: TaskDeleteInput!): TaskDeletePayload!
 }
 
 type Mutation {

@@ -1,9 +1,9 @@
-import { ApplicationError, invalidInput } from "../../applicationError";
+import { ApplicationError } from "../../applicationError";
 import type { Orm, Transact, Tx } from "../../db";
-import type { Logger } from "../../logger";
+import type { PublishedEvent } from "../../events";
 import { PrincipalSecurityContext, type SecurityContext } from "../../security";
-import type { Task, TaskService } from "../../tasks";
-import { processRepository, type StoredProcess } from "../db";
+import type { TaskService } from "../../tasks";
+import { processRepository } from "../db";
 import {
   type CancelCause,
   cancelRun,
@@ -11,31 +11,29 @@ import {
   PROCESS_CANCELLED,
   type ProcessRun as StoredRun,
   removalCancellation,
-  reopenStep,
-  type RunStep,
   settleRun,
   SUBJECT_REMOVED,
 } from "../domain";
-import type { ProcessRun, ProcessRunDetails, StepChange, StepProgress } from "./processViews";
-import type { RunReader } from "./runReader";
+import type { StepProgress } from "./processViews";
 import type { RunStarter } from "./runStarter";
 
 /**
- * A run while it runs: its assignees finish and reopen their steps, admins cancel it, and it
- * cancels itself once its subject or a waiting step's assignee is gone.
+ * A run while it runs: it follows its steps' tasks as their assignees mark them done, and cancels
+ * itself once its subject or a waiting step's assignee is gone.
  */
 export interface RunLifecycleService {
-  /** The assignee marks their step's task done; the run finishes when every step is done. */
-  markStepDone(ctx: SecurityContext, taskId: string): Promise<StepChange>;
-  /** The assignee takes their step's done task back to do; a finished run goes back in progress. */
-  reopenStep(ctx: SecurityContext, taskId: string): Promise<StepChange>;
+  /**
+   * Trusted, before the commit of the transaction that marked tasks done: completes their steps
+   * and finishes each run with no step left awaiting its task. Takes each run's lock after the
+   * task's, as the change that marked it done holds it already.
+   */
+  completeStepsOfDoneTasks(tx: Tx, events: readonly PublishedEvent[]): Promise<void>;
   /** The run behind a task its assignee or asker reads, as counts. */
   readStepProgress(ctx: SecurityContext, taskId: string): Promise<StepProgress>;
-  /** An admin cancels a run in progress: its open tasks with the reason, done steps stay done. */
-  cancelRun(ctx: SecurityContext, runId: string, reason: string): Promise<ProcessRunDetails>;
   /**
    * The locked run, cancelled and saved when its subject or a waiting step's assignee is gone;
-   * else as it was. The run cancels itself, so Broccoli is the author, whoever's command noticed.
+   * else as it was. The run cancels itself, so Broccoli is the author. The caller holds the run's
+   * open tasks before the run.
    */
   cancelIfCannotRun(tx: Tx, run: StoredRun): Promise<StoredRun>;
 }
@@ -43,59 +41,54 @@ export interface RunLifecycleService {
 export function createRunLifecycleService({
   orm,
   transact,
-  logger,
   tasks,
   starter,
-  reader,
 }: {
   orm: Orm;
   transact: Transact;
-  logger: Logger;
   tasks: TaskService;
   starter: RunStarter;
-  reader: RunReader;
 }): RunLifecycleService {
-  const lifecycle: RunLifecycleService = {
-    async markStepDone(ctx, taskId) {
-      const change = await changeStep(stepDeps, ctx, taskId, async (tx, run, step) => {
-        const task = await tasks.markDoneInTransaction(ctx, tx, taskId);
-        return { task, step: completeStep(run, step, task.doneAt!) };
-      });
-      logger.info(
-        { runId: change.run.id, taskId, runStatus: change.run.status },
-        "Process step done",
+  return {
+    async completeStepsOfDoneTasks(tx, events) {
+      const doneTaskIds = new Set(
+        events.flatMap(({ type, payload }) =>
+          type === "tasks.task_status_changed" && payload.to === "done" ? [payload.taskId] : [],
+        ),
       );
-      return change;
-    },
-
-    async reopenStep(ctx, taskId) {
-      const change = await changeStep(stepDeps, ctx, taskId, async (tx, run, step, process) => {
-        const runs = processRepository(tx);
-        const newer = await runs.findRunInProgress(run.processId, run.recordType, run.recordId);
-        const subject = run.subjectEmployeeId
-          ? await starter.readSubject(tx, run.subjectEmployeeId)
-          : null;
-        const reopened = reopenStep(run, step, {
-          processName: process.name,
-          subjectFirstName: subject?.firstName ?? null,
-          isSuperseded: newer !== null && newer.id !== run.id,
+      if (doneTaskIds.size === 0) return;
+      const runs = processRepository(tx);
+      const awaiting = (await runs.findStepsByTaskIds([...doneTaskIds])).filter(
+        ({ status }) => status === "step_awaiting_task_completion",
+      );
+      const now = new Date();
+      for (const runId of [...new Set(awaiting.map((step) => step.runId))].sort()) {
+        const run = (await runs.lockRun(runId))!;
+        const steps = (await runs.findSteps(runId)).map((step) =>
+          step.status === "step_awaiting_task_completion" && doneTaskIds.has(step.taskId!)
+            ? completeStep(run, step, now)
+            : step,
+        );
+        const completed = steps.filter(({ taskId }) => taskId && doneTaskIds.has(taskId));
+        await runs.saveSteps(completed);
+        const settled = settleRun(run, steps, now);
+        if (settled !== run) await runs.saveRun(settled);
+        tx.publish("processes.steps_completed", {
+          runId,
+          taskIds: completed.map(({ taskId }) => taskId!),
+          runStatus: settled.status,
         });
-        return { task: await tasks.reopenInTransaction(ctx, tx, taskId), step: reopened };
-      });
-      logger.info(
-        { runId: change.run.id, taskId, runStatus: change.run.status },
-        "Process step reopened",
-      );
-      return change;
+      }
     },
 
     async readStepProgress(ctx, taskId) {
       const task = await tasks.readTask(ctx, taskId);
-      const runId = (await reader.requireRun(orm, runIdOf(task))).id;
+      const [step] = await processRepository(orm).findStepsByTaskIds([task.id]);
+      if (!step) throw new ApplicationError("CONFLICT", "This task does not belong to a process.");
       return transact(async (tx) => {
         const runs = processRepository(tx);
         // Locked, so a step change committing meanwhile cannot pair its steps with the old status.
-        const run = (await runs.lockRun(runId))!;
+        const run = (await runs.lockRun(step.runId))!;
         const [process] = await runs.findProcessesByIds([run.processId]);
         const steps = (await runs.findSteps(run.id)).filter(
           ({ status }) => status !== "step_skipped",
@@ -108,23 +101,6 @@ export function createRunLifecycleService({
           totalSteps: steps.length,
         };
       });
-    },
-
-    async cancelRun(ctx, runId, reason) {
-      const trimmed = reason.trim();
-      if (!trimmed) throw invalidInput([{ field: "reason", code: "required" }]);
-      const found = await reader.requireRun(orm, runId);
-      await ctx.requireInScope("process_run", "update", found.subjectEmployeeId ?? "public");
-      const run = await transact(async (tx) =>
-        cancelAndSave(tasks, ctx, tx, (await processRepository(tx).lockRun(found.id))!, {
-          cause: "cancelled_by_admin",
-          reason: trimmed,
-          taskReason: trimmed,
-          byEmployeeId: ctx.user?.employeeId ?? null,
-        }),
-      );
-      logger.info({ runId: run.id, cancelCause: run.cancelCause }, "Process run cancelled");
-      return reader.readDetails(run);
     },
 
     async cancelIfCannotRun(tx, run) {
@@ -151,55 +127,6 @@ export function createRunLifecycleService({
       });
     },
   };
-
-  const stepDeps = { orm, transact, tasks, reader, lifecycle };
-  return lifecycle;
-}
-
-/**
- * Locks the task's process, then its run (the order starts take), cancels the run when it can no
- * longer run, else applies the step change and settles the run; one transaction commits either.
- */
-async function changeStep(
-  { orm, transact, tasks, reader, lifecycle }: StepCommandDeps,
-  ctx: SecurityContext,
-  taskId: string,
-  change: StepCommand,
-): Promise<StepChange> {
-  const task = await tasks.readTask(ctx, taskId);
-  const runId = runIdOf(task);
-  const [process] = await processRepository(orm).findProcessesByIds([
-    (await reader.requireRun(orm, runId)).processId,
-  ]);
-  return transact(async (tx) => {
-    const runs = processRepository(tx);
-    await runs.lockProcess(process!.id);
-    const locked = (await runs.lockRun(runId))!;
-    const checked = await lifecycle.cancelIfCannotRun(tx, locked);
-    if (checked.status === "cancelled" && locked.status !== "cancelled") {
-      const [cancelledTask] = await tasks.readTasksInTransaction(tx, [task.id]);
-      return { run: assigneeView(reader.view(checked, process!)), task: cancelledTask! };
-    }
-    const steps = await runs.findSteps(locked.id);
-    const step = steps.find(({ taskId: id }) => id === task.id)!;
-    const changed = await change(tx, locked, step, process!);
-    await runs.saveSteps([changed.step]);
-    const settled = settleRun(
-      locked,
-      steps.map((s) => (s.stepKey === step.stepKey ? changed.step : s)),
-      new Date(),
-    );
-    const saved = settled === locked ? locked : await runs.saveRun(settled);
-    return { run: assigneeView(reader.view(saved, process!)), task: changed.task };
-  });
-}
-
-interface StepCommandDeps {
-  orm: Orm;
-  transact: Transact;
-  tasks: TaskService;
-  reader: RunReader;
-  lifecycle: RunLifecycleService;
 }
 
 /** Cancels the locked run: its open tasks with `taskReason`, the run with its cause and reason. */
@@ -230,26 +157,4 @@ interface Cancellation {
   reason: string;
   taskReason: string;
   byEmployeeId: string | null;
-}
-
-/** What a step command does to its task and step, inside the run's transaction. */
-type StepCommand = (
-  tx: Tx,
-  run: StoredRun,
-  step: RunStep,
-  process: StoredProcess,
-) => Promise<{ task: Task; step: RunStep }>;
-
-function runIdOf(task: Task): string {
-  const runId = task.type === "process_step_to_do" ? task.processSource?.processRunId : null;
-  if (!runId) throw new ApplicationError("CONFLICT", "This task does not belong to a process.");
-  return runId;
-}
-
-/** The run as an assignee's step change returns it: without why it was cancelled. */
-function assigneeView(run: ProcessRun): StepChange["run"] {
-  const visible: Partial<ProcessRun> = { ...run };
-  delete visible.cancelReason;
-  delete visible.cancelCause;
-  return visible as StepChange["run"];
 }

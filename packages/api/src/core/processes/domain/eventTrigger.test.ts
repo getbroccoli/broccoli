@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { matchEventStarts } from "./eventTrigger";
+import { eventAboutRecord, matchEventStarts } from "./eventTrigger";
 import type { ProcessDefinition } from "./processDefinition";
 
 test("starts each added person in event, process and record order", () => {
@@ -14,7 +14,7 @@ test("starts each added person in event, process and record order", () => {
     payload: { employeeIds: ["sam", "alex", "jo"] },
   };
 
-  expect(matchEventStarts(processes, [event])).toEqual([
+  expect(matchEventStarts(processes, [event], triggeringEvents)).toEqual([
     { processId: "welcome", event, recordId: "sam" },
     { processId: "welcome", event, recordId: "alex" },
     { processId: "welcome", event, recordId: "jo" },
@@ -29,9 +29,13 @@ test.each(["tasks.task_created", "tasks.task_status_changed"] as const)(
   (type) => {
     const event = { id: "event-1", type, payload: { taskId: "task-1" } };
 
-    expect(matchEventStarts([{ processId: "follow_up", trigger: onEvent(type) }], [event])).toEqual(
-      [{ processId: "follow_up", event, recordId: "task-1" }],
-    );
+    expect(
+      matchEventStarts(
+        [{ processId: "follow_up", trigger: onEvent(type) }],
+        [event],
+        triggeringEvents,
+      ),
+    ).toEqual([{ processId: "follow_up", event, recordId: "task-1" }]);
   },
 );
 
@@ -51,9 +55,9 @@ test.each([
   const event = { id: "event-1", type: "tasks.task_status_changed", payload };
   const trigger = onEvent("tasks.task_status_changed", { field: "to", in: accepted });
 
-  expect(matchEventStarts([{ processId: "follow_up", trigger }], [event])).toEqual(
-    matches ? [{ processId: "follow_up", event, recordId: "task-1" }] : [],
-  );
+  expect(
+    matchEventStarts([{ processId: "follow_up", trigger }], [event], triggeringEvents),
+  ).toEqual(matches ? [{ processId: "follow_up", event, recordId: "task-1" }] : []);
 });
 
 test("does not start a date-triggered process from an event", () => {
@@ -66,7 +70,9 @@ test("does not start a date-triggered process from an event", () => {
   };
   const event = { id: "event-1", type: "employees.added", payload: { employeeIds: ["sam"] } };
 
-  expect(matchEventStarts([{ processId: "welcome", trigger }], [event])).toEqual([]);
+  expect(matchEventStarts([{ processId: "welcome", trigger }], [event], triggeringEvents)).toEqual(
+    [],
+  );
 });
 
 test("keeps two matching events for the same record as separate starts", () => {
@@ -77,7 +83,7 @@ test("keeps two matching events for the same record as separate starts", () => {
     { processId: "induction", trigger: onEvent("employees.added") },
   ];
 
-  expect(matchEventStarts(processes, [first, second])).toEqual([
+  expect(matchEventStarts(processes, [first, second], triggeringEvents)).toEqual([
     { processId: "welcome", event: first, recordId: "sam" },
     { processId: "induction", event: first, recordId: "sam" },
     { processId: "welcome", event: second, recordId: "sam" },
@@ -89,8 +95,26 @@ test("does not start a process for an event of another type", () => {
   const event = { id: "event-1", type: "tasks.task_created", payload: { taskId: "task-1" } };
 
   expect(
-    matchEventStarts([{ processId: "welcome", trigger: onEvent("employees.added") }], [event]),
+    matchEventStarts(
+      [{ processId: "welcome", trigger: onEvent("employees.added") }],
+      [event],
+      triggeringEvents,
+    ),
   ).toEqual([]);
+});
+
+test("keeps only the selected record in a multi-record event's payload", () => {
+  const event = {
+    id: "event-1",
+    type: "employees.added",
+    payload: { employeeIds: ["sam", "alex"] },
+  };
+
+  expect(eventAboutRecord(event, "alex", triggeringEvents)).toEqual({
+    id: "event-1",
+    type: "employees.added",
+    payload: { employeeIds: ["alex"] },
+  });
 });
 
 function onEvent(
@@ -105,3 +129,21 @@ function onEvent(
     ...(when && { when }),
   };
 }
+
+const triggeringEvents = {
+  "employees.added": {
+    recordType: "employee",
+    recordIds: (payload: unknown) => (payload as { employeeIds: string[] }).employeeIds,
+    payloadFor: (_payload: unknown, recordId: string) => ({ employeeIds: [recordId] }),
+  },
+  "tasks.task_created": {
+    recordType: "task",
+    recordIds: (payload: unknown) => [(payload as { taskId: string }).taskId],
+    payloadFor: (payload: unknown) => payload,
+  },
+  "tasks.task_status_changed": {
+    recordType: "task",
+    recordIds: (payload: unknown) => [(payload as { taskId: string }).taskId],
+    payloadFor: (payload: unknown) => payload,
+  },
+};

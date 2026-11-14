@@ -203,8 +203,8 @@ test("keeps tasks closed within fourteen days and excludes tasks closed fifteen 
 test("returns empty groups for a caller without an employee", async ({ orm, seed }) => {
   const assignee = await seed.employee();
   await seed.task({
+    type: "process_step_to_do",
     assigneeEmployeeId: assignee.id,
-    processSource: { processKey: "onboarding", processRunId: null, stepKey: "read_handbook" },
   });
 
   expect(await taskService(orm).listMyTasks(EMPLOYEE)).toEqual({

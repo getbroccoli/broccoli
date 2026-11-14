@@ -114,29 +114,23 @@ test("refuses a blank title without creating a task", async ({ orm, seed, transa
   });
 });
 
-test("shows a process task without an asker only to its assignee", async ({
-  orm,
-  seed,
-  transact,
-}) => {
+test("shows a task without an asker only to its assignee", async ({ orm, seed, transact }) => {
   const assignee = await seed.employee();
   const about = await seed.employee();
   const assigneeCtx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
   const aboutCtx = signedIn(orm, { employeeId: about.id, profiles: ["EMPLOYEE"] });
   const tasks = taskService(orm);
-  const processSource = { processKey: "onboarding", processRunId: null, stepKey: "read_handbook" };
 
   const task = await transact((tx) =>
     tasks.createTask(assigneeCtx, tx, {
-      type: "manual_to_do",
+      type: "process_step_to_do",
       title: "Read the handbook",
       assigneeEmployeeId: assignee.id,
       subjectEmployeeId: about.id,
-      processSource,
     }),
   );
 
-  expect(task).toMatchObject({ askedByEmployeeId: null, processSource });
+  expect(task).toMatchObject({ askedByEmployeeId: null });
   expect(await tasks.listMyTasks(assigneeCtx)).toEqual({
     needsYou: [task],
     waitingOnOthers: [],
@@ -186,7 +180,10 @@ test("deletes a person's held tasks when the person is deleted", async ({ orm, s
   });
 });
 
-test("publishes the created task's ids and the person who created it", async ({ orm, seed }) => {
+test("publishes the created task's type, source and people without storing the source", async ({
+  orm,
+  seed,
+}) => {
   const assignee = await seed.employee();
   const asker = await seed.employee();
   const subject = await seed.employee();
@@ -201,7 +198,7 @@ test("publishes the created task's ids and the person who created it", async ({ 
       assigneeEmployeeId: assignee.id,
       askedByEmployeeId: asker.id,
       subjectEmployeeId: subject.id,
-      processSource: { processKey: "onboarding", processRunId: null, stepKey: "handbook" },
+      sourceKey: "onboarding",
     }),
   );
 
@@ -213,11 +210,13 @@ test("publishes the created task's ids and the person who created it", async ({ 
         assigneeEmployeeId: assignee.id,
         askedByEmployeeId: asker.id,
         subjectEmployeeId: subject.id,
-        processKey: "onboarding",
+        type: "manual_to_do",
+        sourceKey: "onboarding",
         byEmployeeId: asker.id,
       },
     },
   ]);
+  expect(await tasks.readTask(ctx, task.id)).not.toHaveProperty("sourceKey");
 });
 
 test("returns bulk-created tasks in input order and publishes each task", async ({ orm, seed }) => {
@@ -254,7 +253,8 @@ test("returns bulk-created tasks in input order and publishes each task", async 
         assigneeEmployeeId: task.assigneeEmployeeId,
         askedByEmployeeId: asker.id,
         subjectEmployeeId: null,
-        processKey: null,
+        type: "manual_to_do",
+        sourceKey: null,
         byEmployeeId: asker.id,
       },
     })),

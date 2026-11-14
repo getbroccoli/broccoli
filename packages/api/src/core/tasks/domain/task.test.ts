@@ -1,13 +1,6 @@
 import { expect, test } from "vitest";
 
-import {
-  cancelTask,
-  markTaskDone,
-  markTaskWaiting,
-  reopenTask,
-  type Task,
-  type TaskStatus,
-} from "./task";
+import { cancelTask, markTaskDone, markTaskWaiting, type Task, type TaskStatus } from "./task";
 
 test("marks a task to do as done by its assignee", () => {
   const task = taskIn("to_do");
@@ -35,24 +28,6 @@ test.each([
   expect(() =>
     markTaskDone(task, task.assigneeEmployeeId, new Date("2026-11-09T12:00:00Z")),
   ).toThrowError(expect.objectContaining({ code: "CONFLICT", message }));
-});
-
-test("reopens a done task and clears who completed it and when", () => {
-  const task = taskIn("done");
-
-  const reopened = reopenTask(task);
-
-  expect(reopened).toMatchObject({ status: "to_do", doneAt: null, doneByEmployeeId: null });
-  expect(task.status).toBe("done");
-});
-
-test.each(["to_do", "waiting", "cancelled"] as const)("refuses to reopen a %s task", (status) => {
-  expect(() => reopenTask(taskIn(status))).toThrowError(
-    expect.objectContaining({
-      code: "CONFLICT",
-      message: "Only a done task can be reopened.",
-    }),
-  );
 });
 
 test.each(["to_do", "waiting"] as const)("cancels a %s task with a reason", (status) => {
@@ -112,7 +87,6 @@ function taskIn(status: TaskStatus): Task {
     assigneeEmployeeId: "00000000-0000-4000-8000-000000000002",
     askedByEmployeeId: "00000000-0000-4000-8000-000000000003",
     subjectEmployeeId: null,
-    processSource: null,
     record: null,
     dueDate: null,
     doneAt: status === "done" ? closedAt : null,

@@ -57,8 +57,8 @@ test("does not give access to the person a task is about", async ({ orm, seed })
 test("hides tasks from a caller without an employee", async ({ orm, seed }) => {
   const assignee = await seed.employee();
   const task = await seed.task({
+    type: "process_step_to_do",
     assigneeEmployeeId: assignee.id,
-    processSource: { processKey: "onboarding", processRunId: null, stepKey: "read_handbook" },
   });
 
   await expect(taskService(orm).readTask(EMPLOYEE, task.id)).rejects.toMatchObject({

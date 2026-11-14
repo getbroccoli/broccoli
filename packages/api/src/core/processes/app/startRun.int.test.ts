@@ -1,6 +1,8 @@
 import {
   ADMIN,
   EMPLOYEE,
+  SYSTEM,
+  employeeServices,
   calendarDate,
   expect,
   processService,
@@ -13,7 +15,7 @@ import {
 
 import { WELCOME_NEW_STARTER } from "../domain";
 
-test("an admin starts two parallel tasks with their assignees, source and due dates", async ({
+test("an admin starts two parallel tasks with their assignees and due dates", async ({
   orm,
   seed,
 }) => {
@@ -26,7 +28,7 @@ test("an admin starts two parallel tasks with their assignees, source and due da
 
   const details = await processes.startRun(ctx, {
     processKey: WELCOME_NEW_STARTER,
-    employeeId: sam.id,
+    recordId: sam.id,
   });
 
   expect(details.run).toMatchObject({
@@ -59,22 +61,12 @@ test("an admin starts two parallel tasks with their assignees, source and due da
     askedByEmployeeId: null,
     subjectEmployeeId: sam.id,
     record: { recordType: "employee", recordId: sam.id },
-    processSource: {
-      processKey: WELCOME_NEW_STARTER,
-      processRunId: details.run.id,
-      stepKey: "welcome_one_to_one",
-    },
   });
   expect(await tasks.readTask(samCtx, details.steps[1]!.task!.id)).toMatchObject({
     type: "process_step_to_do",
     askedByEmployeeId: null,
     subjectEmployeeId: sam.id,
     record: { recordType: "employee", recordId: sam.id },
-    processSource: {
-      processKey: WELCOME_NEW_STARTER,
-      processRunId: details.run.id,
-      stepKey: "coffee_calls",
-    },
   });
 });
 
@@ -90,7 +82,7 @@ test("tasks from an admin's welcome are authored by Broccoli with the run as cau
 
   const started = await processes.startRun(adminCtx, {
     processKey: WELCOME_NEW_STARTER,
-    employeeId: employee.id,
+    recordId: employee.id,
   });
 
   const history = await taskService(orm).readTaskHistory(assigneeCtx, started.steps[1]!.task!.id, {
@@ -116,7 +108,7 @@ test("an early manual welcome uses the person's future start day and manager", a
 
   const details = await processes.startRun(ADMIN, {
     processKey: WELCOME_NEW_STARTER,
-    employeeId: employee.id,
+    recordId: employee.id,
   });
 
   expect(details.run.startDay).toBe("2026-12-10");
@@ -135,7 +127,7 @@ test("the owner's employee covers a missing manager with an explanation", async 
 
   const details = await processes.startRun(ADMIN, {
     processKey: WELCOME_NEW_STARTER,
-    employeeId: employee.id,
+    recordId: employee.id,
   });
 
   expect(details.steps[0]).toMatchObject({
@@ -156,7 +148,7 @@ test("skips the welcome meeting when neither a manager nor an owner employee exi
 
   const details = await processes.startRun(ADMIN, {
     processKey: WELCOME_NEW_STARTER,
-    employeeId: employee.id,
+    recordId: employee.id,
   });
 
   expect(details.steps[0]).toMatchObject({
@@ -172,10 +164,10 @@ test("skips the welcome meeting when neither a manager nor an owner employee exi
 test("refuses a second welcome while the first is in progress", async ({ orm, seed }) => {
   const employee = await seed.employee({ firstName: "Sam" });
   const processes = processService(orm, { today: () => calendarDate("2026-12-03") });
-  await processes.startRun(ADMIN, { processKey: WELCOME_NEW_STARTER, employeeId: employee.id });
+  await processes.startRun(ADMIN, { processKey: WELCOME_NEW_STARTER, recordId: employee.id });
 
   await expect(
-    processes.startRun(ADMIN, { processKey: WELCOME_NEW_STARTER, employeeId: employee.id }),
+    processes.startRun(ADMIN, { processKey: WELCOME_NEW_STARTER, recordId: employee.id }),
   ).rejects.toMatchObject({
     code: "CONFLICT",
     message: "Welcome a new starter is already running for Sam.",
@@ -184,17 +176,21 @@ test("refuses a second welcome while the first is in progress", async ({ orm, se
 });
 
 test("allows another manual welcome after cancellation", async ({ orm, seed }) => {
+  const manager = await seed.employee();
   const employee = await seed.employee();
+  await seed.manager(employee.id, manager.id);
   const processes = processService(orm, { today: () => calendarDate("2026-12-03") });
   const first = await processes.startRun(ADMIN, {
     processKey: WELCOME_NEW_STARTER,
-    employeeId: employee.id,
+    recordId: employee.id,
   });
-  await processes.cancelRun(ADMIN, first.run.id, "Start again");
+  await employeeServices(orm).deleteEmployee(ADMIN, { id: manager.id });
+  await processes.startDueRuns(SYSTEM, calendarDate("2026-12-03"));
+  expect((await processes.readRun(ADMIN, first.run.id)).run.status).toBe("cancelled");
 
   const next = await processes.startRun(ADMIN, {
     processKey: WELCOME_NEW_STARTER,
-    employeeId: employee.id,
+    recordId: employee.id,
   });
 
   expect(next.run.id).not.toBe(first.run.id);
@@ -208,7 +204,7 @@ test("allows a manual welcome while automatic starts are off", async ({ orm, see
 
   const details = await processes.startRun(ADMIN, {
     processKey: WELCOME_NEW_STARTER,
-    employeeId: employee.id,
+    recordId: employee.id,
   });
 
   expect(details.run.status).toBe("in_progress");
@@ -221,7 +217,7 @@ test("refuses a manual welcome without a create grant", async ({ orm, seed }) =>
   await expect(
     processService(orm).startRun(EMPLOYEE, {
       processKey: WELCOME_NEW_STARTER,
-      employeeId: employee.id,
+      recordId: employee.id,
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
 });
@@ -235,7 +231,7 @@ test("refuses a due date beyond the bank holiday data without leaving a run or t
   const processes = processService(orm, { today: () => calendarDate("2028-12-28") });
 
   await expect(
-    processes.startRun(ADMIN, { processKey: WELCOME_NEW_STARTER, employeeId: employee.id }),
+    processes.startRun(ADMIN, { processKey: WELCOME_NEW_STARTER, recordId: employee.id }),
   ).rejects.toMatchObject({
     code: "CONFLICT",
     message: "No bank holidays are known for 2029.",
@@ -256,7 +252,7 @@ test("counts the subject's own part-time working days for coffee calls", async (
 
   const details = await processes.startRun(ADMIN, {
     processKey: WELCOME_NEW_STARTER,
-    employeeId: employee.id,
+    recordId: employee.id,
   });
 
   expect(details.steps[1]!.task!.dueDate).toBe("2026-12-21");
@@ -269,7 +265,7 @@ test("uses calendar days for a person without a working pattern", async ({ orm, 
 
   const details = await processes.startRun(ADMIN, {
     processKey: WELCOME_NEW_STARTER,
-    employeeId: employee.id,
+    recordId: employee.id,
   });
 
   expect(details.steps[1]!.task!.dueDate).toBe("2026-12-08");

@@ -6,30 +6,25 @@ import {
   createRecordHistoryReaderService,
   createRecordHistoryService,
   type HistoryLine,
+  type RecordTypeRegistry,
 } from "../../records";
 import { PrincipalSecurityContext, type SecurityContext } from "../../security";
-import { type CalendarDate, dateInLondon, parseUuid } from "../../../utils";
-import type { BankHolidayService } from "../../../modules/bankHolidays";
+import { type CalendarDate, dateInLondon } from "../../../utils";
 import type { TaskService } from "../../tasks";
 import { processRepository, type StoredProcess } from "../db";
-import { parseProcessDefinition } from "../domain";
+import { parseProcessDefinition, type TriggeringEvents } from "../domain";
 import { createDueRunService } from "./dueRunService";
 import { createEventRunService, type EventRunService } from "./eventRunService";
 import { processRecordType } from "./processRecordType";
-import type {
-  Process,
-  ProcessRun,
-  ProcessRunDetails,
-  StepChange,
-  StepProgress,
-} from "./processViews";
-import { createRunLifecycleService } from "./runLifecycleService";
+import type { PeoplePort, WorkingCalendarsPort } from "./ports";
+import type { Process, ProcessRun, ProcessRunDetails, StepProgress } from "./processViews";
+import { createRunLifecycleService, type RunLifecycleService } from "./runLifecycleService";
 import { createRunReader, type RunReader } from "./runReader";
-import { createRunStarter } from "./runStarter";
+import { createRunStarter, type DefinitionReader, type ProcessRecordTypes } from "./runStarter";
 
 /**
  * Processes give people tasks when something happens to a record, and follow each run to its end.
- * Admins turn them on, start and cancel runs; a step's assignee finishes it through its task here.
+ * Admins turn them on and start runs; a step's assignee finishes it by marking its task done.
  */
 export interface ProcessService {
   /** Every process, for those who manage the workspace. */
@@ -44,20 +39,14 @@ export interface ProcessService {
     processKey: string,
     args: PageArgs,
   ): Promise<Connection<HistoryLine>>;
-  /** An admin starts the process for one person by hand, whether it is on or off. */
+  /** An admin starts the process by hand for one record of its record type, whether it is on or off. */
   startRun(
     ctx: SecurityContext,
-    input: { processKey: string; employeeId: string },
+    input: { processKey: string; recordId: string },
   ): Promise<ProcessRunDetails>;
-  /** Cancels a run in progress: its open tasks are cancelled with the reason, done steps stay done. */
-  cancelRun(ctx: SecurityContext, runId: string, reason: string): Promise<ProcessRunDetails>;
   readRun(ctx: SecurityContext, runId: string): Promise<ProcessRunDetails>;
   /** The process's runs the caller may read, newest first. */
   listRuns(ctx: SecurityContext, processKey: string): Promise<ProcessRun[]>;
-  /** The assignee marks their step's task done; the run finishes when every step is done. */
-  markStepDone(ctx: SecurityContext, taskId: string): Promise<StepChange>;
-  /** The assignee takes their step's done task back to do; a finished run goes back in progress. */
-  reopenStep(ctx: SecurityContext, taskId: string): Promise<StepChange>;
   /** The run behind a task its assignee or asker reads, as counts. */
   readStepProgress(ctx: SecurityContext, taskId: string): Promise<StepProgress>;
   /**
@@ -69,17 +58,26 @@ export interface ProcessService {
     today: CalendarDate,
   ): Promise<{ runsStarted: number; runsCancelled: number }>;
   /**
-   * Trusted, for resets: locks every process until the transaction ends, before anything a step
-   * command locks after its process, so a reset and a step command take turns.
+   * Trusted, for resets: locks every process until the transaction ends, before the tasks, so a
+   * reset waits for a run's start instead of deadlocking with it.
    */
   lockProcesses(ctx: SecurityContext, tx: Tx): Promise<void>;
-  /** Back to a fresh workspace: deletes every run with its tasks, turns every process off, forgets their history. */
+  /** Back to a fresh workspace: deletes every run, turns every process off, forgets their history; the people's deletion took the tasks. */
   resetProcesses(ctx: SecurityContext, tx: Tx): Promise<void>;
   /**
    * Trusted, as the system, before a transaction commits: starts the runs its events trigger, so
    * they commit with the change or not at all.
    */
   startRunsOnEvents: EventRunService["startRunsOnEvents"];
+  /**
+   * The process and step behind each of these tasks that a step created, by task id; the caller
+   * shows it only on tasks the person may read.
+   */
+  readTaskSources(
+    taskIds: readonly string[],
+  ): Promise<Map<string, { processKey: string; stepKey: string }>>;
+  /** Trusted, before the commit: completes the steps of the tasks its events marked done. */
+  completeStepsOfDoneTasks: RunLifecycleService["completeStepsOfDoneTasks"];
 }
 
 export function createProcessService({
@@ -87,20 +85,44 @@ export function createProcessService({
   transact,
   logger,
   tasks,
-  bankHolidays,
+  people,
+  workingCalendars,
+  recordTypes: registeredRecordTypes,
+  triggeringEvents,
   now = () => new Date(),
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   tasks: TaskService;
-  bankHolidays: BankHolidayService;
+  people: PeoplePort;
+  workingCalendars: WorkingCalendarsPort;
+  /** Every registered record type; those with process capabilities may be a run's subject. */
+  recordTypes: RecordTypeRegistry;
+  triggeringEvents: TriggeringEvents;
   /** The clock: when a process is turned on, and from it today in London. */
   now?: () => Date;
 }): ProcessService {
   const today = () => dateInLondon(now());
-  const starter = createRunStarter({ orm, transact, tasks, bankHolidays });
+  const recordTypes = processRecordTypesOf(registeredRecordTypes);
+  const definitionOf = definitionReader(recordTypes, triggeringEvents);
+  const starter = createRunStarter({ tasks, people, workingCalendars, recordTypes, definitionOf });
   const reader = createRunReader({ transact, tasks, starter });
-  const lifecycle = createRunLifecycleService({ orm, transact, logger, tasks, starter, reader });
-  const dueRuns = createDueRunService({ orm, transact, logger, starter, lifecycle });
-  const eventRuns = createEventRunService({ logger, tasks, starter, today });
+  const lifecycle = createRunLifecycleService({ orm, transact, tasks, starter });
+  const dueRuns = createDueRunService({
+    orm,
+    transact,
+    logger,
+    tasks,
+    starter,
+    lifecycle,
+    recordTypes,
+    definitionOf,
+  });
+  const eventRuns = createEventRunService({
+    logger,
+    starter,
+    today,
+    triggeringEvents,
+    definitionOf,
+  });
   const historyReader = createRecordHistoryReaderService(orm, { process: processRecordType(orm) });
 
   return {
@@ -129,35 +151,31 @@ export function createProcessService({
       return historyReader.readHistory(ctx, "process", process.id, args);
     },
 
-    async startRun(ctx, { processKey, employeeId }) {
+    async startRun(ctx, { processKey, recordId }) {
       const process = await reader.requireProcess(orm, processKey);
-      const { activeVersion } = process;
-      const definition = parseProcessDefinition(
-        activeVersion.schemaVersion,
-        activeVersion.definition,
-      );
-      const subjectId = parseUuid(employeeId);
-      if (!subjectId) throw employeeNotFound();
-      await ctx.requireInScope("process_run", "create", subjectId);
-      if (!definition.startableByAdmin || definition.subject.recordType !== "employee") {
+      const definition = definitionOf(process.activeVersion);
+      const { recordType } = definition.subject;
+      if (!definition.startableByAdmin) {
         throw new ApplicationError("FORBIDDEN", "This process starts only by itself.");
       }
       const run = await transact(async (tx) => {
         await processRepository(tx).lockProcess(process.id);
-        const subject = await starter.readSubject(tx, subjectId);
-        if (!subject) throw employeeNotFound();
-        if (await processRepository(tx).findRunInProgress(process.id, "employee", subjectId)) {
+        const subjects = await starter.readRecordSubjects(tx, recordType, [recordId]);
+        if (!subjects.has(recordId)) throw recordNotFound();
+        const subject = subjects.get(recordId)!;
+        await ctx.requireInScope("process_run", "create", subject?.id ?? "public");
+        if (await processRepository(tx).findRunInProgress(process.id, recordType, recordId)) {
           throw new ApplicationError(
             "CONFLICT",
-            `${process.name} is already running for ${subject.firstName}.`,
+            `${process.name} is already running for ${subject?.firstName ?? "this record"}.`,
           );
         }
-        const startDay = laterOf(today(), subject.startDate);
+        const startDay = laterOf(today(), subject?.startDate ?? null);
         const [started] = await starter.startMany(tx, [
           {
             process,
             definition,
-            record: { recordType: "employee", recordId: subjectId },
+            record: { recordType, recordId },
             subject,
             startCause: "started_by_admin",
             startedByEmployeeId: ctx.user?.employeeId ?? null,
@@ -173,8 +191,6 @@ export function createProcessService({
       return reader.readDetails(run);
     },
 
-    cancelRun: (ctx, runId, reason) => lifecycle.cancelRun(ctx, runId, reason),
-
     async readRun(ctx, runId) {
       const run = await reader.requireRun(orm, runId);
       await ctx.requireInScope("process_run", "read", run.subjectEmployeeId ?? "public");
@@ -188,10 +204,6 @@ export function createProcessService({
       return runs.map((run) => reader.view(run, process));
     },
 
-    markStepDone: (ctx, taskId) => lifecycle.markStepDone(ctx, taskId),
-
-    reopenStep: (ctx, taskId) => lifecycle.reopenStep(ctx, taskId),
-
     readStepProgress: (ctx, taskId) => lifecycle.readStepProgress(ctx, taskId),
 
     startDueRuns: (ctx, day) => dueRuns.startDueRuns(ctx, day),
@@ -202,6 +214,10 @@ export function createProcessService({
     },
 
     startRunsOnEvents: (ctx, tx, events) => eventRuns.startRunsOnEvents(ctx, tx, events),
+
+    completeStepsOfDoneTasks: (tx, events) => lifecycle.completeStepsOfDoneTasks(tx, events),
+
+    readTaskSources: (taskIds) => processRepository(orm).findTaskSources(taskIds),
 
     async resetProcesses(ctx, tx) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
@@ -260,12 +276,36 @@ function processView({
   };
 }
 
+/** The process capabilities of the record types that registered them, by type. */
+function processRecordTypesOf(registry: RecordTypeRegistry): ProcessRecordTypes {
+  return Object.fromEntries(
+    Object.entries(registry).flatMap(([type, registration]) =>
+      registration?.processes ? [[type, registration.processes]] : [],
+    ),
+  );
+}
+
+/** Parses stored definitions against the record types and events the modules registered. */
+function definitionReader(
+  recordTypes: ProcessRecordTypes,
+  triggeringEvents: TriggeringEvents,
+): DefinitionReader {
+  const catalog = {
+    recordTypes: Object.fromEntries(
+      Object.entries(recordTypes).map(([type, { dateFields = [] }]) => [type, { dateFields }]),
+    ),
+    triggeringEvents,
+  };
+  return ({ schemaVersion, definition }) =>
+    parseProcessDefinition(schemaVersion, definition, catalog);
+}
+
 function laterOf(day: CalendarDate, other: CalendarDate | null): CalendarDate {
   return other !== null && other > day ? other : day;
 }
 
-function employeeNotFound(): ApplicationError {
-  return new ApplicationError("NOT_FOUND", "No employee has this id.");
+function recordNotFound(): ApplicationError {
+  return new ApplicationError("NOT_FOUND", "No record has this id.");
 }
 
 const history = createRecordHistoryService();

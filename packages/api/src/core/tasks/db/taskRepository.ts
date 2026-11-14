@@ -19,6 +19,8 @@ export interface TaskRepository {
   lockByIds(ids: readonly string[]): Promise<Task[]>;
   /** Every task, locked in id order until the transaction ends. */
   lockAll(): Promise<void>;
+  /** Deletes the task. */
+  delete(id: string): Promise<void>;
   /** Writes the task's status and the columns that follow it. */
   saveStatus(task: Task): Promise<Task>;
   /**
@@ -74,6 +76,10 @@ export function taskRepository(db: Orm | Tx): TaskRepository {
       return row ? toTask(row) : null;
     },
 
+    async delete(id) {
+      await orm.delete(tasks).where(eq(tasks.id, id));
+    },
+
     async saveStatus({ id, status, doneAt, doneByEmployeeId, cancelledAt, cancelReason }) {
       const [row] = await orm
         .update(tasks)
@@ -107,28 +113,17 @@ type TaskRow = typeof tasks.$inferSelect;
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
 const INSERT_BATCH_SIZE = 1_000;
 
-function toRow({ processSource, record, ...task }: NewTaskRow) {
+function toRow({ record, ...task }: NewTaskRow) {
   return {
     ...task,
-    processKey: processSource?.processKey ?? null,
-    processRunId: processSource?.processRunId ?? null,
-    stepKey: processSource?.stepKey ?? null,
     recordType: record?.recordType ?? null,
     recordId: record?.recordId ?? null,
   };
 }
 
-function toTask({
-  processKey,
-  processRunId,
-  stepKey,
-  recordType,
-  recordId,
-  ...row
-}: TaskRow): Task {
+function toTask({ recordType, recordId, ...row }: TaskRow): Task {
   return {
     ...row,
-    processSource: processKey && stepKey ? { processKey, processRunId, stepKey } : null,
     record: recordType && recordId ? { recordType, recordId } : null,
   };
 }

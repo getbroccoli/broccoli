@@ -39,9 +39,13 @@ export {
   createEmployeeWorkingPatternService,
   createLocationService,
   createOwnWorkingWeekService,
+  createPeopleAdapter,
   createTermsService,
+  createWorkingCalendarsAdapter,
+  EMPLOYEE_TRIGGERING_EVENTS,
   employeeDirectory,
   employeeNotFound,
+  employeeRecordType,
   termsRecordType,
 } from "./app";
 export {

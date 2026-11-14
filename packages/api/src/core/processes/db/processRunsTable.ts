@@ -91,7 +91,7 @@ export const processRuns = pgTable(
     ),
     check(
       "process_runs_cancel_cause_known",
-      sql`${table.cancelCause} in ('cancelled_by_admin', 'cancelled_because_step_assignee_was_removed', 'cancelled_because_subject_was_removed')`,
+      sql`${table.cancelCause} in ('cancelled_because_step_assignee_was_removed', 'cancelled_because_subject_was_removed')`,
     ),
     check(
       "process_runs_columns_follow_status",

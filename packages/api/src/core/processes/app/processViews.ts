@@ -1,5 +1,5 @@
 import type { CalendarDate } from "../../../utils";
-import type { Task, TaskStatus } from "../../tasks";
+import type { TaskStatus } from "../../tasks";
 import type { ProcessRun as StoredRun, RunStatus, RunStep } from "../domain";
 
 // The shapes the process service returns.
@@ -52,13 +52,6 @@ export interface ProcessRunStep {
 export interface ProcessRunDetails {
   run: ProcessRun;
   steps: ProcessRunStep[];
-}
-
-/** A step's task after a step command, and its run; a run cancelled on the way says so instead of throwing. */
-export interface StepChange {
-  /** Without why it was cancelled, which only admins may see: it can name another step. */
-  run: Omit<ProcessRun, "cancelReason" | "cancelCause">;
-  task: Task;
 }
 
 /** How far a run is, as one of its tasks' readers may see it: never the other steps. */
