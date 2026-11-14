@@ -87,7 +87,10 @@ export function BookTimeOffDialog({
     <Dialog open onOpenChange={(open) => !open && !booking.loading && onClose()}>
       <DialogContent
         closeLabel={t("timeOff.details.close")}
-        className={cn("max-h-[92vh] overflow-y-auto", pane ? "sm:max-w-5xl" : "sm:max-w-xl")}
+        className={cn(
+          "max-h-[92vh] overflow-y-auto max-sm:flex max-sm:h-dvh max-sm:max-h-dvh max-sm:max-w-full max-sm:flex-col max-sm:rounded-none",
+          pane ? "sm:max-w-5xl" : "sm:max-w-xl",
+        )}
       >
         <DialogTitle className="text-lg">{t("timeOff.book")}</DialogTitle>
         <div className={cn("grid gap-6", pane && "md:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]")}>
@@ -175,7 +178,7 @@ export function BookTimeOffDialog({
             </aside>
           )}
         </div>
-        <DialogFooter className="items-center sm:justify-between">
+        <DialogFooter className="items-center max-sm:mt-auto max-sm:shrink-0 max-sm:rounded-none sm:justify-between">
           <p className="text-sm text-muted-foreground">
             {person ? t("timeOff.dialog.bookedStraightAway") : t("timeOff.dialog.pickWho")}
           </p>
