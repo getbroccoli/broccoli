@@ -145,9 +145,7 @@ export class ProcessRun implements Readonly<ProcessRunFields> {
 
   /** The tasks of steps still awaiting them. */
   openTaskIds(): string[] {
-    return this.steps.flatMap(({ status, taskId }) =>
-      status === "step_awaiting_task_completion" && taskId ? [taskId] : [],
-    );
+    return openTaskIdsOf(this.steps);
   }
 
   /**
@@ -214,4 +212,11 @@ export class ProcessRun implements Readonly<ProcessRunFields> {
   private with(changes: Partial<ProcessRunFields>, steps: readonly RunStep[]): ProcessRun {
     return new ProcessRun({ ...this, ...changes }, steps);
   }
+}
+
+/** The tasks of these steps still awaiting them. */
+export function openTaskIdsOf(steps: readonly RunStep[]): string[] {
+  return steps.flatMap(({ status, taskId }) =>
+    status === "step_awaiting_task_completion" && taskId ? [taskId] : [],
+  );
 }

@@ -23,6 +23,7 @@ export {
   CANCEL_CAUSES,
   type CancelCause,
   PROCESS_CANCELLED,
+  openTaskIdsOf,
   ProcessRun,
   type ProcessRunFields,
   resolveAssignee,

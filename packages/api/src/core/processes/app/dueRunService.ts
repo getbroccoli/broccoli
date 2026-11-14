@@ -6,6 +6,7 @@ import { processRepository, type StoredProcess } from "../db";
 import type { TaskService } from "../../tasks";
 import {
   dueTriggerDate,
+  openTaskIdsOf,
   type ProcessRun,
   type ProcessRunFields,
   type RecordDateTrigger,
@@ -85,9 +86,7 @@ async function checkRun(
   runId: string,
 ): Promise<ProcessRun | null> {
   const runs = processRepository(tx);
-  const locked = (await runs.findSteps(runId)).flatMap(({ status, taskId }) =>
-    status === "step_awaiting_task_completion" && taskId ? [taskId] : [],
-  );
+  const locked = openTaskIdsOf(await runs.findSteps(runId));
   await tasks.lockInTransaction(tx, locked);
   const run = (await runs.lockRun(runId))!;
   if (String(run.openTaskIds()) !== String(locked)) return null;

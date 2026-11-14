@@ -59,7 +59,7 @@ export interface ProcessRepository {
   findRun(id: string): Promise<ProcessRunFields | null>;
   /** The run with its steps, locked until the transaction ends, so changes to it take turns. */
   lockRun(id: string): Promise<ProcessRun | null>;
-  /** Writes the run and its steps. */
+  /** Writes the run and its steps' status. */
   saveRun(run: ProcessRun): Promise<void>;
   /** The run's steps, in no particular order. */
   findSteps(runId: string): Promise<RunStep[]>;
@@ -226,10 +226,11 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
         .update(processRuns)
         .set({ ...run, updatedAt: new Date() })
         .where(eq(processRuns.id, run.id));
-      for (const { runId, stepKey, ...step } of steps) {
+      // Only what a run changes: a step's task reference is the database's to clear.
+      for (const { runId, stepKey, status, finishedAt } of steps) {
         await orm
           .update(processRunSteps)
-          .set(step)
+          .set({ status, finishedAt })
           .where(and(eq(processRunSteps.runId, runId), eq(processRunSteps.stepKey, stepKey)));
       }
     },
