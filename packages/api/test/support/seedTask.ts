@@ -1,5 +1,5 @@
 import type { Orm } from "../../src/core/db";
-import { type NewTaskRow, taskRepository } from "../../src/modules/tasks/db";
+import { type NewTaskRow, taskRepository } from "../../src/core/tasks/db";
 import { testTransactor } from "./testTransactor";
 
 export function seedTask(

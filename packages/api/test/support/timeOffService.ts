@@ -5,7 +5,7 @@ import { createEventBus } from "../../src/core/events";
 import type { SecurityContext } from "../../src/core/security";
 import { createLogger } from "../../src/core/logger";
 import { createDemoFillService } from "../../src/modules/demo";
-import { createTaskService } from "../../src/modules/tasks";
+import { createTaskService } from "../../src/core/tasks";
 import {
   createBookTimeOffService,
   createOwnTimeOffRulesService,

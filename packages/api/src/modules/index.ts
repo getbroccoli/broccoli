@@ -19,10 +19,10 @@ import {
 import { externalAgentsModule } from "./externalAgents";
 import { createImportServices, importsModule } from "./imports";
 import { mcpAgentsModule } from "./mcpAgents";
-import { createProcessService, processesModule } from "./processes";
+import { createProcessService, processesModule } from "../core/processes";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
-import { createTaskService, tasksModule } from "./tasks";
+import { createTaskService, tasksModule } from "../core/tasks";
 import { createTimeOffSetupService, createTimeOffService, timeOffModule } from "./timeOff";
 
 const employeeSetup = createEmployeeSetupService();

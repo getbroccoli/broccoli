@@ -1,7 +1,7 @@
 import { createBeforeCommitBus, type Orm, type Transact, transactor } from "../../src/core/db";
 import { createEventBus } from "../../src/core/events";
 import { createLogger } from "../../src/core/logger";
-import { createProcessService, processesModule } from "../../src/modules/processes";
+import { createProcessService, processesModule } from "../../src/core/processes";
 import { type CalendarDate, todayInLondon } from "../../src/utils";
 import { bankHolidayService } from "./bankHolidayService";
 import { taskService } from "./services";

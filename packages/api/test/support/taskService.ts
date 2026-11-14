@@ -1,6 +1,6 @@
 import type { Orm, Transact } from "../../src/core/db";
 import { createLogger } from "../../src/core/logger";
-import { createTaskService } from "../../src/modules/tasks";
+import { createTaskService } from "../../src/core/tasks";
 import { testTransactor } from "./testTransactor";
 
 export function taskService(
