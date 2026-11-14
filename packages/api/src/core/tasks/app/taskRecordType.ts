@@ -2,7 +2,6 @@ import type { Orm } from "../../db";
 import type { RecordTypeRegistration } from "../../records";
 import { parseUuid } from "../../../utils";
 import { taskRepository } from "../db";
-import { isTaskVisibleTo } from "../domain";
 
 /**
  * How core reads a task's history: only its assignee and the person who asked, as for the task;
@@ -20,7 +19,7 @@ export function taskRecordType(orm: Orm): RecordTypeRegistration {
       const employeeId = ctx.user?.employeeId;
       if (!employeeId) return new Set();
       const tasks = await taskRepository(orm).findByIds(ids);
-      return new Set(tasks.filter((task) => isTaskVisibleTo(task, employeeId)).map(({ id }) => id));
+      return new Set(tasks.filter((task) => task.isVisibleTo(employeeId)).map(({ id }) => id));
     },
     // A process on a task is about the task's subject, who gains no access to the task by it.
     processes: {

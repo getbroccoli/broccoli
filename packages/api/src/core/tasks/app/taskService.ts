@@ -11,17 +11,7 @@ import type { SecurityContext } from "../../security";
 import { parseUuid } from "../../../utils";
 import { taskRepository } from "../db";
 import { createTasks, DIRECT_EDIT, type NewTask, requireText, type TaskCause } from "./createTasks";
-import {
-  cancelTask,
-  groupMyTasks,
-  isTaskVisibleTo,
-  markTaskDone,
-  markTaskWaiting,
-  refuseClosed,
-  type MyTasks,
-  resolvedRecentlySince,
-  type Task,
-} from "../domain";
+import { groupMyTasks, type MyTasks, resolvedRecentlySince, type Task } from "../domain";
 import { taskRecordType } from "./taskRecordType";
 
 /**
@@ -104,7 +94,7 @@ export function createTaskService({
       for (const task of await tasks.lockByIds(taskIds)) {
         if (task.status === "done" || task.status === "cancelled") continue;
         const saved = await tasks.saveStatus(
-          cancelTask(task, requireText(reason, "reason"), new Date()),
+          task.cancel(requireText(reason, "reason"), new Date()),
         );
         await appendStatusChange(ctx, tx, task, saved, cause);
       }
@@ -120,7 +110,7 @@ export function createTaskService({
       if (!task) {
         throw notFound();
       }
-      const saved = await tasks.saveStatus(markTaskWaiting(task));
+      const saved = await tasks.saveStatus(task.markWaiting());
       await appendStatusChange(ctx, tx, task, saved);
       return saved;
     },
@@ -147,10 +137,7 @@ export function createTaskService({
     async markDone(ctx, taskId) {
       const done = await transact(async (tx) => {
         const { task, employeeId } = await lockVisible(ctx, tx, taskId);
-        refuseUnlessAssignee(task, employeeId, MARK_DONE_REFUSAL);
-        const saved = await taskRepository(tx).saveStatus(
-          markTaskDone(task, employeeId, new Date()),
-        );
+        const saved = await taskRepository(tx).saveStatus(task.markDone(employeeId, new Date()));
         return { task: saved, historyLine: await appendStatusChange(ctx, tx, task, saved) };
       });
       logger.info({ taskId: done.task.id, type: done.task.type }, "Task marked done");
@@ -160,13 +147,7 @@ export function createTaskService({
     async deleteTask(ctx, taskId) {
       const deleted = await transact(async (tx) => {
         const { task, employeeId } = await lockVisible(ctx, tx, taskId);
-        if (task.askedByEmployeeId !== employeeId) {
-          throw new ApplicationError(
-            "FORBIDDEN",
-            "Only the person who asked can delete this task.",
-          );
-        }
-        refuseClosed(task);
+        task.requireDeletableBy(employeeId);
         await taskRepository(tx).delete(task.id);
         await history.append(ctx, tx, {
           recordType: "task",
@@ -245,16 +226,10 @@ function requireVisible(
   task: Task | null,
 ): { task: Task; employeeId: string } {
   const employeeId = ctx.user?.employeeId ?? null;
-  if (task === null || employeeId === null || !isTaskVisibleTo(task, employeeId)) {
+  if (task === null || employeeId === null || !task.isVisibleTo(employeeId)) {
     throw notFound();
   }
   return { task, employeeId };
-}
-
-function refuseUnlessAssignee(task: Task, employeeId: string, message: string): void {
-  if (task.assigneeEmployeeId !== employeeId) {
-    throw new ApplicationError("FORBIDDEN", message);
-  }
 }
 
 function notFound(): ApplicationError {
@@ -262,5 +237,3 @@ function notFound(): ApplicationError {
 }
 
 const history = createRecordHistoryService();
-
-const MARK_DONE_REFUSAL = "Only the person who holds this task can mark it done.";

@@ -1,12 +1,8 @@
 export {
-  cancelTask,
-  isTaskVisibleTo,
-  markTaskDone,
-  markTaskWaiting,
   TASK_STATUSES,
   MANUAL_TO_DO,
-  refuseClosed,
-  type Task,
+  Task,
+  type TaskFields,
   type TaskStatus,
   type TaskRecord,
 } from "./task";

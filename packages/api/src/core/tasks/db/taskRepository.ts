@@ -1,11 +1,11 @@
 import { and, eq, gte, inArray, or } from "drizzle-orm";
 
 import { ormOf, type Orm, type Tx } from "../../db";
-import type { Task } from "../domain";
+import { Task, type TaskFields } from "../domain";
 import { tasks } from "./tasksTable";
 
 /** A task as it is stored before it has an id and timestamps. */
-export type NewTaskRow = Omit<Task, "id" | "createdAt" | "updatedAt">;
+export type NewTaskRow = Omit<TaskFields, "id" | "createdAt" | "updatedAt">;
 
 /** Stored tasks. */
 export interface TaskRepository {
@@ -122,8 +122,8 @@ function toRow({ record, ...task }: NewTaskRow) {
 }
 
 function toTask({ recordType, recordId, ...row }: TaskRow): Task {
-  return {
+  return Task.restore({
     ...row,
     record: recordType && recordId ? { recordType, recordId } : null,
-  };
+  });
 }

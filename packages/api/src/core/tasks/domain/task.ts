@@ -13,8 +13,8 @@ export interface TaskRecord {
   recordId: string;
 }
 
-/** Work asked of one person, and where it stands. */
-export interface Task {
+/** A task's facts, as stored. */
+export interface TaskFields {
   id: string;
   /** `manual_to_do`, or the type of the feature that created it. */
   type: string;
@@ -34,42 +34,93 @@ export interface Task {
   updatedAt: Date;
 }
 
-/** Only the assignee and the person who asked see a task; whom it is about does not count. */
-export function isTaskVisibleTo(task: Task, employeeId: string): boolean {
-  return task.assigneeEmployeeId === employeeId || task.askedByEmployeeId === employeeId;
-}
+/**
+ * Work asked of one person, and the rules of its life: who sees it, who finishes or deletes it,
+ * and that done and cancelled are final. Every change returns a new task; the original stays.
+ */
+export class Task implements Readonly<TaskFields> {
+  declare readonly id: string;
+  declare readonly type: string;
+  declare readonly status: TaskStatus;
+  declare readonly title: string;
+  declare readonly description: string | null;
+  declare readonly assigneeEmployeeId: string;
+  declare readonly askedByEmployeeId: string | null;
+  declare readonly subjectEmployeeId: string | null;
+  declare readonly record: TaskRecord | null;
+  declare readonly dueDate: CalendarDate | null;
+  declare readonly doneAt: Date | null;
+  declare readonly doneByEmployeeId: string | null;
+  declare readonly cancelledAt: Date | null;
+  declare readonly cancelReason: string | null;
+  declare readonly createdAt: Date;
+  declare readonly updatedAt: Date;
 
-export function markTaskDone(task: Task, byEmployeeId: string, now: Date): Task {
-  refuseClosed(task);
-  if (task.status === "waiting") {
-    throw new ApplicationError("CONFLICT", "This task is waiting.");
+  private constructor(fields: TaskFields) {
+    Object.assign(this, fields);
   }
-  return { ...task, status: "done", doneAt: now, doneByEmployeeId: byEmployeeId };
-}
 
-/** `reason` is the trimmed, non-blank reason the caller checked. */
-export function cancelTask(task: Task, reason: string, now: Date): Task {
-  refuseClosed(task);
-  return { ...task, status: "cancelled", cancelledAt: now, cancelReason: reason };
-}
+  /** The task as stored. */
+  static restore(fields: TaskFields): Task {
+    return new Task(fields);
+  }
 
-export function markTaskWaiting(task: Task): Task {
-  if (task.status === "cancelled") {
-    throw cancelledConflict();
+  /** Only the assignee and the person who asked see a task; whom it is about does not count. */
+  isVisibleTo(employeeId: string): boolean {
+    return this.assigneeEmployeeId === employeeId || this.askedByEmployeeId === employeeId;
   }
-  if (task.status !== "to_do") {
-    throw new ApplicationError("CONFLICT", "Only a task to do can wait.");
-  }
-  return { ...task, status: "waiting" };
-}
 
-/** Done and cancelled are final: nothing changes such a task again. */
-export function refuseClosed(task: Task): void {
-  if (task.status === "done") {
-    throw new ApplicationError("CONFLICT", "This task is already done.");
+  /** Its assignee finishes it, whatever created it. */
+  markDone(byEmployeeId: string, now: Date): Task {
+    if (this.assigneeEmployeeId !== byEmployeeId) {
+      throw new ApplicationError(
+        "FORBIDDEN",
+        "Only the person who holds this task can mark it done.",
+      );
+    }
+    this.refuseClosed();
+    if (this.status === "waiting") {
+      throw new ApplicationError("CONFLICT", "This task is waiting.");
+    }
+    return this.with({ status: "done", doneAt: now, doneByEmployeeId: byEmployeeId });
   }
-  if (task.status === "cancelled") {
-    throw cancelledConflict();
+
+  /** `reason` is the trimmed, non-blank reason the caller checked. */
+  cancel(reason: string, now: Date): Task {
+    this.refuseClosed();
+    return this.with({ status: "cancelled", cancelledAt: now, cancelReason: reason });
+  }
+
+  markWaiting(): Task {
+    if (this.status === "cancelled") {
+      throw cancelledConflict();
+    }
+    if (this.status !== "to_do") {
+      throw new ApplicationError("CONFLICT", "Only a task to do can wait.");
+    }
+    return this.with({ status: "waiting" });
+  }
+
+  /** Only the person who asked deletes it, while it is open; a feature's task has nobody who asked. */
+  requireDeletableBy(employeeId: string): void {
+    if (this.askedByEmployeeId !== employeeId) {
+      throw new ApplicationError("FORBIDDEN", "Only the person who asked can delete this task.");
+    }
+    this.refuseClosed();
+  }
+
+  /** Done and cancelled are final: nothing changes such a task again. */
+  private refuseClosed(): void {
+    if (this.status === "done") {
+      throw new ApplicationError("CONFLICT", "This task is already done.");
+    }
+    if (this.status === "cancelled") {
+      throw cancelledConflict();
+    }
+  }
+
+  private with(changes: Partial<TaskFields>): Task {
+    return new Task({ ...this, ...changes });
   }
 }
 
