@@ -130,6 +130,8 @@ export { signedIn } from "./signedIn";
 export { bankHolidayService } from "./bankHolidayService";
 export { workingPatternService } from "./workingPatternService";
 
+export { createJobRunner } from "../../src/core/jobs";
+export { notificationFlow } from "./notifications";
 export { fakeMail } from "./fakeMail";
 export { startFakeResend } from "./fakeResend";
 export { startFakeMailRelay } from "./fakeMailRelay";

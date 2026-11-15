@@ -2,7 +2,7 @@ import { ADMIN, EMPLOYEE, calendarDate, expect, processService, test } from "#te
 
 import { ONBOARDING_EXAMPLE, WELCOME_NEW_STARTER } from "../domain";
 
-test("lists the seeded onboarding and welcome processes with automatic starts off", async ({
+test("lists the seeded processes, with the built-in notifications off in tests", async ({
   orm,
 }) => {
   const processes = await processService(orm).listProcesses(ADMIN);
@@ -15,6 +15,8 @@ test("lists the seeded onboarding and welcome processes with automatic starts of
       turnedOnAt: null,
       activeVersion: { version: 1 },
     },
+    { key: "notifications.task_done", name: "Tell the asker a task is done", isOn: false },
+    { key: "notifications.task_created", name: "Tell the assignee about a new task", isOn: false },
     {
       key: WELCOME_NEW_STARTER,
       name: "Welcome a new starter",

@@ -29,3 +29,13 @@ A manual check of My tasks, against a development stack.
 - [ ] On "Check the laptop budget for new starters", which you asked for, "…" offers Delete task. "Delete this task?" names Priya; Keep it leaves it, Delete task closes the panel, says "Task deleted" and the task is gone from Waiting on others.
 - [ ] An unknown id, such as `/tasks/00000000-0000-4000-8000-000000000001`, says "This task is not yours to see, or it is gone."
 - [ ] At phone width the panel is full screen.
+
+## Task emails
+
+Mailpit catches every email in development; open it from the address the development launcher prints.
+
+- [ ] In the demo, nothing in Mailpit mentions a task: the demo's tasks email nobody.
+- [ ] Invite Priya Shah from People, accept her invite from Mailpit in a private window and sign in as her. On "Check the laptop budget for new starters" Mark done: within seconds Oliver Bennett gets "Priya Shah marked done: Check the laptop budget for new starters", with "Done by Priya Shah on <today>" and an Open task button.
+- [ ] Open task signs in if needed and opens the task at `/tasks/<id>` for Oliver.
+- [ ] As Oliver, Mark done "Approve the hiring plan for next quarter", which Priya asked for: Priya gets an email, Oliver none.
+- [ ] A task someone gives you (such as Welcome a new starter's "Have a welcome 1:1 with …") emails you "New task: …" with the description, the due day and Open task; a person who has not joined gets nothing.

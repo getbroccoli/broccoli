@@ -23,8 +23,10 @@
       "src/core/env",
       "src/core/instance",
       "src/core/moduleManifest",
+      "src/core/notifications",
       "src/core/records",
       "src/core/processes",
+      "src/core/security",
       "src/core/tasks",
       "src/modules/*",
       "src/utils"
@@ -181,6 +183,7 @@
     ],
     "test/e2e": ["src/core/db", "src/core/logger", "src/core/server", "test/support"],
     "src/core/tasks": [
+      "src/integrations/mail",
       "src/core/applicationError",
       "src/core/db",
       "src/core/events",
@@ -191,6 +194,17 @@
       "src/core/records",
       "src/core/security",
       "src/utils"
+    ],
+    "src/core/notifications": [
+      "src/integrations/mail",
+      "src/core/db",
+      "src/core/events",
+      "src/core/instance",
+      "src/core/jobs",
+      "src/core/logger",
+      "src/core/moduleManifest",
+      "src/core/processes",
+      "src/core/records"
     ],
     "src/core/processes": [
       "src/core/applicationError",

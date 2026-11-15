@@ -82,6 +82,8 @@ async function addDemoTasks(
     await tasks.createTask(ctx, tx, {
       ...task,
       type: "manual_to_do",
+      // The built-in notification processes skip it, so exploring the demo emails nobody.
+      sourceKey: "demo_fill",
       assigneeEmployeeId: idsByEmail.get(assigneeEmail)!,
       askedByEmployeeId: idsByEmail.get(askedByEmail)!,
     });

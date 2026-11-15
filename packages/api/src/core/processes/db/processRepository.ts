@@ -90,7 +90,7 @@ export interface ProcessRepository {
     recordType: string,
     recordId: string,
   ): Promise<ProcessRunFields | null>;
-  /** Back to a fresh workspace: deletes every run (their steps and tasks with them), turns every process off. */
+  /** Back to a fresh workspace: deletes every run (their steps and tasks with them), turns every built-in process on and every other off. */
   reset(): Promise<void>;
 }
 
@@ -286,7 +286,11 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
 
     async reset() {
       await orm.delete(processRuns);
-      await orm.update(processes).set({ turnedOnAt: null, updatedAt: new Date() });
+      // Built-in processes start on in a fresh workspace, as the migration seeds them.
+      await orm.update(processes).set({
+        turnedOnAt: sql`case when ${processes.builtIn} then now() end`,
+        updatedAt: new Date(),
+      });
     },
   };
 }

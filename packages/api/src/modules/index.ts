@@ -5,13 +5,16 @@ import {
 } from "../core/instance";
 import type { Deployment } from "../core/env";
 import type { ModuleDependencies, Modules } from "../core/moduleManifest";
+import { createNotifications, notificationsModule } from "../core/notifications";
 import { recordsManifest } from "../core/records";
+import { PrincipalSecurityContext } from "../core/security";
 import { createBankHolidayService, createStaticBankHolidaySource } from "./bankHolidays";
 import { companyModule, createCompany } from "./company";
 import { createDemoFillService, demoModule } from "./demo";
 import {
   createEmployeeInviteService,
   createEmployeeSetupService,
+  createNotificationPeopleAdapter,
   createPeopleAdapter,
   createWorkingCalendarsAdapter,
   EMPLOYEE_TRIGGERING_EVENTS,
@@ -33,6 +36,7 @@ import { systemModule } from "./system";
 import {
   createTaskService,
   TASK_TRIGGERING_EVENTS,
+  taskEmailTemplates,
   taskRecordType,
   tasksModule,
 } from "../core/tasks";
@@ -70,19 +74,38 @@ export function createModules(
   });
   const timeOff = createTimeOffService({ ...core, bankHolidays });
   const tasks = createTaskService(core);
+  // The record types a process may run on, registered by the modules that own them.
+  const recordTypes = { employee: employeeRecordType(core.orm), task: taskRecordType(core.orm) };
+  const notificationPeople = createNotificationPeopleAdapter(core);
+  const system = PrincipalSecurityContext.system();
+  const notifications = createNotifications({
+    ...core,
+    recordTypes,
+    // The emails notify steps may name, registered by the modules that own their records.
+    emailTemplates: collectRegistrations("notification email template", [
+      taskEmailTemplates({
+        orm: core.orm,
+        readEmployeeNames: notificationPeople.readEmployeeNames,
+      }),
+    ]),
+    people: notificationPeople,
+    readMailer: () => mailSettings.readMailer(system),
+    readCompanyName: async () => (await company.readStoredCompany(system)).name ?? "",
+  });
   const processes = createProcessService({
     ...core,
     tasks,
     people: createPeopleAdapter(core),
     workingCalendars: createWorkingCalendarsAdapter({ ...core, bankHolidays }),
-    // The record types a process may run on, registered by the modules that own them.
-    recordTypes: { employee: employeeRecordType(core.orm), task: taskRecordType(core.orm) },
+    recordTypes,
     triggeringEvents: collectRegistrations<TriggeringEventRegistration>("triggering event", [
       EMPLOYEE_TRIGGERING_EVENTS,
       TASK_TRIGGERING_EVENTS,
     ]),
     // The actions process steps may run, registered by the modules that own them.
-    actions: collectRegistrations<ProcessActionRegistration<unknown>>("process action", []),
+    actions: collectRegistrations<ProcessActionRegistration<unknown>>("process action", [
+      notifications.actions,
+    ]),
   });
   // Every path that clears the people resets time off, processes and tasks too, back to a fresh workspace.
   const deleteAllEmployees: typeof employeeSetup.deleteAllEmployees = async (ctx, tx) => {
@@ -151,6 +174,7 @@ export function createModules(
     }),
     tasksModule({ orm: core.orm, tasks }),
     processesModule({ logger: core.logger, processes }),
+    notificationsModule({ logger: core.logger, notifications }),
   ];
   return {
     manifests: [...manifests, recordsManifest(core, manifests)],

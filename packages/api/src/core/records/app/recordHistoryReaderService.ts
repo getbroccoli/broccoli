@@ -81,6 +81,10 @@ export interface RecordProcessCapabilities {
     tx: Tx,
     input: { field: string; from: CalendarDate; until: CalendarDate },
   ): Promise<Map<string, CalendarDate>>;
+  /** The employee fields a step may name, such as a task's "assignee"; none when absent. */
+  employeeFields?: readonly string[];
+  /** The record's employee fields as they are now, by field, null when empty; null when it is gone. */
+  readEmployees?(tx: Tx, id: string): Promise<Record<string, string | null> | null>;
 }
 
 interface ScopedReading {

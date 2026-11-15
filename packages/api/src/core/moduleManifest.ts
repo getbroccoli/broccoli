@@ -34,9 +34,9 @@ export interface ModuleDependencies {
  */
 export interface ModuleManifest {
   name: string;
-  /** The module's GraphQL SDL. */
-  typeDefs: string;
-  resolvers: Resolvers;
+  /** The module's GraphQL SDL; a module without an API leaves it and its resolvers out. */
+  typeDefs?: string;
+  resolvers?: Resolvers;
   /** What the module does when another module's event happens. */
   events?: EventHandlers;
   /** What the module does with a transaction's events inside it, committing with them or not at all. */

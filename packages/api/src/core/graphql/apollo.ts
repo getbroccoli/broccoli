@@ -61,7 +61,7 @@ export interface GraphqlApi {
 
 /** Builds the schema from the modules' SDL and resolvers and starts Apollo Server. */
 export async function startGraphqlApi(
-  manifests: readonly { typeDefs: string; resolvers: Resolvers }[],
+  manifests: readonly { typeDefs?: string; resolvers?: Resolvers }[],
   httpServer: Server,
   logger: Logger,
   resolveSecurity: SecurityResolver,
@@ -70,8 +70,8 @@ export async function startGraphqlApi(
   const apollo = new ApolloServer<GraphqlContext>({
     schema: requireSessionOutsidePublicFields(
       makeExecutableSchema({
-        typeDefs: [CORE_TYPE_DEFS, ...manifests.map((manifest) => manifest.typeDefs)],
-        resolvers: [CORE_RESOLVERS, ...manifests.map((manifest) => manifest.resolvers)],
+        typeDefs: [CORE_TYPE_DEFS, ...manifests.flatMap((manifest) => manifest.typeDefs ?? [])],
+        resolvers: [CORE_RESOLVERS, ...manifests.flatMap((manifest) => manifest.resolvers ?? [])],
       }),
     ),
     parseOptions: { maxTokens: MAX_TOKENS },

@@ -46,7 +46,11 @@ export {
   employeeRecordType,
   termsRecordType,
 } from "./app";
-export { createPeopleAdapter, createWorkingCalendarsAdapter } from "./adapters";
+export {
+  createNotificationPeopleAdapter,
+  createPeopleAdapter,
+  createWorkingCalendarsAdapter,
+} from "./adapters";
 export {
   cancelOwnChange,
   cancelPlannedVersion,

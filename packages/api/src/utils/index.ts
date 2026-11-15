@@ -5,6 +5,7 @@ export {
   addYears,
   coversDate,
   daysBetween,
+  formatShortDay,
   isWithin,
   laterOf,
   parseCalendarDate,

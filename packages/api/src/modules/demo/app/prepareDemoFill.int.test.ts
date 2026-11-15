@@ -1,4 +1,6 @@
 import {
+  ADMIN,
+  notificationFlow,
   demoFillService,
   demoService,
   employeeServices,
@@ -159,6 +161,17 @@ test("fills Oliver's tasks with three to do, two of them asking for a result, an
       }),
     ]),
   );
+});
+
+test("demo tasks queue no notification run even when notifications are on", async ({ orm }) => {
+  const notifications = notificationFlow(orm, { today: () => today });
+  await notifications.processes.turnOn(ADMIN, "notifications.task_created");
+  const { transact, queuedJobs } = notifications;
+
+  await transact(await demoFillService(orm).prepareDemoFill(today));
+
+  expect(queuedJobs).toEqual([]);
+  expect(await notifications.processes.listRuns(ADMIN, "notifications.task_created")).toEqual([]);
 });
 
 const today = parseCalendarDate("2026-10-13")!;
