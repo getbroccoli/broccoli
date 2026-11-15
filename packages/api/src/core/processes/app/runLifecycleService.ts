@@ -5,7 +5,7 @@ import { PrincipalSecurityContext, type SecurityContext } from "../../security";
 import { type CalendarDate, laterOf } from "../../../utils";
 import type { TaskService } from "../../tasks";
 import { processRepository, runStepRepository } from "../db";
-import { PROCESS_CANCELLED, type ProcessRun, SUBJECT_REMOVED } from "../domain";
+import { PROCESS_CANCELLED, type ProcessRun, type StepStatus, SUBJECT_REMOVED } from "../domain";
 import type { StepProgress } from "./processViews";
 import type { RunStarter } from "./runStarter";
 import type { StepStarter } from "./stepStarter";
@@ -74,7 +74,8 @@ export function createRunLifecycleService({
         tx.publish("processes.steps_completed", {
           runId,
           taskIds: run.openTaskIds().filter((taskId) => resultsByTaskId.has(taskId)),
-          startedStepKeys: startedStepKeys(completed, changed),
+          startedStepKeys: decidedStepKeys(completed, changed, isStarted),
+          notReachedStepKeys: decidedStepKeys(completed, changed, isNotReached),
           runStatus: changed.status,
         });
       }
@@ -89,7 +90,9 @@ export function createRunLifecycleService({
         // Locked, so a step change committing meanwhile cannot pair its steps with the old status.
         const run = (await runs.lockRun(step.runId))!;
         const [process] = await runs.findProcessesByIds([run.processId]);
-        const steps = run.steps.filter(({ status }) => status !== "step_skipped");
+        const steps = run.steps.filter(
+          ({ status }) => status !== "step_skipped" && status !== "step_not_reached",
+        );
         return {
           processName: process!.name,
           subjectEmployeeId: run.subjectEmployeeId,
@@ -137,14 +140,26 @@ async function removalOf(starter: RunStarter, tx: Tx, run: ProcessRun) {
   return run.removal(subjectExists);
 }
 
-/** The steps that were waiting before and are no longer. */
-function startedStepKeys(before: ProcessRun, after: ProcessRun): string[] {
+/** The steps that were waiting before and are now as `decision` says. */
+function decidedStepKeys(
+  before: ProcessRun,
+  after: ProcessRun,
+  decision: (status: StepStatus) => boolean,
+): string[] {
   const waiting = new Set(
     before.steps.flatMap(({ stepKey, status }) =>
       status === "step_waiting_to_start" ? [stepKey] : [],
     ),
   );
   return after.steps.flatMap(({ stepKey, status }) =>
-    waiting.has(stepKey) && status !== "step_waiting_to_start" ? [stepKey] : [],
+    waiting.has(stepKey) && decision(status) ? [stepKey] : [],
   );
+}
+
+function isStarted(status: StepStatus): boolean {
+  return status !== "step_waiting_to_start" && status !== "step_not_reached";
+}
+
+function isNotReached(status: StepStatus): boolean {
+  return status === "step_not_reached";
 }

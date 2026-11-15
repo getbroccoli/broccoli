@@ -2,7 +2,7 @@ import { ApplicationError } from "../../applicationError";
 import type { CalendarDate } from "../../../utils";
 import type { TaskResult } from "../../tasks";
 import type { TriggerEvent } from "./eventTrigger";
-import type { AssigneeRule, TaskStep } from "./processDefinition";
+import type { AfterEntry, AssigneeRule, StepJoin, TaskStep } from "./processDefinition";
 
 export const RUN_STATUSES = ["in_progress", "finished", "cancelled"] as const;
 export type RunStatus = (typeof RUN_STATUSES)[number];
@@ -25,6 +25,7 @@ export const STEP_STATUSES = [
   "step_awaiting_task_completion",
   "step_completed",
   "step_skipped",
+  "step_not_reached",
   "step_cancelled",
 ] as const;
 export type StepStatus = (typeof STEP_STATUSES)[number];
@@ -74,7 +75,7 @@ export interface RunStep {
   runId: string;
   stepKey: string;
   status: StepStatus;
-  /** Null for a waiting or skipped step, and once the task's assignee was removed. */
+  /** Null for a step waiting, skipped or not reached, and once the task's assignee was removed. */
   taskId: string | null;
   assigneeNote: AssigneeNote | null;
   skipReason: SkipReason | null;
@@ -109,24 +110,28 @@ export function resolveAssignee(
 }
 
 /**
- * The keys, in the definition's order, of waiting steps whose every listed step is completed or
- * skipped: the steps to start now.
+ * What the waiting steps can do now, each list in the definition's order: start, as their join
+ * allows; or never start, because the steps they wait for went another way.
  */
-export function readyStepKeys(
-  steps: readonly Pick<TaskStep, "key" | "after">[],
-  progress: readonly Pick<RunStep, "stepKey" | "status">[],
-): string[] {
-  const statusOf = new Map(progress.map(({ stepKey, status }) => [stepKey, status]));
-  const isDone = (key: string) =>
-    statusOf.get(key) === "step_completed" || statusOf.get(key) === "step_skipped";
-  return steps.flatMap(({ key, after = [] }) =>
-    statusOf.get(key) === "step_waiting_to_start" && after.every(isDone) ? [key] : [],
-  );
+export function decideWaitingSteps(
+  steps: readonly Pick<TaskStep, "key" | "after" | "join">[],
+  progress: readonly Pick<RunStep, "stepKey" | "status" | "result">[],
+): { ready: string[]; notReached: string[] } {
+  const rowOf = new Map(progress.map((row) => [row.stepKey, row]));
+  const ready: string[] = [];
+  const notReached: string[] = [];
+  for (const { key, after, join } of steps) {
+    if (rowOf.get(key)?.status !== "step_waiting_to_start") continue;
+    const states = after.map((entry) => entryState(entry, rowOf.get(entry.step)));
+    if (canStart(join, states)) ready.push(key);
+    else if (cannotEverStart(join, states)) notReached.push(key);
+  }
+  return { ready, notReached };
 }
 
-/** Whether a run with these steps has nothing left to do: every step completed or skipped. */
+/** Whether a run with these steps has nothing left to do: every step completed, skipped or not reached. */
 export function isEveryStepDone(steps: readonly Pick<RunStep, "status">[]): boolean {
-  return steps.every(({ status }) => status === "step_completed" || status === "step_skipped");
+  return steps.every(({ status }) => FINISHED_STATUSES.has(status));
 }
 
 /** A step that starts now, and who gets its task; null skips it for want of anyone. */
@@ -136,9 +141,9 @@ export interface StepStart {
 }
 
 /**
- * Starts the ready steps among `progress`, and again while skipped ones make more ready. Returns
- * the steps it started in order, and the progress with them awaiting their task (its id still
- * null, for the caller to fill) or skipped.
+ * Starts the ready steps among `progress` and marks the not reached, again while that decides
+ * more. Returns the steps it started in order, and the progress with them awaiting their task (its
+ * id still null, for the caller to fill) or skipped, and the not reached.
  */
 export function startReadySteps(
   steps: readonly TaskStep[],
@@ -148,16 +153,23 @@ export function startReadySteps(
 ): { starts: StepStart[]; progress: RunStep[] } {
   const starts: StepStart[] = [];
   let current = [...progress];
-  for (let ready = readyStepKeys(steps, current); ready.length > 0;) {
+  for (
+    let decided = decideWaitingSteps(steps, current);
+    decided.ready.length + decided.notReached.length > 0;
+    decided = decideWaitingSteps(steps, current)
+  ) {
+    const { ready, notReached } = decided;
     const started = steps
       .filter(({ key }) => ready.includes(key))
       .map((step) => ({ step, assignee: assigneeOf(step) }));
     starts.push(...started);
     current = current.map((row) => {
       const start = started.find(({ step }) => step.key === row.stepKey);
-      return start ? startedRow(row, start.assignee, now) : row;
+      if (start) return startedRow(row, start.assignee, now);
+      return notReached.includes(row.stepKey)
+        ? { ...row, status: "step_not_reached", finishedAt: now }
+        : row;
     });
-    ready = readyStepKeys(steps, current);
   }
   return { starts, progress: current };
 }
@@ -234,9 +246,12 @@ export class ProcessRun implements Readonly<ProcessRunFields> {
     return this.settled(steps, now);
   }
 
-  /** The run with these steps started, as stored; it finishes when none awaits a task or waits. */
-  withStartedSteps(started: readonly RunStep[], now: Date): ProcessRun {
-    const byKey = new Map(started.map((step) => [step.stepKey, step]));
+  /**
+   * The run with these waiting steps started or not reached, as stored; it finishes when none
+   * awaits a task or waits.
+   */
+  withDecidedSteps(decided: readonly RunStep[], now: Date): ProcessRun {
+    const byKey = new Map(decided.map((step) => [step.stepKey, step]));
     return this.settled(
       this.steps.map((step) => byKey.get(step.stepKey) ?? step),
       now,
@@ -311,4 +326,50 @@ function startedRow(row: RunStep, assignee: ResolvedAssignee | null, now: Date):
         skipReason: "no_assignee_for_step",
         finishedAt: now,
       };
+}
+
+const FINISHED_STATUSES: ReadonlySet<StepStatus> = new Set([
+  "step_completed",
+  "step_skipped",
+  "step_not_reached",
+]);
+
+type EntryState = "met" | "pending" | "impossible";
+
+/** Whether the step an entry names lets it start, may still, or never will. */
+function entryState(
+  { when }: AfterEntry,
+  row: Pick<RunStep, "status" | "result"> | undefined,
+): EntryState {
+  switch (row?.status) {
+    case "step_completed":
+      return !when || row.result?.code === when.result ? "met" : "impossible";
+    case "step_skipped":
+      // A skipped step counts as done, but nobody gave it a result.
+      return when ? "impossible" : "met";
+    case "step_not_reached":
+    case "step_cancelled":
+      return "impossible";
+    default:
+      return "pending";
+  }
+}
+
+/** `all`: every entry is met; `any`: one is; a step waiting for nothing can always start. */
+function canStart(join: StepJoin, states: readonly EntryState[]): boolean {
+  if (states.length === 0) return true;
+  return join === "all" ? states.every(isMet) : states.some(isMet);
+}
+
+/** `all`: one entry is impossible; `any`: every one is. */
+function cannotEverStart(join: StepJoin, states: readonly EntryState[]): boolean {
+  return join === "all" ? states.some(isImpossible) : states.every(isImpossible);
+}
+
+function isMet(state: EntryState): boolean {
+  return state === "met";
+}
+
+function isImpossible(state: EntryState): boolean {
+  return state === "impossible";
 }

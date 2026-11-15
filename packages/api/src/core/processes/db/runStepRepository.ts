@@ -8,8 +8,8 @@ import { resultColumnsOf, runStepProgress, toRunStep } from "./processRunsTable"
 /** Stored progress of runs' steps, read and written without their run. */
 export interface RunStepRepository {
   insertSteps(steps: readonly RunStep[]): Promise<void>;
-  /** Writes steps that were waiting as started: their status, task, note or skip reason. */
-  saveStartedSteps(steps: readonly RunStep[]): Promise<void>;
+  /** Writes steps that were waiting as started or not reached: their status, task, note or skip reason. */
+  saveDecidedSteps(steps: readonly RunStep[]): Promise<void>;
   /** The run's steps, in no particular order. */
   findSteps(runId: string): Promise<RunStep[]>;
   /** The steps whose tasks are among these, whatever their run. */
@@ -27,12 +27,12 @@ export function runStepRepository(db: Orm | Tx): RunStepRepository {
       }
     },
 
-    async saveStartedSteps(steps) {
+    async saveDecidedSteps(steps) {
       for (const step of steps) {
-        const { runId, stepKey, ...started } = toStepRow(step);
+        const { runId, stepKey, ...decided } = toStepRow(step);
         await orm
           .update(runStepProgress)
-          .set(started)
+          .set(decided)
           .where(
             and(
               eq(runStepProgress.runId, runId),

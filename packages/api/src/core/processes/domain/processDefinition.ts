@@ -8,7 +8,7 @@ export const PROCESS_DEFINITION_SCHEMA_VERSION = 1;
 /** The ready-made process that welcomes a new starter on their start date. */
 export const WELCOME_NEW_STARTER = "welcome_new_starter";
 
-/** The ready-made example of an onboarding whose last step waits for another. */
+/** The ready-made example of an onboarding whose steps wait for others and branch on a result. */
 export const ONBOARDING_EXAMPLE = "onboarding_example";
 
 /**
@@ -21,6 +21,9 @@ export interface ProcessDefinition {
   trigger: RecordDateTrigger | EventTrigger;
   steps: TaskStep[];
 }
+
+/** A definition as stored and written: an `after` entry may be a step key, `after` and `join` missing. */
+export type StoredProcessDefinition = z.input<typeof definitionSchema>;
 
 /** What the modules registered that a definition may name. */
 export interface ProcessCatalog {
@@ -55,13 +58,27 @@ export type EventTrigger = {
   | { run: "after_commit" }
 );
 
+/** How many of the steps a step waits for must let it start: every one, or any one. */
+export const STEP_JOINS = ["all", "any"] as const;
+export type StepJoin = (typeof STEP_JOINS)[number];
+
 /** A step that gives one person a task. */
 export interface TaskStep {
   key: string;
   kind: "task";
-  /** The steps it waits for, all completed or skipped before it starts; none starts it with the run. */
-  after?: string[];
+  /** The steps it waits for, as `join` says; none starts it with the run. */
+  after: AfterEntry[];
+  join: StepJoin;
   task: StepTask;
+}
+
+/**
+ * One step a step waits for: met once it is completed or skipped, or with `when`, only once it is
+ * completed with that result. Stored as the step's key alone when there is no `when`.
+ */
+export interface AfterEntry {
+  step: string;
+  when: { result: string } | null;
 }
 
 /** The task a task step gives; `title` and `description` may name `{firstName}`. */
@@ -101,6 +118,7 @@ export function parseProcessDefinition(
   refuseSubjectOtherThanTrigger(parsed, catalog);
   refuseRepeatedStepKeys(parsed.steps);
   refuseUnrunnableWaits(parsed.steps);
+  refuseResultsNotOffered(parsed.steps);
   const triggerOffsets = parsed.trigger.kind === "on_record_date" ? [parsed.trigger.offset] : [];
   for (const offset of [...triggerOffsets, ...parsed.steps.map(({ task }) => task.due)]) {
     refuseOffsetBeyondLimit(offset);
@@ -161,9 +179,9 @@ function refuseRepeatedStepKeys(steps: readonly TaskStep[]): void {
 /** Refuses a step waiting for a step that does not exist, for itself, twice, or in a cycle. */
 function refuseUnrunnableWaits(steps: readonly TaskStep[]): void {
   const keys = new Set(steps.map(({ key }) => key));
-  for (const { key, after = [] } of steps) {
+  for (const { key, after } of steps) {
     const listed = new Set<string>();
-    for (const waitedFor of after) {
+    for (const { step: waitedFor } of after) {
       if (waitedFor === key) throw new Error(`Step ${key} waits for itself.`);
       if (!keys.has(waitedFor)) {
         throw new Error(`Step ${key} waits for ${waitedFor}, which is not a step.`);
@@ -176,9 +194,26 @@ function refuseUnrunnableWaits(steps: readonly TaskStep[]): void {
   if (cycle.length > 0) throw new Error(`Steps ${cycle.join(", ")} wait for each other.`);
 }
 
+/** Refuses a step waiting for a result that the step it names does not ask for. */
+function refuseResultsNotOffered(steps: readonly TaskStep[]): void {
+  const formOf = new Map(steps.map(({ key, task }) => [key, task.resultForm]));
+  for (const { key, after } of steps) {
+    for (const { step, when } of after) {
+      if (!when) continue;
+      const form = formOf.get(step);
+      if (!form) throw new Error(`Step ${key} waits for a result of ${step}, which asks for none.`);
+      if (!form.options.some(({ code }) => code === when.result)) {
+        throw new Error(
+          `Step ${key} waits for result ${when.result} of ${step}, which does not offer it.`,
+        );
+      }
+    }
+  }
+}
+
 /** The steps that wait, directly or through others, for themselves, in definition order. */
 function stepsOnCycle(steps: readonly TaskStep[]): string[] {
-  const afterOf = new Map(steps.map(({ key, after = [] }) => [key, after]));
+  const afterOf = new Map(steps.map(({ key, after }) => [key, after.map(({ step }) => step)]));
   return steps.flatMap(({ key }) => (waitedForBy(afterOf, key).has(key) ? [key] : []));
 }
 
@@ -249,15 +284,29 @@ function eventTriggerSchema<Shape extends z.ZodRawShape>(runShape: Shape) {
   });
 }
 
+const stepKeySchema = z.string().trim().min(1);
+
+const afterEntrySchema = z.union([
+  stepKeySchema.transform((step): AfterEntry => ({ step, when: null })),
+  z.object({
+    step: stepKeySchema,
+    when: z
+      .object({ result: z.string().min(1) })
+      .nullable()
+      .default(null),
+  }),
+]);
+
 const definitionSchema = z.object({
   subject: z.object({ recordType: z.string().min(1) }),
   trigger: triggerSchema,
   steps: z
     .array(
       z.object({
-        key: z.string().trim().min(1),
+        key: stepKeySchema,
         kind: z.literal("task"),
-        after: z.array(z.string().trim().min(1)).default([]),
+        after: z.array(afterEntrySchema).default([]),
+        join: z.enum(STEP_JOINS).default("all"),
         task: z.object({
           assignee: assigneeRuleSchema,
           title: z.string().trim().min(1),

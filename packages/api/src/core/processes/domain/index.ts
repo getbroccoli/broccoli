@@ -18,6 +18,7 @@ export {
   type RecordDateTrigger,
   type TaskStep,
   ONBOARDING_EXAMPLE,
+  type StoredProcessDefinition,
   WELCOME_NEW_STARTER,
 } from "./processDefinition";
 export {
@@ -29,7 +30,7 @@ export {
   openTaskIdsOf,
   ProcessRun,
   type ProcessRunFields,
-  readyStepKeys,
+  decideWaitingSteps,
   resolveAssignee,
   type ResolvedAssignee,
   RUN_STATUSES,
@@ -42,4 +43,5 @@ export {
   SUBJECT_REMOVED,
   type StartCause,
   STEP_STATUSES,
+  type StepStatus,
 } from "./processRun";

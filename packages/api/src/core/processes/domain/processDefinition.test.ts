@@ -329,6 +329,7 @@ function welcomeDefinition(resultForm: unknown = null) {
         key: "welcome_one_to_one",
         kind: "task",
         after: [] as string[],
+        join: "all",
         task: {
           assignee: { kind: "subjects_manager", otherwise: { kind: "workspace_owner" } },
           title: "Have a welcome 1:1 with {firstName}",
@@ -341,6 +342,7 @@ function welcomeDefinition(resultForm: unknown = null) {
         key: "coffee_calls",
         kind: "task",
         after: [] as string[],
+        join: "all",
         task: {
           assignee: { kind: "subject" },
           title: "Have coffee calls with 3 colleagues",
