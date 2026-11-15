@@ -4,10 +4,11 @@ import type { PublishedEvent } from "../../events";
 import { PrincipalSecurityContext, type SecurityContext } from "../../security";
 import { type CalendarDate, laterOf } from "../../../utils";
 import type { TaskService } from "../../tasks";
-import { processRepository } from "../db";
+import { processRepository, runStepRepository } from "../db";
 import { PROCESS_CANCELLED, type ProcessRun, SUBJECT_REMOVED } from "../domain";
 import type { StepProgress } from "./processViews";
 import type { RunStarter } from "./runStarter";
+import type { StepStarter } from "./stepStarter";
 
 /**
  * A run while it runs: it follows its steps' tasks as their assignees mark them done, and cancels
@@ -35,12 +36,14 @@ export function createRunLifecycleService({
   transact,
   tasks,
   starter,
+  steps,
   today,
 }: {
   orm: Orm;
   transact: Transact;
   tasks: TaskService;
   starter: RunStarter;
+  steps: StepStarter;
   /** Today in London: the day a step that starts later resolves its assignee on. */
   today: () => CalendarDate;
 }): RunLifecycleService {
@@ -53,7 +56,7 @@ export function createRunLifecycleService({
       );
       if (doneTaskIds.size === 0) return;
       const runs = processRepository(tx);
-      const awaiting = (await runs.findStepsByTaskIds([...doneTaskIds])).filter(
+      const awaiting = (await runStepRepository(tx).findStepsByTaskIds([...doneTaskIds])).filter(
         ({ status }) => status === "step_awaiting_task_completion",
       );
       const now = new Date();
@@ -63,7 +66,7 @@ export function createRunLifecycleService({
         const canGoOn = (await removalOf(starter, tx, run)) === null;
         const completed = run.completeTasks(doneTaskIds, now, canGoOn);
         const changed = canGoOn
-          ? await starter.startReadySteps(tx, completed, laterOf(today(), run.startDay))
+          ? await steps.startReadySteps(tx, completed, laterOf(today(), run.startDay))
           : completed;
         await runs.saveRun(changed);
         tx.publish("processes.steps_completed", {
@@ -77,7 +80,7 @@ export function createRunLifecycleService({
 
     async readStepProgress(ctx, taskId) {
       const task = await tasks.readTask(ctx, taskId);
-      const [step] = await processRepository(orm).findStepsByTaskIds([task.id]);
+      const [step] = await runStepRepository(orm).findStepsByTaskIds([task.id]);
       if (!step) throw new ApplicationError("CONFLICT", "This task does not belong to a process.");
       return transact(async (tx) => {
         const runs = processRepository(tx);
@@ -102,7 +105,7 @@ export function createRunLifecycleService({
       const reason =
         removal.cause === "cancelled_because_subject_was_removed"
           ? SUBJECT_REMOVED
-          : `The assignee of '${(await starter.stepTitles(tx, run)).get(removal.stepKey!)}' was removed from Broccoli.`;
+          : `The assignee of '${(await steps.stepTitles(tx, run)).get(removal.stepKey!)}' was removed from Broccoli.`;
       const cancelled = run.cancel({
         cause: removal.cause,
         reason,

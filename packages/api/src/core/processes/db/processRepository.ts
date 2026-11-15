@@ -2,12 +2,7 @@ import { and, desc, eq, inArray, isNotNull, type SQL, sql } from "drizzle-orm";
 
 import { ormOf, type Orm, type OrmTransaction, type Tx } from "../../db";
 import { inRecordScope, type RecordScope } from "../../security";
-import {
-  PROCESS_DEFINITION_SCHEMA_VERSION,
-  ProcessRun,
-  type ProcessRunFields,
-  type RunStep,
-} from "../domain";
+import { PROCESS_DEFINITION_SCHEMA_VERSION, ProcessRun, type ProcessRunFields } from "../domain";
 import { processes, processVersions } from "./processesTable";
 import { processRuns, runStepProgress } from "./processRunsTable";
 
@@ -33,7 +28,7 @@ export interface NewProcessRow {
 /** A run as it is stored before it has an id and timestamps. */
 export type NewRunRow = Omit<ProcessRunFields, "id" | "createdAt" | "updatedAt">;
 
-/** Stored processes, their versions, runs and run steps. */
+/** Stored processes, their versions, and runs with their steps; `runStepRepository` has the steps alone. */
 export interface ProcessRepository {
   listProcesses(): Promise<StoredProcess[]>;
   findProcessByKey(key: string): Promise<StoredProcess | null>;
@@ -55,18 +50,11 @@ export interface ProcessRepository {
   setTurnedOnAt(id: string, turnedOnAt: Date | null): Promise<void>;
   /** Inserts the runs in batches; returns them in the same order. */
   insertRuns(runs: readonly NewRunRow[]): Promise<ProcessRunFields[]>;
-  insertSteps(steps: readonly RunStep[]): Promise<void>;
   findRun(id: string): Promise<ProcessRunFields | null>;
   /** The run with its steps, locked until the transaction ends, so changes to it take turns. */
   lockRun(id: string): Promise<ProcessRun | null>;
   /** Writes the run and its steps' status. */
   saveRun(run: ProcessRun): Promise<void>;
-  /** Writes steps that were waiting as started: their status, task, note or skip reason. */
-  saveStartedSteps(steps: readonly RunStep[]): Promise<void>;
-  /** The run's steps, in no particular order. */
-  findSteps(runId: string): Promise<RunStep[]>;
-  /** The steps whose tasks are among these, whatever their run. */
-  findStepsByTaskIds(taskIds: readonly string[]): Promise<RunStep[]>;
   /** The process key and step key behind each of these tasks that a step created, by task id. */
   findTaskSources(
     taskIds: readonly string[],
@@ -196,12 +184,6 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
       return inserted;
     },
 
-    async insertSteps(steps) {
-      for (let start = 0; start < steps.length; start += INSERT_BATCH_SIZE) {
-        await orm.insert(runStepProgress).values(steps.slice(start, start + INSERT_BATCH_SIZE));
-      }
-    },
-
     async findRun(id) {
       const [row] = await orm.select().from(processRuns).where(eq(processRuns.id, id));
       return row ?? null;
@@ -230,33 +212,6 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
           .set({ status, finishedAt })
           .where(and(eq(runStepProgress.runId, runId), eq(runStepProgress.stepKey, stepKey)));
       }
-    },
-
-    async saveStartedSteps(steps) {
-      for (const { runId, stepKey, ...started } of steps) {
-        await orm
-          .update(runStepProgress)
-          .set(started)
-          .where(
-            and(
-              eq(runStepProgress.runId, runId),
-              eq(runStepProgress.stepKey, stepKey),
-              eq(runStepProgress.status, "step_waiting_to_start"),
-            ),
-          );
-      }
-    },
-
-    async findSteps(runId) {
-      return orm.select().from(runStepProgress).where(eq(runStepProgress.runId, runId));
-    },
-
-    async findStepsByTaskIds(taskIds) {
-      if (taskIds.length === 0) return [];
-      return orm
-        .select()
-        .from(runStepProgress)
-        .where(inArray(runStepProgress.taskId, [...taskIds]));
     },
 
     async findTaskSources(taskIds) {
@@ -367,7 +322,7 @@ async function findRecordsWithRunsWhere(
 }
 
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
-const INSERT_BATCH_SIZE = 1_000;
+export const INSERT_BATCH_SIZE = 1_000;
 
 type ProcessWithVersionRow = {
   process: typeof processes.$inferSelect;

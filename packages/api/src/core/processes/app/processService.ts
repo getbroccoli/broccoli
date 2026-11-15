@@ -21,6 +21,7 @@ import type { Process, ProcessRun, ProcessRunDetails, StepProgress } from "./pro
 import { createRunLifecycleService, type RunLifecycleService } from "./runLifecycleService";
 import { createRunReader, type RunReader } from "./runReader";
 import { createRunStarter, type DefinitionReader, type ProcessRecordTypes } from "./runStarter";
+import { createStepStarter } from "./stepStarter";
 
 /**
  * Processes give people tasks when something happens to a record, and follow each run to its end.
@@ -106,9 +107,10 @@ export function createProcessService({
   const today = () => dateInLondon(now());
   const recordTypes = processRecordTypesOf(registeredRecordTypes);
   const definitionOf = definitionReader(recordTypes, triggeringEvents);
-  const starter = createRunStarter({ tasks, people, workingCalendars, recordTypes, definitionOf });
-  const reader = createRunReader({ transact, tasks, starter });
-  const lifecycle = createRunLifecycleService({ orm, transact, tasks, starter, today });
+  const steps = createStepStarter({ tasks, people, workingCalendars, definitionOf });
+  const starter = createRunStarter({ people, recordTypes, steps });
+  const reader = createRunReader({ transact, tasks, stepStarter: steps });
+  const lifecycle = createRunLifecycleService({ orm, transact, tasks, starter, steps, today });
   const dueRuns = createDueRunService({
     orm,
     transact,
