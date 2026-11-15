@@ -1,6 +1,73 @@
 import { afterEach, beforeEach, vi } from "vitest";
 
-import { ADMIN, agentConnectionService, expect, OWNER, SYSTEM, test } from "#test/support";
+import {
+  ADMIN,
+  agentConnectionService,
+  domainEvents,
+  expect,
+  OWNER,
+  SYSTEM,
+  test,
+} from "#test/support";
+
+test("disconnect publishes one connection change for the caller", async ({ orm, seed }) => {
+  const userId = OWNER.user!.userId;
+  await seed.agentConnection({ userId });
+  await seed.agentConnection({ userId });
+  const { transact, events } = domainEvents(orm);
+
+  await agentConnectionService(orm, { transact }).disconnectMyAgent(OWNER);
+
+  expect(events).toEqual([{ type: "agentAccess.connection_changed", payload: { userId } }]);
+});
+
+test("disconnect without a connection publishes nothing", async ({ orm }) => {
+  const { transact, events } = domainEvents(orm);
+
+  await agentConnectionService(orm, { transact }).disconnectMyAgent(OWNER);
+
+  expect(events).toEqual([]);
+});
+
+test("allowing an agent publishes a connection change for that person", async ({ orm, seed }) => {
+  const userId = OWNER.user!.userId;
+  const { clientId } = await seed.agentConnection({ userId });
+  const { transact, events } = domainEvents(orm);
+
+  await agentConnectionService(orm, { transact }).keepOnlyConnection(SYSTEM, { userId, clientId });
+
+  expect(events).toEqual([{ type: "agentAccess.connection_changed", payload: { userId } }]);
+});
+
+test("a password reset publishes one connection change for that person", async ({ orm, seed }) => {
+  const userId = OWNER.user!.userId;
+  await seed.agentConnection({ userId });
+  await seed.agentConnection({ userId });
+  const { transact, events } = domainEvents(orm);
+
+  await agentConnectionService(orm, { transact }).endConnections(SYSTEM, {
+    userId,
+    reason: "ended_by_password_reset",
+  });
+
+  expect(events).toEqual([{ type: "agentAccess.connection_changed", payload: { userId } }]);
+});
+
+test("using a connection unused for 31 days publishes a connection change", async ({
+  orm,
+  seed,
+}) => {
+  const userId = OWNER.user!.userId;
+  const { clientId } = await seed.agentConnection({
+    userId,
+    connectedAt: new Date("2026-10-12T12:00:00Z"),
+  });
+  const { transact, events } = domainEvents(orm);
+
+  await agentConnectionService(orm, { transact }).useAgentConnection(SYSTEM, { userId, clientId });
+
+  expect(events).toEqual([{ type: "agentAccess.connection_changed", payload: { userId } }]);
+});
 
 test("disconnect ends the caller's connection and refuses its next use", async ({ orm, seed }) => {
   const connectedAt = new Date("2026-11-11T12:00:00Z");

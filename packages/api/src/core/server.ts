@@ -12,6 +12,8 @@ import {
   agentSecurityResolver,
   type AgentSecurityResolver,
   createAgentConnectionService,
+  createLiveNudges,
+  type LiveNudges,
 } from "./agentAccess";
 import { authHandler, type DeploymentServer } from "./auth";
 import { connectDatabase, createBeforeCommitBus, type Database, transactor } from "./db";
@@ -71,6 +73,7 @@ export async function startServer(
   let resolveAgentSecurity: AgentSecurityResolver;
   const agentConnections = createAgentConnectionService({ orm: database.orm, transact, logger });
   let graphql: GraphqlApi;
+  let live: LiveNudges;
   try {
     const { manifests, setupDemo, addApprovedPeople, employeeDirectory, passwordResetEmail } =
       createModules({
@@ -106,6 +109,8 @@ export async function startServer(
     const auth = deployment.auth;
     resolveSecurity = (headers) =>
       resolveSecurityContext(auth, database.orm, employeeDirectory, headers);
+    live = createLiveNudges(resolveSecurity);
+    eventBus.subscribe(live.events);
     resolveAgentSecurity = agentSecurityResolver(
       auth,
       database.orm,
@@ -143,6 +148,7 @@ export async function startServer(
         );
       }
     }
+    app.use("/api", live.router);
     app.all("/api/auth/{*path}", authHandler(deployment.auth));
     app.use(graphql.router);
     if (webApp) {
@@ -166,6 +172,7 @@ export async function startServer(
     stop: () => {
       stopping ??= (async () => {
         stopped.abort();
+        live.close();
         // Drains in-flight requests, then closes the HTTP server.
         await graphql.stop();
         await jobRunner.stop();

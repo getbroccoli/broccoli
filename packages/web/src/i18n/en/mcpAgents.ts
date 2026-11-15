@@ -51,7 +51,7 @@ export const mcpAgentsEn = {
     "Then run codex mcp login broccoli, choose Allow, and start a new Codex session.",
   "mcpAgents.cli.copyCommand": "Copy command",
   "mcpAgents.cli.other": "Other clients: add the address as a remote HTTP server with OAuth.",
-  "mcpAgents.waiting": "Waiting for your agent…",
+  "mcpAgents.waiting": "Waiting for your agent… This page updates the moment you choose Allow.",
   "mcpAgents.connected.badge": "Connected",
   "mcpAgents.connected.since": "Acts as you, {name} · Connected {date} · Last active {lastActive}",
   "mcpAgents.welcome.title": "{client} is connected. Nice.",

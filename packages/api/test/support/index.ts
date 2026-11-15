@@ -86,6 +86,7 @@ export {
   seedSecondProcessVersion,
 } from "./seedProcess";
 export { domainEvents } from "./domainEvents";
+export { sseMessages } from "./sseMessages";
 export {
   employeeSetup,
   fileStorage,

@@ -2,7 +2,7 @@ import { t } from "@/i18n";
 
 import "./waitingForAgent.css";
 
-/** Shown until the person's agent connects; the page checks again when they come back to it. */
+/** Shown until the person's agent connects, which the page shows the moment it happens. */
 export function WaitingForAgent() {
   return (
     <p role="status" className="flex items-center gap-2.5 text-sm text-muted-foreground">
