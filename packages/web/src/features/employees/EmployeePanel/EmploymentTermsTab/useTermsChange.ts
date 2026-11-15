@@ -1,5 +1,5 @@
 import { useQuery } from "@apollo/client/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -58,28 +58,22 @@ export function useTermsChange({
   const [value, setValue] = useState<TermsChoice>({ termsId: null, startDate: companyToday() });
   const [earliest, setEarliest] = useState(companyToday());
   const [error, setError] = useState<string | null>(null);
+  // A pending save must not close or report errors in a later opening of the form.
+  const opening = useRef(0);
   const { input, termsName, moves, skipped, loading, failed } = usePreview(employeeId, value, open);
   // The payload carries the person's new terms; History reads its new line when shown.
   const [changeTerms, mutation] = usePayloadMutation(ChangeTermsDocument, {
     update: forgetHistory,
+    // A reopened draft may have previewed the person's terms before this save finished.
+    refetch: [TermsChangePreviewDocument],
   });
   const texts = { firstName, termsName, startDate: value.startDate };
   const close = () => {
+    opening.current++;
     setOpen(false);
     setError(null);
     mutation.reset();
   };
-  const saved = (payload: ChangeTermsMutation["employees"]["changeTerms"]) => {
-    const moved = payload.moved?.[0];
-    const reason = payload.skipped?.[0]?.reason;
-    if (moved) {
-      toast(savedToast({ ...texts, startDate: moved.startDate, today: companyToday() }));
-      close();
-    } else if (reason) {
-      setError(skipError({ ...texts, reason }));
-    }
-  };
-
   return {
     open,
     value,
@@ -96,6 +90,7 @@ export function useTermsChange({
     changed: open && value.termsId !== null,
     saving: mutation.loading,
     start: (earliestChange) => {
+      opening.current++;
       const today = companyToday();
       setEarliest(earliestChange);
       setValue({ termsId: null, startDate: earliestChange > today ? earliestChange : today });
@@ -108,8 +103,22 @@ export function useTermsChange({
     close,
     save: async () => {
       if (!value.termsId || mutation.loading) return;
-      await changeTerms({ variables: { input } }).then(saved, (failed: unknown) =>
-        setError(failureMessage(failed, earliest)),
+      const submittedOpening = opening.current;
+      await changeTerms({ variables: { input } }).then(
+        (payload) => {
+          if (submittedOpening !== opening.current) return;
+          const moved = payload.moved?.[0];
+          const reason = payload.skipped?.[0]?.reason;
+          if (moved) {
+            toast(savedToast({ ...texts, startDate: moved.startDate, today: companyToday() }));
+            close();
+          } else if (reason) {
+            setError(skipError({ ...texts, reason }));
+          }
+        },
+        (failed: unknown) => {
+          if (submittedOpening === opening.current) setError(failureMessage(failed, earliest));
+        },
       );
     },
   };

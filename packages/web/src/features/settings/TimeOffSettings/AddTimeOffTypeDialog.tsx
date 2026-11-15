@@ -87,7 +87,7 @@ export function AddTimeOffTypeDialog({ refetch, onClose, onAdded }: Props) {
             </p>
           )}
           <DialogFooter className="sm:items-center">
-            <p className="text-sm text-muted-foreground sm:mr-auto">
+            <p className="text-sm wrap-anywhere text-muted-foreground sm:mr-auto">
               {trimmed
                 ? t("settings.timeOff.addsNamed", { name: trimmed })
                 : t("settings.timeOff.adds")}

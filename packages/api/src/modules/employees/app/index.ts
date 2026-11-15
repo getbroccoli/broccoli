@@ -42,6 +42,7 @@ export {
   type OwnWorkingWeekService,
 } from "./employmentTerms/ownWorkingWeekService";
 export { employeeRecordType } from "./employeeRecordType";
+export { EMPLOYEE_TRIGGERING_EVENTS } from "./employeeTriggeringEvents";
 export {
   type CopyTermsParts,
   createTermsService,

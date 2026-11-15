@@ -122,6 +122,41 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.agent_invitation_closings": {
+      "name": "agent_invitation_closings",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "closed_at": {
+          "name": "closed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "agent_invitation_closings_user_id_user_id_fk": {
+          "name": "agent_invitation_closings_user_id_user_id_fk",
+          "tableFrom": "agent_invitation_closings",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.oauth_access_token": {
       "name": "oauth_access_token",
       "schema": "",
@@ -3428,24 +3463,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "process_key": {
-          "name": "process_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "process_run_id": {
-          "name": "process_run_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "step_key": {
-          "name": "step_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "record_type": {
           "name": "record_type",
           "type": "text",
@@ -3567,11 +3584,7 @@
         },
         "tasks_asked_by_someone": {
           "name": "tasks_asked_by_someone",
-          "value": "\"tasks\".\"asked_by_employee_id\" is not null or \"tasks\".\"process_key\" is not null"
-        },
-        "tasks_process_source_complete": {
-          "name": "tasks_process_source_complete",
-          "value": "(\"tasks\".\"process_key\" is null) = (\"tasks\".\"step_key\" is null)\n        and (\"tasks\".\"process_run_id\" is null or \"tasks\".\"process_key\" is not null)"
+          "value": "(\"tasks\".\"type\" = 'manual_to_do') = (\"tasks\".\"asked_by_employee_id\" is not null)"
         },
         "tasks_record_complete": {
           "name": "tasks_record_complete",

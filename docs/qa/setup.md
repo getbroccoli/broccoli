@@ -51,7 +51,7 @@ curl -b cookies -H 'content-type: application/json' "$URL/api/graphql" \
 
 ## Create the owner
 
-After an import or the terminal demo start, the last step opens `/setup`. Enter `owner@example.com` and a password of at least 8 characters, then choose "Create account". This signs you in and ends on `/people`.
+After an import or the terminal demo start, the last step opens `/setup`. Enter `owner@example.com` and a password of at least 8 characters, then choose "Create account". This signs you in and ends on Today (`/`).
 
 From a terminal:
 

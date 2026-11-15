@@ -33,6 +33,26 @@ export function addDays(date: CalendarDate, days: number): CalendarDate {
   return moved.toISOString().slice(0, 10) as CalendarDate;
 }
 
+/**
+ * The `count`-th day after `from` on which `isWorkingDay` holds, or before it when negative; 0 is
+ * `from` itself. Null when no working day comes within `maxSearchDays`.
+ */
+export function addWorkingDays(
+  from: CalendarDate,
+  count: number,
+  isWorkingDay: (date: CalendarDate) => boolean,
+  maxSearchDays: number,
+): CalendarDate | null {
+  const step = Math.sign(count);
+  let date = from;
+  for (let left = Math.abs(count), searched = 0; left > 0; searched += 1) {
+    if (searched === maxSearchDays) return null;
+    date = addDays(date, step);
+    if (isWorkingDay(date)) left -= 1;
+  }
+  return date;
+}
+
 /** The same day `years` later; 29 February becomes 1 March in other years. */
 export function addYears(date: CalendarDate, years: number): CalendarDate {
   const moved = utcMidnight(date);

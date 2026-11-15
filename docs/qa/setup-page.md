@@ -26,9 +26,9 @@ Name the company and skip the import in A ([QA setup](setup.md)); A lands on `/s
 
 ## After setup
 
-- [ ] Submitting `owner@acme-corp.example` ends on `/people` with the app's navigation; the `broccoli_setup` cookie is gone.
-- [ ] `/setup` and `/setup/company` both end on `/people`.
-- [ ] In B, any path now lands on `/login`; signing in as the owner ends on `/people`.
+- [ ] Submitting `owner@acme-corp.example` ends on Today (`/`) with the app's navigation; the `broccoli_setup` cookie is gone.
+- [ ] `/setup` and `/setup/company` both end on Today.
+- [ ] In B, any path now lands on `/login`; signing in as the owner ends on Today.
 
 ## Starting over
 

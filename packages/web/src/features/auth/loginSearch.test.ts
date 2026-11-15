@@ -17,7 +17,7 @@ it("keeps a local path with its query and hash", () => {
 });
 
 it("defaults an empty redirect to Tasks", () => {
-  expect(toLocalPath("", origin)).toBe("/tasks");
+  expect(toLocalPath("", origin)).toBe("/");
 });
 
 it.each([
@@ -29,9 +29,9 @@ it.each([
   ["a JavaScript URL", "javascript:alert(1)"],
   ["a control character", "/peo\nple"],
 ])("defaults a redirect containing %s to Tasks", (_kind, raw) => {
-  expect(toLocalPath(raw, origin)).toBe("/tasks");
+  expect(toLocalPath(raw, origin)).toBe("/");
 });
 
 it("defaults a login redirect to Tasks to avoid a loop", () => {
-  expect(toLocalPath("/login?redirect=/people", origin)).toBe("/tasks");
+  expect(toLocalPath("/login?redirect=/people", origin)).toBe("/");
 });

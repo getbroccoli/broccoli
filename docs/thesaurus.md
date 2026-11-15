@@ -21,11 +21,13 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **External agent session**: what the external agent gets for an external agent one-time code: a secret token and the security context it acts as. It lasts two hours at most, works only while setup is at the import step with the external agent chosen, and ends on Disconnect or a new code.
 - **Connected agent**: a person's own AI client, such as Claude, ChatGPT, Claude Code or Codex, connected to Broccoli over MCP and acting as that person, with their permissions; one per person, shown as "Your agent".
 - **Agent connection**: a person's grant to their connected agent, from Allow until they disconnect it on Your agent, connect another agent, reset their password, or leave it unused for 30 days.
+- **Agent invitation**: the card on Today that invites a person to connect their own agent. Each person closes it for good, on every browser; it never shows while their agent is connected.
 - **Setup review step**: the setup page after the import step, "Review your people", where the owner sees every import employee, settles what its records disagree on, fixes values, leaves some out, and approves. Only the web app knows it: the instance stays at the `import` setup step until setup approve.
 - **Data folder**: `DATA_DIR`, the folder for files that must survive restarts, such as `secrets/`.
 - **File**: bytes with a MIME type that a module stores in the `files` table, such as the company logo. The module that references it decides who may see it.
 - **Primitive**: one of the four building blocks every HR feature is made of: records, tasks, calendar and processes.
 - **Record**: a module's main entity, such as an employee or the company.
+- **Today**: the home page, where a person lands after setup and after signing in. It shows what needs them today; for now only the agent invitation.
 - **Task**: work asked of one person, its assignee, by its asker or a process step. To do, Waiting, Done or Cancelled; only its assignee and its asker see it.
 - **Assignee**: the person who does a task. Not "holder", which is the setup holder. Code: `assignee_employee_id`.
 - **Asker**: the person who asked for a task; none on a process step's task. Code: `asked_by_employee_id`.

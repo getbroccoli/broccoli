@@ -1,5 +1,5 @@
 import { useQuery } from "@apollo/client/react";
-import { CalendarBlank, CaretLeft, CheckSquare, Robot, Users } from "@phosphor-icons/react";
+import { CalendarBlank, CaretLeft, CheckSquare, House, Robot, Users } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 
 import { LeftNavAgentConnectionDocument } from "@/__generated__/graphql";
@@ -34,6 +34,7 @@ export function LeftNav() {
       ?.myAgentConnection,
   );
   const appItems: NavItem[] = [
+    { to: "/", label: t("nav.today"), icon: House },
     {
       to: "/tasks",
       label: t("nav.tasks"),
@@ -68,7 +69,7 @@ export function LeftNav() {
         </div>
         <div inert={!inSettings} className={cn(menuClass, !inSettings && "max-md:hidden")}>
           <Link
-            to="/people"
+            to="/"
             className="flex h-8 items-center gap-2 rounded-md px-2 text-sm font-medium whitespace-nowrap text-foreground/80 transition-colors hover:bg-foreground/5"
           >
             <CaretLeft size={14} weight="bold" />

@@ -17,7 +17,7 @@ import { NO_SETUP_INVITES } from "../../../core/instance";
 
 test.for([
   { mode: "managed", step: "ready" },
-  { mode: "self-hosted", step: "done" },
+  { mode: "self-hosted", step: "ready" },
 ] as const)(
   "approving on a $mode instance with an owner moves setup to $step and creates employees when setup finishes",
   async ({ mode, step }, { orm, seed }) => {
@@ -39,13 +39,8 @@ test.for([
     await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
 
     expect((await instances.readInstance(orm)).step).toBe(step);
-    if (mode === "managed") {
-      expect((await employeeServices(orm).listEmployees(owner, {})).edges).toEqual([]);
-      await systemService(orm).completeSetup(owner, {
-        ...NO_SETUP_INVITES,
-        linkOrigin: "https://broccoli.example.com",
-      });
-    }
+    expect((await employeeServices(orm).listEmployees(owner, {})).edges).toEqual([]);
+    await systemService(orm).completeSetup(owner, SETUP_WITHOUT_INVITES);
     const employees = await employeeServices(orm).listEmployees(OWNER, { first: 100 });
     expect(employees.edges.map(({ node }) => node)).toEqual(
       expect.arrayContaining([expect.objectContaining(avery), expect.objectContaining(robin)]),
@@ -58,7 +53,7 @@ test.for([
   },
 );
 
-test("approving adds exactly the ready import employees the review counts", async ({
+test("finishing an approved import adds exactly the ready import employees the review counts", async ({
   orm,
   seed,
 }) => {
@@ -75,6 +70,7 @@ test("approving adds exactly the ready import employees the review counts", asyn
   expect(review.readyEmployees).toHaveLength(1);
 
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
+  await systemService(orm).completeSetup(owner, SETUP_WITHOUT_INVITES);
 
   const approved = await employees.listEmployees(owner, {});
   expect(approved.edges.map(({ node }) => node)).toEqual([
@@ -83,7 +79,7 @@ test("approving adds exactly the ready import employees the review counts", asyn
   ]);
 });
 
-test("approving keeps a record without a last name without creating an employee", async ({
+test("finishing an approved import keeps a record without a last name without creating an employee", async ({
   orm,
   seed,
 }) => {
@@ -96,6 +92,7 @@ test("approving keeps a record without a last name without creating an employee"
   const imports = importServices(orm);
 
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
+  await systemService(orm).completeSetup(owner, SETUP_WITHOUT_INVITES);
 
   expect((await employeeServices(orm).listEmployees(OWNER, { first: 100 })).edges).toEqual([]);
   expect(
@@ -116,6 +113,7 @@ test("approving twice creates the employees once", async ({ orm, seed }) => {
   const imports = importServices(orm);
   const employees = employeeServices(orm);
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
+  await systemService(orm).completeSetup(owner, SETUP_WITHOUT_INVITES);
   const first = await employees.listEmployees(OWNER, { first: 100 });
   expect(first.edges).toHaveLength(1);
 
@@ -138,10 +136,7 @@ test("two concurrent approves create the employees once", async ({ orm, seed }) 
   ]);
 
   expect((await instances.readInstance(orm)).step).toBe("ready");
-  await systemService(orm).completeSetup(owner, {
-    ...NO_SETUP_INVITES,
-    linkOrigin: "https://broccoli.example.com",
-  });
+  await systemService(orm).completeSetup(owner, SETUP_WITHOUT_INVITES);
   const employees = await employeeServices(orm).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node.email)).toEqual([record!.email]);
 });
@@ -220,10 +215,7 @@ test("approves available records when a failed file is present", async ({ orm, s
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
 
   expect((await instances.readInstance(orm)).step).toBe("ready");
-  await systemService(orm).completeSetup(owner, {
-    ...NO_SETUP_INVITES,
-    linkOrigin: "https://broccoli.example.com",
-  });
+  await systemService(orm).completeSetup(owner, SETUP_WITHOUT_INVITES);
   expect(
     (await employeeServices(orm).listEmployees(OWNER, {})).edges.map(({ node }) => node),
   ).toMatchObject([{ firstName: "Avery", lastName: "Stone", email: "avery@example.com" }]);
@@ -319,6 +311,7 @@ test("approves one employee per group with picked and typed values, excluding le
   const review = (await imports.reads.readReview(owner)).listEmployees({});
 
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
+  await systemService(orm).completeSetup(owner, SETUP_WITHOUT_INVITES);
 
   const employees = await employeeServices(orm).listEmployees(OWNER, {});
   expect(employees.edges.map(({ node }) => node)).toMatchObject([
@@ -326,3 +319,8 @@ test("approves one employee per group with picked and typed values, excluding le
   ]);
   expect((await imports.reads.readReview(owner)).listEmployees({})).toEqual(review);
 });
+
+const SETUP_WITHOUT_INVITES = {
+  ...NO_SETUP_INVITES,
+  linkOrigin: "https://broccoli.example.com",
+};

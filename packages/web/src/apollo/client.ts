@@ -33,6 +33,15 @@ export function createApolloClient({ onUnauthenticated }: ApolloClientOptions): 
         ImportEmployeeValue: { merge: true },
         // A person's terms have no id; the panel names their periods and its tab the rest.
         EmployeeEmploymentTerms: { merge: true },
+        Query: {
+          fields: {
+            // Closing is for good, so a read sent before the close can't reopen the invitation.
+            agentInvitationClosed: {
+              merge: (existing: boolean | undefined, incoming: boolean) =>
+                existing === true || incoming,
+            },
+          },
+        },
       }),
     }),
     dataMasking: true,

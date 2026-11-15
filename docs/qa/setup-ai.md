@@ -43,7 +43,7 @@ A manual check of how a self-hosted owner picks the way Broccoli reads their fil
 
 ## Demo data
 
-- [ ] "Explore the demo" shows "Opening the demo…" and opens `/people` with the 40 demo people, signed in as the demo's owner, without asking for an account.
+- [ ] "Explore the demo" shows "Opening the demo…" and opens Today, signed in as the demo's owner, without asking for an account; `/people` lists the 40 demo people.
 
 ## File refusals
 

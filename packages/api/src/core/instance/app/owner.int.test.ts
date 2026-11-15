@@ -1,4 +1,14 @@
-import { importServices, expect, EMPLOYEE, SYSTEM, test, instances, owners } from "#test/support";
+import {
+  importServices,
+  expect,
+  EMPLOYEE,
+  SYSTEM,
+  test,
+  instances,
+  owners,
+  recordHistory,
+  scotlandTimeOffSetup,
+} from "#test/support";
 
 import { user } from "../../auth";
 import { ormOf, transactor, type Tx } from "../../db";
@@ -77,6 +87,34 @@ test("creates the owner for the holder, completes setup and ends the session", a
   expect((await instances.readInstance(orm)).setupSession).toBeNull();
   expect(completed).toEqual([null]);
   expect(claimed).toEqual([{ userId: owner.user.id, email: owner.user.email }]);
+});
+
+test("attributes the terms set up during owner creation to the new owner", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  await seed.setupStep("owner");
+  await seed.setupSession({ expiresAt: new Date("2026-01-04T12:00:00Z") });
+
+  const { owner } = await transact((tx) =>
+    owners.createOwnerAtSetup(
+      SYSTEM,
+      tx,
+      { token: "setup-token", now: new Date("2026-01-02T12:00:00Z") },
+      () => insertOwner(tx),
+      importServices(orm).addApprovedPeople,
+      { ...CHOICES, timeOff: scotlandTimeOffSetup() },
+    ),
+  );
+
+  const history = await recordHistory.read(orm, "terms", await seed.defaultTermsId(), {});
+  expect(history.edges.map(({ node }) => node)).toMatchObject([
+    {
+      author: { kind: "SIGNED_IN_USER", id: owner.user.id },
+      cause: { kind: "TIME_OFF_TURNED_ON" },
+    },
+  ]);
 });
 
 test.for([null, "another-token"])(

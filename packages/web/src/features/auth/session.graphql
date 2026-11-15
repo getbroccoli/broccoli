@@ -8,6 +8,7 @@ query Session {
     employee {
       id
       ...ProfileMenu_employee
+      ...Today_employee
     }
   }
   setup {

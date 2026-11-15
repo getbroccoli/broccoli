@@ -74,4 +74,10 @@ export const mcpAgentsEn = {
   "mcpAgents.disconnect.confirm": "Disconnect",
   "mcpAgents.disconnect.pending": "Disconnecting…",
   "mcpAgents.disconnect.failed": "Couldn’t disconnect your agent. Try again.",
+  "mcpAgents.invitation.title": "Ask your own Claude or ChatGPT",
+  "mcpAgents.invitation.detail":
+    "Connect it to Broccoli and it can look you up and find people for you. It reads only what you can and never approves anything.",
+  "mcpAgents.invitation.connect": "Connect your agent",
+  "mcpAgents.invitation.close": "Close the invitation to connect your agent",
+  "mcpAgents.invitation.closeFailed": "Couldn’t close the invitation. Try again.",
 } as const;

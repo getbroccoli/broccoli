@@ -1,6 +1,13 @@
 import { expect, it } from "vitest";
 
-import { addDays, type CalendarDate, coversDate, parseCalendarDate, parseDateColumn } from ".";
+import {
+  addDays,
+  addWorkingDays,
+  type CalendarDate,
+  coversDate,
+  parseCalendarDate,
+  parseDateColumn,
+} from ".";
 
 it("returns a real date unchanged", () => {
   expect(parseCalendarDate("2026-02-28")).toBe("2026-02-28");
@@ -118,4 +125,8 @@ it("should leave 0000-01-01 unchanged when adding zero days", () => {
 
   // Assert
   expect(result).toBe(date);
+});
+
+it("finds no working day when none comes within the search", () => {
+  expect(addWorkingDays("2026-01-01" as CalendarDate, 1, () => false, 10)).toBeNull();
 });

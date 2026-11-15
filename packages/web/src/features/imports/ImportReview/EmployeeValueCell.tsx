@@ -10,6 +10,15 @@ import { EmployeeValuePopover } from "./EmployeeValuePopover";
 import { FlagPill } from "./FlagPill";
 import { NotSet } from "./NotSet";
 
+type Props = {
+  employeeId: string;
+  employeeName: string;
+  field: EmployeeFieldKey;
+  value: EmployeeValueCell_ValueFragment;
+  /** Whether an empty value is why Approve leaves the import employee out. */
+  missing?: boolean;
+};
+
 /**
  * One value of an import employee, or an amber pill while its sources disagree; a click
  * opens the popover to pick or type it. Owns the `EmployeeValueCell_value` fragment, which
@@ -21,14 +30,7 @@ export function EmployeeValueCell({
   field,
   value,
   missing = false,
-}: {
-  employeeId: string;
-  employeeName: string;
-  field: EmployeeFieldKey;
-  value: EmployeeValueCell_ValueFragment;
-  /** Whether an empty value is why Approve leaves the import employee out. */
-  missing?: boolean;
-}) {
+}: Props) {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -58,13 +60,15 @@ export function EmployeeValueCell({
         sideOffset={8}
         className="w-[380px] max-w-[calc(100vw-2rem)] gap-4 rounded-xl p-5"
       >
-        <EmployeeValuePopover
-          employeeId={employeeId}
-          employeeName={employeeName}
-          field={field}
-          value={value}
-          onDone={() => setOpen(false)}
-        />
+        {open && (
+          <EmployeeValuePopover
+            employeeId={employeeId}
+            employeeName={employeeName}
+            field={field}
+            value={value}
+            onDone={() => setOpen(false)}
+          />
+        )}
       </PopoverContent>
     </Popover>
   );

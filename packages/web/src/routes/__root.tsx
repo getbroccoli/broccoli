@@ -12,6 +12,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   // Who is signed in and how far setup is, for the gates of every route below.
   beforeLoad: async ({ context, location }) => {
     const { me, setup } = await readSession(context.apolloClient);
+    const setupFlow = { mode: setup.mode, hasOwner: !!me };
     // Another browser holds setup: this one sees only that, and only then.
     const heldElsewhere = setup.holder === "ANOTHER_DEVICE";
     if (heldElsewhere !== (location.pathname === SETUP_IN_PROGRESS)) {
@@ -19,13 +20,14 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     }
     // The setup holder has no account yet, so sign-in and other pages lead back to setup.
     if (setup.holder === "YOU" && !location.pathname.startsWith("/setup")) {
-      throw redirect({ to: setupStepPage(setup.step, setup.mode), replace: true });
+      throw redirect({ to: setupStepPage(setup.step, setupFlow), replace: true });
     }
     return {
       me: me ?? null,
       holdsSetup: setup.holder === "YOU",
       setupStep: setup.step,
       mode: setup.mode,
+      setupFlow,
       demoExpiresAt: setup.demoExpiresAt ?? null,
       ownerSignInMethod: setup.ownerSignInMethod ?? null,
       passwordResetByEmail: setup.passwordResetByEmail,

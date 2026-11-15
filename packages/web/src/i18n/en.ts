@@ -17,6 +17,7 @@ import { tableEn } from "./en/table";
 import { tasksEn } from "./en/tasks";
 import { termsEn } from "./en/terms";
 import { timeOffEn } from "./en/timeOff";
+import { todayEn } from "./en/today";
 import { workspaceEn } from "./en/workspace";
 
 /** English copy, one file per key prefix under `en/`. Every user-facing string is read through `t()`. */
@@ -41,4 +42,5 @@ export const en = {
   ...settingsEn,
   ...termsEn,
   ...timeOffEn,
+  ...todayEn,
 } as const;

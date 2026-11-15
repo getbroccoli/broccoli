@@ -14,6 +14,7 @@ import {
 import { type Orm, ormOf, type Tx } from "../../db";
 import type { AgentConnectionEnding } from "../domain";
 import { agentConnectionEndings } from "./agentConnectionEndingsTable";
+import { agentInvitationClosings } from "./agentInvitationClosingsTable";
 
 /**
  * A person's agent connections, kept in the OAuth provider's tables: a consent per client, and
@@ -52,6 +53,10 @@ export interface AgentConnectionRepository {
    * the tokens issued in them.
    */
   deleteExpiredSessions(now: Date): Promise<void>;
+  /** Whether the person closed the invitation to connect their agent. */
+  isInvitationClosed(userId: string): Promise<boolean>;
+  /** Stores that the person closed the invitation to connect their agent, unless stored already. */
+  closeInvitation(userId: string, closedAt: Date): Promise<void>;
 }
 
 export interface StoredAgentConnection {
@@ -164,6 +169,19 @@ export function agentConnectionRepository(db: Orm | Tx): AgentConnectionReposito
       await orm()
         .delete(session)
         .where(and(lt(session.expiresAt, now), inArray(session.id, holdingTokens)));
+    },
+    async isInvitationClosed(userId) {
+      const [row] = await orm()
+        .select({ userId: agentInvitationClosings.userId })
+        .from(agentInvitationClosings)
+        .where(eq(agentInvitationClosings.userId, userId));
+      return row !== undefined;
+    },
+    async closeInvitation(userId, closedAt) {
+      await orm()
+        .insert(agentInvitationClosings)
+        .values({ userId, closedAt })
+        .onConflictDoNothing({ target: agentInvitationClosings.userId });
     },
   };
 }

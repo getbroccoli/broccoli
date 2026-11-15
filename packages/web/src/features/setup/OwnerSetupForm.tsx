@@ -65,7 +65,7 @@ type Props = {
 
 /**
  * Creates the owner's account. On success the session changes, so routing sends the now
- * signed-in owner to the directory. On a conflict, such as an owner created first, the
+ * signed-in owner to Today. On a conflict, such as an owner created first, the
  * reload routes the visitor to wherever setup now is.
  */
 export function OwnerSetupForm({

@@ -13,6 +13,8 @@ export function createResolvers(connections: AgentConnectionService): Resolvers 
         connections.readMyAgentConnection(context.getActor()),
       myLastEndedAgentConnection: async (_parent, _args, context) =>
         toGraphql(await connections.readMyLastEndedConnection(context.getActor())),
+      agentInvitationClosed: (_parent, _args, context) =>
+        connections.isInvitationClosed(context.getActor()),
     },
     Mutation: {
       mcpAgents: () => ({}),
@@ -22,6 +24,11 @@ export function createResolvers(connections: AgentConnectionService): Resolvers 
         mutationPayload<ResolversTypes["AgentConnectionMutationPayload"]>(async () => ({
           endedAgentConnection: toGraphql(await connections.disconnectMyAgent(context.getActor())),
         })),
+      closeInvitation: (_parent, _args, context) =>
+        mutationPayload<ResolversTypes["CloseAgentInvitationPayload"]>(async () => {
+          await connections.closeInvitation(context.getActor());
+          return { agentInvitationClosed: true };
+        }),
     },
   };
 }

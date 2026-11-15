@@ -7,7 +7,7 @@ import {
   requireSetupPage,
 } from "@/features/setup";
 
-/** The last step of managed setup: what it adds and the invites it sends, before the owner starts. */
+/** The last step with an existing owner: what it adds and the invites it sends. */
 export const Route = createFileRoute("/setup/ready")({
   validateSearch: parseSetupInviteSearch,
   search: { middlewares: [stripSearchParams(DEFAULT_SETUP_INVITE_SEARCH)] },

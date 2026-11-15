@@ -32,7 +32,7 @@ A manual check that skipping the import fills the demo company and that Exit dem
 - [ ] While exiting, the button reads "Exiting…" and the dialog cannot be closed.
 - [ ] You land on `/setup/company` with the company name filled in; Setup AI keeps its choice and "Explore the demo" is offered again.
 - [ ] `/people` no longer opens, and a demo avatar URL copied before exiting answers 403 (`curl` with this browser's cookies, not the browser cache).
-- [ ] Finishing setup with an import and `owner@example.com` ends on `/people` with only the imported people; the person from step 1 is gone.
+- [ ] Finishing setup with an import and `owner@example.com` ends on Today; `/people` lists only the imported people; the person from step 1 is gone.
 
 ## Managed
 

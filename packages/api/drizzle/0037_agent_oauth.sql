@@ -161,4 +161,9 @@ CREATE TABLE "agent_connection_endings" (
 	"reason" text NOT NULL
 );--> statement-breakpoint
 ALTER TABLE "agent_connection_endings" ADD CONSTRAINT "agent_connection_endings_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE TABLE "agent_invitation_closings" (
+	"user_id" text PRIMARY KEY NOT NULL,
+	"closed_at" timestamp with time zone NOT NULL
+);--> statement-breakpoint
+ALTER TABLE "agent_invitation_closings" ADD CONSTRAINT "agent_invitation_closings_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "agent_connection_endings_user_id_ended_at_idx" ON "agent_connection_endings" USING btree ("user_id","ended_at");
