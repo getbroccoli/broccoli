@@ -6,28 +6,21 @@ export const PROCESS_DEFINITION_SCHEMA_VERSION = 1;
 /** The ready-made process that welcomes a new starter on their start date. */
 export const WELCOME_NEW_STARTER = "welcome_new_starter";
 
-const OFFSET_LIMITS = { calendar_days: 366, business_days: 260 } as const;
-
-/** Days before (negative) or after (positive) a date. */
-export interface DayOffset {
-  amount: number;
-  unit: keyof typeof OFFSET_LIMITS;
+/** What one version of a process does; its steps run in parallel, listed in display order. */
+export interface ProcessDefinition {
+  /** The record a run is about, the trigger's record type. */
+  subject: { recordType: string };
+  trigger: RecordDateTrigger | EventTrigger;
+  startableByAdmin: boolean;
+  steps: TaskStep[];
 }
 
-/** Who will be a step task's assignee, and who covers when there is no one. */
-export type AssigneeRule = {
-  kind: "subject" | "subjects_manager" | "workspace_owner";
-  otherwise?: AssigneeRule;
-};
-
-/** A step that gives one person a task; `title` and `description` may name `{firstName}`. */
-export interface TaskStep {
-  key: string;
-  kind: "task";
-  assignee: AssigneeRule;
-  title: string;
-  description: string | null;
-  due: DayOffset;
+/** What the modules registered that a definition may name. */
+export interface ProcessCatalog {
+  /** Record types a run may be about, with the date fields an `on_record_date` trigger may name. */
+  recordTypes: Readonly<Record<string, { dateFields: readonly string[] }>>;
+  /** Events that may start a run, with the record type each is about. */
+  triggeringEvents: Readonly<Record<string, { recordType: string }>>;
 }
 
 /** Starts a run on a date of the subject record, plus an offset, by a daily pass. */
@@ -55,22 +48,27 @@ export interface EventTrigger {
   faultMode: "rollback_transaction";
 }
 
-/** What one version of a process does; its steps run in parallel, listed in display order. */
-export interface ProcessDefinition {
-  /** The record a run is about, the trigger's record type. */
-  subject: { recordType: string };
-  trigger: RecordDateTrigger | EventTrigger;
-  startableByAdmin: boolean;
-  steps: TaskStep[];
+/** A step that gives one person a task; `title` and `description` may name `{firstName}`. */
+export interface TaskStep {
+  key: string;
+  kind: "task";
+  assignee: AssigneeRule;
+  title: string;
+  description: string | null;
+  due: DayOffset;
 }
 
-/** What the modules registered that a definition may name. */
-export interface ProcessCatalog {
-  /** Record types a run may be about, with the date fields an `on_record_date` trigger may name. */
-  recordTypes: Readonly<Record<string, { dateFields: readonly string[] }>>;
-  /** Events that may start a run, with the record type each is about. */
-  triggeringEvents: Readonly<Record<string, { recordType: string }>>;
+/** Days before (negative) or after (positive) a date. */
+export interface DayOffset {
+  amount: number;
+  unit: keyof typeof OFFSET_LIMITS;
 }
+
+/** Who will be a step task's assignee, and who covers when there is no one. */
+export type AssigneeRule = {
+  kind: "subject" | "subjects_manager" | "workspace_owner";
+  otherwise?: AssigneeRule;
+};
 
 /** Reads a stored definition, refusing a shape, trigger, record type or step this code cannot run. */
 export function parseProcessDefinition(
@@ -150,6 +148,8 @@ function refuseOffsetBeyondLimit({ amount, unit }: DayOffset): void {
     );
   }
 }
+
+const OFFSET_LIMITS = { calendar_days: 366, business_days: 260 } as const;
 
 const offsetSchema = z.object({
   amount: z.number().int(),
