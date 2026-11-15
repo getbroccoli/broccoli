@@ -104,9 +104,9 @@ export const processRuns = pgTable(
   ],
 );
 
-/** Where each step of a run stands; created with the run, one per step of its version. */
-export const processRunSteps = pgTable(
-  "process_run_steps",
+/** A run's progress on each step of its version's definition, by `step_key`; created with the run. */
+export const processRunStepProgress = pgTable(
+  "process_run_step_progress",
   {
     runId: uuid("run_id").notNull(),
     stepKey: text("step_key").notNull(),
@@ -120,21 +120,21 @@ export const processRunSteps = pgTable(
   (table) => [
     primaryKey({ columns: [table.runId, table.stepKey] }),
     foreignKey({
-      name: "process_run_steps_run_fk",
+      name: "process_run_step_progress_run_fk",
       columns: [table.runId],
       foreignColumns: [processRuns.id],
     }).onDelete("cascade"),
-    check("process_run_steps_key_not_blank", sql`btrim(${table.stepKey}) <> ''`),
+    check("process_run_step_progress_key_not_blank", sql`btrim(${table.stepKey}) <> ''`),
     check(
-      "process_run_steps_status_known",
+      "process_run_step_progress_status_known",
       sql`${table.status} in ('step_awaiting_task_completion', 'step_completed', 'step_skipped', 'step_cancelled')`,
     ),
     check(
-      "process_run_steps_assignee_note_known",
+      "process_run_step_progress_assignee_note_known",
       sql`${table.assigneeNote} in ('assignee_is_owner_because_subject_has_no_manager')`,
     ),
     check(
-      "process_run_steps_columns_follow_status",
+      "process_run_step_progress_columns_follow_status",
       sql`(${table.status} = 'step_awaiting_task_completion') = (${table.finishedAt} is null)
         and (${table.status} = 'step_skipped') = (${table.skipReason} is not null)
         and (${table.skipReason} is null or ${table.skipReason} = 'no_assignee_for_step')`,

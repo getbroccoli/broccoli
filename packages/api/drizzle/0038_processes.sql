@@ -26,7 +26,7 @@ CREATE TABLE "processes" (
 	CONSTRAINT "processes_name_not_blank" CHECK (btrim("processes"."name") <> '')
 );
 --> statement-breakpoint
-CREATE TABLE "process_run_steps" (
+CREATE TABLE "process_run_step_progress" (
 	"run_id" uuid NOT NULL,
 	"step_key" text NOT NULL,
 	"status" text NOT NULL,
@@ -34,14 +34,14 @@ CREATE TABLE "process_run_steps" (
 	"assignee_note" text,
 	"skip_reason" text,
 	"finished_at" timestamp with time zone,
-	CONSTRAINT "process_run_steps_run_id_step_key_pk" PRIMARY KEY("run_id","step_key"),
-	CONSTRAINT "process_run_steps_task_id_unique" UNIQUE("task_id"),
-	CONSTRAINT "process_run_steps_key_not_blank" CHECK (btrim("process_run_steps"."step_key") <> ''),
-	CONSTRAINT "process_run_steps_status_known" CHECK ("process_run_steps"."status" in ('step_awaiting_task_completion', 'step_completed', 'step_skipped', 'step_cancelled')),
-	CONSTRAINT "process_run_steps_assignee_note_known" CHECK ("process_run_steps"."assignee_note" in ('assignee_is_owner_because_subject_has_no_manager')),
-	CONSTRAINT "process_run_steps_columns_follow_status" CHECK (("process_run_steps"."status" = 'step_awaiting_task_completion') = ("process_run_steps"."finished_at" is null)
-        and ("process_run_steps"."status" = 'step_skipped') = ("process_run_steps"."skip_reason" is not null)
-        and ("process_run_steps"."skip_reason" is null or "process_run_steps"."skip_reason" = 'no_assignee_for_step'))
+	CONSTRAINT "process_run_step_progress_run_id_step_key_pk" PRIMARY KEY("run_id","step_key"),
+	CONSTRAINT "process_run_step_progress_task_id_unique" UNIQUE("task_id"),
+	CONSTRAINT "process_run_step_progress_key_not_blank" CHECK (btrim("process_run_step_progress"."step_key") <> ''),
+	CONSTRAINT "process_run_step_progress_status_known" CHECK ("process_run_step_progress"."status" in ('step_awaiting_task_completion', 'step_completed', 'step_skipped', 'step_cancelled')),
+	CONSTRAINT "process_run_step_progress_assignee_note_known" CHECK ("process_run_step_progress"."assignee_note" in ('assignee_is_owner_because_subject_has_no_manager')),
+	CONSTRAINT "process_run_step_progress_columns_follow_status" CHECK (("process_run_step_progress"."status" = 'step_awaiting_task_completion') = ("process_run_step_progress"."finished_at" is null)
+        and ("process_run_step_progress"."status" = 'step_skipped') = ("process_run_step_progress"."skip_reason" is not null)
+        and ("process_run_step_progress"."skip_reason" is null or "process_run_step_progress"."skip_reason" = 'no_assignee_for_step'))
 );
 --> statement-breakpoint
 CREATE TABLE "process_runs" (
@@ -78,7 +78,7 @@ CREATE TABLE "process_runs" (
 --> statement-breakpoint
 ALTER TABLE "process_versions" ADD CONSTRAINT "process_versions_process_id_processes_id_fk" FOREIGN KEY ("process_id") REFERENCES "public"."processes"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "processes" ADD CONSTRAINT "processes_active_version_fk" FOREIGN KEY ("id","active_version_id") REFERENCES "public"."process_versions"("process_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "process_run_steps" ADD CONSTRAINT "process_run_steps_run_fk" FOREIGN KEY ("run_id") REFERENCES "public"."process_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "process_run_step_progress" ADD CONSTRAINT "process_run_step_progress_run_fk" FOREIGN KEY ("run_id") REFERENCES "public"."process_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "process_runs" ADD CONSTRAINT "process_runs_process_fk" FOREIGN KEY ("process_id") REFERENCES "public"."processes"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "process_runs" ADD CONSTRAINT "process_runs_version_fk" FOREIGN KEY ("process_id","process_version_id") REFERENCES "public"."process_versions"("process_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "process_versions_one_draft_per_process" ON "process_versions" USING btree ("process_id") WHERE "process_versions"."status" = 'draft';--> statement-breakpoint
@@ -89,7 +89,7 @@ CREATE INDEX "process_runs_record_idx" ON "process_runs" USING btree ("process_i
 CREATE INDEX "process_runs_subject_idx" ON "process_runs" USING btree ("subject_employee_id");--> statement-breakpoint
 ALTER TABLE "process_runs" ADD CONSTRAINT "process_runs_started_by_employee_fk" FOREIGN KEY ("started_by_employee_id") REFERENCES "public"."employees"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "process_runs" ADD CONSTRAINT "process_runs_cancelled_by_employee_fk" FOREIGN KEY ("cancelled_by_employee_id") REFERENCES "public"."employees"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "process_run_steps" ADD CONSTRAINT "process_run_steps_task_fk" FOREIGN KEY ("task_id") REFERENCES "public"."tasks"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "process_run_step_progress" ADD CONSTRAINT "process_run_step_progress_task_fk" FOREIGN KEY ("task_id") REFERENCES "public"."tasks"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 -- The ready-made Welcome a new starter, off, with its first published version active.
 INSERT INTO "processes" ("key", "name", "description") VALUES (
 	'welcome_new_starter',
