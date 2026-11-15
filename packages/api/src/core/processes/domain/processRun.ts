@@ -281,6 +281,13 @@ export class ProcessRun implements Readonly<ProcessRunFields> {
   }
 }
 
+/** The tasks of these steps still awaiting them. */
+export function openTaskIdsOf(steps: readonly RunStep[]): string[] {
+  return steps.flatMap(({ status, taskId }) =>
+    status === "step_awaiting_task_completion" && taskId ? [taskId] : [],
+  );
+}
+
 function startedRow(row: RunStep, assignee: ResolvedAssignee | null, now: Date): RunStep {
   return assignee
     ? { ...row, status: "step_awaiting_task_completion", assigneeNote: assignee.note }
@@ -290,11 +297,4 @@ function startedRow(row: RunStep, assignee: ResolvedAssignee | null, now: Date):
         skipReason: "no_assignee_for_step",
         finishedAt: now,
       };
-}
-
-/** The tasks of these steps still awaiting them. */
-export function openTaskIdsOf(steps: readonly RunStep[]): string[] {
-  return steps.flatMap(({ status, taskId }) =>
-    status === "step_awaiting_task_completion" && taskId ? [taskId] : [],
-  );
 }

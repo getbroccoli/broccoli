@@ -6,6 +6,9 @@ import { PROCESS_DEFINITION_SCHEMA_VERSION, ProcessRun, type ProcessRunFields } 
 import { processes, processVersions } from "./processesTable";
 import { processRuns, runStepProgress } from "./processRunsTable";
 
+/** Rows per insert, well below Postgres's limit of 65,535 parameters. */
+export const INSERT_BATCH_SIZE = 1_000;
+
 /** A process with the stored definition of its active version, not yet parsed. */
 export interface StoredProcess {
   id: string;
@@ -320,9 +323,6 @@ async function findRecordsWithRunsWhere(
     );
   return new Set(rows.map(({ recordId }) => recordId));
 }
-
-/** Rows per insert, well below Postgres's limit of 65,535 parameters. */
-export const INSERT_BATCH_SIZE = 1_000;
 
 type ProcessWithVersionRow = {
   process: typeof processes.$inferSelect;
