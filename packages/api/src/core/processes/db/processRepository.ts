@@ -39,7 +39,7 @@ export interface ProcessRepository {
   findProcessByKey(key: string): Promise<StoredProcess | null>;
   findProcessesByIds(ids: readonly string[]): Promise<StoredProcess[]>;
   /** A version's stored definition, not yet parsed; null when no version has the id. */
-  findVersion(id: string): Promise<{ schemaVersion: number; definition: unknown } | null>;
+  findVersion(id: string): Promise<StoredProcess["activeVersion"] | null>;
   /**
    * The process, locked until the transaction ends, so the daily job, an admin's start, step
    * commands and resets take turns. The lock leaves new runs' foreign keys free, so a change that
@@ -85,6 +85,12 @@ export interface ProcessRepository {
     recordType: string,
     recordIds: readonly string[],
   ): Promise<Set<string>>;
+  /** The records among these whose run of the process has the start key given with it. */
+  findRecordsWithStartKeys(
+    processId: string,
+    recordType: string,
+    starts: readonly { recordId: string; startKey: string }[],
+  ): Promise<Set<string>>;
   /** The record's run of the process in progress, if any. */
   findRunInProgress(
     processId: string,
@@ -99,15 +105,7 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
   const orm = ormOf(db);
   const selectProcesses = () =>
     orm
-      .select({
-        process: processes,
-        version: {
-          id: processVersions.id,
-          version: processVersions.version,
-          schemaVersion: processVersions.definitionSchemaVersion,
-          definition: processVersions.definition,
-        },
-      })
+      .select({ process: processes, version: VERSION_COLUMNS })
       .from(processes)
       .innerJoin(processVersions, eq(processVersions.id, processes.activeVersionId));
   return {
@@ -126,10 +124,7 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
 
     async findVersion(id) {
       const [row] = await orm
-        .select({
-          schemaVersion: processVersions.definitionSchemaVersion,
-          definition: processVersions.definition,
-        })
+        .select(VERSION_COLUMNS)
         .from(processVersions)
         .where(eq(processVersions.id, id));
       return row ?? null;
@@ -289,6 +284,16 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
         eq(processRuns.status, "in_progress"),
       ),
 
+    findRecordsWithStartKeys: (processId, recordType, starts) =>
+      findRecordsWithRunsWhere(
+        orm,
+        { processId, recordType, recordIds: starts.map(({ recordId }) => recordId) },
+        inArray(
+          processRuns.startKey,
+          starts.map(({ startKey }) => startKey),
+        ),
+      ),
+
     async findRunInProgress(processId, recordType, recordId) {
       const [row] = await orm
         .select()
@@ -310,6 +315,14 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
     },
   };
 }
+
+/** A version as `StoredProcess` keeps it. */
+const VERSION_COLUMNS = {
+  id: processVersions.id,
+  version: processVersions.version,
+  schemaVersion: processVersions.definitionSchemaVersion,
+  definition: processVersions.definition,
+};
 
 /** The records among these with a run of the process that also meets `condition`. */
 async function findRecordsWithRunsWhere(
@@ -345,12 +358,6 @@ type ProcessWithVersionRow = {
 };
 
 function toStoredProcess({ process, version }: ProcessWithVersionRow): StoredProcess {
-  return {
-    id: process.id,
-    key: process.key,
-    name: process.name,
-    description: process.description,
-    turnedOnAt: process.turnedOnAt,
-    activeVersion: version,
-  };
+  const { id, key, name, description, turnedOnAt } = process;
+  return { id, key, name, description, turnedOnAt, activeVersion: version };
 }

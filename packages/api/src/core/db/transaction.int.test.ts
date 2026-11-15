@@ -5,6 +5,18 @@ import { createLogger } from "../logger";
 import { createBeforeCommitBus, transactor } from ".";
 import { MAX_BEFORE_COMMIT_ROUNDS } from "./transaction";
 
+test("a transaction starts at hop zero by default", async ({ transact }) => {
+  const hop = await transact((tx) => Promise.resolve(tx.hop));
+
+  expect(hop).toBe(0);
+});
+
+test("a transaction carries the hop given to transact", async ({ transact }) => {
+  const hop = await transact((tx) => Promise.resolve(tx.hop), { hop: 7 });
+
+  expect(hop).toBe(7);
+});
+
 test("dispatches queued events after the write commits", async ({ orm, seed }) => {
   await seed.owner();
   const eventBus = createEventBus(createLogger("silent"));

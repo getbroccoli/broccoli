@@ -33,19 +33,19 @@ export interface RecordDateTrigger {
   maxDaysLate: number;
 }
 
-/**
- * Starts a run for each record an event is about, inside the transaction that published it: the
- * run commits with the change, and a run that fails fails the change.
- */
-export interface EventTrigger {
+/** Starts a run for each record an event is about. */
+export type EventTrigger = {
   kind: "on_event";
   /** An event a module registered as triggering. */
   event: string;
   /** Only events whose payload field holds one of these values. */
   when?: { field: string; in: (string | null)[] };
-  run: "in_same_transaction";
-  faultMode: "rollback_transaction";
-}
+} & (
+  | /** Inside the transaction that published the event: a run that fails fails the change. */
+    { run: "in_same_transaction"; faultMode: "rollback_transaction" }
+    /** In a job queued with the change, after it commits: retried, never failing the change. */
+  | { run: "after_commit" }
+);
 
 /** A step that gives one person a task. */
 export interface TaskStep {
@@ -175,7 +175,18 @@ const triggerSchema = z.discriminatedUnion("kind", [
     offset: offsetSchema,
     maxDaysLate: z.number().int().min(0),
   }),
-  z.object({
+  z.discriminatedUnion("run", [
+    eventTriggerSchema({
+      run: z.literal("in_same_transaction"),
+      faultMode: z.literal("rollback_transaction"),
+    }),
+    // A fault mode is refused rather than dropped: retrying is how an after-commit run handles faults.
+    eventTriggerSchema({ run: z.literal("after_commit"), faultMode: z.never().optional() }),
+  ]),
+]);
+
+function eventTriggerSchema<Shape extends z.ZodRawShape>(runShape: Shape) {
+  return z.object({
     kind: z.literal("on_event"),
     event: z.string().min(1),
     when: z
@@ -184,10 +195,9 @@ const triggerSchema = z.discriminatedUnion("kind", [
         in: z.array(z.string().nullable()).min(1),
       })
       .optional(),
-    run: z.literal("in_same_transaction"),
-    faultMode: z.literal("rollback_transaction"),
-  }),
-]);
+    ...runShape,
+  });
+}
 
 const definitionSchema = z.object({
   subject: z.object({ recordType: z.string().min(1) }),

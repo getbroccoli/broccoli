@@ -65,10 +65,12 @@ export interface ProcessService {
   /** Back to a fresh workspace: deletes every run, turns every process off, forgets their history; the people's deletion took the tasks. */
   resetProcesses(ctx: SecurityContext, tx: Tx): Promise<void>;
   /**
-   * Trusted, as the system, before a transaction commits: starts the runs its events trigger, so
-   * they commit with the change or not at all.
+   * Trusted, as the system, before a transaction commits: starts the in-transaction runs its events
+   * trigger and queues the after-commit ones, so either commits with the change or not at all.
    */
   startRunsOnEvents: EventRunService["startRunsOnEvents"];
+  /** Trusted, as the system, for an after-commit job: starts its runs in their own transaction. */
+  startRunsAfterCommit: EventRunService["startRunsAfterCommit"];
   /**
    * The process and step behind each of these tasks that a step created, by task id; the caller
    * shows it only on tasks the person may read.
@@ -83,6 +85,7 @@ export interface ProcessService {
 export function createProcessService({
   orm,
   transact,
+  jobs,
   logger,
   tasks,
   people,
@@ -90,7 +93,7 @@ export function createProcessService({
   recordTypes: registeredRecordTypes,
   triggeringEvents,
   now = () => new Date(),
-}: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
+}: Pick<ModuleDependencies, "orm" | "transact" | "jobs" | "logger"> & {
   tasks: TaskService;
   people: PeoplePort;
   workingCalendars: WorkingCalendarsPort;
@@ -117,6 +120,8 @@ export function createProcessService({
     definitionOf,
   });
   const eventRuns = createEventRunService({
+    transact,
+    jobs,
     logger,
     starter,
     today,
@@ -212,6 +217,8 @@ export function createProcessService({
     },
 
     startRunsOnEvents: (ctx, tx, events) => eventRuns.startRunsOnEvents(ctx, tx, events),
+
+    startRunsAfterCommit: (ctx, job) => eventRuns.startRunsAfterCommit(ctx, job),
 
     completeStepsOfDoneTasks: (tx, events) => lifecycle.completeStepsOfDoneTasks(tx, events),
 

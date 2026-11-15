@@ -78,8 +78,13 @@ export {
   passwordResetEmail,
 } from "./services";
 export type { EmployeeServices } from "./services";
-export { processService, transactWithProcesses } from "./processService";
-export { eventProcess, seedProcess } from "./seedProcess";
+export { afterCommitProcesses, processService, transactWithProcesses } from "./processService";
+export {
+  afterCommitProcess,
+  eventProcess,
+  seedProcess,
+  seedSecondProcessVersion,
+} from "./seedProcess";
 export { domainEvents } from "./domainEvents";
 export {
   employeeSetup,
