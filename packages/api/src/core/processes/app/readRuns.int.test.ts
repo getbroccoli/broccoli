@@ -110,12 +110,12 @@ test("reset removes runs and turns automatic starts off", async ({ orm, seed, tr
   const employee = await seed.employee();
   await seed.manager(employee.id, manager.id);
   const processes = processService(orm, { today: () => calendarDate("2026-12-03") });
-  const [original] = await processes.listProcesses(ADMIN);
+  const original = await processes.listProcesses(ADMIN);
   await processes.turnOn(ADMIN, WELCOME_NEW_STARTER);
   await processes.startRun(ADMIN, { processKey: WELCOME_NEW_STARTER, recordId: employee.id });
 
   await transact((tx) => processes.resetProcesses(ADMIN, tx));
 
   expect(await processes.listRuns(ADMIN, WELCOME_NEW_STARTER)).toEqual([]);
-  expect(await processes.listProcesses(ADMIN)).toEqual([original]);
+  expect(await processes.listProcesses(ADMIN)).toEqual(original);
 });

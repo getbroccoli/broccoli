@@ -9,6 +9,7 @@ export {
   type TriggeringEvents,
 } from "./eventTrigger";
 export {
+  type AssigneeRule,
   type DayOffset,
   parseProcessDefinition,
   type ProcessCatalog,
@@ -16,16 +17,19 @@ export {
   type ProcessDefinition,
   type RecordDateTrigger,
   type TaskStep,
+  ONBOARDING_EXAMPLE,
   WELCOME_NEW_STARTER,
 } from "./processDefinition";
 export {
   ASSIGNEE_NOTES,
   CANCEL_CAUSES,
   type CancelCause,
+  isEveryStepDone,
   PROCESS_CANCELLED,
   openTaskIdsOf,
   ProcessRun,
   type ProcessRunFields,
+  readyStepKeys,
   resolveAssignee,
   type ResolvedAssignee,
   RUN_STATUSES,
@@ -33,6 +37,8 @@ export {
   type RunStep,
   SKIP_REASONS,
   START_CAUSES,
+  startReadySteps,
+  type StepStart,
   SUBJECT_REMOVED,
   type StartCause,
   STEP_STATUSES,

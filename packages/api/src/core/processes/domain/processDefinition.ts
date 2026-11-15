@@ -6,7 +6,13 @@ export const PROCESS_DEFINITION_SCHEMA_VERSION = 1;
 /** The ready-made process that welcomes a new starter on their start date. */
 export const WELCOME_NEW_STARTER = "welcome_new_starter";
 
-/** What one version of a process does; its steps run in parallel, listed in display order. */
+/** The ready-made example of an onboarding whose last step waits for another. */
+export const ONBOARDING_EXAMPLE = "onboarding_example";
+
+/**
+ * What one version of a process does; its steps are listed in display order, and those that wait
+ * for nothing start with the run.
+ */
 export interface ProcessDefinition {
   /** The record a run is about, the trigger's record type. */
   subject: { recordType: string };
@@ -51,6 +57,8 @@ export type EventTrigger = {
 export interface TaskStep {
   key: string;
   kind: "task";
+  /** The steps it waits for, all completed or skipped before it starts; none starts it with the run. */
+  after?: string[];
   task: StepTask;
 }
 
@@ -88,6 +96,7 @@ export function parseProcessDefinition(
   refuseUnregisteredRecord(parsed, catalog);
   refuseSubjectOtherThanTrigger(parsed, catalog);
   refuseRepeatedStepKeys(parsed.steps);
+  refuseUnrunnableWaits(parsed.steps);
   const triggerOffsets = parsed.trigger.kind === "on_record_date" ? [parsed.trigger.offset] : [];
   for (const offset of [...triggerOffsets, ...parsed.steps.map(({ task }) => task.due)]) {
     refuseOffsetBeyondLimit(offset);
@@ -143,6 +152,43 @@ function refuseRepeatedStepKeys(steps: readonly TaskStep[]): void {
     if (seen.has(key)) throw new Error(`Step key ${key} is used twice.`);
     seen.add(key);
   }
+}
+
+/** Refuses a step waiting for a step that does not exist, for itself, twice, or in a cycle. */
+function refuseUnrunnableWaits(steps: readonly TaskStep[]): void {
+  const keys = new Set(steps.map(({ key }) => key));
+  for (const { key, after = [] } of steps) {
+    const listed = new Set<string>();
+    for (const waitedFor of after) {
+      if (waitedFor === key) throw new Error(`Step ${key} waits for itself.`);
+      if (!keys.has(waitedFor)) {
+        throw new Error(`Step ${key} waits for ${waitedFor}, which is not a step.`);
+      }
+      if (listed.has(waitedFor)) throw new Error(`Step ${key} lists ${waitedFor} twice.`);
+      listed.add(waitedFor);
+    }
+  }
+  const cycle = stepsOnCycle(steps);
+  if (cycle.length > 0) throw new Error(`Steps ${cycle.join(", ")} wait for each other.`);
+}
+
+/** The steps that wait, directly or through others, for themselves, in definition order. */
+function stepsOnCycle(steps: readonly TaskStep[]): string[] {
+  const afterOf = new Map(steps.map(({ key, after = [] }) => [key, after]));
+  return steps.flatMap(({ key }) => (waitedForBy(afterOf, key).has(key) ? [key] : []));
+}
+
+/** Every step `key` waits for, directly or through the steps it waits for. */
+function waitedForBy(afterOf: ReadonlyMap<string, readonly string[]>, key: string): Set<string> {
+  const reached = new Set<string>();
+  const toVisit = [...(afterOf.get(key) ?? [])];
+  while (toVisit.length > 0) {
+    const next = toVisit.pop()!;
+    if (reached.has(next)) continue;
+    reached.add(next);
+    toVisit.push(...(afterOf.get(next) ?? []));
+  }
+  return reached;
 }
 
 function refuseOffsetBeyondLimit({ amount, unit }: DayOffset): void {
@@ -207,6 +253,7 @@ const definitionSchema = z.object({
       z.object({
         key: z.string().trim().min(1),
         kind: z.literal("task"),
+        after: z.array(z.string().trim().min(1)).default([]),
         task: z.object({
           assignee: assigneeRuleSchema,
           title: z.string().trim().min(1),

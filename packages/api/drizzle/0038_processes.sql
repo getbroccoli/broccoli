@@ -37,9 +37,10 @@ CREATE TABLE "process_run_step_progress" (
 	CONSTRAINT "process_run_step_progress_run_id_step_key_pk" PRIMARY KEY("run_id","step_key"),
 	CONSTRAINT "process_run_step_progress_task_id_unique" UNIQUE("task_id"),
 	CONSTRAINT "process_run_step_progress_key_not_blank" CHECK (btrim("process_run_step_progress"."step_key") <> ''),
-	CONSTRAINT "process_run_step_progress_status_known" CHECK ("process_run_step_progress"."status" in ('step_awaiting_task_completion', 'step_completed', 'step_skipped', 'step_cancelled')),
+	CONSTRAINT "process_run_step_progress_status_known" CHECK ("process_run_step_progress"."status" in ('step_waiting_to_start', 'step_awaiting_task_completion', 'step_completed', 'step_skipped', 'step_cancelled')),
 	CONSTRAINT "process_run_step_progress_assignee_note_known" CHECK ("process_run_step_progress"."assignee_note" in ('assignee_is_owner_because_subject_has_no_manager')),
-	CONSTRAINT "process_run_step_progress_columns_follow_status" CHECK (("process_run_step_progress"."status" = 'step_awaiting_task_completion') = ("process_run_step_progress"."finished_at" is null)
+	CONSTRAINT "process_run_step_progress_columns_follow_status" CHECK (("process_run_step_progress"."status" in ('step_waiting_to_start', 'step_awaiting_task_completion')) = ("process_run_step_progress"."finished_at" is null)
+        and ("process_run_step_progress"."status" <> 'step_waiting_to_start' or "process_run_step_progress"."task_id" is null)
         and ("process_run_step_progress"."status" = 'step_skipped') = ("process_run_step_progress"."skip_reason" is not null)
         and ("process_run_step_progress"."skip_reason" is null or "process_run_step_progress"."skip_reason" = 'no_assignee_for_step'))
 );
@@ -115,4 +116,40 @@ INSERT INTO "process_versions" ("process_id", "version", "status", "definition_s
 		]
 	}'::jsonb FROM "processes" WHERE "key" = 'welcome_new_starter';--> statement-breakpoint
 UPDATE "processes" SET "active_version_id" = v."id" FROM "process_versions" v
-	WHERE v."process_id" = "processes"."id" AND "processes"."key" = 'welcome_new_starter';
+	WHERE v."process_id" = "processes"."id" AND "processes"."key" = 'welcome_new_starter';--> statement-breakpoint
+-- The ready-made Onboarding example, off: its last step waits for the accounts to be provisioned.
+INSERT INTO "processes" ("key", "name", "description") VALUES (
+	'onboarding_example',
+	'Onboarding example',
+	'Onboards a new person from their start date: a 1:1 with their manager, coffee breaks, and their accounts, which they check once provisioned.'
+);--> statement-breakpoint
+INSERT INTO "process_versions" ("process_id", "version", "status", "definition_schema_version", "definition")
+	SELECT "id", 1, 'published', 1, '{
+		"subject": { "recordType": "employee" },
+		"trigger": { "kind": "on_record_date", "recordType": "employee", "dateField": "startDate",
+			"offset": { "amount": 0, "unit": "calendar_days" }, "maxDaysLate": 7 },
+		"steps": [
+			{ "key": "one_to_one", "kind": "task", "after": [], "task": {
+				"assignee": { "kind": "subjects_manager", "otherwise": { "kind": "workspace_owner" } },
+				"title": "Have a 1:1 with {firstName}",
+				"description": "Meet {firstName} in their first week to talk about their role, their first goals and how you will work together.",
+				"due": { "amount": 0, "unit": "calendar_days" } } },
+			{ "key": "coffee_breaks", "kind": "task", "after": [], "task": {
+				"assignee": { "kind": "subject" },
+				"title": "Have 3 random coffee breaks",
+				"description": "Pick three colleagues you have not met yet and have a short coffee with each.",
+				"due": { "amount": 5, "unit": "business_days" } } },
+			{ "key": "provision_accounts", "kind": "task", "after": [], "task": {
+				"assignee": { "kind": "workspace_owner" },
+				"title": "Provision {firstName}''s accounts",
+				"description": "Create {firstName}''s email and the accounts they need for their role, and send them their sign-in details.",
+				"due": { "amount": 0, "unit": "calendar_days" } } },
+			{ "key": "ensure_provision", "kind": "task", "after": ["provision_accounts"], "task": {
+				"assignee": { "kind": "subject" },
+				"title": "Check that your accounts work",
+				"description": "Sign in to your email and the tools you were given, and mark this done once everything works.",
+				"due": { "amount": 2, "unit": "business_days" } } }
+		]
+	}'::jsonb FROM "processes" WHERE "key" = 'onboarding_example';--> statement-breakpoint
+UPDATE "processes" SET "active_version_id" = v."id" FROM "process_versions" v
+	WHERE v."process_id" = "processes"."id" AND "processes"."key" = 'onboarding_example';

@@ -9,7 +9,7 @@ import {
   type RecordTypeRegistry,
 } from "../../records";
 import { PrincipalSecurityContext, type SecurityContext } from "../../security";
-import { type CalendarDate, dateInLondon } from "../../../utils";
+import { type CalendarDate, dateInLondon, laterOf } from "../../../utils";
 import type { TaskService } from "../../tasks";
 import { processRepository, type StoredProcess } from "../db";
 import { parseProcessDefinition, type TriggeringEvents } from "../domain";
@@ -21,6 +21,7 @@ import type { Process, ProcessRun, ProcessRunDetails, StepProgress } from "./pro
 import { createRunLifecycleService, type RunLifecycleService } from "./runLifecycleService";
 import { createRunReader, type RunReader } from "./runReader";
 import { createRunStarter, type DefinitionReader, type ProcessRecordTypes } from "./runStarter";
+import { createStepStarter } from "./stepStarter";
 
 /**
  * Processes give people tasks when something happens to a record, and follow each run to its end.
@@ -106,9 +107,10 @@ export function createProcessService({
   const today = () => dateInLondon(now());
   const recordTypes = processRecordTypesOf(registeredRecordTypes);
   const definitionOf = definitionReader(recordTypes, triggeringEvents);
-  const starter = createRunStarter({ tasks, people, workingCalendars, recordTypes, definitionOf });
-  const reader = createRunReader({ transact, tasks, starter });
-  const lifecycle = createRunLifecycleService({ orm, transact, tasks, starter });
+  const steps = createStepStarter({ tasks, people, workingCalendars, definitionOf, logger });
+  const starter = createRunStarter({ people, recordTypes, steps });
+  const reader = createRunReader({ transact, tasks, stepStarter: steps });
+  const lifecycle = createRunLifecycleService({ orm, transact, tasks, starter, steps, today });
   const dueRuns = createDueRunService({
     orm,
     transact,
@@ -303,10 +305,6 @@ function definitionReader(
   };
   return ({ schemaVersion, definition }) =>
     parseProcessDefinition(schemaVersion, definition, catalog);
-}
-
-function laterOf(day: CalendarDate, other: CalendarDate | null): CalendarDate {
-  return other !== null && other > day ? other : day;
 }
 
 function recordNotFound(): ApplicationError {

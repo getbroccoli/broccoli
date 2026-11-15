@@ -38,8 +38,16 @@ declare module "../../events" {
       hop: number;
       recordCount: number;
     };
-    /** A run's steps completed as their tasks were marked done; logged once the change commits. */
-    "processes.steps_completed": { runId: string; taskIds: string[]; runStatus: string };
+    /**
+     * A run's steps completed as their tasks were marked done, and the steps that started after
+     * them; logged once the change commits.
+     */
+    "processes.steps_completed": {
+      runId: string;
+      taskIds: string[];
+      startedStepKeys: string[];
+      runStatus: string;
+    };
   }
 }
 

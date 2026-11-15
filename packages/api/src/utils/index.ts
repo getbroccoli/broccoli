@@ -6,6 +6,7 @@ export {
   coversDate,
   daysBetween,
   isWithin,
+  laterOf,
   parseCalendarDate,
   parseDateColumn,
   dateInLondon,

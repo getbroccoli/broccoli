@@ -5,7 +5,7 @@ import type { Task, TaskService } from "../../tasks";
 import { processRepository, type StoredProcess } from "../db";
 import type { ProcessRunFields as StoredRun, RunStep } from "../domain";
 import type { ProcessRun, ProcessRunDetails, ProcessRunStep } from "./processViews";
-import type { RunStarter } from "./runStarter";
+import type { StepStarter } from "./stepStarter";
 
 /** Finds processes and runs for the other process services, and reads runs as callers see them. */
 export interface RunReader {
@@ -22,11 +22,11 @@ export interface RunReader {
 export function createRunReader({
   transact,
   tasks,
-  starter,
+  stepStarter,
 }: {
   transact: Transact;
   tasks: TaskService;
-  starter: RunStarter;
+  stepStarter: StepStarter;
 }): RunReader {
   return {
     async requireProcess(db, processKey) {
@@ -50,7 +50,7 @@ export function createRunReader({
         const { steps } = current;
         const taskIds = steps.flatMap(({ taskId }) => (taskId ? [taskId] : []));
         const runTasks = await tasks.readTasksInTransaction(tx, taskIds);
-        const titles = await starter.stepTitles(tx, current);
+        const titles = await stepStarter.stepTitles(tx, current);
         return {
           run: runView(current, process!),
           steps: [...titles].flatMap(([key, title]) =>

@@ -1,11 +1,20 @@
 import { ADMIN, EMPLOYEE, calendarDate, expect, processService, test } from "#test/support";
 
-import { WELCOME_NEW_STARTER } from "../domain";
+import { ONBOARDING_EXAMPLE, WELCOME_NEW_STARTER } from "../domain";
 
-test("lists the seeded welcome process with automatic starts off", async ({ orm }) => {
+test("lists the seeded onboarding and welcome processes with automatic starts off", async ({
+  orm,
+}) => {
   const processes = await processService(orm).listProcesses(ADMIN);
 
   expect(processes).toMatchObject([
+    {
+      key: ONBOARDING_EXAMPLE,
+      name: "Onboarding example",
+      isOn: false,
+      turnedOnAt: null,
+      activeVersion: { version: 1 },
+    },
     {
       key: WELCOME_NEW_STARTER,
       name: "Welcome a new starter",
