@@ -1,7 +1,7 @@
 import { readSdl } from "../graphql";
 import { PrincipalSecurityContext } from "../security";
 import type { ModuleDependencies, ModuleManifest } from "../moduleManifest";
-import { type ProcessService, startDueRunsJob } from "./app";
+import { type ProcessService, startDueRunsJob, startRunsAfterCommitJob } from "./app";
 import { createResolvers } from "./graphql";
 
 // Public values.
@@ -22,13 +22,14 @@ export function processesModule({
     name: "processes",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
     resolvers: createResolvers(processes),
-    jobs: startDueRunsJob({ processes, logger }),
+    jobs: {
+      ...startDueRunsJob({ processes, logger }),
+      ...startRunsAfterCommitJob({ processes, logger }),
+    },
     events: {
       // Logged once the change commits, never for runs a rollback dropped.
       "processes.runs_started_on_event": (started) =>
-        Promise.resolve(
-          logger.info(started, "Process runs started with the change that triggered them"),
-        ),
+        Promise.resolve(logger.info(started, "Process runs started on an event")),
       "processes.steps_completed": (completed) =>
         Promise.resolve(logger.info(completed, "Process step done")),
     },

@@ -145,11 +145,28 @@ test("refuses an event condition without any accepted values", () => {
   expect(() => parseProcessDefinition(1, { ...definition, trigger }, catalog)).toThrow();
 });
 
-test("refuses an event trigger that runs after commit", () => {
+test("accepts an after-commit trigger without a fault mode", () => {
+  const definition = eventDefinition("employees.added");
+  const trigger = { kind: "on_event", event: "employees.added", run: "after_commit" };
+
+  expect(parseProcessDefinition(1, { ...definition, trigger }, catalog)).toEqual({
+    ...definition,
+    trigger,
+  });
+});
+
+test("refuses an after-commit trigger with a fault mode", () => {
   const definition = eventDefinition("employees.added");
   definition.trigger.run = "after_commit";
 
   expect(() => parseProcessDefinition(1, definition, catalog)).toThrow();
+});
+
+test("refuses an in-same-transaction trigger without a fault mode", () => {
+  const definition = eventDefinition("employees.added");
+  const trigger = { kind: "on_event", event: "employees.added", run: "in_same_transaction" };
+
+  expect(() => parseProcessDefinition(1, { ...definition, trigger }, catalog)).toThrow();
 });
 
 test("refuses an event trigger that silently ignores failures", () => {

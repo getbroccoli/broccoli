@@ -69,6 +69,8 @@ export interface ProcessService {
    * they commit with the change or not at all.
    */
   startRunsOnEvents: EventRunService["startRunsOnEvents"];
+  /** Trusted, as the system, for an after-commit job: starts its runs in their own transaction. */
+  startRunsAfterCommit: EventRunService["startRunsAfterCommit"];
   /**
    * The process and step behind each of these tasks that a step created, by task id; the caller
    * shows it only on tasks the person may read.
@@ -83,6 +85,7 @@ export interface ProcessService {
 export function createProcessService({
   orm,
   transact,
+  jobs,
   logger,
   tasks,
   people,
@@ -90,7 +93,7 @@ export function createProcessService({
   recordTypes: registeredRecordTypes,
   triggeringEvents,
   now = () => new Date(),
-}: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
+}: Pick<ModuleDependencies, "orm" | "transact" | "jobs" | "logger"> & {
   tasks: TaskService;
   people: PeoplePort;
   workingCalendars: WorkingCalendarsPort;
@@ -117,6 +120,8 @@ export function createProcessService({
     definitionOf,
   });
   const eventRuns = createEventRunService({
+    transact,
+    jobs,
     logger,
     starter,
     today,
@@ -212,6 +217,8 @@ export function createProcessService({
     },
 
     startRunsOnEvents: (ctx, tx, events) => eventRuns.startRunsOnEvents(ctx, tx, events),
+
+    startRunsAfterCommit: (ctx, job) => eventRuns.startRunsAfterCommit(ctx, job),
 
     completeStepsOfDoneTasks: (tx, events) => lifecycle.completeStepsOfDoneTasks(tx, events),
 

@@ -1,5 +1,6 @@
-import type { Tx } from "../../db";
+import type { Transact, Tx } from "../../db";
 import type { PublishedEvent } from "../../events";
+import type { JobQueue, Jobs } from "../../jobs";
 import type { Logger } from "../../logger";
 import type { SecurityContext } from "../../security";
 import type { CalendarDate } from "../../../utils";
@@ -9,22 +10,38 @@ import {
   type EventStart,
   matchEventStarts,
   type ProcessDefinition,
+  type TriggerEvent,
   type TriggeringEvents,
 } from "../domain";
 import type { RunSubject } from "../ports";
 import type { DefinitionReader, RunStarter } from "./runStarter";
 
-/** Starts the runs that a transaction's events trigger, inside that transaction. */
+/** How many after-commit jobs in a row may start more: a loop of processes beyond it is a bug. */
+export const MAX_AFTER_COMMIT_HOPS = 10;
+
+/** What an after-commit job carries: one process version and the event that triggered it. */
+export type AfterCommitJob = Jobs["processes.startRunsAfterCommit"];
+
+/** Starts the runs that a transaction's events trigger, inside it or after it commits. */
 export interface EventRunService {
   /**
-   * Trusted, as the system, before the commit: one run per turned-on process and record each event
-   * triggers, skipping a record whose run of the process is in progress or that is gone. An error
-   * rolls the transaction back.
+   * Trusted, as the system, before the commit: one run per turned-on in-transaction process and
+   * record each event triggers, skipping a record whose run of the process is in progress or that
+   * is gone; one job per after-commit process and event it triggers. An error rolls the
+   * transaction back.
    */
   startRunsOnEvents(ctx: SecurityContext, tx: Tx, events: readonly PublishedEvent[]): Promise<void>;
+  /**
+   * Trusted, as the system, for an after-commit job, in its own transaction: the runs of the job's
+   * process version for its event's records, unless the process is off, a record is gone, has a run
+   * in progress or already had this event's run.
+   */
+  startRunsAfterCommit(ctx: SecurityContext, job: AfterCommitJob): Promise<void>;
 }
 
 interface EventRunDependencies {
+  transact: Transact;
+  jobs: JobQueue;
   logger: Logger;
   starter: RunStarter;
   triggeringEvents: TriggeringEvents;
@@ -48,12 +65,20 @@ export function createEventRunService(dependencies: EventRunDependencies): Event
         await startRunsOf(dependencies, tx, process, triggering);
       }
     },
+
+    async startRunsAfterCommit(ctx, job) {
+      ctx.requireSystem();
+      await dependencies.transact((tx) => startRunsOfJob(dependencies, tx, job), { hop: job.hop });
+    },
   };
 }
 
-type Start = EventStart<PublishedEvent>;
+type Start = EventStart<TriggerEvent>;
 
-/** Starts the runs one process's trigger matches; a failure is logged with the process and rethrown. */
+/**
+ * Starts the runs one process's trigger matches, or queues them after the commit; a failure is
+ * logged with the process and rethrown.
+ */
 async function startRunsOf(
   dependencies: EventRunDependencies,
   tx: Tx,
@@ -67,8 +92,12 @@ async function startRunsOf(
       events,
       dependencies.triggeringEvents,
     );
-    if (starts.length > 0)
+    if (starts.length === 0) return;
+    if (definition.trigger.kind === "on_event" && definition.trigger.run === "after_commit") {
+      await queueAfterCommit(dependencies, tx, process, starts);
+    } else {
       await startProcessRuns(dependencies, tx, { process, definition, starts });
+    }
   } catch (error) {
     dependencies.logger.error(
       {
@@ -80,6 +109,77 @@ async function startRunsOf(
     );
     throw error;
   }
+}
+
+/** One job per event, carrying the process's version; none past the hop limit, which is logged. */
+async function queueAfterCommit(
+  { jobs, logger }: EventRunDependencies,
+  tx: Tx,
+  process: StoredProcess,
+  starts: readonly Start[],
+): Promise<void> {
+  const hop = tx.hop + 1;
+  for (const [event, recordIds] of recordIdsByEvent(starts)) {
+    const context = { processKey: process.key, eventId: event.id, eventType: event.type, hop };
+    if (hop > MAX_AFTER_COMMIT_HOPS) {
+      logger.error(
+        context,
+        `Process runs not queued: events kept starting processes after ${MAX_AFTER_COMMIT_HOPS} hops`,
+      );
+      continue;
+    }
+    const { id, type, payload } = event;
+    await jobs.send(tx, "processes.startRunsAfterCommit", {
+      processId: process.id,
+      versionId: process.activeVersion.id,
+      hop,
+      event: { id, type, payload },
+    });
+    logger.info(
+      { ...context, recordCount: recordIds.length },
+      "Process runs queued to start after the change",
+    );
+  }
+}
+
+/**
+ * The job's runs, once its process is locked so its jobs take turns: with the version it carries,
+ * for the records of its event that have no run of it yet.
+ */
+async function startRunsOfJob(
+  dependencies: EventRunDependencies,
+  tx: Tx,
+  { processId, versionId, event }: AfterCommitJob,
+): Promise<void> {
+  const runs = processRepository(tx);
+  await runs.lockProcess(processId);
+  const [current] = await runs.findProcessesByIds([processId]);
+  if (!current?.turnedOnAt) {
+    dependencies.logger.info(
+      { processId, eventId: event.id, eventType: event.type, reason: "process_turned_off" },
+      "Process run not started for an event",
+    );
+    return;
+  }
+  const process = { ...current, activeVersion: (await runs.findVersion(versionId))! };
+  const definition = dependencies.definitionOf(process.activeVersion);
+  const starts = matchEventStarts(
+    [{ processId, trigger: definition.trigger }],
+    [event],
+    dependencies.triggeringEvents,
+  );
+  const taken = await runs.findRecordsWithStartKeys(
+    processId,
+    definition.subject.recordType,
+    starts.map((start) => ({ recordId: start.recordId, startKey: startKeyOf(start) })),
+  );
+  const fresh = starts.filter((start) => {
+    const isTaken = taken.has(start.recordId);
+    if (isTaken) logSkip(dependencies.logger, process, start, "already_started");
+    return !isTaken;
+  });
+  if (fresh.length > 0)
+    await startProcessRuns(dependencies, tx, { process, definition, starts: fresh });
 }
 
 /**
@@ -124,7 +224,7 @@ async function startProcessRuns(
         startedByEmployeeId: null,
         triggerDate: null,
         triggerEvent: eventAboutRecord(event, recordId, triggeringEvents),
-        startKey: `on_event:${event.id}:${recordId}`,
+        startKey: startKeyOf({ event, recordId }),
         startDay: today(),
       })),
     );
@@ -146,16 +246,32 @@ function publishStarted(
   });
 }
 
-/** Why a start is skipped: its record is gone or already has a run of the process in progress. */
+type SkipReason = "record_gone" | "run_in_progress" | "already_started";
+
+/** Why a start is skipped before its record's run starts. */
 function skipReasonOf(
   { recordId }: Start,
   {
     subjects,
     inProgress,
   }: { subjects: ReadonlyMap<string, RunSubject | null>; inProgress: ReadonlySet<string> },
-): "record_gone" | "run_in_progress" | null {
+): SkipReason | null {
   if (!subjects.has(recordId)) return "record_gone";
   return inProgress.has(recordId) ? "run_in_progress" : null;
+}
+
+/** At most one run per process, event and record, however often the event is delivered. */
+function startKeyOf({ event, recordId }: Pick<Start, "event" | "recordId">): string {
+  return `on_event:${event.id}:${recordId}`;
+}
+
+/** Each event's record ids, in the order of the starts. */
+function recordIdsByEvent(starts: readonly Start[]): Map<TriggerEvent, string[]> {
+  const byEvent = new Map<TriggerEvent, string[]>();
+  for (const { event, recordId } of starts) {
+    byEvent.set(event, [...(byEvent.get(event) ?? []), recordId]);
+  }
+  return byEvent;
 }
 
 /** The starts split so each record appears at most once a wave, keeping their order. */
@@ -174,7 +290,7 @@ function logSkip(
   logger: Logger,
   process: StoredProcess,
   { event, recordId }: Start,
-  reason: "record_gone" | "run_in_progress",
+  reason: SkipReason,
 ): void {
   logger.info(
     { processKey: process.key, eventId: event.id, eventType: event.type, recordId, reason },
