@@ -102,15 +102,11 @@ export class Task implements Readonly<TaskFields> {
       throw new ApplicationError("CONFLICT", "This task is already done.");
     }
     if (this.status === "cancelled") {
-      throw cancelledConflict();
+      throw new ApplicationError("CONFLICT", "This task was cancelled.");
     }
   }
 
   private with(changes: Partial<TaskFields>): Task {
     return new Task({ ...this, ...changes });
   }
-}
-
-function cancelledConflict(): ApplicationError {
-  return new ApplicationError("CONFLICT", "This task was cancelled.");
 }
