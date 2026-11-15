@@ -36,3 +36,17 @@ mutation DisconnectAgent {
     }
   }
 }
+
+query YourAgentActivity {
+  myAgentActivity(first: 50) {
+    edges {
+      node {
+        id
+        tool
+        outcome
+        resultCount
+        calledAt
+      }
+    }
+  }
+}

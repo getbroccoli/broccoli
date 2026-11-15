@@ -1,4 +1,8 @@
-import { createAgentConnectionService } from "../../core/agentAccess";
+import {
+  createAgentActivityService,
+  createAgentConnectionService,
+  deleteOldAgentActivityJob,
+} from "../../core/agentAccess";
 import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import { createMcpAgentToolService } from "./app";
@@ -15,12 +19,15 @@ export { createMcpAgentToolService } from "./app";
 export function mcpAgentsModule(
   dependencies: Pick<ModuleDependencies, "orm" | "transact" | "logger">,
 ): ModuleManifest {
+  const { logger } = dependencies;
   const tools = createMcpAgentToolService(dependencies);
+  const activity = createAgentActivityService(dependencies);
   return {
     name: "mcpAgents",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
-    resolvers: createResolvers(createAgentConnectionService(dependencies)),
+    resolvers: createResolvers(createAgentConnectionService(dependencies), activity),
     router: (_resolveSecurity, publicOrigin, resolveAgentSecurity) =>
-      mcpAgentRouter(publicOrigin, resolveAgentSecurity, { tools, logger: dependencies.logger }),
+      mcpAgentRouter(publicOrigin, resolveAgentSecurity, { tools, activity, logger }),
+    jobs: deleteOldAgentActivityJob({ activity, logger }),
   };
 }

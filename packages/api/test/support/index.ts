@@ -21,6 +21,7 @@ export {
   registerAgentClient,
 } from "./agentClient";
 export { agentConnectionService } from "./agentConnectionService";
+export { agentActivityService } from "./agentActivityService";
 export { mcpAgentToolService } from "./mcpAgentToolService";
 export { startDisconnectingProxy, type DisconnectingProxy } from "./disconnectingProxy";
 export { test, slackTest } from "./fixture";

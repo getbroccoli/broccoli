@@ -1,0 +1,39 @@
+@keyframes agent-activity-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes agent-activity-flash {
+  from {
+    background-color: var(--brand-soft);
+  }
+}
+
+@keyframes agent-activity-pulse {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--brand) 50%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 7px transparent;
+  }
+}
+
+/* Each line mounts once, as its call arrives, so it slides in and flashes once. */
+.agent-activity-line {
+  animation:
+    agent-activity-arrive 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both,
+    agent-activity-flash 1600ms ease-out;
+}
+
+.agent-activity-pulse {
+  animation: agent-activity-pulse 900ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-activity-line,
+  .agent-activity-pulse {
+    animation: none;
+  }
+}

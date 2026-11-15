@@ -167,3 +167,16 @@ CREATE TABLE "agent_invitation_closings" (
 );--> statement-breakpoint
 ALTER TABLE "agent_invitation_closings" ADD CONSTRAINT "agent_invitation_closings_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "agent_connection_endings_user_id_ended_at_idx" ON "agent_connection_endings" USING btree ("user_id","ended_at");
+--> statement-breakpoint
+CREATE TABLE "agent_activity" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "agent_activity_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"user_id" text NOT NULL,
+	"client_id" text NOT NULL,
+	"tool" text NOT NULL,
+	"outcome" text NOT NULL,
+	"result_count" integer,
+	"called_at" timestamp with time zone NOT NULL
+);
+--> statement-breakpoint
+ALTER TABLE "agent_activity" ADD CONSTRAINT "agent_activity_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "agent_activity_user_id_id_idx" ON "agent_activity" USING btree ("user_id","id");

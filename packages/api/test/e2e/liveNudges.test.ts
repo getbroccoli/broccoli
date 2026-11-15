@@ -1,4 +1,5 @@
 import {
+  callMcpTool,
   connectAgent,
   expect,
   registerAgentClient,
@@ -6,6 +7,25 @@ import {
   test,
   TEST_OWNER,
 } from "#test/support";
+
+test("an agent's tool call sends the person's stream one activity nudge", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const clientId = await registerAgentClient(env, "Claude Code");
+  const { accessToken } = await connectAgent(env, browser, { clientId });
+  const response = await browser.get("/api/live");
+  const messages = sseMessages(response);
+  try {
+    expect(response.status).toBe(200);
+
+    const called = await callMcpTool(env, accessToken, "who_am_i");
+
+    expect(called.status).toBe(200);
+    expect(await messages.next()).toBe('{"type":"agentActivity.recorded"}');
+    expect(await messages.next(100)).toBeNull();
+  } finally {
+    await messages.cancel();
+  }
+});
 
 test("connecting an agent and disconnecting each send the person's stream one nudge", async ({
   env,

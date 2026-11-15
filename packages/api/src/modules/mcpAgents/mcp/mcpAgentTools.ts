@@ -1,7 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import type { AgentScope } from "../../../core/agentAccess";
+import type {
+  AgentActivityOutcome,
+  AgentActivityService,
+  AgentScope,
+} from "../../../core/agentAccess";
 import { ApplicationError } from "../../../core/applicationError";
 import type { Logger } from "../../../core/logger";
 import type { SecurityContext } from "../../../core/security";
@@ -24,14 +28,21 @@ const PERSON = z.object({
   jobTitle: z.string().nullable(),
 });
 
-/** Adds the tools to `server`, each acting as the person behind `ctx`. */
+/** The person an agent's call acts for, and which agent it is. */
+export interface AgentCaller {
+  ctx: SecurityContext;
+  clientId: string;
+}
+
+/** Adds the tools to `server`, each acting as the person behind `caller` and recording its call. */
 export function registerMcpAgentTools(
   server: McpServer,
-  ctx: SecurityContext,
-  { tools, logger }: { tools: McpAgentToolService; logger: Logger },
+  caller: AgentCaller,
+  dependencies: { tools: McpAgentToolService; activity: AgentActivityService; logger: Logger },
 ): void {
-  const run = <T extends object>(tool: string, answer: () => Promise<T>) =>
-    resultOf(tool, answer, { userId: ctx.user?.userId, logger });
+  const { ctx } = caller;
+  const { tools } = dependencies;
+  const run = <T extends object>(call: ToolCall<T>) => resultOf(call, caller, dependencies);
   server.registerTool(
     "who_am_i",
     {
@@ -46,7 +57,7 @@ export function registerMcpAgentTools(
       },
       annotations: { readOnlyHint: true },
     },
-    () => run("who_am_i", () => tools.whoAmI(ctx)),
+    () => run({ tool: "who_am_i", answer: () => tools.whoAmI(ctx) }),
   );
   server.registerTool(
     "find_people",
@@ -61,18 +72,37 @@ export function registerMcpAgentTools(
       outputSchema: { people: z.array(PERSON), nextCursor: z.string().nullable() },
       annotations: { readOnlyHint: true },
     },
-    (input) => run("find_people", () => tools.findPeople(ctx, input)),
+    (input) =>
+      run({
+        tool: "find_people",
+        answer: () => tools.findPeople(ctx, input),
+        countOf: (found) => found.people.length,
+      }),
   );
 }
 
-/** The tool's answer; a refusal the person may read, or a failure that hides its cause. */
+/** One tool call: its answer, and how many records it returned for tools that count. */
+interface ToolCall<T> {
+  tool: string;
+  answer: () => Promise<T>;
+  countOf?: (value: T) => number;
+}
+
+/**
+ * The tool's answer; a refusal the person may read, or a failure that hides its cause. Records how
+ * it ended as the person's agent activity.
+ */
 async function resultOf<T extends object>(
-  tool: string,
-  answer: () => Promise<T>,
-  { userId, logger }: { userId: string | undefined; logger: Logger },
+  { tool, answer, countOf }: ToolCall<T>,
+  { ctx, clientId }: AgentCaller,
+  { activity, logger }: { activity: AgentActivityService; logger: Logger },
 ) {
+  const userId = ctx.user?.userId;
+  const record = (outcome: AgentActivityOutcome, resultCount: number | null = null) =>
+    activity.recordCall(ctx, { clientId, tool, outcome, resultCount });
   try {
     const value = await answer();
+    await record("answered_by_broccoli", countOf ? countOf(value) : null);
     return {
       content: [{ type: "text" as const, text: JSON.stringify(value) }],
       structuredContent: value as Record<string, unknown>,
@@ -80,9 +110,11 @@ async function resultOf<T extends object>(
   } catch (error) {
     if (error instanceof ApplicationError) {
       logger.warn({ tool, userId, code: error.code }, "MCP tool refused");
+      await record("refused_by_broccoli");
     } else {
       // Only the name: a message may carry the data the tool read.
       logger.error({ error: (error as Error).name, tool, userId }, "MCP tool failed");
+      await record("failed_in_broccoli");
     }
     const message =
       error instanceof ApplicationError ? error.message : "Broccoli could not answer; try again.";

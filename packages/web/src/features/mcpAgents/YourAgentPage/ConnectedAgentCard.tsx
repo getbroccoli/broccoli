@@ -5,21 +5,24 @@ import type { YourAgentQuery } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
+import { AgentActivity } from "./AgentActivity";
 import { AgentWelcome } from "./AgentWelcome";
 import { DisconnectAgentDialog } from "./DisconnectAgentDialog";
-import { PromptIdeas } from "./PromptIdeas";
+import { timeAgo } from "./timeAgo";
 
 /** How long after connecting the page congratulates the person. */
 const WELCOME_MS = 60 * 60 * 1000;
 
 type Props = {
   connection: NonNullable<YourAgentQuery["myAgentConnection"]>;
+  /** When the page opened, in milliseconds; calls before it are history. */
+  openedAt: number;
   /** Who the agent acts as: the person's name, or their email without an employee. */
   personName: string;
 };
 
-/** The person's connected agent with Disconnect, a welcome right after connecting, and prompts to try. */
-export function ConnectedAgentCard({ connection, personName }: Props) {
+/** The person's connected agent with Disconnect, a welcome right after connecting, and what it is doing. */
+export function ConnectedAgentCard({ connection, openedAt, personName }: Props) {
   const [confirming, setConfirming] = useState(false);
   // Decided once per visit, so the welcome stays put while the person reads it.
   const [welcoming, setWelcoming] = useState(
@@ -62,7 +65,7 @@ export function ConnectedAgentCard({ connection, personName }: Props) {
           </Button>
         </div>
       </section>
-      <PromptIdeas client={client} />
+      <AgentActivity client={client} connectedAt={connection.connectedAt} openedAt={openedAt} />
       <DisconnectAgentDialog
         open={confirming}
         onOpenChange={setConfirming}
@@ -82,22 +85,3 @@ const dateAndTime = new Intl.DateTimeFormat("en-GB", {
 function dateAndTimeOf(dateTime: string): string {
   return dateAndTime.format(new Date(dateTime));
 }
-
-const relativeTime = new Intl.RelativeTimeFormat("en-GB", { numeric: "auto" });
-
-/** A past moment as "2 hours ago" or "yesterday", in the largest unit that fits. */
-function timeAgo(dateTime: string): string {
-  const seconds = Math.round((new Date(dateTime).getTime() - Date.now()) / 1000);
-  for (const [unit, size] of UNITS) {
-    if (Math.abs(seconds) >= size) {
-      return relativeTime.format(Math.round(seconds / size), unit);
-    }
-  }
-  return relativeTime.format(0, "second");
-}
-
-const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
-  ["day", 86_400],
-  ["hour", 3_600],
-  ["minute", 60],
-];

@@ -1,5 +1,5 @@
 import { useQuery } from "@apollo/client/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { YourAgentDocument } from "@/__generated__/graphql";
 import { t } from "@/i18n";
@@ -19,6 +19,8 @@ export function YourAgentPage() {
     fetchPolicy: "cache-and-network",
   });
   useRefetchOnFocus(refetch);
+  // Calls from before this moment are history, not live.
+  const [openedAt] = useState(Date.now);
   // The address the browser is on: the one an agent's token is issued for.
   const address = `${window.location.origin}/api/mcp`;
   const connection = data?.myAgentConnection;
@@ -37,6 +39,7 @@ export function YourAgentPage() {
       {data && connection && me && (
         <ConnectedAgentCard
           connection={connection}
+          openedAt={openedAt}
           personName={employee ? `${employee.firstName} ${employee.lastName}` : me.email}
         />
       )}

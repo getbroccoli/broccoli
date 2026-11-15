@@ -2,20 +2,29 @@
 import { useApolloClient } from "@apollo/client/react";
 import { useEffect } from "react";
 
-/** The open queries that show the person's agent connection. */
-const AGENT_CONNECTION_QUERIES = new Set(["YourAgent", "LeftNavAgentConnection"]);
+/** The open queries that show the person's agent connection and what their agent does. */
+const AGENT_CONNECTION_QUERIES = new Set([
+  "YourAgent",
+  "YourAgentActivity",
+  "LeftNavAgentConnection",
+]);
 
 /**
  * Keeps the person's agent connection current while they are signed in: the server nudges this
- * tab when their agent connects or a connection ends, and the open queries that show it read again.
+ * tab when their agent connects, a connection ends or the agent calls a tool, and the open
+ * queries that show it read again.
  * They read again each time the stream opens too, for a change made while it was not yet or no
  * longer open; the browser reopens a dropped stream by itself.
  */
 export function useLiveAgentConnection(): void {
   const apolloClient = useApolloClient();
   useEffect(() => {
-    const refetch = () =>
-      void apolloClient.refetchQueries({
+    // One read at a time, so an older answer never lands after a newer one; nudges that arrive
+    // meanwhile make one more read once it ends.
+    let reading: Promise<unknown> | null = null;
+    let readAgain = false;
+    const readAll = () =>
+      apolloClient.refetchQueries({
         include: "active",
         onQueryUpdated: (query) =>
           AGENT_CONNECTION_QUERIES.has(query.queryName ?? "") &&
@@ -27,6 +36,19 @@ export function useLiveAgentConnection(): void {
             context: { queryDeduplication: false },
           }),
       });
+    const refetch = () => {
+      if (reading) {
+        readAgain = true;
+        return;
+      }
+      reading = Promise.resolve(readAll()).finally(() => {
+        reading = null;
+        if (readAgain) {
+          readAgain = false;
+          refetch();
+        }
+      });
+    };
     const stream = new EventSource("/api/live");
     stream.onmessage = refetch;
     stream.onopen = refetch;

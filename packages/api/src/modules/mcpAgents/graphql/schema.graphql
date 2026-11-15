@@ -30,7 +30,39 @@ enum AgentConnectionEndReason {
   ENDED_AFTER_30_DAYS_UNUSED
 }
 
+"One tool call of the caller's agent: which tool and how Broccoli ended it, never what it read."
+type AgentActivity {
+  id: ID!
+  "The tool's name, such as who_am_i."
+  tool: String!
+  outcome: AgentActivityOutcome!
+  "How many records the call returned, for tools that count; null otherwise."
+  resultCount: Int
+  calledAt: DateTime!
+}
+
+enum AgentActivityOutcome {
+  "Broccoli answered the call."
+  ANSWERED_BY_BROCCOLI
+  "Broccoli refused the call: the agent lacked the permission, the person may not do it, or its input was invalid."
+  REFUSED_BY_BROCCOLI
+  "Broccoli could not answer the call."
+  FAILED_IN_BROCCOLI
+}
+
+type AgentActivityEdge {
+  cursor: String!
+  node: AgentActivity!
+}
+
+type AgentActivityConnection {
+  edges: [AgentActivityEdge!]!
+  pageInfo: PageInfo!
+}
+
 type Query {
+  "The caller's agent activity, newest first; kept 30 days."
+  myAgentActivity("Page size, 1 to 10000." first: Int = 50, after: String): AgentActivityConnection!
   "The caller's own agent connection; null without one."
   myAgentConnection: AgentConnection
   "The caller's most recently ended agent connection; null when none has ended."
