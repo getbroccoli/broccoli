@@ -127,6 +127,34 @@ test("find_people with an invalid cursor records a refusal", async ({ env }) => 
   });
 });
 
+test("find_people with a search longer than 100 characters records a refusal", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const clientId = await registerAgentClient(env, "Claude Code");
+  const { accessToken } = await connectAgent(env, browser, { clientId });
+
+  const response = await callMcpTool(env, accessToken, "find_people", { search: "a".repeat(101) });
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({ result: { isError: true } });
+  expect(await readActivity(browser)).toEqual({
+    data: {
+      myAgentActivity: {
+        edges: [
+          {
+            node: {
+              id: expect.any(String) as unknown,
+              tool: "find_people",
+              outcome: "REFUSED_BY_BROCCOLI",
+              resultCount: null,
+              calledAt: expect.any(String) as unknown,
+            },
+          },
+        ],
+      },
+    },
+  });
+});
+
 test("tools/list and a call after disconnect record no activity", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
   const clientId = await registerAgentClient(env, "Claude Code");

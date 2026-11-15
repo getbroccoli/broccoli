@@ -68,22 +68,52 @@ export function mcpAgentRouter(
     .use(mcpErrorHandler(logger));
 }
 
-/** Answers the call with a fresh MCP server holding the tools, acting as the call's person. */
-function answerWithTools(dependencies: {
+/**
+ * Answers the call with a fresh MCP server holding the tools, acting as the call's person. A tool
+ * call the server refused before the tool ran, such as for invalid input, is recorded as refused.
+ */
+function answerWithTools({
+  tools,
+  activity,
+  logger,
+}: {
   tools: McpAgentToolService;
   activity: AgentActivityService;
   logger: Logger;
 }): express.RequestHandler {
   return async (request, response) => {
+    const caller = agentOf(response);
+    let recorded = false;
+    const recording: AgentActivityService = {
+      ...activity,
+      recordCall: (ctx, call) => {
+        recorded = true;
+        return activity.recordCall(ctx, call);
+      },
+    };
     const server = new McpServer(
       { name: "broccoli", version: "1" },
       { instructions: INSTRUCTIONS },
     );
-    registerMcpAgentTools(server, agentOf(response), dependencies);
+    registerMcpAgentTools(server, caller, { tools, activity: recording, logger });
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,
     });
+    const tool = toolCalledBy(request.body);
+    const send = transport.send.bind(transport);
+    // Before the answer leaves, so the person's page never reads ahead of the line.
+    transport.send = async (message, options) => {
+      if (tool && !recorded) {
+        await recording.recordCall(caller.ctx, {
+          clientId: caller.clientId,
+          tool: tool.name,
+          outcome: "refused_by_broccoli",
+          resultCount: null,
+        });
+      }
+      return send(message, options);
+    };
     response.on("close", () => {
       void transport.close();
       void server.close();

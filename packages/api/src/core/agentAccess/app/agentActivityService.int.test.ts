@@ -113,6 +113,12 @@ test("deleting a person's user deletes their agent activity", async ({ orm, seed
   expect((await service.listMyActivity(OWNER, {})).edges).toEqual([]);
 });
 
+test("recording a call that cannot be saved does not throw", async ({ orm }) => {
+  const service = agentActivityService(orm);
+
+  await expect(service.recordCall(OWNER, answeredCall("test-client"))).resolves.toBeUndefined();
+});
+
 function answeredCall(clientId: string) {
   return {
     clientId,

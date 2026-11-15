@@ -63,7 +63,8 @@ export function ConnectedAgentCard({ connection, personName }: Props) {
           </Button>
         </div>
       </section>
-      <AgentActivity client={client} />
+      {/* A replacing agent starts its own list. */}
+      <AgentActivity key={connection.id} client={client} />
       <DisconnectAgentDialog
         open={confirming}
         onOpenChange={setConfirming}

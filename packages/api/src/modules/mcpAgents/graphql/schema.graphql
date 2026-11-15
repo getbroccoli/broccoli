@@ -44,7 +44,7 @@ type AgentActivity {
 enum AgentActivityOutcome {
   "Broccoli answered the call."
   ANSWERED_BY_BROCCOLI
-  "Broccoli refused the call: the agent lacked the permission, or the person may not do it."
+  "Broccoli refused the call: the agent lacked the permission, the person may not do it, or its input was invalid."
   REFUSED_BY_BROCCOLI
   "Broccoli could not answer the call."
   FAILED_IN_BROCCOLI

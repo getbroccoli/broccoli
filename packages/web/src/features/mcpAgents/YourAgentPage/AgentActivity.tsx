@@ -16,19 +16,21 @@ type Props = { client: string };
 /**
  * The calls the person's agent makes while the page is open, newest first, each as it happens;
  * calls from before the page opened stay out. The shell's live stream reads the list again on each call.
+ * shortcut: shows a visit's newest 50 calls; page back to the opening once history pages this list.
  */
 export function AgentActivity({ client }: Props) {
-  // Never a cached list: the newest line at opening marks where this visit's lines start.
   const { data } = useQuery(YourAgentActivityDocument, { fetchPolicy: "network-only" });
-  const edges = data?.myAgentActivity.edges;
-  const [newestAtOpening, setNewestAtOpening] = useState<string | null>();
-  if (edges && newestAtOpening === undefined) {
-    setNewestAtOpening(edges[0]?.node.id ?? null);
+  const lines = data?.myAgentActivity.edges.map(({ node }) => node);
+  const [openedAt] = useState(Date.now);
+  // The lines the first read finds from before the page opened; any later line is live.
+  const [earlierIds, setEarlierIds] = useState<ReadonlySet<string>>();
+  if (lines && !earlierIds) {
+    setEarlierIds(
+      new Set(lines.filter(({ calledAt }) => Date.parse(calledAt) < openedAt).map(({ id }) => id)),
+    );
   }
   useTicking();
-  const lines = (edges ?? []).map(({ node }) => node);
-  const opened = lines.findIndex(({ id }) => id === newestAtOpening);
-  const liveLines = opened === -1 ? lines : lines.slice(0, opened);
+  const liveLines = earlierIds ? (lines ?? []).filter(({ id }) => !earlierIds.has(id)) : [];
 
   return (
     <section aria-labelledby="agent-activity" className="flex flex-col gap-2.5">
