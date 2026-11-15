@@ -9,13 +9,6 @@ import { agentActivityLabel } from "../agentActivityLabel";
 import "./agentCallBubbles.css";
 import { callsAfter } from "./callsAfter";
 
-/** How faint each bubble is, newest first; their count is the most shown at once. */
-const OPACITIES = [1, 0.6, 0.35];
-/** How far each older bubble sits above the newer one, in pixels. */
-const STACK_STEP_PX = 30;
-/** The gap between the dot and the bubbles, in pixels. */
-const DOT_GAP_PX = 14;
-
 type Call = AgentCallBubblesQuery["myAgentActivity"]["edges"][number]["node"];
 
 /**
@@ -27,28 +20,33 @@ export function AgentCallBubbles() {
     fetchPolicy: "network-only",
   }).data?.myAgentActivity.edges.map(({ node }) => node);
   // undefined until the first read; the calls it finds are from before and never show.
-  const [lastShownId, setLastShownId] = useState<string | null>();
+  const [lastShownAt, setLastShownAt] = useState<string | null>();
   const [bubbles, setBubbles] = useState<Call[]>([]);
-  const newestId = calls?.[0]?.id ?? null;
-  if (calls && newestId !== lastShownId) {
-    if (lastShownId !== undefined) {
-      setBubbles([...bubbles, ...callsAfter(calls, lastShownId)].slice(-OPACITIES.length));
+  if (calls) {
+    if (lastShownAt === undefined) {
+      setLastShownAt(calls[0]?.calledAt ?? null);
+    } else {
+      // By time, so a read older than the last one shown adds nothing.
+      const newCalls = callsAfter(calls, lastShownAt);
+      const newest = newCalls.at(-1);
+      if (newest) {
+        setBubbles([...bubbles, ...newCalls].slice(-OPACITIES.length));
+        setLastShownAt(newest.calledAt);
+      }
     }
-    setLastShownId(newestId);
   }
 
   const dot = useRef<HTMLSpanElement>(null);
   const [dotBox, setDotBox] = useState<DOMRect>();
-  const showing = bubbles.length > 0;
   // The menu clips what overflows it, so the bubbles sit outside it, where the dot is now.
   useLayoutEffect(() => {
-    if (showing) setDotBox(dot.current?.getBoundingClientRect());
-  }, [showing]);
+    if (bubbles.length > 0) setDotBox(dot.current?.getBoundingClientRect());
+  }, [bubbles]);
 
   return (
     <>
       <span ref={dot} aria-hidden className="absolute inset-0" />
-      {showing &&
+      {bubbles.length > 0 &&
         dotBox &&
         createPortal(
           // Invisible rather than hidden, so a bubble still times out and never shows late.
@@ -87,3 +85,10 @@ export function AgentCallBubbles() {
     </>
   );
 }
+
+/** How faint each bubble is, newest first; their count is the most shown at once. */
+const OPACITIES = [1, 0.6, 0.35];
+/** How far each older bubble sits above the newer one, in pixels. */
+const STACK_STEP_PX = 30;
+/** The gap between the dot and the bubbles, in pixels. */
+const DOT_GAP_PX = 14;
