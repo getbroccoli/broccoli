@@ -5,6 +5,7 @@ import type { CalendarDate } from "../../../utils";
 import type { NewTask, TaskService } from "../../tasks";
 import { runStepRepository, processRepository } from "../db";
 import {
+  type ActionStep,
   addDayOffset,
   type AssigneeRule,
   type IsWorkingDay,
@@ -19,6 +20,7 @@ import {
   type TaskStep,
 } from "../domain";
 import type { PeoplePort, RunSubject, WorkingCalendarsPort } from "../ports";
+import type { RegisteredActions } from "./processActions";
 import type { DefinitionReader } from "./runStarter";
 
 /** A process's own task type: a step's to-do, whose done step processes follows. */
@@ -31,12 +33,15 @@ export interface StepStarter {
    * steps, start with assignees found on each run's start day; the others wait.
    */
   planFirstSteps(tx: Tx, runs: readonly FirstStepsInput[]): Promise<FirstSteps[]>;
-  /** Trusted: creates the first steps' tasks as Broccoli, and stores every step of the runs. */
+  /**
+   * Trusted: creates the first steps' tasks as Broccoli, stores every step of the runs, then runs
+   * the actions of their completed action steps.
+   */
   saveFirstSteps(tx: Tx, runs: readonly NewRunSteps[]): Promise<void>;
   /**
    * Trusted, under the run's lock: starts its waiting steps that their join lets start, giving
-   * their tasks to whom their rules name on `day`, marks those that never can not reached, and
-   * saves them. Returns the run with them, finished when nothing is left to do.
+   * their tasks to whom their rules name on `day` and running their actions, marks those that never
+   * can not reached, and saves them. Returns the run with them, finished when nothing is left to do.
    */
   startReadySteps(tx: Tx, run: ProcessRun, day: CalendarDate): Promise<ProcessRun>;
   /** Each step's title as its task gets it, in the order the run's version lists the steps. */
@@ -51,9 +56,11 @@ export interface FirstStepsInput {
   startDay: CalendarDate;
 }
 
-/** A new run's steps as they start: those started, and the progress of every step. */
+/** A new run's steps as they start: those started or completed, and the progress of every step. */
 export interface FirstSteps {
   starts: StepStart[];
+  /** Action steps completed with the run, whose actions run once it is stored. */
+  completedActions: ActionStep[];
   progress: RunStep[];
 }
 
@@ -70,6 +77,7 @@ export interface StepStarterDependencies {
   people: PeoplePort;
   workingCalendars: WorkingCalendarsPort;
   definitionOf: DefinitionReader;
+  actions: RegisteredActions;
   logger: Logger;
 }
 
@@ -101,6 +109,9 @@ export function createStepStarter(dependencies: StepStarterDependencies): StepSt
         first.progress.map((row) => ({ ...row, runId: run.id })),
       );
       await runStepRepository(tx).insertSteps(withTaskIds(plans, progress, taskIds).flat());
+      for (const { run, first } of runs) {
+        await runActions(dependencies, tx, run, first.completedActions);
+      }
     },
 
     async startReadySteps(tx, run, day) {
@@ -120,7 +131,13 @@ export function createStepStarter(dependencies: StepStarterDependencies): StepSt
       const version = (await processRepository(tx).findVersion(run.processVersionId))!;
       const { steps } = definitionOf(version);
       const subject = await readSubject(people, tx, run);
-      return new Map(steps.map(({ key, task }) => [key, filled(task.title, subject)]));
+      return new Map(
+        steps.map((step) => [
+          step.key,
+          // An action step has no title of its own yet; its action's name stands for it.
+          step.kind === "task" ? filled(step.task.title, subject) : step.action.name,
+        ]),
+      );
     },
   };
 }
@@ -130,11 +147,12 @@ export function createStepStarter(dependencies: StepStarterDependencies): StepSt
  * it was when no waiting step is decided.
  */
 async function startReadyStepsOf(
-  { tasks, people, workingCalendars, definitionOf }: StepStarterDependencies,
+  dependencies: StepStarterDependencies,
   tx: Tx,
   run: ProcessRun,
   day: CalendarDate,
 ): Promise<ProcessRun> {
+  const { tasks, people, workingCalendars, definitionOf } = dependencies;
   if (!run.steps.some(({ status }) => status === "step_waiting_to_start")) return run;
   const processes = processRepository(tx);
   const definition = definitionOf((await processes.findVersion(run.processVersionId))!);
@@ -160,7 +178,37 @@ async function startReadyStepsOf(
     await createStepTasks({ tasks, workingCalendars }, tx, [plan]),
   );
   await runStepRepository(tx).saveDecidedSteps(decided!);
-  return run.withDecidedSteps(decided!, now);
+  const changed = run.withDecidedSteps(decided!, now);
+  await runActions(dependencies, tx, changed, next.completedActions);
+  return changed;
+}
+
+/**
+ * Runs the actions of these completed steps in order, as Broccoli. A failure is logged with its
+ * step and rethrown, so the transaction that completed them rolls back.
+ */
+async function runActions(
+  { actions, logger }: Pick<StepStarterDependencies, "actions" | "logger">,
+  tx: Tx,
+  run: ProcessRunFields,
+  steps: readonly ActionStep[],
+): Promise<void> {
+  for (const { key, action } of steps) {
+    try {
+      await actions[action.name]!.run(PrincipalSecurityContext.system(), tx, {
+        run,
+        step: { key },
+        params: action.params,
+      });
+    } catch (error) {
+      const kind = (error as Error | undefined)?.constructor?.name;
+      logger.error(
+        { runId: run.id, stepKey: key, action: action.name, kind },
+        "Process action failed, so its transaction rolls back",
+      );
+      throw error;
+    }
+  }
 }
 
 /** The steps starting together in one run, with what their tasks need. */

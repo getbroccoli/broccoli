@@ -85,6 +85,7 @@ export {
   eventProcess,
   seedProcess,
   seedSecondProcessVersion,
+  type TaskStepsDefinition,
 } from "./seedProcess";
 export { domainEvents } from "./domainEvents";
 export { sseMessages } from "./sseMessages";
@@ -98,6 +99,7 @@ export {
   setupSessions,
   setupSteps,
 } from "./statelessServices";
+export { testActions } from "./testActions";
 export { EXAMPLE_PAYLOAD } from "./exampleEvent";
 export {
   fetchReadiness,

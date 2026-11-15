@@ -2,7 +2,16 @@ import { ApplicationError } from "../../applicationError";
 import type { CalendarDate } from "../../../utils";
 import type { TaskResult } from "../../tasks";
 import type { TriggerEvent } from "./eventTrigger";
-import type { AfterEntry, AssigneeRule, StepJoin, TaskStep } from "./processDefinition";
+import type {
+  ActionStep,
+  AfterEntry,
+  AssigneeRule,
+  ProcessStep,
+  StepBase,
+  StepJoin,
+  TaskStep,
+} from "./processDefinition";
+import { taskStepsOf } from "./processDefinition";
 
 export const RUN_STATUSES = ["in_progress", "finished", "cancelled"] as const;
 export type RunStatus = (typeof RUN_STATUSES)[number];
@@ -114,7 +123,7 @@ export function resolveAssignee(
  * allows; or never start, because the steps they wait for went another way.
  */
 export function decideWaitingSteps(
-  steps: readonly Pick<TaskStep, "key" | "after" | "join">[],
+  steps: readonly StepBase[],
   progress: readonly Pick<RunStep, "stepKey" | "status" | "result">[],
 ): { ready: string[]; notReached: string[] } {
   const rowOf = new Map(progress.map((row) => [row.stepKey, row]));
@@ -142,16 +151,18 @@ export interface StepStart {
 
 /**
  * Starts the ready steps among `progress` and marks the not reached, again while that decides
- * more. Returns the steps it started in order, and the progress with them awaiting their task (its
- * id still null, for the caller to fill) or skipped, and the not reached.
+ * more. An action step completes at once: the caller runs its action in the same transaction,
+ * which rolls back if it throws. Returns, in order, the task steps started (their task ids still
+ * null) and the action steps completed, and the progress with them.
  */
 export function startReadySteps(
-  steps: readonly TaskStep[],
+  steps: readonly ProcessStep[],
   progress: readonly RunStep[],
   assigneeOf: (step: TaskStep) => ResolvedAssignee | null,
   now: Date,
-): { starts: StepStart[]; progress: RunStep[] } {
+): { starts: StepStart[]; completedActions: ActionStep[]; progress: RunStep[] } {
   const starts: StepStart[] = [];
+  const completedActions: ActionStep[] = [];
   let current = [...progress];
   for (
     let decided = decideWaitingSteps(steps, current);
@@ -159,19 +170,20 @@ export function startReadySteps(
     decided = decideWaitingSteps(steps, current)
   ) {
     const { ready, notReached } = decided;
-    const started = steps
-      .filter(({ key }) => ready.includes(key))
-      .map((step) => ({ step, assignee: assigneeOf(step) }));
+    const readySteps = steps.filter(({ key }) => ready.includes(key));
+    const started = taskStepsOf(readySteps).map((step) => ({ step, assignee: assigneeOf(step) }));
     starts.push(...started);
+    completedActions.push(...readySteps.flatMap((step) => (step.kind === "action" ? [step] : [])));
     current = current.map((row) => {
       const start = started.find(({ step }) => step.key === row.stepKey);
       if (start) return startedRow(row, start.assignee, now);
+      if (ready.includes(row.stepKey)) return { ...row, status: "step_completed", finishedAt: now };
       return notReached.includes(row.stepKey)
         ? { ...row, status: "step_not_reached", finishedAt: now }
         : row;
     });
   }
-  return { starts, progress: current };
+  return { starts, completedActions, progress: current };
 }
 
 /**

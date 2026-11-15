@@ -19,7 +19,7 @@ export interface ProcessDefinition {
   /** The record a run is about, the trigger's record type. */
   subject: { recordType: string };
   trigger: RecordDateTrigger | EventTrigger;
-  steps: TaskStep[];
+  steps: ProcessStep[];
 }
 
 /** A definition as stored and written: an `after` entry may be a step key, `after` and `join` missing. */
@@ -31,6 +31,8 @@ export interface ProcessCatalog {
   recordTypes: Readonly<Record<string, { dateFields: readonly string[] }>>;
   /** Events that may start a run, with the record type each is about. */
   triggeringEvents: Readonly<Record<string, { recordType: string }>>;
+  /** Actions an action step may name, with the schema of their params. */
+  actions: Readonly<Record<string, { params: z.ZodType }>>;
 }
 
 /** Starts a run on a date of the subject record, plus an offset, by a daily pass. */
@@ -62,14 +64,28 @@ export type EventTrigger = {
 export const STEP_JOINS = ["all", "any"] as const;
 export type StepJoin = (typeof STEP_JOINS)[number];
 
-/** A step that gives one person a task. */
-export interface TaskStep {
+/** What every step has, whatever its kind: its key and the steps it waits for. */
+export interface StepBase {
   key: string;
-  kind: "task";
   /** The steps it waits for, as `join` says; none starts it with the run. */
   after: AfterEntry[];
   join: StepJoin;
+}
+
+/** One step of a process: a person's task, or an action Broccoli runs. */
+export type ProcessStep = TaskStep | ActionStep;
+
+/** A step that gives one person a task. */
+export interface TaskStep extends StepBase {
+  kind: "task";
   task: StepTask;
+}
+
+/** A step that runs an action a module registered, and completes when it returns. */
+export interface ActionStep extends StepBase {
+  kind: "action";
+  /** A registered action's name, and its params as its schema parsed them. */
+  action: { name: string; params: unknown };
 }
 
 /**
@@ -113,6 +129,7 @@ export function parseProcessDefinition(
     throw new Error(`Process definition schema version ${schemaVersion} is not known.`);
   }
   refuseUnbuiltTrigger(definition, catalog);
+  refuseUnbuiltStepKinds(definition);
   const parsed: ProcessDefinition = definitionSchema.parse(definition);
   refuseUnregisteredRecord(parsed, catalog);
   refuseSubjectOtherThanTrigger(parsed, catalog);
@@ -120,13 +137,20 @@ export function parseProcessDefinition(
   refuseUnrunnableWaits(parsed.steps);
   refuseResultsNotOffered(parsed.steps);
   const triggerOffsets = parsed.trigger.kind === "on_record_date" ? [parsed.trigger.offset] : [];
-  for (const offset of [...triggerOffsets, ...parsed.steps.map(({ task }) => task.due)]) {
+  for (const offset of [...triggerOffsets, ...taskStepsOf(parsed.steps).map(({ task }) => task.due)]) {
     refuseOffsetBeyondLimit(offset);
   }
-  return parsed;
+  return { ...parsed, steps: parsed.steps.map((step) => withParsedParams(step, catalog)) };
+}
+
+/** The task steps among these, in their order. */
+export function taskStepsOf(steps: readonly ProcessStep[]): TaskStep[] {
+  return steps.flatMap((step) => (step.kind === "task" ? [step] : []));
 }
 
 const UNBUILT_TRIGGER_KINDS = new Set(["on_record_created", "on_record_changed", "on_schedule"]);
+
+const UNBUILT_STEP_KINDS = new Set(["wait", "subprocess", "agent", "end"]);
 
 function refuseUnbuiltTrigger(definition: unknown, { triggeringEvents }: ProcessCatalog): void {
   const trigger = (definition as { trigger?: { kind?: unknown; event?: unknown } } | null)?.trigger;
@@ -136,6 +160,30 @@ function refuseUnbuiltTrigger(definition: unknown, { triggeringEvents }: Process
   if (trigger?.kind === "on_event" && !Object.hasOwn(triggeringEvents, String(trigger.event))) {
     throw new Error(`Event ${String(trigger.event)} cannot trigger a process.`);
   }
+}
+
+function refuseUnbuiltStepKinds(definition: unknown): void {
+  const steps = (definition as { steps?: unknown } | null)?.steps;
+  if (!Array.isArray(steps)) return;
+  for (const step of steps as ({ kind?: unknown } | null)[]) {
+    if (typeof step?.kind === "string" && UNBUILT_STEP_KINDS.has(step.kind)) {
+      throw new Error(`Step kind ${step.kind} is not built.`);
+    }
+  }
+}
+
+/** An action step with its params as its registered action's schema parses them. */
+function withParsedParams(step: ProcessStep, { actions }: ProcessCatalog): ProcessStep {
+  if (step.kind !== "action") return step;
+  const { name, params } = step.action;
+  if (!Object.hasOwn(actions, name)) throw new Error(`Action ${name} is not registered.`);
+  const parsed = actions[name]!.params.safeParse(params);
+  if (!parsed.success) {
+    throw new Error(
+      `Step ${step.key} has bad params for action ${name}: ${z.prettifyError(parsed.error)}`,
+    );
+  }
+  return { ...step, action: { name, params: parsed.data } };
 }
 
 function refuseUnregisteredRecord(
@@ -168,7 +216,7 @@ function refuseSubjectOtherThanTrigger(
   }
 }
 
-function refuseRepeatedStepKeys(steps: readonly TaskStep[]): void {
+function refuseRepeatedStepKeys(steps: readonly StepBase[]): void {
   const seen = new Set<string>();
   for (const { key } of steps) {
     if (seen.has(key)) throw new Error(`Step key ${key} is used twice.`);
@@ -177,7 +225,7 @@ function refuseRepeatedStepKeys(steps: readonly TaskStep[]): void {
 }
 
 /** Refuses a step waiting for a step that does not exist, for itself, twice, or in a cycle. */
-function refuseUnrunnableWaits(steps: readonly TaskStep[]): void {
+function refuseUnrunnableWaits(steps: readonly StepBase[]): void {
   const keys = new Set(steps.map(({ key }) => key));
   for (const { key, after } of steps) {
     const listed = new Set<string>();
@@ -195,8 +243,9 @@ function refuseUnrunnableWaits(steps: readonly TaskStep[]): void {
 }
 
 /** Refuses a step waiting for a result that the step it names does not ask for. */
-function refuseResultsNotOffered(steps: readonly TaskStep[]): void {
-  const formOf = new Map(steps.map(({ key, task }) => [key, task.resultForm]));
+function refuseResultsNotOffered(steps: readonly ProcessStep[]): void {
+  // An action step gives no result, so it offers none.
+  const formOf = new Map(taskStepsOf(steps).map(({ key, task }) => [key, task.resultForm]));
   for (const { key, after } of steps) {
     for (const { step, when } of after) {
       if (!when) continue;
@@ -212,7 +261,7 @@ function refuseResultsNotOffered(steps: readonly TaskStep[]): void {
 }
 
 /** The steps that wait, directly or through others, for themselves, in definition order. */
-function stepsOnCycle(steps: readonly TaskStep[]): string[] {
+function stepsOnCycle(steps: readonly StepBase[]): string[] {
   const afterOf = new Map(steps.map(({ key, after }) => [key, after.map(({ step }) => step)]));
   return steps.flatMap(({ key }) => (waitedForBy(afterOf, key).has(key) ? [key] : []));
 }
@@ -297,24 +346,31 @@ const afterEntrySchema = z.union([
   }),
 ]);
 
+const stepBaseSchema = z.object({
+  key: stepKeySchema,
+  after: z.array(afterEntrySchema).default([]),
+  join: z.enum(STEP_JOINS).default("all"),
+});
+
+const stepSchema = z.discriminatedUnion("kind", [
+  stepBaseSchema.extend({
+    kind: z.literal("task"),
+    task: z.object({
+      assignee: assigneeRuleSchema,
+      title: z.string().trim().min(1),
+      description: z.string().nullable().default(null),
+      due: offsetSchema,
+      resultForm: TASK_RESULT_FORM_SCHEMA.nullable().default(null),
+    }),
+  }),
+  stepBaseSchema.extend({
+    kind: z.literal("action"),
+    action: z.object({ name: z.string().min(1), params: z.unknown().default({}) }),
+  }),
+]);
+
 const definitionSchema = z.object({
   subject: z.object({ recordType: z.string().min(1) }),
   trigger: triggerSchema,
-  steps: z
-    .array(
-      z.object({
-        key: stepKeySchema,
-        kind: z.literal("task"),
-        after: z.array(afterEntrySchema).default([]),
-        join: z.enum(STEP_JOINS).default("all"),
-        task: z.object({
-          assignee: assigneeRuleSchema,
-          title: z.string().trim().min(1),
-          description: z.string().nullable().default(null),
-          due: offsetSchema,
-          resultForm: TASK_RESULT_FORM_SCHEMA.nullable().default(null),
-        }),
-      }),
-    )
-    .min(1),
+  steps: z.array(stepSchema).min(1),
 });

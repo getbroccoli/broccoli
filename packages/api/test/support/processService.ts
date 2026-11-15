@@ -5,6 +5,7 @@ import { createLogger } from "../../src/core/logger";
 import {
   createProcessService,
   processesModule,
+  type ProcessActionRegistrations,
   type TriggeringEventRegistration,
 } from "../../src/core/processes";
 import { TASK_TRIGGERING_EVENTS, taskRecordType } from "../../src/core/tasks";
@@ -27,16 +28,19 @@ export function processService(
   orm: Orm,
   {
     today = todayInLondon,
+    actions = {},
     transact = testTransactor(orm),
     jobs = { send: () => Promise.reject(new Error("Unexpected job")) },
   }: {
     today?: () => CalendarDate;
+    actions?: ProcessActionRegistrations;
     transact?: Transact;
     jobs?: JobQueue;
   } = {},
 ) {
   return createProcessService({
     orm,
+    actions,
     transact,
     jobs,
     logger: createLogger("silent"),
@@ -61,18 +65,25 @@ export function processService(
  */
 export function transactWithProcesses(
   orm: Orm,
-  { today, jobs }: { today: () => CalendarDate; jobs?: JobQueue },
+  {
+    today,
+    jobs,
+    actions = {},
+  }: { today: () => CalendarDate; jobs?: JobQueue; actions?: ProcessActionRegistrations },
 ): Transact {
   const logger = createLogger("silent");
   const beforeCommit = createBeforeCommitBus();
   const transact = transactor(orm, createEventBus(logger), beforeCommit);
-  const processes = processService(orm, { today, transact, jobs });
+  const processes = processService(orm, { today, transact, jobs, actions });
   beforeCommit.subscribe(processesModule({ logger, processes }).eventsBeforeCommit!);
   return transact;
 }
 
 /** Collects after-commit jobs and delivers them through the real handler and before-commit bus. */
-export function afterCommitProcesses(orm: Orm, { today }: { today: () => CalendarDate }) {
+export function afterCommitProcesses(
+  orm: Orm,
+  { today, actions = {} }: { today: () => CalendarDate; actions?: ProcessActionRegistrations },
+) {
   const queuedJobs: Jobs["processes.startRunsAfterCommit"][] = [];
   const jobs: JobQueue = {
     send: (_tx, name, payload) => {
@@ -83,8 +94,8 @@ export function afterCommitProcesses(orm: Orm, { today }: { today: () => Calenda
       return Promise.resolve();
     },
   };
-  const transact = transactWithProcesses(orm, { today, jobs });
-  const processes = processService(orm, { today, transact, jobs });
+  const transact = transactWithProcesses(orm, { today, jobs, actions });
+  const processes = processService(orm, { today, transact, jobs, actions });
   const module = processesModule({ logger: createLogger("silent"), processes });
   return {
     transact,

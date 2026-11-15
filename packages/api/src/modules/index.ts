@@ -24,6 +24,7 @@ import { createImportServices, importsModule } from "./imports";
 import { mcpAgentsModule } from "./mcpAgents";
 import {
   createProcessService,
+  type ProcessActionRegistration,
   processesModule,
   type TriggeringEventRegistration,
 } from "../core/processes";
@@ -80,6 +81,8 @@ export function createModules(
       EMPLOYEE_TRIGGERING_EVENTS,
       TASK_TRIGGERING_EVENTS,
     ]),
+    // The actions process steps may run, registered by the modules that own them.
+    actions: collectRegistrations<ProcessActionRegistration<unknown>>("process action", []),
   });
   // Every path that clears the people resets time off, processes and tasks too, back to a fresh workspace.
   const deleteAllEmployees: typeof employeeSetup.deleteAllEmployees = async (ctx, tx) => {

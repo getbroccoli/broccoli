@@ -20,6 +20,7 @@ import type { PeoplePort, WorkingCalendarsPort } from "../ports";
 import type { Process, ProcessRun, ProcessRunDetails, StepProgress } from "./processViews";
 import { createRunLifecycleService, type RunLifecycleService } from "./runLifecycleService";
 import { createRunReader, type RunReader } from "./runReader";
+import type { RegisteredActions } from "./processActions";
 import { createRunStarter, type DefinitionReader, type ProcessRecordTypes } from "./runStarter";
 import { createStepStarter } from "./stepStarter";
 
@@ -83,6 +84,23 @@ export interface ProcessService {
   completeStepsOfDoneTasks: RunLifecycleService["completeStepsOfDoneTasks"];
 }
 
+/** What processes reads and writes through, and what the modules registered for them. */
+export interface ProcessServiceDependencies extends Pick<
+  ModuleDependencies,
+  "orm" | "transact" | "jobs" | "logger"
+> {
+  tasks: TaskService;
+  people: PeoplePort;
+  workingCalendars: WorkingCalendarsPort;
+  /** Every registered record type; those with process capabilities may be a run's subject. */
+  recordTypes: RecordTypeRegistry;
+  triggeringEvents: TriggeringEvents;
+  /** The actions modules registered, which action steps name. */
+  actions: RegisteredActions;
+  /** The clock: when a process is turned on, and from it today in London. */
+  now?: () => Date;
+}
+
 export function createProcessService({
   orm,
   transact,
@@ -93,21 +111,20 @@ export function createProcessService({
   workingCalendars,
   recordTypes: registeredRecordTypes,
   triggeringEvents,
+  actions,
   now = () => new Date(),
-}: Pick<ModuleDependencies, "orm" | "transact" | "jobs" | "logger"> & {
-  tasks: TaskService;
-  people: PeoplePort;
-  workingCalendars: WorkingCalendarsPort;
-  /** Every registered record type; those with process capabilities may be a run's subject. */
-  recordTypes: RecordTypeRegistry;
-  triggeringEvents: TriggeringEvents;
-  /** The clock: when a process is turned on, and from it today in London. */
-  now?: () => Date;
-}): ProcessService {
+}: ProcessServiceDependencies): ProcessService {
   const today = () => dateInLondon(now());
   const recordTypes = processRecordTypesOf(registeredRecordTypes);
-  const definitionOf = definitionReader(recordTypes, triggeringEvents);
-  const steps = createStepStarter({ tasks, people, workingCalendars, definitionOf, logger });
+  const definitionOf = definitionReader({ recordTypes, triggeringEvents, actions });
+  const steps = createStepStarter({
+    tasks,
+    people,
+    workingCalendars,
+    definitionOf,
+    actions,
+    logger,
+  });
   const starter = createRunStarter({ people, recordTypes, steps });
   const reader = createRunReader({ transact, tasks, stepStarter: steps });
   const lifecycle = createRunLifecycleService({ orm, transact, tasks, starter, steps, today });
@@ -292,16 +309,22 @@ function processRecordTypesOf(registry: RecordTypeRegistry): ProcessRecordTypes 
   );
 }
 
-/** Parses stored definitions against the record types and events the modules registered. */
-function definitionReader(
-  recordTypes: ProcessRecordTypes,
-  triggeringEvents: TriggeringEvents,
-): DefinitionReader {
+/** Parses stored definitions against the record types, events and actions the modules registered. */
+function definitionReader({
+  recordTypes,
+  triggeringEvents,
+  actions,
+}: {
+  recordTypes: ProcessRecordTypes;
+  triggeringEvents: TriggeringEvents;
+  actions: RegisteredActions;
+}): DefinitionReader {
   const catalog = {
     recordTypes: Object.fromEntries(
       Object.entries(recordTypes).map(([type, { dateFields = [] }]) => [type, { dateFields }]),
     ),
     triggeringEvents,
+    actions,
   };
   return ({ schemaVersion, definition }) =>
     parseProcessDefinition(schemaVersion, definition, catalog);
