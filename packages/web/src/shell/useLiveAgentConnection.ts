@@ -7,6 +7,7 @@ const AGENT_CONNECTION_QUERIES = new Set([
   "YourAgent",
   "YourAgentActivity",
   "LeftNavAgentConnection",
+  "AgentCallBubbles",
 ]);
 
 /**

@@ -1,5 +1,6 @@
 import { type Icon } from "@phosphor-icons/react";
 import { type LinkProps } from "@tanstack/react-router";
+import { type ReactNode } from "react";
 
 import { NavLink } from "./NavLink";
 
@@ -13,6 +14,8 @@ export interface NavItem {
   countLabel?: string;
   /** A green dot beside the label, named this for screen readers; none when unset. */
   dotLabel?: string;
+  /** Shown at the dot while another page is open, such as what the agent just did. */
+  besideDot?: ReactNode;
 }
 
 type Props = { label: string; items: NavItem[] };

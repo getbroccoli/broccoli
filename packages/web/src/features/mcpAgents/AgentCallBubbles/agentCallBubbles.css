@@ -1,0 +1,23 @@
+/* Pops up beside the dot, holds, then fades; the bubble leaves when this ends. */
+@keyframes agent-call-bubble {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+    animation-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
+  }
+  8% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.agent-call-bubble {
+  transform-origin: 0 100%;
+  animation: agent-call-bubble 4s linear both;
+}

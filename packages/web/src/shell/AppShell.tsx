@@ -10,11 +10,17 @@ import { useFocusHeadingOnNavigation } from "./useFocusHeadingOnNavigation";
 import { useInSettings } from "./useInSettings";
 import { useLiveAgentConnection } from "./useLiveAgentConnection";
 
+type Props = {
+  children: ReactNode;
+  /** What the person's agent is doing, shown at the Your agent menu dot on other pages. */
+  agentActivity: ReactNode;
+};
+
 /**
  * The window-sized app frame: navigation above or beside the Canvas, a card that
  * owns its own scroll. The document itself never scrolls.
  */
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ children, agentActivity }: Props) {
   const main = useRef<HTMLElement>(null);
   const inSettings = useInSettings();
   useFocusHeadingOnNavigation(main);
@@ -28,7 +34,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           inSettings ? "bg-settings-backdrop" : "bg-app-backdrop",
         )}
       >
-        <LeftNav />
+        <LeftNav agentActivity={agentActivity} />
         <main ref={main} className="flex min-h-0 min-w-0 flex-1 p-2 pt-0 md:p-3">
           <div
             className={cn(
