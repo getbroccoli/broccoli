@@ -30,6 +30,8 @@ export function processesModule({
       // Logged once the change commits, never for runs a rollback dropped.
       "processes.runs_started_on_event": (started) =>
         Promise.resolve(logger.info(started, "Process runs started on an event")),
+      "processes.runs_queued_after_commit": (queued) =>
+        Promise.resolve(logger.info(queued, "Process runs queued to start after the change")),
       "processes.steps_completed": (completed) =>
         Promise.resolve(logger.info(completed, "Process step done")),
     },

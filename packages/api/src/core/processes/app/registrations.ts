@@ -30,6 +30,14 @@ declare module "../../events" {
   interface DomainEvents {
     /** Runs started on events, with the change or in an after-commit job; after-commit handlers get it once that commits. */
     "processes.runs_started_on_event": { processKey: string; runIds: string[]; eventIds: string[] };
+    /** Runs queued to start in a job once the change commits; logged only then. */
+    "processes.runs_queued_after_commit": {
+      processKey: string;
+      eventId: string;
+      eventType: string;
+      hop: number;
+      recordCount: number;
+    };
     /** A run's steps completed as their tasks were marked done; logged once the change commits. */
     "processes.steps_completed": { runId: string; taskIds: string[]; runStatus: string };
   }

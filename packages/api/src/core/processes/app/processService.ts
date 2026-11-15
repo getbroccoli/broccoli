@@ -65,8 +65,8 @@ export interface ProcessService {
   /** Back to a fresh workspace: deletes every run, turns every process off, forgets their history; the people's deletion took the tasks. */
   resetProcesses(ctx: SecurityContext, tx: Tx): Promise<void>;
   /**
-   * Trusted, as the system, before a transaction commits: starts the runs its events trigger, so
-   * they commit with the change or not at all.
+   * Trusted, as the system, before a transaction commits: starts the in-transaction runs its events
+   * trigger and queues the after-commit ones, so either commits with the change or not at all.
    */
   startRunsOnEvents: EventRunService["startRunsOnEvents"];
   /** Trusted, as the system, for an after-commit job: starts its runs in their own transaction. */

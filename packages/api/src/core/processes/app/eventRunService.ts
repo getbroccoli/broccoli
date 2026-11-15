@@ -119,7 +119,7 @@ async function queueAfterCommit(
   starts: readonly Start[],
 ): Promise<void> {
   const hop = tx.hop + 1;
-  for (const [event, recordIds] of recordIdsByEvent(starts)) {
+  for (const [event, recordCount] of recordCountsByEvent(starts)) {
     const context = { processKey: process.key, eventId: event.id, eventType: event.type, hop };
     if (hop > MAX_AFTER_COMMIT_HOPS) {
       logger.error(
@@ -135,10 +135,7 @@ async function queueAfterCommit(
       hop,
       event: { id, type, payload },
     });
-    logger.info(
-      { ...context, recordCount: recordIds.length },
-      "Process runs queued to start after the change",
-    );
+    tx.publish("processes.runs_queued_after_commit", { ...context, recordCount });
   }
 }
 
@@ -265,13 +262,11 @@ function startKeyOf({ event, recordId }: Pick<Start, "event" | "recordId">): str
   return `on_event:${event.id}:${recordId}`;
 }
 
-/** Each event's record ids, in the order of the starts. */
-function recordIdsByEvent(starts: readonly Start[]): Map<TriggerEvent, string[]> {
-  const byEvent = new Map<TriggerEvent, string[]>();
-  for (const { event, recordId } of starts) {
-    byEvent.set(event, [...(byEvent.get(event) ?? []), recordId]);
-  }
-  return byEvent;
+/** How many records each event starts, in the order of the starts. */
+function recordCountsByEvent(starts: readonly Start[]): Map<TriggerEvent, number> {
+  const counts = new Map<TriggerEvent, number>();
+  for (const { event } of starts) counts.set(event, (counts.get(event) ?? 0) + 1);
+  return counts;
 }
 
 /** The starts split so each record appears at most once a wave, keeping their order. */
