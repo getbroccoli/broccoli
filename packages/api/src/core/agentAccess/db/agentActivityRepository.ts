@@ -1,6 +1,7 @@
 import { and, desc, eq, lt } from "drizzle-orm";
 import { z } from "zod";
 
+import { oauthClient } from "../../auth";
 import { type Orm, ormOf, type Tx } from "../../db";
 import type { KeysetRow } from "../../pagination";
 import type { AgentActivityOutcome } from "../domain";
@@ -21,6 +22,8 @@ export interface AgentActivityRepository {
 export interface StoredAgentActivity {
   id: string;
   clientId: string;
+  /** The name the agent gave itself; null when it gave none. */
+  clientName: string | null;
   tool: string;
   outcome: AgentActivityOutcome;
   /** How many records the call returned, for tools that count; null otherwise. */
@@ -28,7 +31,7 @@ export interface StoredAgentActivity {
   calledAt: Date;
 }
 
-export type NewAgentActivity = Omit<StoredAgentActivity, "id">;
+export type NewAgentActivity = Omit<StoredAgentActivity, "id" | "clientName">;
 
 /** A line's sort values in a cursor: its id. */
 export type AgentActivitySortValues = [string];
@@ -49,12 +52,14 @@ export function agentActivityRepository(db: Orm | Tx): AgentActivityRepository {
         .select({
           id: agentActivity.id,
           clientId: agentActivity.clientId,
+          clientName: oauthClient.name,
           tool: agentActivity.tool,
           outcome: agentActivity.outcome,
           resultCount: agentActivity.resultCount,
           calledAt: agentActivity.calledAt,
         })
         .from(agentActivity)
+        .leftJoin(oauthClient, eq(oauthClient.clientId, agentActivity.clientId))
         .where(
           and(
             eq(agentActivity.userId, userId),

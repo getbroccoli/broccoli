@@ -73,6 +73,11 @@ export const mcpAgentsEn = {
   "mcpAgents.activity.findPeopleFound": "Searched people · {count} found",
   "mcpAgents.activity.otherTool": "Used {tool}",
   "mcpAgents.activity.loadFailed": "Couldn’t load what your agent is doing. Try again in a moment.",
+  "mcpAgents.activity.showHistory": "Show history",
+  "mcpAgents.activity.hideHistory": "Hide history",
+  "mcpAgents.activity.earlier": "Earlier · last 30 days",
+  "mcpAgents.activity.noEarlier": "No earlier calls.",
+  "mcpAgents.activity.historyFailed": "Couldn’t load earlier calls. Try again later.",
   "mcpAgents.disconnect.open": "Disconnect",
   "mcpAgents.disconnect.title": "Disconnect {client}?",
   "mcpAgents.disconnect.detail":

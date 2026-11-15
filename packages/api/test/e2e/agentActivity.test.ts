@@ -22,6 +22,7 @@ test("who_am_i records an answered call with no result count", async ({ env }) =
           {
             node: {
               id: expect.any(String) as unknown,
+              clientName: "Claude Code",
               tool: "who_am_i",
               outcome: "ANSWERED_BY_BROCCOLI",
               resultCount: null,
@@ -57,6 +58,7 @@ test("find_people activity shows the returned count without the search or people
           {
             node: {
               id: expect.any(String) as unknown,
+              clientName: "Claude Code",
               tool: "find_people",
               outcome: "ANSWERED_BY_BROCCOLI",
               resultCount: answer.result.structuredContent.people.length,
@@ -87,6 +89,7 @@ test("a call without broccoli:read records a refusal", async ({ env }) => {
           {
             node: {
               id: expect.any(String) as unknown,
+              clientName: "Write-only client",
               tool: "who_am_i",
               outcome: "REFUSED_BY_BROCCOLI",
               resultCount: null,
@@ -115,6 +118,7 @@ test("find_people with an invalid cursor records a refusal", async ({ env }) => 
           {
             node: {
               id: expect.any(String) as unknown,
+              clientName: "Claude Code",
               tool: "find_people",
               outcome: "REFUSED_BY_BROCCOLI",
               resultCount: null,
@@ -143,8 +147,44 @@ test("find_people with a search longer than 100 characters records a refusal", a
           {
             node: {
               id: expect.any(String) as unknown,
+              clientName: "Claude Code",
               tool: "find_people",
               outcome: "REFUSED_BY_BROCCOLI",
+              resultCount: null,
+              calledAt: expect.any(String) as unknown,
+            },
+          },
+        ],
+      },
+    },
+  });
+});
+
+test("a disconnected agent's calls stay listed with its name", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const clientId = await registerAgentClient(env, "Claude Code");
+  const { accessToken } = await connectAgent(env, browser, { clientId });
+  expect((await callMcpTool(env, accessToken, "who_am_i")).status).toBe(200);
+
+  const disconnected = await browser.graphql(
+    "mutation { mcpAgents { disconnect { endedAgentConnection { id reason } } } }",
+  );
+
+  expect(await disconnected.json()).toMatchObject({
+    data: {
+      mcpAgents: { disconnect: { endedAgentConnection: { reason: "DISCONNECTED_BY_PERSON" } } },
+    },
+  });
+  expect(await readActivity(browser)).toEqual({
+    data: {
+      myAgentActivity: {
+        edges: [
+          {
+            node: {
+              id: expect.any(String) as unknown,
+              clientName: "Claude Code",
+              tool: "who_am_i",
+              outcome: "ANSWERED_BY_BROCCOLI",
               resultCount: null,
               calledAt: expect.any(String) as unknown,
             },
@@ -189,7 +229,7 @@ async function readActivity(browser: Browser): Promise<unknown> {
   const response = await browser.graphql(`
     query {
       myAgentActivity {
-        edges { node { id tool outcome resultCount calledAt } }
+        edges { node { id clientName tool outcome resultCount calledAt } }
       }
     }
   `);

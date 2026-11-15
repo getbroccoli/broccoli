@@ -12,7 +12,7 @@ import {
 } from "#test/support";
 import { user } from "../../auth";
 
-test("a person lists their recorded call with its tool, outcome, count and time", async ({
+test("a person lists their recorded call with its agent's name, tool, outcome, count and time", async ({
   orm,
   seed,
 }) => {
@@ -29,8 +29,47 @@ test("a person lists their recorded call with its tool, outcome, count and time"
 
   const activity = await service.listMyActivity(OWNER, {});
   expect(activity.edges.map(({ node }) => node)).toEqual([
-    { ...call, id: expect.any(String) as unknown, calledAt: new Date("2026-11-12T12:00:00Z") },
+    {
+      ...call,
+      clientName: "Claude Code",
+      id: expect.any(String) as unknown,
+      calledAt: new Date("2026-11-12T12:00:00Z"),
+    },
   ]);
+});
+
+test("each line names the agent that made the call", async ({ orm, seed }) => {
+  const claude = await seed.agentConnection({
+    userId: OWNER.user!.userId,
+    clientName: "Claude Code",
+  });
+  const codex = await seed.agentConnection({
+    userId: OWNER.user!.userId,
+    clientName: "Codex",
+  });
+  const service = agentActivityService(orm);
+  await service.recordCall(OWNER, answeredCall(claude.clientId));
+  await service.recordCall(OWNER, answeredCall(codex.clientId));
+
+  const activity = await service.listMyActivity(OWNER, {});
+
+  expect(activity.edges.map(({ node }) => node)).toMatchObject([
+    { clientId: codex.clientId, clientName: "Codex" },
+    { clientId: claude.clientId, clientName: "Claude Code" },
+  ]);
+});
+
+test("a line of an agent that gave no name has no agent name", async ({ orm, seed }) => {
+  const { clientId } = await seed.agentConnection({
+    userId: OWNER.user!.userId,
+    clientName: null,
+  });
+  const service = agentActivityService(orm);
+  await service.recordCall(OWNER, answeredCall(clientId));
+
+  const activity = await service.listMyActivity(OWNER, {});
+
+  expect(activity.edges.map(({ node }) => node.clientName)).toEqual([null]);
 });
 
 test("activity is paged newest first", async ({ orm, seed }) => {
