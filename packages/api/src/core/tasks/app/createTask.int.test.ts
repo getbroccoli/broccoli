@@ -143,27 +143,6 @@ test("shows a task without an asker only to its assignee", async ({ orm, seed, t
   });
 });
 
-test("moves a task into its assignee's waiting on others group", async ({
-  orm,
-  seed,
-  transact,
-}) => {
-  const assignee = await seed.employee();
-  const asker = await seed.employee();
-  const task = await seed.task({ assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id });
-  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
-  const tasks = taskService(orm);
-
-  const waiting = await transact((tx) => tasks.markWaiting(ctx, tx, task.id));
-
-  expect(waiting.status).toBe("waiting");
-  expect(await tasks.listMyTasks(ctx)).toEqual({
-    needsYou: [],
-    waitingOnOthers: [waiting],
-    resolvedRecently: [],
-  });
-});
-
 test("deletes a person's held tasks when the person is deleted", async ({ orm, seed }) => {
   const assignee = await seed.employee();
   const asker = await seed.employee();

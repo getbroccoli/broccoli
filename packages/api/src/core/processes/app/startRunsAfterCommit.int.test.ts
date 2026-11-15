@@ -105,7 +105,7 @@ test("an event that does not match when queues no job", async ({ orm, seed }) =>
     tx.publish("tasks.task_status_changed", {
       taskId: task.id,
       from: "to_do",
-      to: "waiting",
+      to: "cancelled",
       byEmployeeId: employee.id,
     });
     return Promise.resolve();
