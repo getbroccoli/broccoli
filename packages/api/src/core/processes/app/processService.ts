@@ -9,7 +9,7 @@ import {
   type RecordTypeRegistry,
 } from "../../records";
 import { PrincipalSecurityContext, type SecurityContext } from "../../security";
-import { type CalendarDate, dateInLondon } from "../../../utils";
+import { type CalendarDate, dateInLondon, laterOf } from "../../../utils";
 import type { TaskService } from "../../tasks";
 import { processRepository, type StoredProcess } from "../db";
 import { parseProcessDefinition, type TriggeringEvents } from "../domain";
@@ -108,7 +108,7 @@ export function createProcessService({
   const definitionOf = definitionReader(recordTypes, triggeringEvents);
   const starter = createRunStarter({ tasks, people, workingCalendars, recordTypes, definitionOf });
   const reader = createRunReader({ transact, tasks, starter });
-  const lifecycle = createRunLifecycleService({ orm, transact, tasks, starter });
+  const lifecycle = createRunLifecycleService({ orm, transact, tasks, starter, today });
   const dueRuns = createDueRunService({
     orm,
     transact,
@@ -303,10 +303,6 @@ function definitionReader(
   };
   return ({ schemaVersion, definition }) =>
     parseProcessDefinition(schemaVersion, definition, catalog);
-}
-
-function laterOf(day: CalendarDate, other: CalendarDate | null): CalendarDate {
-  return other !== null && other > day ? other : day;
 }
 
 function recordNotFound(): ApplicationError {

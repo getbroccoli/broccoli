@@ -2,6 +2,7 @@ import { ApplicationError } from "../../applicationError";
 import type { Orm, Transact, Tx } from "../../db";
 import type { PublishedEvent } from "../../events";
 import { PrincipalSecurityContext, type SecurityContext } from "../../security";
+import { type CalendarDate, laterOf } from "../../../utils";
 import type { TaskService } from "../../tasks";
 import { processRepository } from "../db";
 import { PROCESS_CANCELLED, type ProcessRun, SUBJECT_REMOVED } from "../domain";
@@ -14,9 +15,9 @@ import type { RunStarter } from "./runStarter";
  */
 export interface RunLifecycleService {
   /**
-   * Trusted, before the commit of the transaction that marked tasks done: completes their steps
-   * and finishes each run with no step left awaiting its task. Takes each run's lock after the
-   * task's, as the change that marked it done holds it already.
+   * Trusted, before the commit of the transaction that marked tasks done: completes their steps,
+   * starts the steps that waited for them, and finishes each run with nothing left to do. Takes
+   * each run's lock after the task's, as the change that marked it done holds it already.
    */
   completeStepsOfDoneTasks(tx: Tx, events: readonly PublishedEvent[]): Promise<void>;
   /** The run behind a task its assignee or asker reads, as counts. */
@@ -34,11 +35,14 @@ export function createRunLifecycleService({
   transact,
   tasks,
   starter,
+  today,
 }: {
   orm: Orm;
   transact: Transact;
   tasks: TaskService;
   starter: RunStarter;
+  /** Today in London: the day a step that starts later resolves its assignee on. */
+  today: () => CalendarDate;
 }): RunLifecycleService {
   return {
     async completeStepsOfDoneTasks(tx, events) {
@@ -57,11 +61,15 @@ export function createRunLifecycleService({
         const run = (await runs.lockRun(runId))!;
         // A run that can no longer run stays in progress for the daily check, which cancels it.
         const canGoOn = (await removalOf(starter, tx, run)) === null;
-        const changed = run.completeTasks(doneTaskIds, now, canGoOn);
+        const completed = run.completeTasks(doneTaskIds, now, canGoOn);
+        const changed = canGoOn
+          ? await starter.startReadySteps(tx, completed, laterOf(today(), run.startDay))
+          : completed;
         await runs.saveRun(changed);
         tx.publish("processes.steps_completed", {
           runId,
           taskIds: run.openTaskIds().filter((taskId) => doneTaskIds.has(taskId)),
+          startedStepKeys: startedStepKeys(completed, changed),
           runStatus: changed.status,
         });
       }
@@ -122,4 +130,16 @@ async function removalOf(starter: RunStarter, tx: Tx, run: ProcessRun) {
     subjects.has(run.recordId) &&
     (run.subjectEmployeeId === null || subjects.get(run.recordId) !== null);
   return run.removal(subjectExists);
+}
+
+/** The steps that were waiting before and are no longer. */
+function startedStepKeys(before: ProcessRun, after: ProcessRun): string[] {
+  const waiting = new Set(
+    before.steps.flatMap(({ stepKey, status }) =>
+      status === "step_waiting_to_start" ? [stepKey] : [],
+    ),
+  );
+  return after.steps.flatMap(({ stepKey, status }) =>
+    waiting.has(stepKey) && status !== "step_waiting_to_start" ? [stepKey] : [],
+  );
 }

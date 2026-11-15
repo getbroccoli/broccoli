@@ -3633,7 +3633,7 @@
         },
         "process_run_step_progress_status_known": {
           "name": "process_run_step_progress_status_known",
-          "value": "\"process_run_step_progress\".\"status\" in ('step_awaiting_task_completion', 'step_completed', 'step_skipped', 'step_cancelled')"
+          "value": "\"process_run_step_progress\".\"status\" in ('step_waiting_to_start', 'step_awaiting_task_completion', 'step_completed', 'step_skipped', 'step_cancelled')"
         },
         "process_run_step_progress_assignee_note_known": {
           "name": "process_run_step_progress_assignee_note_known",
@@ -3641,7 +3641,7 @@
         },
         "process_run_step_progress_columns_follow_status": {
           "name": "process_run_step_progress_columns_follow_status",
-          "value": "(\"process_run_step_progress\".\"status\" = 'step_awaiting_task_completion') = (\"process_run_step_progress\".\"finished_at\" is null)\n        and (\"process_run_step_progress\".\"status\" = 'step_skipped') = (\"process_run_step_progress\".\"skip_reason\" is not null)\n        and (\"process_run_step_progress\".\"skip_reason\" is null or \"process_run_step_progress\".\"skip_reason\" = 'no_assignee_for_step')"
+          "value": "(\"process_run_step_progress\".\"status\" in ('step_waiting_to_start', 'step_awaiting_task_completion')) = (\"process_run_step_progress\".\"finished_at\" is null)\n        and (\"process_run_step_progress\".\"status\" <> 'step_waiting_to_start' or \"process_run_step_progress\".\"task_id\" is null)\n        and (\"process_run_step_progress\".\"status\" = 'step_skipped') = (\"process_run_step_progress\".\"skip_reason\" is not null)\n        and (\"process_run_step_progress\".\"skip_reason\" is null or \"process_run_step_progress\".\"skip_reason\" = 'no_assignee_for_step')"
         }
       },
       "isRLSEnabled": false

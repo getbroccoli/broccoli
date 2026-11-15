@@ -6,16 +6,20 @@ import type { NewTask, TaskService } from "../../tasks";
 import { type NewRunRow, processRepository, type StoredProcess } from "../db";
 import {
   addDayOffset,
+  type AssigneeRule,
   type DayOffset,
   dueTriggerDate,
   type IsWorkingDay,
   type ProcessDefinition,
+  type ProcessRun,
   type ProcessRunFields,
   type RecordDateTrigger,
   resolveAssignee,
-  type ResolvedAssignee,
   type RunStep,
   type StartCause,
+  startReadySteps,
+  type StepStart,
+  type TaskStep,
   type TriggerEvent,
 } from "../domain";
 import type { PeoplePort, RunSubject, WorkingCalendarsPort } from "../ports";
@@ -48,7 +52,7 @@ export interface RunStart {
   startDay: CalendarDate;
 }
 
-/** Starts runs: their steps' assignees, tasks and due dates. */
+/** Starts runs and their steps: the steps' assignees, tasks and due dates. */
 export interface RunStarter {
   /**
    * The subject of each record among these that still exists, by record id: the person it is
@@ -60,11 +64,18 @@ export interface RunStarter {
     recordIds: readonly string[],
   ): Promise<Map<string, RunSubject | null>>;
   /**
-   * Trusted: creates the runs, their steps and their tasks in `tx`, as Broccoli, with each run as
-   * its tasks' cause, in a fixed number of statements; a run whose steps are all skipped is
-   * finished at once. Returns the runs in the order of `starts`.
+   * Trusted: creates the runs, a progress row for every step and the tasks of the steps that wait
+   * for nothing, in `tx`, as Broccoli, with each run as its tasks' cause, in a fixed number of
+   * statements; a run with nothing left to do is finished at once. Returns the runs in the order
+   * of `starts`.
    */
   startMany(tx: Tx, starts: readonly RunStart[]): Promise<ProcessRunFields[]>;
+  /**
+   * Trusted, under the run's lock: starts its waiting steps whose listed steps are all done,
+   * giving their tasks to whom their rules name on `day`, and saves them. Returns the run with
+   * them, finished when nothing is left to do.
+   */
+  startReadySteps(tx: Tx, run: ProcessRun, day: CalendarDate): Promise<ProcessRun>;
   /** The records whose date triggers a run today, with the date it triggered on. */
   findDue(
     tx: Tx,
@@ -108,28 +119,69 @@ export function createRunStarter({
 
     async startMany(tx, starts) {
       if (starts.length === 0) return [];
-      const assignees = await resolveAssignees(people, tx, starts);
-      const workingDays = await workingCalendars.readWorkingDays(tx, {
-        employeeIds: subjectsCountingBusinessDays(starts),
-        days: starts.map(({ startDay }) => startDay),
-      });
+      const candidates = await readCandidates(
+        people,
+        tx,
+        starts.map(({ subject, startDay }) => ({ subject, day: startDay })),
+      );
       const now = new Date();
+      const firstSteps = starts.map(({ definition }, index) =>
+        startReadySteps(
+          definition.steps,
+          definition.steps.map(({ key }) => waitingRow(key)),
+          assigneeFrom(candidates[index]!),
+          now,
+        ),
+      );
       const runs = await processRepository(tx).insertRuns(
-        starts.map((start, index) => newRun(start, assignees[index]!, now)),
+        starts.map((start, index) => newRun(start, firstSteps[index]!.progress, now)),
       );
       const plans = runs.map((run, index) => ({
         run,
-        start: starts[index]!,
-        assignees: assignees[index]!,
-        isWorkingDay: workingDays.get(starts[index]!.subject?.id ?? "") ?? null,
+        processKey: starts[index]!.process.key,
+        subject: starts[index]!.subject,
+        startDay: starts[index]!.startDay,
+        definition: starts[index]!.definition,
+        starts: firstSteps[index]!.starts,
       }));
-      const created = await tasks.createTasks(
-        PrincipalSecurityContext.system(),
-        tx,
-        plans.flatMap(newTasksOf),
+      const taskIds = await createStepTasks({ tasks, workingCalendars }, tx, plans);
+      await processRepository(tx).insertSteps(
+        withTaskIds(
+          plans,
+          firstSteps.map(({ progress }, index) =>
+            progress.map((row) => ({ ...row, runId: runs[index]!.id })),
+          ),
+          taskIds,
+        ).flat(),
       );
-      await processRepository(tx).insertSteps(stepsOf(plans, created, now));
       return runs;
+    },
+
+    async startReadySteps(tx, run, day) {
+      const repository = processRepository(tx);
+      const definition = definitionOf((await repository.findVersion(run.processVersionId))!);
+      const subject = await readSubject(people, tx, run);
+      const [candidates] = await readCandidates(people, tx, [{ subject, day }]);
+      const now = new Date();
+      const next = startReadySteps(definition.steps, run.steps, assigneeFrom(candidates!), now);
+      if (next.starts.length === 0) return run;
+      const [process] = await repository.findProcessesByIds([run.processId]);
+      const plan = {
+        run,
+        processKey: process!.key,
+        subject,
+        startDay: run.startDay,
+        definition,
+        starts: next.starts,
+      };
+      const startedKeys = new Set(next.starts.map(({ step }) => step.key));
+      const [started] = withTaskIds(
+        [plan],
+        [next.progress.filter(({ stepKey }) => startedKeys.has(stepKey))],
+        await createStepTasks({ tasks, workingCalendars }, tx, [plan]),
+      );
+      await repository.saveStartedSteps(started!);
+      return run.withStartedSteps(started!, now);
     },
 
     async findDue(tx, trigger, days) {
@@ -149,59 +201,104 @@ export function createRunStarter({
     async stepTitles(tx, run) {
       const version = (await processRepository(tx).findVersion(run.processVersionId))!;
       const { steps } = definitionOf(version);
-      const subject = run.subjectEmployeeId
-        ? ((await readPeople(tx, [run.subjectEmployeeId])).get(run.subjectEmployeeId) ?? null)
-        : null;
+      const subject = await readSubject(people, tx, run);
       return new Map(steps.map(({ key, task }) => [key, filled(task.title, subject)]));
     },
   };
 }
 
-/** One run being started, with what its steps need. */
-interface RunPlan {
+/** The steps starting together in one run, with what their tasks need. */
+interface StepsPlan {
   run: ProcessRunFields;
-  start: RunStart;
-  /** Each step's assignee, in the definition's order; null for a step skipped for want of one. */
-  assignees: (ResolvedAssignee | null)[];
-  isWorkingDay: IsWorkingDay | null;
+  processKey: string;
+  subject: RunSubject | null;
+  /** The day due dates count from: the run's start day. */
+  startDay: CalendarDate;
+  definition: ProcessDefinition;
+  starts: StepStart[];
 }
 
-/** Each start's step assignees, with each subject's manager on its start day and the owner. */
-async function resolveAssignees(
+/** Each plan's step tasks, created as Broccoli; their ids come back in the order of `plans`. */
+async function createStepTasks(
+  { tasks, workingCalendars }: { tasks: TaskService; workingCalendars: WorkingCalendarsPort },
+  tx: Tx,
+  plans: readonly StepsPlan[],
+): Promise<string[]> {
+  const workingDays = await workingCalendars.readWorkingDays(tx, {
+    employeeIds: subjectsCountingBusinessDays(plans),
+    days: plans.map(({ startDay }) => startDay),
+  });
+  const created = await tasks.createTasks(
+    PrincipalSecurityContext.system(),
+    tx,
+    plans.flatMap((plan) => newTasksOf(plan, workingDays.get(plan.subject?.id ?? "") ?? null)),
+  );
+  return created.map(({ id }) => id);
+}
+
+async function readSubject(
   people: PeoplePort,
   tx: Tx,
-  starts: readonly RunStart[],
-): Promise<(ResolvedAssignee | null)[][]> {
+  { subjectEmployeeId }: ProcessRunFields,
+): Promise<RunSubject | null> {
+  if (!subjectEmployeeId) return null;
+  return (await people.readPeople(tx, [subjectEmployeeId])).get(subjectEmployeeId) ?? null;
+}
+
+/** The person each assignee kind names for one run, on the day its steps start. */
+type AssigneeCandidates = Readonly<Record<AssigneeRule["kind"], string | null>>;
+
+/** For each run, its subject, its subject's manager on `day` and the owner. */
+async function readCandidates(
+  people: PeoplePort,
+  tx: Tx,
+  runs: readonly { subject: RunSubject | null; day: CalendarDate }[],
+): Promise<AssigneeCandidates[]> {
   const owner = await people.readOwner(tx);
   const managersByDay = new Map<CalendarDate, Map<string, string>>();
-  for (const day of new Set(starts.map(({ startDay }) => startDay))) {
-    const employeeIds = starts.flatMap((start) =>
-      start.startDay === day && start.subject ? [start.subject.id] : [],
+  for (const day of new Set(runs.map((run) => run.day))) {
+    const employeeIds = runs.flatMap((run) =>
+      run.day === day && run.subject ? [run.subject.id] : [],
     );
     managersByDay.set(day, await people.readManagersOn(tx, { employeeIds, date: day }));
   }
-  return starts.map(({ definition, subject, startDay }) => {
-    const candidates = {
-      subject: subject?.id ?? null,
-      subjects_manager: subject ? (managersByDay.get(startDay)!.get(subject.id) ?? null) : null,
-      workspace_owner: owner,
-    };
-    return definition.steps.map((step) => resolveAssignee(step.task.assignee, candidates));
-  });
+  return runs.map(({ subject, day }) => ({
+    subject: subject?.id ?? null,
+    subjects_manager: subject ? (managersByDay.get(day)!.get(subject.id) ?? null) : null,
+    workspace_owner: owner,
+  }));
 }
 
-/** The subjects of runs with a step due in business days, which count their own working days. */
-function subjectsCountingBusinessDays(starts: readonly RunStart[]): string[] {
-  const ids = starts.flatMap(({ definition, subject }) =>
-    subject && definition.steps.some(({ task }) => task.due.unit === "business_days")
+function assigneeFrom(candidates: AssigneeCandidates) {
+  return (step: TaskStep) => resolveAssignee(step.task.assignee, candidates);
+}
+
+/** The subjects of plans with a step due in business days, which count their own working days. */
+function subjectsCountingBusinessDays(plans: readonly StepsPlan[]): string[] {
+  const ids = plans.flatMap(({ starts, subject }) =>
+    subject && starts.some(({ step }) => step.task.due.unit === "business_days")
       ? [subject.id]
       : [],
   );
   return [...new Set(ids)];
 }
 
-function newRun(start: RunStart, assignees: readonly (ResolvedAssignee | null)[], now: Date) {
-  const finished = assignees.every((assignee) => assignee === null);
+function waitingRow(stepKey: string): RunStep {
+  return {
+    runId: "",
+    stepKey,
+    status: "step_waiting_to_start",
+    taskId: null,
+    assigneeNote: null,
+    skipReason: null,
+    finishedAt: null,
+  };
+}
+
+function newRun(start: RunStart, progress: readonly RunStep[], now: Date) {
+  const finished = progress.every(
+    ({ status }) => status === "step_completed" || status === "step_skipped",
+  );
   return {
     processId: start.process.id,
     processVersionId: start.process.activeVersion.id,
@@ -223,55 +320,50 @@ function newRun(start: RunStart, assignees: readonly (ResolvedAssignee | null)[]
   } satisfies NewRunRow;
 }
 
-/** The tasks of a run's assigned steps, due their offset after its start day. */
-function newTasksOf({ run, start, assignees, isWorkingDay }: RunPlan): NewTask[] {
-  return start.definition.steps.flatMap((step, index) => {
-    const assignee = assignees[index];
-    if (!assignee) return [];
-    return [
-      {
-        type: PROCESS_STEP_TO_DO,
-        sourceKey: start.process.key,
-        title: filled(step.task.title, start.subject),
-        description:
-          step.task.description === null ? null : filled(step.task.description, start.subject),
-        assigneeEmployeeId: assignee.employeeId,
-        subjectEmployeeId: start.subject?.id ?? null,
-        record: { recordType: run.recordType, recordId: run.recordId },
-        dueDate: addDayOffset(start.startDay, step.task.due, isWorkingDay),
-        cause: { kind: "PROCESS_RUN", ref: run.id },
-      },
-    ];
-  });
+/** The tasks of a plan's assigned step starts, due their offset after its start day. */
+function newTasksOf(
+  { run, processKey, subject, startDay, starts }: StepsPlan,
+  isWorkingDay: IsWorkingDay | null,
+): NewTask[] {
+  return starts.flatMap(({ step, assignee }) =>
+    assignee
+      ? [
+          {
+            type: PROCESS_STEP_TO_DO,
+            sourceKey: processKey,
+            title: filled(step.task.title, subject),
+            description:
+              step.task.description === null ? null : filled(step.task.description, subject),
+            assigneeEmployeeId: assignee.employeeId,
+            subjectEmployeeId: subject?.id ?? null,
+            record: { recordType: run.recordType, recordId: run.recordId },
+            dueDate: addDayOffset(startDay, step.task.due, isWorkingDay),
+            cause: { kind: "PROCESS_RUN", ref: run.id },
+          },
+        ]
+      : [],
+  );
 }
 
-/** Every run's steps: awaiting the task created for it, in the same order, or skipped. */
-function stepsOf(plans: readonly RunPlan[], created: readonly { id: string }[], now: Date) {
+/**
+ * Each plan's progress rows, the steps it started given the tasks created for them: `taskIds`
+ * follows the plans' assigned starts, in order.
+ */
+function withTaskIds(
+  plans: readonly StepsPlan[],
+  progress: readonly (readonly RunStep[])[],
+  taskIds: readonly string[],
+): RunStep[][] {
   let next = 0;
-  return plans.flatMap(({ run, start, assignees }) =>
-    start.definition.steps.map((step, index): RunStep => {
-      const assignee = assignees[index];
-      return assignee
-        ? {
-            runId: run.id,
-            stepKey: step.key,
-            status: "step_awaiting_task_completion",
-            taskId: created[next++]!.id,
-            assigneeNote: assignee.note,
-            skipReason: null,
-            finishedAt: null,
-          }
-        : {
-            runId: run.id,
-            stepKey: step.key,
-            status: "step_skipped",
-            taskId: null,
-            assigneeNote: null,
-            skipReason: "no_assignee_for_step",
-            finishedAt: now,
-          };
-    }),
-  );
+  return plans.map(({ starts }, index) => {
+    const taskIdOf = new Map(
+      starts.flatMap(({ step, assignee }) => (assignee ? [[step.key, taskIds[next++]!]] : [])),
+    );
+    return progress[index]!.map((row) => ({
+      ...row,
+      taskId: taskIdOf.get(row.stepKey) ?? row.taskId,
+    }));
+  });
 }
 
 /** How far a trigger date can be from its record's date: business days stretch by weekends and holidays. */

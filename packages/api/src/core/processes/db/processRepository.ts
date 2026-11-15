@@ -61,6 +61,8 @@ export interface ProcessRepository {
   lockRun(id: string): Promise<ProcessRun | null>;
   /** Writes the run and its steps' status. */
   saveRun(run: ProcessRun): Promise<void>;
+  /** Writes steps that were waiting as started: their status, task, note or skip reason. */
+  saveStartedSteps(steps: readonly RunStep[]): Promise<void>;
   /** The run's steps, in no particular order. */
   findSteps(runId: string): Promise<RunStep[]>;
   /** The steps whose tasks are among these, whatever their run. */
@@ -227,6 +229,21 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
           .update(runStepProgress)
           .set({ status, finishedAt })
           .where(and(eq(runStepProgress.runId, runId), eq(runStepProgress.stepKey, stepKey)));
+      }
+    },
+
+    async saveStartedSteps(steps) {
+      for (const { runId, stepKey, ...started } of steps) {
+        await orm
+          .update(runStepProgress)
+          .set(started)
+          .where(
+            and(
+              eq(runStepProgress.runId, runId),
+              eq(runStepProgress.stepKey, stepKey),
+              eq(runStepProgress.status, "step_waiting_to_start"),
+            ),
+          );
       }
     },
 

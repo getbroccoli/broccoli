@@ -1,7 +1,7 @@
 import { ApplicationError } from "../../applicationError";
 import type { CalendarDate } from "../../../utils";
 import type { TriggerEvent } from "./eventTrigger";
-import type { AssigneeRule } from "./processDefinition";
+import type { AssigneeRule, TaskStep } from "./processDefinition";
 
 export const RUN_STATUSES = ["in_progress", "finished", "cancelled"] as const;
 export type RunStatus = (typeof RUN_STATUSES)[number];
@@ -20,6 +20,7 @@ export const CANCEL_CAUSES = [
 export type CancelCause = (typeof CANCEL_CAUSES)[number];
 
 export const STEP_STATUSES = [
+  "step_waiting_to_start",
   "step_awaiting_task_completion",
   "step_completed",
   "step_skipped",
@@ -67,12 +68,12 @@ export interface ProcessRunFields {
   updatedAt: Date;
 }
 
-/** Where one step of a run stands; its task, once created, is the work. */
+/** Where one step of a run stands; its task, created when the step starts, is the work. */
 export interface RunStep {
   runId: string;
   stepKey: string;
   status: StepStatus;
-  /** Null for a skipped step, and once the task's assignee was removed. */
+  /** Null for a waiting or skipped step, and once the task's assignee was removed. */
   taskId: string | null;
   assigneeNote: AssigneeNote | null;
   skipReason: SkipReason | null;
@@ -105,9 +106,58 @@ export function resolveAssignee(
 }
 
 /**
- * A run with its steps, and the rules of its life: its steps complete as their tasks are done, it
- * finishes when none awaits a task, and it is cancelled when it can no longer run. Every change
- * returns a new run; the original stays.
+ * The keys, in the definition's order, of waiting steps whose every listed step is completed or
+ * skipped: the steps to start now.
+ */
+export function readyStepKeys(
+  steps: readonly Pick<TaskStep, "key" | "after">[],
+  progress: readonly Pick<RunStep, "stepKey" | "status">[],
+): string[] {
+  const statusOf = new Map(progress.map(({ stepKey, status }) => [stepKey, status]));
+  const isDone = (key: string) =>
+    statusOf.get(key) === "step_completed" || statusOf.get(key) === "step_skipped";
+  return steps.flatMap(({ key, after = [] }) =>
+    statusOf.get(key) === "step_waiting_to_start" && after.every(isDone) ? [key] : [],
+  );
+}
+
+/** A step that starts now, and who gets its task; null skips it for want of anyone. */
+export interface StepStart {
+  step: TaskStep;
+  assignee: ResolvedAssignee | null;
+}
+
+/**
+ * Starts the ready steps among `progress`, and again while skipped ones make more ready. Returns
+ * the steps it started in order, and the progress with them awaiting their task (its id still
+ * null, for the caller to fill) or skipped.
+ */
+export function startReadySteps(
+  steps: readonly TaskStep[],
+  progress: readonly RunStep[],
+  assigneeOf: (step: TaskStep) => ResolvedAssignee | null,
+  now: Date,
+): { starts: StepStart[]; progress: RunStep[] } {
+  const starts: StepStart[] = [];
+  let current = [...progress];
+  for (let ready = readyStepKeys(steps, current); ready.length > 0;) {
+    const started = steps
+      .filter(({ key }) => ready.includes(key))
+      .map((step) => ({ step, assignee: assigneeOf(step) }));
+    starts.push(...started);
+    current = current.map((row) => {
+      const start = started.find(({ step }) => step.key === row.stepKey);
+      return start ? startedRow(row, start.assignee, now) : row;
+    });
+    ready = readyStepKeys(steps, current);
+  }
+  return { starts, progress: current };
+}
+
+/**
+ * A run with its steps, and the rules of its life: its steps start once the steps they wait for are
+ * done, complete as their tasks are done, the run finishes when none awaits a task or waits, and it
+ * is cancelled when it can no longer run. Every change returns a new run; the original stays.
  */
 export class ProcessRun implements Readonly<ProcessRunFields> {
   declare readonly id: string;
@@ -161,11 +211,17 @@ export class ProcessRun implements Readonly<ProcessRunFields> {
         ? { ...step, status: "step_completed" as const, finishedAt: now }
         : step,
     );
-    const allDone = steps.every(
-      ({ status }) => status === "step_completed" || status === "step_skipped",
+    if (!canGoOn || this.status === "finished") return this.with({}, steps);
+    return this.settled(steps, now);
+  }
+
+  /** The run with these steps started, as stored; it finishes when none awaits a task or waits. */
+  withStartedSteps(started: readonly RunStep[], now: Date): ProcessRun {
+    const byKey = new Map(started.map((step) => [step.stepKey, step]));
+    return this.settled(
+      this.steps.map((step) => byKey.get(step.stepKey) ?? step),
+      now,
     );
-    if (!canGoOn || !allDone || this.status === "finished") return this.with({}, steps);
-    return this.with({ status: "finished", finishedAt: now }, steps);
   }
 
   /**
@@ -202,16 +258,36 @@ export class ProcessRun implements Readonly<ProcessRunFields> {
         cancelReason: cancellation.reason,
       },
       this.steps.map((step) =>
-        step.status === "step_awaiting_task_completion"
+        step.status === "step_awaiting_task_completion" || step.status === "step_waiting_to_start"
           ? { ...step, status: "step_cancelled", finishedAt: cancellation.now }
           : step,
       ),
     );
   }
 
+  private settled(steps: readonly RunStep[], now: Date): ProcessRun {
+    const allDone = steps.every(
+      ({ status }) => status === "step_completed" || status === "step_skipped",
+    );
+    return allDone
+      ? this.with({ status: "finished", finishedAt: now }, steps)
+      : this.with({}, steps);
+  }
+
   private with(changes: Partial<ProcessRunFields>, steps: readonly RunStep[]): ProcessRun {
     return new ProcessRun({ ...this, ...changes }, steps);
   }
+}
+
+function startedRow(row: RunStep, assignee: ResolvedAssignee | null, now: Date): RunStep {
+  return assignee
+    ? { ...row, status: "step_awaiting_task_completion", assigneeNote: assignee.note }
+    : {
+        ...row,
+        status: "step_skipped",
+        skipReason: "no_assignee_for_step",
+        finishedAt: now,
+      };
 }
 
 /** The tasks of these steps still awaiting them. */
