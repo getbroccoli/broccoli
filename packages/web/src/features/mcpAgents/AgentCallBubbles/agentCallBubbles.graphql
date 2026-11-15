@@ -1,0 +1,12 @@
+query AgentCallBubbles {
+  myAgentActivity(first: 3) {
+    edges {
+      node {
+        id
+        tool
+        outcome
+        resultCount
+      }
+    }
+  }
+}

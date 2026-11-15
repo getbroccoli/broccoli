@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 
+import { AgentCallBubbles } from "@/features/mcpAgents";
 import { requireFinishedSetup } from "@/features/setup";
 import { AppShell } from "@/shell";
 
@@ -10,7 +11,7 @@ import { AppShell } from "@/shell";
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: (gate) => ({ me: requireFinishedSetup(gate) }),
   component: () => (
-    <AppShell>
+    <AppShell agentActivity={<AgentCallBubbles />}>
       <Outlet />
     </AppShell>
   ),

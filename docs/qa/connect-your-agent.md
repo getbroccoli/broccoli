@@ -48,6 +48,14 @@ A manual check of connecting a person's own agent over MCP against a development
 - [ ] After a password reset by email and signing in again, the page says the agent was disconnected when the password was reset.
 - [ ] At phone width the tabs scroll sideways, and the address and Copy stay on one line.
 
+## Other pages
+
+- [ ] With People open and not focused, each call of the agent rises within a second as a small green bubble beside the dot on Your agent in the menu, with the same label as the list; each leaves after about 4 seconds.
+- [ ] Several calls in a row stack upward, newest at the bottom and older ones fainter; at most three show.
+- [ ] A refused call's bubble has dark text.
+- [ ] The bubbles never block a click or take focus, and a screen reader does not read them.
+- [ ] No bubble shows on Your agent, in Settings, at phone width or under reduced motion.
+
 ## Managed sign-in
 
 On a managed workspace created through the website (with the QA mock providers):

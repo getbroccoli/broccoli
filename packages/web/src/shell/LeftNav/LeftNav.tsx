@@ -1,6 +1,7 @@
 import { useQuery } from "@apollo/client/react";
 import { CalendarBlank, CaretLeft, CheckSquare, House, Robot, Users } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
+import { type ReactNode } from "react";
 
 import { LeftNavAgentConnectionDocument } from "@/__generated__/graphql";
 
@@ -22,11 +23,16 @@ const SETTINGS_SYSTEM_ITEMS: NavItem[] = [
   { to: "/settings/email", label: t("settings.email.title") },
 ];
 
+type Props = {
+  /** What the person's agent is doing, shown at the Your agent dot while it is connected. */
+  agentActivity: ReactNode;
+};
+
 /**
  * The app menu, or the Settings menu while a settings page is open. On wide screens both
  * sit side by side in one strip that slides between them.
  */
-export function LeftNav() {
+export function LeftNav({ agentActivity }: Props) {
   const inSettings = useInSettings();
   const tasksNeedingYou = useTasksNeedingYou() ?? 0;
   const agentConnected = Boolean(
@@ -49,6 +55,7 @@ export function LeftNav() {
       label: t("nav.yourAgent"),
       icon: Robot,
       dotLabel: agentConnected ? t("nav.agentConnected") : undefined,
+      besideDot: agentConnected && !inSettings ? agentActivity : undefined,
     },
   ];
   return (
