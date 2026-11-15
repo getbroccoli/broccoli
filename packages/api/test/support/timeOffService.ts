@@ -5,7 +5,7 @@ import { createEventBus } from "../../src/core/events";
 import type { SecurityContext } from "../../src/core/security";
 import { createLogger } from "../../src/core/logger";
 import { createDemoFillService } from "../../src/modules/demo";
-import { createTaskService } from "../../src/modules/tasks";
+import { createTaskService } from "../../src/core/tasks";
 import {
   createBookTimeOffService,
   createOwnTimeOffRulesService,
@@ -257,6 +257,7 @@ export function deleteAllEmployees(orm: Orm) {
   return async (ctx: SecurityContext, tx: Tx) => {
     await timeOff.lockPolicies(ctx, tx);
     await processes.lockProcesses(ctx, tx);
+    await tasks.lockTasks(ctx, tx);
     await employeeSetup.deleteAllEmployees(ctx, tx);
     await timeOff.resetTimeOff(ctx, tx);
     await processes.resetProcesses(ctx, tx);

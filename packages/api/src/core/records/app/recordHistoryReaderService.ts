@@ -8,6 +8,7 @@ import {
   type Subject,
 } from "../../security";
 import { findUserEmails } from "../db";
+import type { CalendarDate } from "../../../utils";
 import type { FieldChange, HistoryLine, RecordType } from "../domain";
 import { createRecordHistoryService, type HistoryPageArgs } from "./recordHistoryService";
 
@@ -65,6 +66,21 @@ interface RecordTypeBasics {
    * absent when records of the type cannot be cloned. It checks the caller's permission.
    */
   clone?: (ctx: SecurityContext, tx: Tx, input: { id: string; name: string }) => Promise<string>;
+  /** What a process needs to run on its records; absent when no process may be about one. */
+  processes?: RecordProcessCapabilities;
+}
+
+/** How a process reads the records it runs on, inside the run's transaction. */
+export interface RecordProcessCapabilities {
+  /** The records among these ids that exist, each with the employee it is about, null for nobody. */
+  readSubjects(tx: Tx, ids: readonly string[]): Promise<Map<string, string | null>>;
+  /** The date fields an `on_record_date` trigger may name; none when absent. */
+  dateFields?: readonly string[];
+  /** The records whose `field`, one of `dateFields`, falls between these days, inclusive: id → date. */
+  findByDateBetween?(
+    tx: Tx,
+    input: { field: string; from: CalendarDate; until: CalendarDate },
+  ): Promise<Map<string, CalendarDate>>;
 }
 
 interface ScopedReading {

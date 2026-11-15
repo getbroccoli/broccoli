@@ -13,6 +13,9 @@ export type DomainEvent = {
   [Type in EventType]: { type: Type; payload: DomainEvents[Type] };
 }[EventType];
 
+/** An event with the id it got when it was published, which stays with it wherever it goes. */
+export type PublishedEvent = DomainEvent & { id: string };
+
 /** What a module does when an event happens, by event type. */
 export type EventHandlers = {
   [Type in EventType]?: (payload: DomainEvents[Type]) => Promise<void>;

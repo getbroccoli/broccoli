@@ -24,7 +24,10 @@
       "src/core/instance",
       "src/core/moduleManifest",
       "src/core/records",
-      "src/modules/*"
+      "src/core/processes",
+      "src/core/tasks",
+      "src/modules/*",
+      "src/utils"
     ],
     "src/modules/bankHolidays": ["src/core/*", "!src/core/server", "src/utils"],
     "src/modules/company": [
@@ -37,7 +40,6 @@
       "src/core/*",
       "!src/core/server",
       "src/modules/employees",
-      "src/modules/tasks",
       "src/modules/timeOff",
       "src/utils"
     ],
@@ -63,17 +65,8 @@
       "src/modules/system"
     ],
     "src/modules/mcpAgents": ["src/core/*", "!src/core/server", "src/modules/employees"],
-    "src/modules/processes": [
-      "src/core/*",
-      "!src/core/server",
-      "src/modules/bankHolidays",
-      "src/modules/employees",
-      "src/modules/tasks",
-      "src/utils"
-    ],
     "src/modules/slack": ["src/core/*", "!src/core/server", "src/integrations/slack", "src/utils"],
     "src/modules/system": ["src/core/*", "!src/core/server"],
-    "src/modules/tasks": ["src/core/*", "!src/core/server", "src/modules/employees", "src/utils"],
     "src/modules/timeOff": [
       "src/core/*",
       "!src/core/server",
@@ -149,7 +142,8 @@
       "src/core/graphql",
       "src/core/logger",
       "src/core/pagination",
-      "src/core/security"
+      "src/core/security",
+      "src/utils"
     ],
     "src/core/jobs": ["src/core/db", "src/core/logger"],
     "src/core/db": ["src/core/applicationError", "src/core/events", "src/core/logger"],
@@ -173,20 +167,50 @@
       "src/modules/employees/db",
       "src/modules/imports/db",
       "src/modules/imports/domain",
+      "src/core/processes/db",
+      "src/core/processes/domain",
       "src/modules/slack/db",
-      "src/modules/tasks/db",
-      "src/modules/tasks/domain",
+      "src/core/tasks/db",
+      "src/core/tasks/domain",
       "src/modules/timeOff/db",
       "src/modules/timeOff/domain",
       "src/utils"
     ],
-    "test/e2e": ["src/core/db", "src/core/logger", "src/core/server", "test/support"]
+    "test/e2e": ["src/core/db", "src/core/logger", "src/core/server", "test/support"],
+    "src/core/tasks": [
+      "src/core/applicationError",
+      "src/core/db",
+      "src/core/events",
+      "src/core/graphql",
+      "src/core/logger",
+      "src/core/moduleManifest",
+      "src/core/pagination",
+      "src/core/records",
+      "src/core/security",
+      "src/utils"
+    ],
+    "src/core/processes": [
+      "src/core/applicationError",
+      "src/core/db",
+      "src/core/events",
+      "src/core/graphql",
+      "src/core/jobs",
+      "src/core/logger",
+      "src/core/moduleManifest",
+      "src/core/pagination",
+      "src/core/records",
+      "src/core/security",
+      "src/core/tasks",
+      "src/utils"
+    ]
   },
   "layers": {
     "domain": ["helpers"],
     "helpers": [],
     "db": ["domain", "helpers"],
-    "app": ["db", "domain", "helpers"],
+    "ports": ["domain", "helpers"],
+    "app": ["db", "domain", "helpers", "ports"],
+    "adapters": ["app", "db", "domain", "helpers"],
     "graphql": ["app", "domain", "helpers", "http"],
     "http": ["app", "domain", "helpers", "jwt"],
     "mcp": ["app", "domain", "helpers"],

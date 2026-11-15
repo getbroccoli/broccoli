@@ -78,31 +78,10 @@ mutation MarkTaskDone($input: TaskMarkDoneInput!) {
   }
 }
 
-mutation ReopenTask($input: TaskReopenInput!) {
+mutation DeleteTask($input: TaskDeleteInput!) {
   tasks {
-    reopen(input: $input) {
-      task {
-        ...TaskFields @unmask
-      }
-      historyLine {
-        ...RecordHistory_line @unmask
-      }
-      error {
-        ...TaskError @unmask
-      }
-    }
-  }
-}
-
-mutation CancelTask($input: TaskCancelInput!) {
-  tasks {
-    cancel(input: $input) {
-      task {
-        ...TaskFields @unmask
-      }
-      historyLine {
-        ...RecordHistory_line @unmask
-      }
+    delete(input: $input) {
+      deletedTaskId
       error {
         ...TaskError @unmask
       }

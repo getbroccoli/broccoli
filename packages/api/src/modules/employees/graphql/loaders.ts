@@ -36,6 +36,8 @@ export interface EmployeeLoaders {
   terms: DataLoader<string, TermsOverview | null>;
   /** A person's terms and working week, or null for a caller who may not read them. */
   employmentTerms: DataLoader<string, EmploymentTerms | null>;
+  /** An employee by id, with the caller's access, or null; for the people a task names. */
+  employee: DataLoader<string, Employee | null>;
 }
 
 /** The `terms` loader's key for the default terms, which a location without terms starts people on. */
@@ -52,6 +54,10 @@ export function employeeLoaders(
   invites: EmployeeInviteService,
 ): (context: GraphqlContext) => EmployeeLoaders {
   return perRequest((context) => ({
+    employee: new DataLoader<string, Employee | null>(async (employeeIds) => {
+      const found = await services.readEmployees(context.getActor(), employeeIds);
+      return employeeIds.map((id) => found.get(id) ?? null);
+    }),
     manager: new DataLoader<string, Employee | null>(async (employeeIds) => {
       const managers = await services.readManagers(context.getActor(), employeeIds);
       return employeeIds.map((id) => managers.get(id) ?? null);

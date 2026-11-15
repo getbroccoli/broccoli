@@ -152,12 +152,6 @@ it("does not count a task marked done in place in needs you", () => {
   expect(countTasksNeedingYou(groups, assignee.id)).toBe(0);
 });
 
-it("counts a reopened task still sitting in resolved recently", () => {
-  const groups = { needsYou: [], waitingOnOthers: [], resolvedRecently: [taskWith()] };
-
-  expect(countTasksNeedingYou(groups, assignee.id)).toBe(1);
-});
-
 it("does not count a task to do that someone else holds", () => {
   const task = taskWith({ assignee: asker, askedBy: assignee });
   const groups = { needsYou: [], waitingOnOthers: [task], resolvedRecently: [] };

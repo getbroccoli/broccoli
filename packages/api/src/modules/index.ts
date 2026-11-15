@@ -11,18 +11,31 @@ import { companyModule, createCompany } from "./company";
 import { createDemoFillService, demoModule } from "./demo";
 import {
   createEmployeeInviteService,
-  createEmployeeReadService,
   createEmployeeSetupService,
+  createPeopleAdapter,
+  createWorkingCalendarsAdapter,
+  EMPLOYEE_TRIGGERING_EVENTS,
   employeeDirectory,
+  employeeRecordType,
   employeesModule,
 } from "./employees";
 import { externalAgentsModule } from "./externalAgents";
 import { createImportServices, importsModule } from "./imports";
 import { mcpAgentsModule } from "./mcpAgents";
-import { createProcessService, processesModule } from "./processes";
+import {
+  createProcessService,
+  processesModule,
+  type TriggeringEventRegistration,
+} from "../core/processes";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
-import { createTaskService, tasksModule } from "./tasks";
+import {
+  createTaskService,
+  TASK_TRIGGERING_EVENTS,
+  taskRecordType,
+  tasksModule,
+} from "../core/tasks";
+import { collectRegistrations } from "../utils";
 import { createTimeOffSetupService, createTimeOffService, timeOffModule } from "./timeOff";
 
 const employeeSetup = createEmployeeSetupService();
@@ -56,13 +69,26 @@ export function createModules(
   });
   const timeOff = createTimeOffService({ ...core, bankHolidays });
   const tasks = createTaskService(core);
-  const processes = createProcessService({ ...core, tasks, bankHolidays });
+  const processes = createProcessService({
+    ...core,
+    tasks,
+    people: createPeopleAdapter(core),
+    workingCalendars: createWorkingCalendarsAdapter({ ...core, bankHolidays }),
+    // The record types a process may run on, registered by the modules that own them.
+    recordTypes: { employee: employeeRecordType(core.orm), task: taskRecordType(core.orm) },
+    triggeringEvents: collectRegistrations<TriggeringEventRegistration>("triggering event", [
+      EMPLOYEE_TRIGGERING_EVENTS,
+      TASK_TRIGGERING_EVENTS,
+    ]),
+  });
   // Every path that clears the people resets time off, processes and tasks too, back to a fresh workspace.
   const deleteAllEmployees: typeof employeeSetup.deleteAllEmployees = async (ctx, tx) => {
     // The policies' lock first: turning time off on holds it while its allowances wait on employee rows.
     await timeOff.lockPolicies(ctx, tx);
-    // Then the processes: a step command locks its process before its run and task.
+    // Then the processes: a run's start locks its process before it creates tasks.
     await processes.lockProcesses(ctx, tx);
+    // Then the tasks: a task change can create tasks for employees before it commits.
+    await tasks.lockTasks(ctx, tx);
     // Employees next: their assignments, allowances and ledger lines point at the policies.
     await employeeSetup.deleteAllEmployees(ctx, tx);
     await timeOff.resetTimeOff(ctx, tx);
@@ -120,7 +146,7 @@ export function createModules(
         bankHolidays,
       }),
     }),
-    tasksModule({ orm: core.orm, tasks, employees: createEmployeeReadService(core) }),
+    tasksModule({ orm: core.orm, tasks }),
     processesModule({ logger: core.logger, processes }),
   ];
   return {

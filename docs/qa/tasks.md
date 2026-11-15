@@ -19,15 +19,14 @@ A manual check of My tasks, against a development stack.
 
 ## Mark done
 
-- [ ] Mark done on a row turns it to Done ("Done by you · <today>"), the count goes down by one and a toast says "Marked done" with Undo.
-- [ ] Undo turns it back to To do. After a reload a done task sits under Resolved recently.
+- [ ] Mark done on a row turns it to Done ("Done by you · <today>"), the count goes down by one and a toast says "Marked done", with no Undo. After a reload the done task sits under Resolved recently.
 
 ## A task
 
 - [ ] Clicking a row opens the task at `/tasks/<id>`: the asker's avatar, the title, the status, "What Priya asks" with the description and due date, "If you mark it done: Priya sees it as done in Tasks." and "Asked by Priya Shah on …".
-- [ ] History lists "Broccoli asked for “…”" for a demo task; Mark done adds "You marked it done" at the top without a reload, and Reopen adds "You reopened it".
+- [ ] History lists "Broccoli asked for “…”" for a demo task; Mark done adds "You marked it done" at the top without a reload.
 - [ ] A waiting task has no Mark done and says "It cannot be marked done while it waits."
-- [ ] On a done task you hold, "…" offers Reopen, which turns it back to To do.
-- [ ] On "Check the laptop budget for new starters", which you asked for, "…" offers Cancel task. Confirming without a reason says "Say why you are cancelling it."; with one, the task shows Cancelled and "Cancelled on …: <reason>".
+- [ ] A done task you hold has no "…" menu: done is final.
+- [ ] On "Check the laptop budget for new starters", which you asked for, "…" offers Delete task. "Delete this task?" names Priya; Keep it leaves it, Delete task closes the panel, says "Task deleted" and the task is gone from Waiting on others.
 - [ ] An unknown id, such as `/tasks/00000000-0000-4000-8000-000000000001`, says "This task is not yours to see, or it is gone."
 - [ ] At phone width the panel is full screen.

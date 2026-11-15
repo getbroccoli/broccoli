@@ -23,7 +23,7 @@ export function TaskPanel({ taskId, onClose }: Props) {
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent aria-describedby={undefined} className={PANEL}>
         {data?.task ? (
-          <TaskDetails task={data.task} />
+          <TaskDetails task={data.task} onDeleted={onClose} />
         ) : (
           <div className="flex flex-col gap-4 p-6">
             <div className="flex items-center justify-between gap-4">

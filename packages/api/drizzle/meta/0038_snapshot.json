@@ -3553,8 +3553,8 @@
       },
       "isRLSEnabled": false
     },
-    "public.process_run_steps": {
-      "name": "process_run_steps",
+    "public.process_run_step_progress": {
+      "name": "process_run_step_progress",
       "schema": "",
       "columns": {
         "run_id": {
@@ -3602,9 +3602,9 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "process_run_steps_run_fk": {
-          "name": "process_run_steps_run_fk",
-          "tableFrom": "process_run_steps",
+        "process_run_step_progress_run_fk": {
+          "name": "process_run_step_progress_run_fk",
+          "tableFrom": "process_run_step_progress",
           "tableTo": "process_runs",
           "columnsFrom": ["run_id"],
           "columnsTo": ["id"],
@@ -3613,35 +3613,35 @@
         }
       },
       "compositePrimaryKeys": {
-        "process_run_steps_run_id_step_key_pk": {
-          "name": "process_run_steps_run_id_step_key_pk",
+        "process_run_step_progress_run_id_step_key_pk": {
+          "name": "process_run_step_progress_run_id_step_key_pk",
           "columns": ["run_id", "step_key"]
         }
       },
       "uniqueConstraints": {
-        "process_run_steps_task_id_unique": {
-          "name": "process_run_steps_task_id_unique",
+        "process_run_step_progress_task_id_unique": {
+          "name": "process_run_step_progress_task_id_unique",
           "nullsNotDistinct": false,
           "columns": ["task_id"]
         }
       },
       "policies": {},
       "checkConstraints": {
-        "process_run_steps_key_not_blank": {
-          "name": "process_run_steps_key_not_blank",
-          "value": "btrim(\"process_run_steps\".\"step_key\") <> ''"
+        "process_run_step_progress_key_not_blank": {
+          "name": "process_run_step_progress_key_not_blank",
+          "value": "btrim(\"process_run_step_progress\".\"step_key\") <> ''"
         },
-        "process_run_steps_status_known": {
-          "name": "process_run_steps_status_known",
-          "value": "\"process_run_steps\".\"status\" in ('step_awaiting_task_completion', 'step_completed', 'step_skipped', 'step_cancelled')"
+        "process_run_step_progress_status_known": {
+          "name": "process_run_step_progress_status_known",
+          "value": "\"process_run_step_progress\".\"status\" in ('step_awaiting_task_completion', 'step_completed', 'step_skipped', 'step_cancelled')"
         },
-        "process_run_steps_assignee_note_known": {
-          "name": "process_run_steps_assignee_note_known",
-          "value": "\"process_run_steps\".\"assignee_note\" in ('assignee_is_owner_because_subject_has_no_manager')"
+        "process_run_step_progress_assignee_note_known": {
+          "name": "process_run_step_progress_assignee_note_known",
+          "value": "\"process_run_step_progress\".\"assignee_note\" in ('assignee_is_owner_because_subject_has_no_manager')"
         },
-        "process_run_steps_columns_follow_status": {
-          "name": "process_run_steps_columns_follow_status",
-          "value": "(\"process_run_steps\".\"status\" = 'step_awaiting_task_completion') = (\"process_run_steps\".\"finished_at\" is null)\n        and (\"process_run_steps\".\"status\" = 'step_skipped') = (\"process_run_steps\".\"skip_reason\" is not null)\n        and (\"process_run_steps\".\"skip_reason\" is null or \"process_run_steps\".\"skip_reason\" = 'no_assignee_for_step')"
+        "process_run_step_progress_columns_follow_status": {
+          "name": "process_run_step_progress_columns_follow_status",
+          "value": "(\"process_run_step_progress\".\"status\" = 'step_awaiting_task_completion') = (\"process_run_step_progress\".\"finished_at\" is null)\n        and (\"process_run_step_progress\".\"status\" = 'step_skipped') = (\"process_run_step_progress\".\"skip_reason\" is not null)\n        and (\"process_run_step_progress\".\"skip_reason\" is null or \"process_run_step_progress\".\"skip_reason\" = 'no_assignee_for_step')"
         }
       },
       "isRLSEnabled": false
@@ -3708,6 +3708,12 @@
         "start_key": {
           "name": "start_key",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "trigger_event": {
+          "name": "trigger_event",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -3913,11 +3919,15 @@
         },
         "process_runs_start_cause_known": {
           "name": "process_runs_start_cause_known",
-          "value": "\"process_runs\".\"start_cause\" in ('started_on_record_date', 'started_by_admin')"
+          "value": "\"process_runs\".\"start_cause\" in ('started_on_record_date', 'started_by_admin', 'started_on_event')"
+        },
+        "process_runs_trigger_event_follows_start_cause": {
+          "name": "process_runs_trigger_event_follows_start_cause",
+          "value": "(\"process_runs\".\"start_cause\" = 'started_on_event') = (\"process_runs\".\"trigger_event\" is not null)"
         },
         "process_runs_cancel_cause_known": {
           "name": "process_runs_cancel_cause_known",
-          "value": "\"process_runs\".\"cancel_cause\" in ('cancelled_by_admin', 'cancelled_because_step_assignee_was_removed', 'cancelled_because_subject_was_removed')"
+          "value": "\"process_runs\".\"cancel_cause\" in ('cancelled_because_step_assignee_was_removed', 'cancelled_because_subject_was_removed')"
         },
         "process_runs_columns_follow_status": {
           "name": "process_runs_columns_follow_status",
@@ -4029,24 +4039,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "process_key": {
-          "name": "process_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "process_run_id": {
-          "name": "process_run_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "step_key": {
-          "name": "step_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "record_type": {
           "name": "record_type",
           "type": "text",
@@ -4155,27 +4147,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "tasks_one_per_run_step": {
-          "name": "tasks_one_per_run_step",
-          "columns": [
-            {
-              "expression": "process_run_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "step_key",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {},
@@ -4189,15 +4160,7 @@
         },
         "tasks_asked_by_someone": {
           "name": "tasks_asked_by_someone",
-          "value": "\"tasks\".\"asked_by_employee_id\" is not null or \"tasks\".\"process_key\" is not null"
-        },
-        "tasks_process_source_complete": {
-          "name": "tasks_process_source_complete",
-          "value": "(\"tasks\".\"process_key\" is null) = (\"tasks\".\"step_key\" is null)\n        and (\"tasks\".\"process_run_id\" is null or \"tasks\".\"process_key\" is not null)"
-        },
-        "tasks_process_step_from_a_run": {
-          "name": "tasks_process_step_from_a_run",
-          "value": "\"tasks\".\"type\" <> 'process_step_to_do'\n        or (\"tasks\".\"process_run_id\" is not null and \"tasks\".\"asked_by_employee_id\" is null)"
+          "value": "(\"tasks\".\"type\" = 'manual_to_do') = (\"tasks\".\"asked_by_employee_id\" is not null)"
         },
         "tasks_record_complete": {
           "name": "tasks_record_complete",

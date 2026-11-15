@@ -53,6 +53,17 @@ export function createResolvers(
       terms: (_parent, { id }, context) => services.readTerms(context.getActor(), id),
       ...terms.Query,
     },
+    Task: {
+      // The assignee's deletion deletes the task, so the assignee is always there.
+      assignee: async ({ assigneeEmployeeId }, _args, context) =>
+        (await loaders(context).employee.load(assigneeEmployeeId))!,
+      askedBy: ({ askedByEmployeeId }, _args, context) =>
+        askedByEmployeeId ? loaders(context).employee.load(askedByEmployeeId) : null,
+      subject: ({ subjectEmployeeId }, _args, context) =>
+        subjectEmployeeId ? loaders(context).employee.load(subjectEmployeeId) : null,
+      doneBy: ({ doneByEmployeeId }, _args, context) =>
+        doneByEmployeeId ? loaders(context).employee.load(doneByEmployeeId) : null,
+    },
     Location: {
       // Never null: deleting terms gives their locations none, which reads as the default terms.
       terms: async ({ termsId }, _args, context) =>

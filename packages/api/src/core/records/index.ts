@@ -1,6 +1,7 @@
 import type { Orm, Transact } from "../db";
 import type { Logger } from "../logger";
 import { readSdl, type Resolvers } from "../graphql";
+import { collectRegistrations } from "../../utils";
 import {
   createRecordCloneService,
   createRecordHistoryReaderService,
@@ -20,6 +21,7 @@ export { changeReasonSchema, parseChangeReason } from "./domain";
 export type {
   LoadedRecord,
   RecordChanged,
+  RecordProcessCapabilities,
   RecordTypeRegistration,
   RecordTypeRegistry,
 } from "./app";
@@ -42,10 +44,10 @@ export function recordsManifest(
   { orm, transact, logger }: { orm: Orm; transact: Transact; logger: Logger },
   modules: readonly { recordTypes?: RecordTypeRegistry }[],
 ): { name: string; typeDefs: string; resolvers: Resolvers } {
-  const registry: RecordTypeRegistry = {};
-  for (const { recordTypes } of modules) {
-    Object.assign(registry, recordTypes);
-  }
+  const registry: RecordTypeRegistry = collectRegistrations(
+    "record type",
+    modules.flatMap(({ recordTypes }) => (recordTypes ? [recordTypes] : [])),
+  );
   return {
     name: "records",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),

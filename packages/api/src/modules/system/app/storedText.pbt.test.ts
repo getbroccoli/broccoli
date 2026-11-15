@@ -23,7 +23,6 @@ test.for(
       entry: `employee.reason.${operation}`,
       limit: 500,
     })),
-    { entry: "task.cancelReason", limit: 1000 },
     { entry: "invite.note", limit: 1000 },
     { entry: "setup.inviteNote", limit: 1000 },
     { entry: "mail.from", limit: 254 },

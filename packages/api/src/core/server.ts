@@ -14,7 +14,7 @@ import {
   createAgentConnectionService,
 } from "./agentAccess";
 import { authHandler, type DeploymentServer } from "./auth";
-import { connectDatabase, type Database, transactor } from "./db";
+import { connectDatabase, createBeforeCommitBus, type Database, transactor } from "./db";
 import type { Env } from "./env";
 import { createEventBus } from "./events";
 import { type GraphqlApi, startGraphqlApi } from "./graphql";
@@ -58,7 +58,8 @@ export async function startServer(
   const secretBox = createSecretBox(await ensureSecret(env.dataDir, "encryption-key"));
   const database = connectDatabase(env.databaseUrl, logger);
   const eventBus = createEventBus(logger);
-  const transact = transactor(database.orm, eventBus);
+  const beforeCommit = createBeforeCommitBus();
+  const transact = transactor(database.orm, eventBus, beforeCommit);
   const jobRunner = createJobRunner(env.databaseUrl, logger);
   const readiness = new Readiness(() => database.checkConnection());
   const app = express();
@@ -131,6 +132,9 @@ export async function startServer(
     for (const module of modules) {
       if (module.events) {
         eventBus.subscribe(module.events);
+      }
+      if (module.eventsBeforeCommit) {
+        beforeCommit.subscribe(module.eventsBeforeCommit);
       }
       if (module.router) {
         app.use(
