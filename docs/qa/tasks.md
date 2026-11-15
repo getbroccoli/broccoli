@@ -38,7 +38,30 @@ Mailpit catches every email in development; open it from the address `pnpm dev` 
 2. Add Avery as "Add employees" in [QA setup](setup.md) shows, invite her from People and join from the invite in Mailpit, in a private window.
 
 - [ ] Starting the demo sends no task email: its tasks email nobody.
-- [ ] Turn on a process that gives the owner a task when a person is added (insert one on `employees.added` with `"run": "after_commit"` and a `task` step for the `workspace_owner`), then add another person: within seconds Oliver gets "New task: …" from Acme Corp, with the description, "Due …", Open task and the task's link.
-- [ ] Insert a `manual_to_do` that Oliver asks of Avery. As Avery, Mark done: Oliver gets "Avery Abbott marked done: …" from "Avery Abbott via Acme Corp", with "Done by Avery Abbott on <today>".
+- [ ] Add a process that gives the owner a task when a person is added, then add another person: within seconds Oliver gets "New task: Prepare a desk and laptop for …" from Acme Corp, with the description, "Due …", Open task and the task's link.
+
+  ```sql
+  insert into processes (key, name, description, turned_on_at) values ('qa_new_person', 'QA: prepare for a new person', 'QA only', now());
+  insert into process_versions (process_id, version, status, definition_schema_version, definition)
+    select id, 1, 'published', 1, '{"subject": {"recordType": "employee"},
+      "trigger": {"kind": "on_event", "event": "employees.added", "run": "after_commit"},
+      "steps": [{"key": "prepare_desk", "kind": "task", "task": {"assignee": {"kind": "workspace_owner"},
+        "title": "Prepare a desk and laptop for {firstName}",
+        "description": "Book a desk near the team and order a laptop before their first day.",
+        "due": {"amount": 3, "unit": "business_days"}}}]}'::jsonb
+    from processes where key = 'qa_new_person';
+  update processes set active_version_id = v.id from process_versions v
+    where v.process_id = processes.id and processes.key = 'qa_new_person';
+  ```
+
+- [ ] Insert a to-do that Oliver asks of Avery. As Avery, Mark done: Oliver gets "Avery Abbott marked done: …" from "Avery Abbott via Acme Corp", with "Done by Avery Abbott on <today>".
+
+  ```sql
+  insert into tasks (type, status, title, description, assignee_employee_id, asked_by_employee_id, due_date)
+    select 'manual_to_do', 'to_do', 'Book the team offsite', 'Choose somewhere near the station.', avery.id, oliver.id, current_date + 5
+    from employees avery, employees oliver
+    where avery.email = 'avery@example.com' and oliver.email = 'oliver.bennett@example.com';
+  ```
+
 - [ ] Signed out, the email's link asks Oliver to sign in, then opens the task at `/tasks/<id>`.
 - [ ] As Oliver, Mark done the process task: nobody gets an email, since nobody asked for it.
