@@ -19,10 +19,8 @@ const DOT_GAP_PX = 14;
 type Call = AgentCallBubblesQuery["myAgentActivity"]["edges"][number]["node"];
 
 /**
- * Each call the person's agent makes from now on, as a small bubble beside the menu dot that
- * leaves by itself after about 4 seconds. Goes inside the dot's box; the shell's live stream reads
- * the calls again on each call. Only decoration: Your agent lists every call for screen readers,
- * and no bubble shows under reduced motion or on narrow screens, where the menu scrolls sideways.
+ * Each call the person's agent makes from now on, as a bubble beside the menu dot (placed inside
+ * the dot's box) that leaves after about 4 seconds. Decoration only: Your agent lists every call.
  */
 export function AgentCallBubbles() {
   const calls = useQuery(AgentCallBubblesDocument, {
