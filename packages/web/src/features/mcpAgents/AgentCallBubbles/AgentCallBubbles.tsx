@@ -53,9 +53,10 @@ export function AgentCallBubbles() {
       {showing &&
         dotBox &&
         createPortal(
+          // Invisible rather than hidden, so a bubble still times out and never shows late.
           <div
             aria-hidden
-            className="pointer-events-none fixed z-40 max-md:hidden motion-reduce:hidden"
+            className="pointer-events-none fixed z-40 max-md:invisible motion-reduce:invisible"
             style={{ left: dotBox.right + DOT_GAP_PX, top: dotBox.top + dotBox.height / 2 }}
           >
             {bubbles.map((call, index) => {
