@@ -5,6 +5,7 @@ import { type NewRunRow, processRepository, type StoredProcess } from "../db";
 import {
   type DayOffset,
   dueTriggerDate,
+  isEveryStepDone,
   type ProcessDefinition,
   type ProcessRunFields,
   type RecordDateTrigger,
@@ -129,9 +130,7 @@ export function createRunStarter({
 }
 
 function newRun(start: RunStart, progress: readonly RunStep[], now: Date) {
-  const finished = progress.every(
-    ({ status }) => status === "step_completed" || status === "step_skipped",
-  );
+  const finished = isEveryStepDone(progress);
   return {
     processId: start.process.id,
     processVersionId: start.process.activeVersion.id,

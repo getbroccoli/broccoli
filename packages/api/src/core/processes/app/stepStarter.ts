@@ -1,4 +1,5 @@
 import type { Tx } from "../../db";
+import type { Logger } from "../../logger";
 import { PrincipalSecurityContext } from "../../security";
 import type { CalendarDate } from "../../../utils";
 import type { NewTask, TaskService } from "../../tasks";
@@ -10,6 +11,7 @@ import {
   type ProcessDefinition,
   type ProcessRun,
   type ProcessRunFields,
+  readyStepKeys,
   resolveAssignee,
   type RunStep,
   startReadySteps,
@@ -62,17 +64,17 @@ export interface NewRunSteps extends FirstStepsInput {
   first: FirstSteps;
 }
 
-export function createStepStarter({
-  tasks,
-  people,
-  workingCalendars,
-  definitionOf,
-}: {
+/** What starting steps reads and writes through. */
+export interface StepStarterDependencies {
   tasks: TaskService;
   people: PeoplePort;
   workingCalendars: WorkingCalendarsPort;
   definitionOf: DefinitionReader;
-}): StepStarter {
+  logger: Logger;
+}
+
+export function createStepStarter(dependencies: StepStarterDependencies): StepStarter {
+  const { tasks, people, workingCalendars, definitionOf, logger } = dependencies;
   const taskMaker = { tasks, workingCalendars };
   return {
     async planFirstSteps(tx, runs) {
@@ -102,30 +104,16 @@ export function createStepStarter({
     },
 
     async startReadySteps(tx, run, day) {
-      const processes = processRepository(tx);
-      const definition = definitionOf((await processes.findVersion(run.processVersionId))!);
-      const subject = await readSubject(people, tx, run);
-      const [candidates] = await readCandidates(people, tx, [{ subject, day }]);
-      const now = new Date();
-      const next = startReadySteps(definition.steps, run.steps, assigneeFrom(candidates!), now);
-      if (next.starts.length === 0) return run;
-      const [process] = await processes.findProcessesByIds([run.processId]);
-      const plan = {
-        run,
-        processKey: process!.key,
-        subject,
-        startDay: run.startDay,
-        definition,
-        starts: next.starts,
-      };
-      const startedKeys = new Set(next.starts.map(({ step }) => step.key));
-      const [started] = withTaskIds(
-        [plan],
-        [next.progress.filter(({ stepKey }) => startedKeys.has(stepKey))],
-        await createStepTasks(taskMaker, tx, [plan]),
-      );
-      await runStepRepository(tx).saveStartedSteps(started!);
-      return run.withStartedSteps(started!, now);
+      try {
+        return await startReadyStepsOf(dependencies, tx, run, day);
+      } catch (error) {
+        const kind = (error as Error | undefined)?.constructor?.name;
+        logger.error(
+          { runId: run.id, kind },
+          "Process steps not started, so the mark done rolls back",
+        );
+        throw error;
+      }
     },
 
     async stepTitles(tx, run) {
@@ -135,6 +123,40 @@ export function createStepStarter({
       return new Map(steps.map(({ key, task }) => [key, filled(task.title, subject)]));
     },
   };
+}
+
+/** Starts the run's ready steps with their tasks, and saves them; the run as it was when none is ready. */
+async function startReadyStepsOf(
+  { tasks, people, workingCalendars, definitionOf }: StepStarterDependencies,
+  tx: Tx,
+  run: ProcessRun,
+  day: CalendarDate,
+): Promise<ProcessRun> {
+  if (!run.steps.some(({ status }) => status === "step_waiting_to_start")) return run;
+  const processes = processRepository(tx);
+  const definition = definitionOf((await processes.findVersion(run.processVersionId))!);
+  if (readyStepKeys(definition.steps, run.steps).length === 0) return run;
+  const subject = await readSubject(people, tx, run);
+  const [candidates] = await readCandidates(people, tx, [{ subject, day }]);
+  const now = new Date();
+  const next = startReadySteps(definition.steps, run.steps, assigneeFrom(candidates!), now);
+  const [process] = await processes.findProcessesByIds([run.processId]);
+  const plan = {
+    run,
+    processKey: process!.key,
+    subject,
+    startDay: run.startDay,
+    definition,
+    starts: next.starts,
+  };
+  const startedKeys = new Set(next.starts.map(({ step }) => step.key));
+  const [started] = withTaskIds(
+    [plan],
+    [next.progress.filter(({ stepKey }) => startedKeys.has(stepKey))],
+    await createStepTasks({ tasks, workingCalendars }, tx, [plan]),
+  );
+  await runStepRepository(tx).saveStartedSteps(started!);
+  return run.withStartedSteps(started!, now);
 }
 
 /** The steps starting together in one run, with what their tasks need. */

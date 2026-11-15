@@ -121,6 +121,11 @@ export function readyStepKeys(
   );
 }
 
+/** Whether a run with these steps has nothing left to do: every step completed or skipped. */
+export function isEveryStepDone(steps: readonly Pick<RunStep, "status">[]): boolean {
+  return steps.every(({ status }) => status === "step_completed" || status === "step_skipped");
+}
+
 /** A step that starts now, and who gets its task; null skips it for want of anyone. */
 export interface StepStart {
   step: TaskStep;
@@ -266,10 +271,7 @@ export class ProcessRun implements Readonly<ProcessRunFields> {
   }
 
   private settled(steps: readonly RunStep[], now: Date): ProcessRun {
-    const allDone = steps.every(
-      ({ status }) => status === "step_completed" || status === "step_skipped",
-    );
-    return allDone
+    return isEveryStepDone(steps)
       ? this.with({ status: "finished", finishedAt: now }, steps)
       : this.with({}, steps);
   }

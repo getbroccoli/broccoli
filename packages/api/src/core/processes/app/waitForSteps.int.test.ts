@@ -1,9 +1,12 @@
+import { sql } from "drizzle-orm";
+
 import {
   ADMIN,
   SYSTEM,
   calendarDate,
   employeeServices,
   expect,
+  expectBlockedBy,
   processService,
   seedProcess,
   signedIn,
@@ -12,6 +15,8 @@ import {
   transactWithProcesses,
 } from "#test/support";
 
+import { ormOf } from "../../db";
+import { processRepository } from "../db";
 import { ONBOARDING_EXAMPLE, type ProcessDefinition } from "../domain";
 
 test("starts only steps with nothing to wait for and stores the others waiting without tasks", async ({
@@ -126,12 +131,32 @@ test("two assignees completing the listed tasks concurrently start the waiting s
   const tasks = taskService(orm, { transact });
   const started = await processes.startRun(ADMIN, { processKey: key, recordId: employee.id });
 
-  const results = await Promise.all([
-    tasks.markDone(managerCtx, started.steps[0]!.task!.id),
-    tasks.markDone(ctx, started.steps[1]!.task!.id),
-  ]);
+  const locked = Promise.withResolvers<number>();
+  const release = Promise.withResolvers<void>();
+  const managerDone = transact(async (tx) => {
+    const managerTasks = taskService(orm, { transact: (work) => work(tx) });
+    const result = await managerTasks.markDone(managerCtx, started.steps[0]!.task!.id);
+    await processRepository(tx).lockRun(started.run.id);
+    const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+    locked.resolve(rows[0]!.pid);
+    await release.promise;
+    return result;
+  });
+  await Promise.race([locked.promise, managerDone]);
+  const employeeDone = tasks.markDone(ctx, started.steps[1]!.task!.id);
+  const results = Promise.allSettled([managerDone, employeeDone]);
 
-  expect(results).toMatchObject([{ task: { status: "done" } }, { task: { status: "done" } }]);
+  try {
+    await expectBlockedBy(orm, await locked.promise);
+  } finally {
+    release.resolve();
+    await results;
+  }
+
+  expect(await results).toMatchObject([
+    { status: "fulfilled", value: { task: { status: "done" } } },
+    { status: "fulfilled", value: { task: { status: "done" } } },
+  ]);
   const progress = await processes.readRun(ADMIN, started.run.id);
   expect(progress.run).toMatchObject({ status: "in_progress", finishedAt: null });
   expect(progress.steps).toMatchObject([

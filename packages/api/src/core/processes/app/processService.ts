@@ -107,7 +107,7 @@ export function createProcessService({
   const today = () => dateInLondon(now());
   const recordTypes = processRecordTypesOf(registeredRecordTypes);
   const definitionOf = definitionReader(recordTypes, triggeringEvents);
-  const steps = createStepStarter({ tasks, people, workingCalendars, definitionOf });
+  const steps = createStepStarter({ tasks, people, workingCalendars, definitionOf, logger });
   const starter = createRunStarter({ people, recordTypes, steps });
   const reader = createRunReader({ transact, tasks, stepStarter: steps });
   const lifecycle = createRunLifecycleService({ orm, transact, tasks, starter, steps, today });
