@@ -22,27 +22,6 @@ import type { DefinitionReader } from "./runStarter";
 /** A process's own task type: a step's to-do, whose done step processes follows. */
 export const PROCESS_STEP_TO_DO = "process_step_to_do";
 
-/** A new run's steps as they start: those started, and the progress of every step. */
-export interface FirstSteps {
-  starts: StepStart[];
-  progress: RunStep[];
-}
-
-/** What a new run's first steps need, before the run is stored. */
-export interface FirstStepsInput {
-  definition: ProcessDefinition;
-  subject: RunSubject | null;
-  /** The day its first steps' assignees are found on, and its due dates count from. */
-  startDay: CalendarDate;
-}
-
-/** A stored new run with its first steps, to save. */
-export interface NewRunSteps extends FirstStepsInput {
-  run: ProcessRunFields;
-  processKey: string;
-  first: FirstSteps;
-}
-
 /** Starts a run's steps: who gets each step's task, the task, and its due date. */
 export interface StepStarter {
   /**
@@ -60,6 +39,27 @@ export interface StepStarter {
   startReadySteps(tx: Tx, run: ProcessRun, day: CalendarDate): Promise<ProcessRun>;
   /** Each step's title as its task gets it, in the order the run's version lists the steps. */
   stepTitles(tx: Tx, run: ProcessRunFields): Promise<Map<string, string>>;
+}
+
+/** What a new run's first steps need, before the run is stored. */
+export interface FirstStepsInput {
+  definition: ProcessDefinition;
+  subject: RunSubject | null;
+  /** The day its first steps' assignees are found on, and its due dates count from. */
+  startDay: CalendarDate;
+}
+
+/** A new run's steps as they start: those started, and the progress of every step. */
+export interface FirstSteps {
+  starts: StepStart[];
+  progress: RunStep[];
+}
+
+/** A stored new run with its first steps, to save. */
+export interface NewRunSteps extends FirstStepsInput {
+  run: ProcessRunFields;
+  processKey: string;
+  first: FirstSteps;
 }
 
 export function createStepStarter({
