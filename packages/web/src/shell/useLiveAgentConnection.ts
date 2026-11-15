@@ -19,8 +19,12 @@ const AGENT_CONNECTION_QUERIES = new Set([
 export function useLiveAgentConnection(): void {
   const apolloClient = useApolloClient();
   useEffect(() => {
-    const refetch = () =>
-      void apolloClient.refetchQueries({
+    // One read at a time, so an older answer never lands after a newer one; nudges that arrive
+    // meanwhile make one more read once it ends.
+    let reading: Promise<unknown> | null = null;
+    let readAgain = false;
+    const readAll = () =>
+      apolloClient.refetchQueries({
         include: "active",
         onQueryUpdated: (query) =>
           AGENT_CONNECTION_QUERIES.has(query.queryName ?? "") &&
@@ -32,6 +36,19 @@ export function useLiveAgentConnection(): void {
             context: { queryDeduplication: false },
           }),
       });
+    const refetch = () => {
+      if (reading) {
+        readAgain = true;
+        return;
+      }
+      reading = Promise.resolve(readAll()).finally(() => {
+        reading = null;
+        if (readAgain) {
+          readAgain = false;
+          refetch();
+        }
+      });
+    };
     const stream = new EventSource("/api/live");
     stream.onmessage = refetch;
     stream.onopen = refetch;

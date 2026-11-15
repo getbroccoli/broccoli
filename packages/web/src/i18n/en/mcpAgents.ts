@@ -72,6 +72,7 @@ export const mcpAgentsEn = {
   "mcpAgents.activity.findPeople": "Searched people",
   "mcpAgents.activity.findPeopleFound": "Searched people · {count} found",
   "mcpAgents.activity.otherTool": "Used {tool}",
+  "mcpAgents.activity.loadFailed": "Couldn’t load what your agent is doing. Try again in a moment.",
   "mcpAgents.disconnect.open": "Disconnect",
   "mcpAgents.disconnect.title": "Disconnect {client}?",
   "mcpAgents.disconnect.detail":

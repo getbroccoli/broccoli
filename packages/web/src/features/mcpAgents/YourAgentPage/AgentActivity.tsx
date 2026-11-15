@@ -25,7 +25,7 @@ type Props = {
  * shortcut: shows a visit's newest 50 calls; page back to the opening once history pages this list.
  */
 export function AgentActivity({ client, connectedAt, openedAt }: Props) {
-  const { data } = useQuery(YourAgentActivityDocument, { fetchPolicy: "network-only" });
+  const { data, error } = useQuery(YourAgentActivityDocument, { fetchPolicy: "network-only" });
   const lines = data?.myAgentActivity.edges.map(({ node }) => node);
   // The lines the first read finds from before the page opened; any later line is live.
   const [earlierIds, setEarlierIds] = useState<ReadonlySet<string>>();
@@ -45,17 +45,23 @@ export function AgentActivity({ client, connectedAt, openedAt }: Props) {
         <h2 id="agent-activity" className="text-[15px] font-semibold">
           {t("mcpAgents.activity.title", { client })}
         </h2>
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-deep">
-          {/* Remounts on each new line, so it pulses once. */}
-          <span
-            key={liveLines[0]?.id}
-            aria-hidden
-            className="agent-activity-pulse size-1.5 rounded-full bg-brand"
-          />
-          {t("mcpAgents.activity.live")}
-        </span>
+        {data && (
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-deep">
+            {/* Remounts on each new line, so it pulses once. */}
+            <span
+              key={liveLines[0]?.id}
+              aria-hidden
+              className="agent-activity-pulse size-1.5 rounded-full bg-brand"
+            />
+            {t("mcpAgents.activity.live")}
+          </span>
+        )}
       </div>
-      {liveLines.length === 0 ? (
+      {error && !data ? (
+        <p role="alert" className="text-sm text-destructive">
+          {t("mcpAgents.activity.loadFailed")}
+        </p>
+      ) : liveLines.length === 0 ? (
         <div className="flex flex-col gap-3 rounded-2xl border border-dashed p-5">
           <p className="text-sm">{t("mcpAgents.activity.empty", { client })}</p>
           <PromptIdeas />
