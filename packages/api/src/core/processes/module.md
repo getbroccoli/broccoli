@@ -15,6 +15,87 @@ A process gives people tasks when something happens to a record, and follows eac
 - Processes reads people, managers, the owner and working days through `PeoplePort` and `WorkingCalendarsPort` in `ports/`, which the employees module fills from its `adapters/`, and the records it runs on through their record types' registered process capabilities. It imports no module.
 - Runs are read through `process_run` permissions: admins and the owner read and change every run; others read none. A task's readers see the run's progress as counts, never the other steps.
 
+## How a run works
+
+Ids are shortened; columns are shown as rows are stored.
+
+### From a change: a person is added
+
+1. A process version's definition listens to the employees module's event:
+
+   ```json
+   {
+     "subject": { "recordType": "employee" },
+     "trigger": { "kind": "on_event", "event": "employees.added",
+       "run": "in_same_transaction", "faultMode": "rollback_transaction" },
+     "startableByAdmin": false,
+     "steps": [
+       { "key": "order_laptop", "kind": "task",
+         "assignee": { "kind": "subjects_manager", "otherwise": { "kind": "workspace_owner" } },
+         "title": "Order a laptop for {firstName}", "description": null,
+         "due": { "amount": 3, "unit": "business_days" } }
+     ]
+   }
+   ```
+
+2. Adding Ada publishes, inside the transaction that adds her:
+
+   ```json
+   { "id": "ev1", "type": "employees.added", "payload": { "employeeIds": ["ada"] } }
+   ```
+
+3. Before that transaction commits, `startRunsOnEvents` starts one run per added person. Ada has no manager, so the owner gets the task with a note:
+
+   ```json
+   // process_runs
+   { "id": "run1", "record_type": "employee", "record_id": "ada", "subject_employee_id": "ada",
+     "start_cause": "started_on_event", "start_key": "on_event:ev1:ada", "start_day": "2026-11-16",
+     "trigger_event": { "id": "ev1", "type": "employees.added", "payload": { "employeeIds": ["ada"] } },
+     "status": "in_progress" }
+   // process_run_step_progress
+   { "run_id": "run1", "step_key": "order_laptop", "status": "step_awaiting_task_completion",
+     "task_id": "t1", "assignee_note": "assignee_is_owner_because_subject_has_no_manager" }
+   // tasks
+   { "id": "t1", "type": "process_step_to_do", "status": "to_do", "title": "Order a laptop for Ada",
+     "assignee_employee_id": "owner", "subject_employee_id": "ada",
+     "record_type": "employee", "record_id": "ada", "due_date": "2026-11-19" }
+   ```
+
+4. The owner marks `t1` done with the ordinary task command, which publishes:
+
+   ```json
+   { "type": "tasks.task_status_changed",
+     "payload": { "taskId": "t1", "from": "to_do", "to": "done", "byEmployeeId": "owner" } }
+   ```
+
+5. In the same transaction, processes completes the step and, with no step left open, finishes the run:
+
+   ```json
+   // process_run_step_progress
+   { "run_id": "run1", "step_key": "order_laptop", "status": "step_completed", "finished_at": "…" }
+   // process_runs
+   { "id": "run1", "status": "finished" }
+   ```
+
+If starting the run fails, adding Ada fails too: the run and the change commit together or not at all.
+
+### From a date: Welcome a new starter
+
+The daily job finds people whose `startDate` is today, or up to `maxDaysLate` (7) days ago, without a run of this process, and starts one per person in its own transaction:
+
+```json
+// process_runs
+{ "id": "run2", "record_type": "employee", "record_id": "ben", "subject_employee_id": "ben",
+  "start_cause": "started_on_record_date", "trigger_date": "2026-11-16",
+  "start_key": "on_record_date:employee:ben:2026-11-16", "start_day": "2026-11-16",
+  "status": "in_progress" }
+// process_run_step_progress: one row per step, each with its task
+{ "run_id": "run2", "step_key": "welcome_one_to_one", "status": "step_awaiting_task_completion", "task_id": "t2" }
+{ "run_id": "run2", "step_key": "coffee_calls", "status": "step_awaiting_task_completion", "task_id": "t3" }
+```
+
+Ben's manager's task is due the same day, and Ben's own task five of his working days later. From there the run finishes as in steps 4 and 5. The unique `start_key` keeps a second pass from starting it again.
+
 ## Data model
 
 - **`processes`:** `key`, `name`, `description`, `active_version_id` (one of its own published versions), `turned_on_at` (null while off).
