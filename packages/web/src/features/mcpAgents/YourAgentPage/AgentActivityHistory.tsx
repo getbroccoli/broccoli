@@ -1,3 +1,4 @@
+import { NetworkStatus } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
 import { useEffect, useRef, useState } from "react";
 
@@ -9,32 +10,32 @@ import { dateAndTime } from "./dateAndTime";
 import { OutcomeBadge } from "./OutcomeBadge";
 
 type Props = {
-  /** The lines the live list already shows, left out here. */
-  liveIds: ReadonlySet<string>;
+  /** When the page opened, in milliseconds; calls since then are live, not history. */
+  openedAt: number;
 };
 
 /**
  * The person's earlier agent calls of the last 30 days, of every agent they connected, newest
  * first; the next page loads as the person scrolls to the end.
  */
-export function AgentActivityHistory({ liveIds }: Props) {
-  const { data, error, fetchMore } = useQuery(YourAgentActivityHistoryDocument, {
+export function AgentActivityHistory({ openedAt }: Props) {
+  const { data, error, fetchMore, networkStatus } = useQuery(YourAgentActivityHistoryDocument, {
     fetchPolicy: "network-only",
   });
-  const [loadingMore, setLoadingMore] = useState(false);
   const [moreFailed, setMoreFailed] = useState(false);
   const history = data?.myAgentActivity;
-  const lines = history?.edges.map(({ node }) => node).filter(({ id }) => !liveIds.has(id));
+  const lines = history?.edges
+    .map(({ node }) => node)
+    .filter(({ calledAt }) => Date.parse(calledAt) < openedAt);
+  const loadingMore = networkStatus === NetworkStatus.fetchMore;
   const endCursor = history?.pageInfo.hasNextPage ? history.pageInfo.endCursor : null;
 
   const end = useRef<HTMLDivElement>(null);
 
-  // Loads the next page whenever the end of the list scrolls into view.
   useEffect(() => {
     const element = end.current;
     if (!element || !endCursor || loadingMore || moreFailed) return;
     const loadMore = async () => {
-      setLoadingMore(true);
       try {
         await fetchMore({
           variables: { after: endCursor },
@@ -47,8 +48,6 @@ export function AgentActivityHistory({ liveIds }: Props) {
         });
       } catch {
         setMoreFailed(true);
-      } finally {
-        setLoadingMore(false);
       }
     };
     const observer = new IntersectionObserver(([entry]) => {
@@ -73,7 +72,6 @@ export function AgentActivityHistory({ liveIds }: Props) {
               <span className="w-24 shrink-0 text-muted-foreground tabular-nums">
                 {dateAndTime(line.calledAt)}
               </span>
-              {/* At phone width the badge and agent wrap under the label. */}
               <span className="min-w-40 flex-1">{labelOf(line)}</span>
               <OutcomeBadge outcome={line.outcome} />
               <span className="ml-auto max-w-28 shrink-0 truncate text-right text-muted-foreground">

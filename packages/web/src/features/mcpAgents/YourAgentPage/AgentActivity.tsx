@@ -91,9 +91,7 @@ export function AgentActivity({ client, connectedAt, openedAt }: Props) {
               ))}
             </ol>
           )}
-          {historyShown && (
-            <AgentActivityHistory liveIds={new Set(liveLines.map(({ id }) => id))} />
-          )}
+          {historyShown && <AgentActivityHistory openedAt={openedAt} />}
         </div>
       )}
       {liveLines.length > 0 && <PromptIdeas />}
