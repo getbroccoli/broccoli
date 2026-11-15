@@ -1,5 +1,5 @@
 import { ApplicationError } from "../../applicationError";
-import { addDays, type CalendarDate, weekdayOf } from "../../../utils";
+import { addDays, addWorkingDays, type CalendarDate, weekdayOf } from "../../../utils";
 import type { DayOffset } from "./processDefinition";
 
 /** Whether a person works on a date: a day of their working week that is not a bank holiday. */
@@ -17,17 +17,9 @@ export function addDayOffset(
   if (unit === "calendar_days" || isWorkingDay === null) {
     return addDays(from, amount);
   }
-  const step = Math.sign(amount);
-  let date = from;
-  for (let left = Math.abs(amount), searched = 0; left > 0; searched += 1) {
-    if (searched === MAX_SEARCH_DAYS) {
-      throw new ApplicationError(
-        "CONFLICT",
-        `No working day comes within ${MAX_SEARCH_DAYS} days.`,
-      );
-    }
-    date = addDays(date, step);
-    if (isWorkingDay(date)) left -= 1;
+  const date = addWorkingDays(from, amount, isWorkingDay, MAX_SEARCH_DAYS);
+  if (date === null) {
+    throw new ApplicationError("CONFLICT", `No working day comes within ${MAX_SEARCH_DAYS} days.`);
   }
   return date;
 }

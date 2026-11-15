@@ -1,6 +1,7 @@
 // Public values.
 export {
   addDays,
+  addWorkingDays,
   addYears,
   coversDate,
   daysBetween,
