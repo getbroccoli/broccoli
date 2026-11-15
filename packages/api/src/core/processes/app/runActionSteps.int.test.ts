@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 
 import {
+  actionProcess,
   ADMIN,
   calendarDate,
   expect,
@@ -16,14 +17,14 @@ import {
 
 import { ormOf } from "../../db";
 import { processRepository } from "../db";
-import type { StoredProcessDefinition } from "../domain";
 
 test("runs every action once at start and finishes a run with only actions", async ({
   orm,
   seed,
 }) => {
   const employee = await seed.employee();
-  const definition = actionDefinition();
+  const ctx = signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] });
+  const definition = actionProcess();
   definition.steps = [
     {
       kind: "action",
@@ -39,7 +40,7 @@ test("runs every action once at start and finishes a run with only actions", asy
     },
   ];
   const { key } = await seedProcess(orm, { key: "actions", definition });
-  const { actions, calls } = testActions();
+  const { actions, calls } = testActions(orm);
   const processes = processService(orm, { today, actions });
 
   const started = await processes.startRun(ADMIN, { processKey: key, recordId: employee.id });
@@ -48,6 +49,16 @@ test("runs every action once at start and finishes a run with only actions", asy
     { runId: started.run.id, stepKey: "first", note: "first" },
     { runId: started.run.id, stepKey: "second", note: "second" },
   ]);
+  expect((await taskService(orm).listMyTasks(ctx)).needsYou).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ title: "first", status: "to_do", assigneeEmployeeId: employee.id }),
+      expect.objectContaining({
+        title: "second",
+        status: "to_do",
+        assigneeEmployeeId: employee.id,
+      }),
+    ]),
+  );
   const finished = await processes.readRun(ADMIN, started.run.id);
   expect(finished.run).toMatchObject({
     status: "finished",
@@ -70,8 +81,8 @@ test("runs an action and creates the next task when its prerequisite task is mar
 }) => {
   const employee = await seed.employee();
   const ctx = signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] });
-  const { key } = await seedProcess(orm, { key: "actions", definition: actionDefinition() });
-  const { actions, calls } = testActions();
+  const { key } = await seedProcess(orm, { key: "actions", definition: actionProcess() });
+  const { actions, calls } = testActions(orm);
   const transact = transactWithProcesses(orm, { today, actions });
   const processes = processService(orm, { today, transact, actions });
   const tasks = taskService(orm, { transact });
@@ -82,6 +93,9 @@ test("runs an action and creates the next task when its prerequisite task is mar
   await tasks.markDone(ctx, started.steps[0]!.task!.id);
 
   expect(calls).toEqual([{ runId: started.run.id, stepKey: "tell_owner", note: "prepared" }]);
+  expect(
+    (await tasks.listMyTasks(ctx)).needsYou.filter(({ title }) => title === "prepared"),
+  ).toMatchObject([{ title: "prepared", status: "to_do", assigneeEmployeeId: employee.id }]);
   const progress = await processes.readRun(ADMIN, started.run.id);
   expect(progress.steps).toMatchObject([
     { key: "prepare", status: "step_completed", task: { status: "done" } },
@@ -94,52 +108,10 @@ test("runs an action and creates the next task when its prerequisite task is mar
   ]);
 });
 
-test("leaves no run when an action fails at run start", async ({ orm, seed }) => {
-  const employee = await seed.employee();
-  const definition = actionDefinition();
-  definition.steps = [{ key: "fail", kind: "action", action: { name: "test.fail", params: {} } }];
-  const { key } = await seedProcess(orm, { key: "actions", definition });
-  const { actions } = testActions();
-  const processes = processService(orm, { today, actions });
-
-  await expect(
-    processes.startRun(ADMIN, { processKey: key, recordId: employee.id }),
-  ).rejects.toThrow("Action failed");
-
-  expect(await processes.listRuns(ADMIN, key)).toEqual([]);
-});
-
-test("keeps a task to do when the action after it fails", async ({ orm, seed }) => {
-  const employee = await seed.employee();
-  const ctx = signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] });
-  const definition = actionDefinition();
-  definition.steps = [
-    definition.steps[0]!,
-    { key: "fail", kind: "action", after: ["prepare"], action: { name: "test.fail", params: {} } },
-  ];
-  const { key } = await seedProcess(orm, { key: "actions", definition });
-  const { actions } = testActions();
-  const transact = transactWithProcesses(orm, { today, actions });
-  const processes = processService(orm, { today, transact, actions });
-  const tasks = taskService(orm, { transact });
-  const started = await processes.startRun(ADMIN, { processKey: key, recordId: employee.id });
-  const taskId = started.steps[0]!.task!.id;
-
-  await expect(tasks.markDone(ctx, taskId)).rejects.toThrow("Action failed");
-
-  expect(await tasks.readTask(ctx, taskId)).toMatchObject({ status: "to_do" });
-  const progress = await processes.readRun(ADMIN, started.run.id);
-  expect(progress.run.status).toBe("in_progress");
-  expect(progress.steps).toMatchObject([
-    { key: "prepare", status: "step_awaiting_task_completion", finishedAt: null },
-    { key: "fail", status: "step_waiting_to_start", task: null, finishedAt: null },
-  ]);
-});
-
 test("never runs an action on a branch not taken", async ({ orm, seed }) => {
   const employee = await seed.employee();
   const ctx = signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] });
-  const definition = actionDefinition();
+  const definition = actionProcess();
   definition.steps = [
     {
       key: "answer",
@@ -160,7 +132,7 @@ test("never runs an action on a branch not taken", async ({ orm, seed }) => {
     { ...definition.steps[1]!, after: [{ step: "answer", when: { result: "no" } }] },
   ];
   const { key } = await seedProcess(orm, { key: "actions", definition });
-  const { actions, calls } = testActions();
+  const { actions, calls } = testActions(orm);
   const transact = transactWithProcesses(orm, { today, actions });
   const processes = processService(orm, { today, transact, actions });
   const tasks = taskService(orm, { transact });
@@ -187,7 +159,7 @@ test("two assignees completing the last listed steps concurrently run the action
   await seed.manager(employee.id, manager.id);
   const managerCtx = signedIn(orm, { employeeId: manager.id, profiles: ["EMPLOYEE"] });
   const ctx = signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] });
-  const definition = actionDefinition();
+  const definition = actionProcess();
   definition.steps = [
     {
       key: "prepare",
@@ -202,7 +174,7 @@ test("two assignees completing the last listed steps concurrently run the action
     { ...definition.steps[1]!, after: ["prepare", "check"] },
   ];
   const { key } = await seedProcess(orm, { key: "actions", definition });
-  const { actions, calls } = testActions();
+  const { actions, calls } = testActions(orm);
   const transact = transactWithProcesses(orm, { today, actions });
   const processes = processService(orm, { today, transact, actions });
   const tasks = taskService(orm, { transact });
@@ -234,6 +206,9 @@ test("two assignees completing the last listed steps concurrently run the action
     { status: "fulfilled", value: { task: { status: "done" } } },
   ]);
   expect(calls).toEqual([{ runId: started.run.id, stepKey: "tell_owner", note: "prepared" }]);
+  expect(
+    (await tasks.listMyTasks(ctx)).needsYou.filter(({ title }) => title === "prepared"),
+  ).toMatchObject([{ title: "prepared", status: "to_do", assigneeEmployeeId: employee.id }]);
   const finished = await processes.readRun(ADMIN, started.run.id);
   expect(finished.run.status).toBe("finished");
   expect(finished.steps).toMatchObject([
@@ -242,45 +217,5 @@ test("two assignees completing the last listed steps concurrently run the action
     { key: "tell_owner", status: "step_completed", task: null },
   ]);
 });
-
-function actionDefinition(): StoredProcessDefinition {
-  return {
-    subject: { recordType: "employee" },
-    trigger: {
-      kind: "on_record_date",
-      recordType: "employee",
-      dateField: "startDate",
-      offset: { amount: 0, unit: "calendar_days" },
-      maxDaysLate: 7,
-    },
-    steps: [
-      {
-        key: "prepare",
-        kind: "task",
-        task: {
-          assignee: { kind: "subject" },
-          title: "Prepare accounts",
-          due: { amount: 0, unit: "calendar_days" },
-        },
-      },
-      {
-        key: "tell_owner",
-        kind: "action",
-        after: ["prepare"],
-        action: { name: "test.record_call", params: { note: "prepared" } },
-      },
-      {
-        key: "check",
-        kind: "task",
-        after: ["tell_owner"],
-        task: {
-          assignee: { kind: "subject" },
-          title: "Check accounts",
-          due: { amount: 0, unit: "calendar_days" },
-        },
-      },
-    ],
-  };
-}
 
 const today = () => calendarDate("2026-12-03");

@@ -99,7 +99,7 @@ export {
   setupSessions,
   setupSteps,
 } from "./statelessServices";
-export { testActions } from "./testActions";
+export { actionProcess, testActions } from "./testActions";
 export { EXAMPLE_PAYLOAD } from "./exampleEvent";
 export {
   fetchReadiness,
