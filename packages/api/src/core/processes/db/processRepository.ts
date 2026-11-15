@@ -316,7 +316,6 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
   };
 }
 
-/** The records among these with a run of the process that also meets `condition`. */
 /** A version as `StoredProcess` keeps it. */
 const VERSION_COLUMNS = {
   id: processVersions.id,
@@ -325,6 +324,7 @@ const VERSION_COLUMNS = {
   definition: processVersions.definition,
 };
 
+/** The records among these with a run of the process that also meets `condition`. */
 async function findRecordsWithRunsWhere(
   orm: Orm | OrmTransaction,
   {
