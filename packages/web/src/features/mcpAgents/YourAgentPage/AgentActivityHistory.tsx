@@ -10,23 +10,21 @@ import { dateAndTime } from "./dateAndTime";
 import { OutcomeBadge } from "./OutcomeBadge";
 
 type Props = {
-  /** When the page opened, in milliseconds; calls since then are live, not history. */
-  openedAt: number;
+  /** Whether a call is from before the page opened; the live list shows the others. */
+  isEarlier: (line: { id: string; calledAt: string }) => boolean;
 };
 
 /**
  * The person's earlier agent calls of the last 30 days, of every agent they connected, newest
  * first; the next page loads as the person scrolls to the end.
  */
-export function AgentActivityHistory({ openedAt }: Props) {
+export function AgentActivityHistory({ isEarlier }: Props) {
   const { data, error, fetchMore, networkStatus } = useQuery(YourAgentActivityHistoryDocument, {
     fetchPolicy: "network-only",
   });
   const [moreFailed, setMoreFailed] = useState(false);
   const history = data?.myAgentActivity;
-  const lines = history?.edges
-    .map(({ node }) => node)
-    .filter(({ calledAt }) => Date.parse(calledAt) < openedAt);
+  const lines = history?.edges.map(({ node }) => node).filter(isEarlier);
   const loadingMore = networkStatus === NetworkStatus.fetchMore;
   const endCursor = history?.pageInfo.hasNextPage ? history.pageInfo.endCursor : null;
 

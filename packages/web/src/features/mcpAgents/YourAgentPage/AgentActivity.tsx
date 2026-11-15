@@ -42,6 +42,10 @@ export function AgentActivity({ client, connectedAt, openedAt }: Props) {
   const liveLines = earlierIds
     ? (lines ?? []).filter(({ id, calledAt }) => !earlierIds.has(id) && calledAt >= connectedAt)
     : [];
+  // Earlier means from before the page opened and not live, so no clock skew shows a call twice.
+  const liveIds = new Set(liveLines.map(({ id }) => id));
+  const isEarlier = ({ id, calledAt }: { id: string; calledAt: string }) =>
+    !liveIds.has(id) && Date.parse(calledAt) < openedAt;
 
   return (
     <section aria-labelledby="agent-activity" className="flex flex-col gap-2.5">
@@ -91,7 +95,7 @@ export function AgentActivity({ client, connectedAt, openedAt }: Props) {
               ))}
             </ol>
           )}
-          {historyShown && <AgentActivityHistory openedAt={openedAt} />}
+          {historyShown && <AgentActivityHistory isEarlier={isEarlier} />}
         </div>
       )}
       {liveLines.length > 0 && <PromptIdeas />}
