@@ -3,11 +3,14 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import express from "express";
 import { rateLimit } from "express-rate-limit";
 
-import { agentResourceMetadataOf, type AgentSecurityResolver } from "../../../core/agentAccess";
+import {
+  type AgentActivityService,
+  agentResourceMetadataOf,
+  type AgentSecurityResolver,
+} from "../../../core/agentAccess";
 import type { Logger } from "../../../core/logger";
-import type { SecurityContext } from "../../../core/security";
 import type { McpAgentToolService } from "../app";
-import { MCP_AGENT_TOOLS, registerMcpAgentTools } from "./mcpAgentTools";
+import { type AgentCaller, MCP_AGENT_TOOLS, registerMcpAgentTools } from "./mcpAgentTools";
 
 /** Small enough to refuse anything but a tool call. */
 const MAX_BODY_BYTES = 64 * 1024;
@@ -26,12 +29,16 @@ const INSTRUCTIONS =
 export function mcpAgentRouter(
   publicOrigin: (request: express.Request) => Promise<string>,
   resolveAgentSecurity: AgentSecurityResolver,
-  { tools, logger }: { tools: McpAgentToolService; logger: Logger },
+  {
+    tools,
+    activity,
+    logger,
+  }: { tools: McpAgentToolService; activity: AgentActivityService; logger: Logger },
 ): express.Router {
   const perPerson = rateLimit({
     windowMs: 60_000,
     limit: CALLS_PER_PERSON_PER_MINUTE,
-    keyGenerator: (_request, response) => agentOf(response).user!.userId,
+    keyGenerator: (_request, response) => agentOf(response).ctx.user!.userId,
   });
   // Mounted under `/api`, so this is `MCP_PATH`.
   return express
@@ -54,14 +61,14 @@ export function mcpAgentRouter(
       }),
       express.json({ limit: MAX_BODY_BYTES }),
       refuseBatches,
-      asAgent(publicOrigin, resolveAgentSecurity, logger),
+      asAgent(publicOrigin, resolveAgentSecurity, { activity, logger }),
       perPerson,
       async (request, response) => {
         const server = new McpServer(
           { name: "broccoli", version: "1" },
           { instructions: INSTRUCTIONS },
         );
-        registerMcpAgentTools(server, agentOf(response), { tools, logger });
+        registerMcpAgentTools(server, agentOf(response), { tools, activity, logger });
         const transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: undefined,
           enableJsonResponse: true,
@@ -119,12 +126,13 @@ const refuseBatches: express.RequestHandler = (request, response, next) => {
 
 /**
  * Lets the call through as the person its token acts for, when the token holds the tool's scope;
- * otherwise answers with the challenge that tells the agent how to get a better one.
+ * otherwise answers with the challenge that tells the agent how to get a better one, and records
+ * the refused call.
  */
 function asAgent(
   publicOrigin: (request: express.Request) => Promise<string>,
   resolveAgentSecurity: AgentSecurityResolver,
-  logger: Logger,
+  { activity, logger }: { activity: AgentActivityService; logger: Logger },
 ): express.RequestHandler {
   return async (request, response, next) => {
     const origin = await publicOrigin(request);
@@ -136,37 +144,52 @@ function asAgent(
       refuse(response, 401, `Bearer ${error}${metadata}`);
       return;
     }
-    const scope = requiredScopeOf(request.body);
-    if (scope && !agent.scopes.has(scope)) {
-      logger.warn(
-        { reason: "INSUFFICIENT_SCOPE", userId: agent.security.user?.userId },
-        "MCP call refused",
+    const tool = toolCalledBy(request.body);
+    const { security: ctx, clientId } = agent;
+    if (tool && !agent.scopes.has(tool.scope)) {
+      logger.warn({ reason: "INSUFFICIENT_SCOPE", userId: ctx.user?.userId }, "MCP call refused");
+      await activity.recordCall(ctx, {
+        clientId,
+        tool: tool.name,
+        outcome: "refused_by_broccoli",
+        resultCount: null,
+      });
+      refuse(
+        response,
+        403,
+        `Bearer error="insufficient_scope", scope="${tool.scope}", ${metadata}`,
       );
-      refuse(response, 403, `Bearer error="insufficient_scope", scope="${scope}", ${metadata}`);
       return;
     }
-    (response.locals as AgentLocals).agent = agent.security;
+    (response.locals as AgentLocals).agent = { ctx, clientId };
     next();
   };
 }
 
 interface AgentLocals {
-  agent: SecurityContext;
+  agent: AgentCaller;
 }
 
-/** The security context `asAgent` resolved for this call. */
-function agentOf(response: express.Response): SecurityContext {
+/** The person and agent `asAgent` resolved for this call. */
+function agentOf(response: express.Response): AgentCaller {
   return (response.locals as AgentLocals).agent;
 }
 
-/** The scope a tool call needs; null for a request that runs no tool, such as a tools list. */
-function requiredScopeOf(body: unknown): string | null {
+/**
+ * The offered tool a request calls, with the scope it needs; null for a request that runs none,
+ * such as a tools list or an unknown tool.
+ */
+function toolCalledBy(body: unknown): { name: string; scope: string } | null {
   const { method, params } = (body ?? {}) as { method?: unknown; params?: { name?: unknown } };
-  if (method !== "tools/call") {
+  const name = params?.name;
+  if (
+    method !== "tools/call" ||
+    typeof name !== "string" ||
+    !Object.hasOwn(MCP_AGENT_TOOLS, name)
+  ) {
     return null;
   }
-  const tool = typeof params?.name === "string" ? MCP_AGENT_TOOLS[params.name] : undefined;
-  return tool?.scope ?? null;
+  return { name, scope: MCP_AGENT_TOOLS[name]!.scope };
 }
 
 function refuse(response: express.Response, status: 401 | 403, challenge: string): void {

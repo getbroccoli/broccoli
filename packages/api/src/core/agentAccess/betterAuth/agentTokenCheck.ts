@@ -13,9 +13,10 @@ import {
 import type { AgentConnectionService } from "../app";
 import { agentResourceOf } from "../domain";
 
-/** Who an agent's call acts as, and what it was allowed; or why it was refused. */
+/** Who an agent's call acts as, which agent it is and what it was allowed; or why it was refused. */
 export type AgentSecurity =
-  { security: SecurityContext; scopes: ReadonlySet<string> } | { refusal: AgentRefusal };
+  | { security: SecurityContext; clientId: string; scopes: ReadonlySet<string> }
+  | { refusal: AgentRefusal };
 
 /** Why an agent's call was refused before it ran. */
 export type AgentRefusal =
@@ -60,9 +61,10 @@ export function agentSecurityResolver(
       return { refusal: "SENDER_CONSTRAINED_TOKEN" };
     }
     // A token outlives its connection when the person allowed another agent, or left it unused.
+    const clientId = String(claims.client_id);
     const person = await connections.useAgentConnection(PrincipalSecurityContext.system(), {
       userId: String(claims.sub),
-      clientId: String(claims.client_id),
+      clientId,
     });
     if (!person) {
       return { refusal: "CONNECTION_ENDED" };
@@ -72,7 +74,7 @@ export function agentSecurityResolver(
       return { refusal: "DEMO_ENDED" };
     }
     const scope = typeof claims.scope === "string" ? claims.scope : "";
-    return { security, scopes: new Set(scope.split(" ")) };
+    return { security, clientId, scopes: new Set(scope.split(" ")) };
   };
 }
 

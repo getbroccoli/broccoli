@@ -6,8 +6,9 @@ import { requireSignedIn, type SecurityResolver } from "../../security";
 
 /** Often enough that proxies never close a quiet stream. */
 const HEARTBEAT_MS = 25_000;
-/** The only message a stream sends: read the agent connection again. Never data. */
-const AGENT_CONNECTION_CHANGED = `data: ${JSON.stringify({ type: "agentConnection.changed" })}\n\n`;
+/** The messages a stream sends, each only telling the page what to read again. Never data. */
+const AGENT_CONNECTION_CHANGED = nudge("agentConnection.changed");
+const AGENT_ACTIVITY_RECORDED = nudge("agentActivity.recorded");
 
 /**
  * `GET /api/live`: a server-sent events stream per signed-in browser tab that tells the page when
@@ -16,7 +17,7 @@ const AGENT_CONNECTION_CHANGED = `data: ${JSON.stringify({ type: "agentConnectio
  */
 export interface LiveNudges {
   router: express.Router;
-  /** Nudges a person's open streams after their agent connection changes. */
+  /** Nudges a person's open streams after their agent connection changes or their agent calls a tool. */
   events: EventHandlers;
   /** Ends every open stream, so the server can stop without waiting for them. */
   close(): void;
@@ -66,17 +67,24 @@ export function createLiveNudges(resolveSecurity: SecurityResolver): LiveNudges 
     });
   });
 
+  const send = (userId: string, message: string) => {
+    for (const stream of streams.get(userId) ?? []) stream.write(message);
+    return Promise.resolve();
+  };
+
   return {
     router,
     events: {
-      "agentAccess.connection_changed": ({ userId }) => {
-        for (const stream of streams.get(userId) ?? []) stream.write(AGENT_CONNECTION_CHANGED);
-        return Promise.resolve();
-      },
+      "agentAccess.connection_changed": ({ userId }) => send(userId, AGENT_CONNECTION_CHANGED),
+      "agentAccess.activity_recorded": ({ userId }) => send(userId, AGENT_ACTIVITY_RECORDED),
     },
     close() {
       closed = true;
       for (const stream of [...streams.values()].flatMap((own) => [...own])) stream.end();
     },
   };
+}
+
+function nudge(type: string): string {
+  return `data: ${JSON.stringify({ type })}\n\n`;
 }

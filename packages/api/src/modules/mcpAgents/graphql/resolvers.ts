@@ -1,4 +1,8 @@
-import type { AgentConnectionService, StoredEndedAgentConnection } from "../../../core/agentAccess";
+import type {
+  AgentActivityService,
+  AgentConnectionService,
+  StoredEndedAgentConnection,
+} from "../../../core/agentAccess";
 import {
   mutationPayload,
   toEnum,
@@ -6,9 +10,22 @@ import {
   type ResolversTypes,
 } from "../../../core/graphql";
 
-export function createResolvers(connections: AgentConnectionService): Resolvers {
+export function createResolvers(
+  connections: AgentConnectionService,
+  activity: AgentActivityService,
+): Resolvers {
   return {
     Query: {
+      myAgentActivity: async (_parent, args, context) => {
+        const page = await activity.listMyActivity(context.getActor(), args);
+        return {
+          ...page,
+          edges: page.edges.map(({ cursor, node }) => ({
+            cursor,
+            node: { ...node, outcome: toEnum(node.outcome) },
+          })),
+        };
+      },
       myAgentConnection: (_parent, _args, context) =>
         connections.readMyAgentConnection(context.getActor()),
       myLastEndedAgentConnection: async (_parent, _args, context) =>

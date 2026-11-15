@@ -1,7 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import type { AgentScope } from "../../../core/agentAccess";
+import type {
+  AgentActivityOutcome,
+  AgentActivityService,
+  AgentScope,
+} from "../../../core/agentAccess";
 import { ApplicationError } from "../../../core/applicationError";
 import type { Logger } from "../../../core/logger";
 import type { SecurityContext } from "../../../core/security";
@@ -24,14 +28,38 @@ const PERSON = z.object({
   jobTitle: z.string().nullable(),
 });
 
-/** Adds the tools to `server`, each acting as the person behind `ctx`. */
+/** The person an agent's call acts for, and which agent it is. */
+export interface AgentCaller {
+  ctx: SecurityContext;
+  clientId: string;
+}
+
+/** Adds the tools to `server`, each acting as the person behind `caller` and recording its call. */
 export function registerMcpAgentTools(
   server: McpServer,
-  ctx: SecurityContext,
-  { tools, logger }: { tools: McpAgentToolService; logger: Logger },
+  { ctx, clientId }: AgentCaller,
+  {
+    tools,
+    activity,
+    logger,
+  }: { tools: McpAgentToolService; activity: AgentActivityService; logger: Logger },
 ): void {
-  const run = <T extends object>(tool: string, answer: () => Promise<T>) =>
-    resultOf(tool, answer, { userId: ctx.user?.userId, logger });
+  const run = <T extends object>(
+    tool: string,
+    answer: () => Promise<T>,
+    countOf: (value: T) => number | null = () => null,
+  ) =>
+    resultOf(tool, answer, {
+      userId: ctx.user?.userId,
+      logger,
+      record: (outcome, value) =>
+        activity.recordCall(ctx, {
+          clientId,
+          tool,
+          outcome,
+          resultCount: value ? countOf(value) : null,
+        }),
+    });
   server.registerTool(
     "who_am_i",
     {
@@ -61,18 +89,35 @@ export function registerMcpAgentTools(
       outputSchema: { people: z.array(PERSON), nextCursor: z.string().nullable() },
       annotations: { readOnlyHint: true },
     },
-    (input) => run("find_people", () => tools.findPeople(ctx, input)),
+    (input) =>
+      run(
+        "find_people",
+        () => tools.findPeople(ctx, input),
+        (found) => found.people.length,
+      ),
   );
 }
 
-/** The tool's answer; a refusal the person may read, or a failure that hides its cause. */
+/**
+ * The tool's answer; a refusal the person may read, or a failure that hides its cause. Records how
+ * it ended, with the answer when there is one.
+ */
 async function resultOf<T extends object>(
   tool: string,
   answer: () => Promise<T>,
-  { userId, logger }: { userId: string | undefined; logger: Logger },
+  {
+    userId,
+    logger,
+    record,
+  }: {
+    userId: string | undefined;
+    logger: Logger;
+    record: (outcome: AgentActivityOutcome, value?: T) => Promise<void>;
+  },
 ) {
   try {
     const value = await answer();
+    await record("answered_by_broccoli", value);
     return {
       content: [{ type: "text" as const, text: JSON.stringify(value) }],
       structuredContent: value as Record<string, unknown>,
@@ -80,9 +125,11 @@ async function resultOf<T extends object>(
   } catch (error) {
     if (error instanceof ApplicationError) {
       logger.warn({ tool, userId, code: error.code }, "MCP tool refused");
+      await record("refused_by_broccoli");
     } else {
       // Only the name: a message may carry the data the tool read.
       logger.error({ error: (error as Error).name, tool, userId }, "MCP tool failed");
+      await record("failed_in_broccoli");
     }
     const message =
       error instanceof ApplicationError ? error.message : "Broccoli could not answer; try again.";

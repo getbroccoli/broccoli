@@ -1,3 +1,5 @@
+export { AGENT_ACTIVITY_OUTCOMES } from "./agentActivityOutcome";
+export type { AgentActivityOutcome } from "./agentActivityOutcome";
 export { AGENT_CONNECTION_ENDINGS } from "./agentConnectionEnding";
 export type { AgentConnectionEnding } from "./agentConnectionEnding";
 export {
