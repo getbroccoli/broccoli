@@ -20,18 +20,18 @@ export function AgentCallBubbles() {
     fetchPolicy: "network-only",
   }).data?.myAgentActivity.edges.map(({ node }) => node);
   // undefined until the first read; the calls it finds are from before and never show.
-  const [lastShownAt, setLastShownAt] = useState<string | null>();
+  const [lastShownId, setLastShownId] = useState<string | null>();
   const [bubbles, setBubbles] = useState<Call[]>([]);
   if (calls) {
-    if (lastShownAt === undefined) {
-      setLastShownAt(calls[0]?.calledAt ?? null);
+    if (lastShownId === undefined) {
+      setLastShownId(calls[0]?.id ?? null);
     } else {
-      // By time, so a read older than the last one shown adds nothing.
-      const newCalls = callsAfter(calls, lastShownAt);
+      // By id, so a read older than the last one shown adds nothing.
+      const newCalls = callsAfter(calls, lastShownId);
       const newest = newCalls.at(-1);
       if (newest) {
         setBubbles([...bubbles, ...newCalls].slice(-OPACITIES.length));
-        setLastShownAt(newest.calledAt);
+        setLastShownId(newest.id);
       }
     }
   }
@@ -40,7 +40,11 @@ export function AgentCallBubbles() {
   const [dotBox, setDotBox] = useState<DOMRect>();
   // The menu clips what overflows it, so the bubbles sit outside it, where the dot is now.
   useLayoutEffect(() => {
-    if (bubbles.length > 0) setDotBox(dot.current?.getBoundingClientRect());
+    if (bubbles.length === 0) return;
+    const measureDot = () => setDotBox(dot.current?.getBoundingClientRect());
+    measureDot();
+    window.addEventListener("resize", measureDot);
+    return () => window.removeEventListener("resize", measureDot);
   }, [bubbles]);
 
   return (

@@ -1,11 +1,12 @@
 /**
- * The calls made after `lastShownAt`, oldest first; `calls` is newest first. null means no call
- * existed when the bubbles started, so every call is new.
+ * The calls after the one last shown, oldest first; `calls` is newest first and ids grow with each
+ * call. null means no call existed when the bubbles started, so every call is new.
  */
-export function callsAfter<Call extends { calledAt: string }>(
+export function callsAfter<Call extends { id: string }>(
   calls: readonly Call[],
-  lastShownAt: string | null,
+  lastShownId: string | null,
 ): Call[] {
-  const after = lastShownAt === null ? -Infinity : Date.parse(lastShownAt);
-  return calls.filter(({ calledAt }) => Date.parse(calledAt) > after).reverse();
+  if (lastShownId === null) return calls.toReversed();
+  const lastShown = BigInt(lastShownId);
+  return calls.filter(({ id }) => BigInt(id) > lastShown).reverse();
 }
