@@ -108,3 +108,4 @@ How to write each kind of test is in [`testing.md`](testing.md).
 - **RULE76.** A code comment says why, never what the next lines do; code that is no longer used is deleted, not commented out.
 - **RULE49.** `thesaurus.md` gets a term only when it is Broccoli's own, not a well-known one such as job, model or mapping. A term names its context, so it reads alone (`Change author`, not `Author`).
 - **RULE50.** A change that needs a new architecture decision changes `architecture.md` in the same pull request.
+- **RULE77.** A module's `module.md` opens, after its one-paragraph summary, with JSON examples of its main flow: what comes in, the rows it writes and what goes out. Rules and the data model follow.
