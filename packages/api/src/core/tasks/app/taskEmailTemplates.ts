@@ -34,15 +34,10 @@ export function taskEmailTemplates({
   "tasks.task_assigned": TaskEmail<TaskAssignedValues>;
   "tasks.task_done": TaskEmail<TaskDoneValues>;
 } {
-  const readVisible = async (taskId: string, employeeId: string): Promise<Task | null> => {
-    const id = parseUuid(taskId);
-    const [task] = id ? await taskRepository(orm).findByIds([id]) : [];
-    return task?.isVisibleTo(employeeId) ? task : null;
-  };
   const assigned: TaskEmail<TaskAssignedValues> = {
     template: TASK_ASSIGNED_TEMPLATE,
     async readValues(taskId, recipientEmployeeId) {
-      const task = await readVisible(taskId, recipientEmployeeId);
+      const task = await readVisible(orm, taskId, recipientEmployeeId);
       if (!task) return null;
       const { id, title, description, dueDate, askedByEmployeeId } = task;
       const names = await readEmployeeNames(askedByEmployeeId ? [askedByEmployeeId] : []);
@@ -56,7 +51,7 @@ export function taskEmailTemplates({
   const done: TaskEmail<TaskDoneValues> = {
     template: TASK_DONE_TEMPLATE,
     async readValues(taskId, recipientEmployeeId) {
-      const task = await readVisible(taskId, recipientEmployeeId);
+      const task = await readVisible(orm, taskId, recipientEmployeeId);
       if (task?.status !== "done" || !task.doneAt || !task.doneByEmployeeId) return null;
       const doneByName = (await readEmployeeNames([task.doneByEmployeeId])).get(
         task.doneByEmployeeId,
@@ -69,4 +64,11 @@ export function taskEmailTemplates({
     },
   };
   return { "tasks.task_assigned": assigned, "tasks.task_done": done };
+}
+
+/** The task, if the employee holds it or asked for it. */
+async function readVisible(orm: Orm, taskId: string, employeeId: string): Promise<Task | null> {
+  const id = parseUuid(taskId);
+  const [task] = id ? await taskRepository(orm).findByIds([id]) : [];
+  return task?.isVisibleTo(employeeId) ? task : null;
 }

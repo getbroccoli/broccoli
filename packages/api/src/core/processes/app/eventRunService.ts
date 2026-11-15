@@ -129,6 +129,7 @@ async function queueAfterCommit(
       continue;
     }
     const { id, type, payload } = event;
+    // shortcut: one queue insert per event (~1 ms each, held in the change); batch them with pg-boss's insert when one change creates thousands of tasks.
     await jobs.send(tx, "processes.startRunsAfterCommit", {
       processId: process.id,
       versionId: process.activeVersion.id,
