@@ -7,8 +7,6 @@ enum TaskType {
 enum TaskStatus {
   "Its assignee can do it now."
   TO_DO
-  "It cannot be done until something else happens."
-  WAITING
   DONE
   "Stopped by the feature that created it, such as a process; the task keeps its reason."
   CANCELLED
@@ -42,7 +40,7 @@ enum RecordType {
 type MyTasks {
   "Tasks they hold to do, by due date."
   needsYou: [Task!]!
-  "Open tasks they asked someone else for, and their own waiting tasks."
+  "Open tasks they asked someone else for."
   waitingOnOthers: [Task!]!
   "Tasks they hold or asked for, done or cancelled in the last 14 days, newest first."
   resolvedRecently: [Task!]!

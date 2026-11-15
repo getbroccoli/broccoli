@@ -4,7 +4,6 @@ import { cn } from "@/lib/class-names";
 
 const TONE_DOT: Record<Status, string> = {
   TO_DO: "bg-amber-500",
-  WAITING: "bg-muted-foreground/40",
   DONE: "bg-brand",
   CANCELLED: "bg-muted-foreground/40",
 };

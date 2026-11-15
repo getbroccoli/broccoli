@@ -26,7 +26,7 @@ export function isLate(task: TaskRow, today: string): boolean {
 }
 
 export function isOpen(task: TaskRow): boolean {
-  return task.status === "TO_DO" || task.status === "WAITING";
+  return task.status === "TO_DO";
 }
 
 /** The one fact that decides a task, under its title; for your own to-do, what is asked, as Due has the date. */
@@ -38,7 +38,6 @@ export function taskFact(task: TaskRow, viewerId: string | null): string {
       : t("tasks.fact.doneBy", { name: personName(task.doneBy), date });
   }
   if (task.status === "CANCELLED") return t("tasks.fact.cancelled", { reason: task.cancelReason! });
-  if (task.status === "WAITING") return t("tasks.fact.waiting");
   if (task.assignee.id !== viewerId)
     return t("tasks.fact.heldBy", { name: personName(task.assignee) });
   return task.description ?? "";

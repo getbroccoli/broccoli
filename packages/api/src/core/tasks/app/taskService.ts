@@ -36,8 +36,6 @@ export interface TaskService {
    * change locks after it, such as its run.
    */
   lockInTransaction(tx: Tx, taskIds: readonly string[]): Promise<void>;
-  /** Trusted: puts a task to do on hold in `tx`, until what it waits for happens. */
-  markWaiting(ctx: SecurityContext, tx: Tx, taskId: string): Promise<Task>;
   /** The signed-in caller's tasks by where the ball is; all empty for a caller with no employee. */
   listMyTasks(ctx: SecurityContext): Promise<MyTasks>;
   /** A task the caller holds or asked for. */
@@ -102,17 +100,6 @@ export function createTaskService({
 
     async lockInTransaction(tx, taskIds) {
       await taskRepository(tx).lockByIds(taskIds);
-    },
-
-    async markWaiting(ctx, tx, taskId) {
-      const tasks = taskRepository(tx);
-      const task = await tasks.lockById(taskId);
-      if (!task) {
-        throw notFound();
-      }
-      const saved = await tasks.saveStatus(task.markWaiting());
-      await appendStatusChange(ctx, tx, task, saved);
-      return saved;
     },
 
     async listMyTasks(ctx) {

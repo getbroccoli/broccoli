@@ -7,7 +7,7 @@ export const RESOLVED_RECENTLY_DAYS = 14;
 export interface MyTasks {
   /** Tasks they hold to do: by due date, none last, then oldest first. */
   needsYou: Task[];
-  /** Open tasks they asked someone else for, and their own waiting tasks; oldest first. */
+  /** Open tasks they asked someone else for; oldest first. */
   waitingOnOthers: Task[];
   /** Tasks they hold or asked for, done or cancelled lately; newest first. */
   resolvedRecently: Task[];
@@ -24,14 +24,14 @@ export function groupMyTasks(tasks: readonly Task[], employeeId: string): MyTask
   return {
     needsYou: tasks.filter((task) => holds(task) && task.status === "to_do").sort(byDueDate),
     waitingOnOthers: tasks
-      .filter((task) => (holds(task) ? task.status === "waiting" : isOpen(task)))
+      .filter((task) => !holds(task) && isOpen(task))
       .sort(byCreation),
     resolvedRecently: tasks.filter((task) => !isOpen(task)).sort(byLatestClose),
   };
 }
 
 function isOpen(task: Task): boolean {
-  return task.status === "to_do" || task.status === "waiting";
+  return task.status === "to_do";
 }
 
 function byDueDate(a: Task, b: Task): number {
