@@ -26,14 +26,22 @@ Ids are shortened; columns are shown as rows are stored.
    ```json
    {
      "subject": { "recordType": "employee" },
-     "trigger": { "kind": "on_event", "event": "employees.added",
-       "run": "in_same_transaction", "faultMode": "rollback_transaction" },
+     "trigger": {
+       "kind": "on_event",
+       "event": "employees.added",
+       "run": "in_same_transaction",
+       "faultMode": "rollback_transaction"
+     },
      "startableByAdmin": false,
      "steps": [
-       { "key": "order_laptop", "kind": "task",
+       {
+         "key": "order_laptop",
+         "kind": "task",
          "assignee": { "kind": "subjects_manager", "otherwise": { "kind": "workspace_owner" } },
-         "title": "Order a laptop for {firstName}", "description": null,
-         "due": { "amount": 3, "unit": "business_days" } }
+         "title": "Order a laptop for {firstName}",
+         "description": null,
+         "due": { "amount": 3, "unit": "business_days" }
+       }
      ]
    }
    ```
@@ -64,8 +72,10 @@ Ids are shortened; columns are shown as rows are stored.
 4. The owner marks `t1` done with the ordinary task command, which publishes:
 
    ```json
-   { "type": "tasks.task_status_changed",
-     "payload": { "taskId": "t1", "from": "to_do", "to": "done", "byEmployeeId": "owner" } }
+   {
+     "type": "tasks.task_status_changed",
+     "payload": { "taskId": "t1", "from": "to_do", "to": "done", "byEmployeeId": "owner" }
+   }
    ```
 
 5. In the same transaction, processes completes the step and, with no step left open, finishes the run:
