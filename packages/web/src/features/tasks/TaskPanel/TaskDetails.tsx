@@ -114,11 +114,9 @@ export function TaskDetails({ task, onDeleted }: Props) {
             <section className="flex flex-col gap-1.5">
               <h3 className={SECTION_LABEL}>{t("tasks.panel.ifDone")}</h3>
               <p>
-                {task.status === "WAITING"
-                  ? t("tasks.panel.waitingNote")
-                  : task.askedBy && !asked
-                    ? t("tasks.panel.ifDoneAsker", { name: task.askedBy.firstName })
-                    : t("tasks.panel.ifDoneNobody")}
+                {task.askedBy && !asked
+                  ? t("tasks.panel.ifDoneAsker", { name: task.askedBy.firstName })
+                  : t("tasks.panel.ifDoneNobody")}
               </p>
             </section>
           )}

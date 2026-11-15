@@ -1,41 +1,37 @@
 import { expect, signedIn, taskService, test } from "#test/support";
 
-test.for(["to_do", "waiting"] as const)(
-  "lets the asker delete a %s task for both people",
-  async (status, { orm, seed }) => {
-    const assignee = await seed.employee();
-    const asker = await seed.employee();
-    const task = await seed.task({
-      assigneeEmployeeId: assignee.id,
-      askedByEmployeeId: asker.id,
-      status,
-    });
-    const assigneeCtx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
-    const askerCtx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
-    const tasks = taskService(orm);
+test("lets the asker delete a task to do for both people", async ({ orm, seed }) => {
+  const assignee = await seed.employee();
+  const asker = await seed.employee();
+  const task = await seed.task({
+    assigneeEmployeeId: assignee.id,
+    askedByEmployeeId: asker.id,
+  });
+  const assigneeCtx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
+  const askerCtx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
+  const tasks = taskService(orm);
 
-    expect(await tasks.deleteTask(askerCtx, task.id)).toEqual({ deletedTaskId: task.id });
+  expect(await tasks.deleteTask(askerCtx, task.id)).toEqual({ deletedTaskId: task.id });
 
-    await expect(tasks.readTask(askerCtx, task.id)).rejects.toMatchObject({
-      code: "NOT_FOUND",
-      message: "No task has this id.",
-    });
-    await expect(tasks.readTask(assigneeCtx, task.id)).rejects.toMatchObject({
-      code: "NOT_FOUND",
-      message: "No task has this id.",
-    });
-    expect(await tasks.listMyTasks(askerCtx)).toEqual({
-      needsYou: [],
-      waitingOnOthers: [],
-      resolvedRecently: [],
-    });
-    expect(await tasks.listMyTasks(assigneeCtx)).toEqual({
-      needsYou: [],
-      waitingOnOthers: [],
-      resolvedRecently: [],
-    });
-  },
-);
+  await expect(tasks.readTask(askerCtx, task.id)).rejects.toMatchObject({
+    code: "NOT_FOUND",
+    message: "No task has this id.",
+  });
+  await expect(tasks.readTask(assigneeCtx, task.id)).rejects.toMatchObject({
+    code: "NOT_FOUND",
+    message: "No task has this id.",
+  });
+  expect(await tasks.listMyTasks(askerCtx)).toEqual({
+    needsYou: [],
+    waitingOnOthers: [],
+    resolvedRecently: [],
+  });
+  expect(await tasks.listMyTasks(assigneeCtx)).toEqual({
+    needsYou: [],
+    waitingOnOthers: [],
+    resolvedRecently: [],
+  });
+});
 
 test("refuses deletion by the assignee who did not ask for the task", async ({ orm, seed }) => {
   const assignee = await seed.employee();

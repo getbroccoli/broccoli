@@ -111,9 +111,9 @@ test("fills Oliver's tasks with two to do and two waiting on others", async ({ o
   expect(tasks.waitingOnOthers).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
-        assigneeEmployeeId: oliver.id,
-        askedByEmployeeId: james.id,
-        status: "waiting",
+        assigneeEmployeeId: james.id,
+        askedByEmployeeId: oliver.id,
+        status: "to_do",
       }),
       expect.objectContaining({
         assigneeEmployeeId: priya.id,

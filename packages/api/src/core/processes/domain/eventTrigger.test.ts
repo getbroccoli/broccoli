@@ -46,7 +46,7 @@ test.each([
     accepted: ["done", "cancelled"],
     matches: true,
   },
-  { payload: { taskId: "task-1", to: "waiting" }, accepted: ["done", "cancelled"], matches: false },
+  { payload: { taskId: "task-1", to: "to_do" }, accepted: ["done", "cancelled"], matches: false },
   { payload: { taskId: "task-1", to: null }, accepted: ["done"], matches: false },
   { payload: { taskId: "task-1" }, accepted: ["done"], matches: false },
   { payload: { taskId: "task-1", to: null }, accepted: [null], matches: true },

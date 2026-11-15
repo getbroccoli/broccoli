@@ -20,8 +20,8 @@ it("formats an ISO date-time using its local calendar day", () => {
   expect(formatTaskDay(dateTime)).toBe("Tue 10 Nov");
 });
 
-it.each(["TO_DO", "WAITING"] as const)("marks a %s task due before today as late", (status) => {
-  const task = taskWith({ status, dueDate: "2026-11-09" });
+it("marks a task to do due before today as late", () => {
+  const task = taskWith({ dueDate: "2026-11-09" });
 
   expect(isLate(task, "2026-11-10")).toBe(true);
 });
@@ -84,12 +84,6 @@ it("shows why a task was cancelled", () => {
   });
 
   expect(taskFact(task, assignee.id)).toBe("Cancelled: No longer needed");
-});
-
-it("shows that a task is waiting even when it is overdue", () => {
-  const task = taskWith({ status: "WAITING", dueDate: "2026-11-09" });
-
-  expect(taskFact(task, assignee.id)).toBe("Waiting");
 });
 
 it("names the assignee when someone else holds an open task", () => {

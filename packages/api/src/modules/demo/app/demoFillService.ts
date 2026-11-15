@@ -29,7 +29,7 @@ export function createDemoFillService({
   tasks,
 }: {
   timeOff: Pick<TimeOffService, "turnOnTimeOff">;
-  tasks: Pick<TaskService, "createTask" | "markWaiting">;
+  tasks: Pick<TaskService, "createTask">;
 }): DemoFillService {
   async function turnOnDemoTimeOff(ctx: SecurityContext, tx: Tx) {
     await timeOff.turnOnTimeOff(ctx, tx, {
@@ -74,20 +74,17 @@ export function createDemoFillService({
 async function addDemoTasks(
   ctx: SecurityContext,
   tx: Tx,
-  tasks: Pick<TaskService, "createTask" | "markWaiting">,
+  tasks: Pick<TaskService, "createTask">,
   demo: readonly DemoTask[],
   idsByEmail: ReadonlyMap<string, string>,
 ) {
-  for (const { assigneeEmail, askedByEmail, isWaiting, ...task } of demo) {
-    const created = await tasks.createTask(ctx, tx, {
+  for (const { assigneeEmail, askedByEmail, ...task } of demo) {
+    await tasks.createTask(ctx, tx, {
       ...task,
       type: "manual_to_do",
       assigneeEmployeeId: idsByEmail.get(assigneeEmail)!,
       askedByEmployeeId: idsByEmail.get(askedByEmail)!,
     });
-    if (isWaiting) {
-      await tasks.markWaiting(ctx, tx, created.id);
-    }
   }
 }
 

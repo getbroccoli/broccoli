@@ -24,17 +24,15 @@ export const TASK_DESCRIPTION: RecordDescription = {
   ],
 };
 
-/** "marked it done", "cancelled it" or "put it on hold". */
+/** "marked it done" or "cancelled it". */
 function statusChangeSentence(newValue: string | null): string | null {
   if (newValue === "done") return t("tasks.history.markedDone");
   if (newValue === "cancelled") return t("tasks.history.cancelled");
-  if (newValue === "waiting") return t("tasks.history.waiting");
   return null;
 }
 
 const STATUS_LABELS: Partial<Record<string, string>> = {
   to_do: t("tasks.status.TO_DO"),
-  waiting: t("tasks.status.WAITING"),
   done: t("tasks.status.DONE"),
   cancelled: t("tasks.status.CANCELLED"),
 };

@@ -213,24 +213,6 @@ test("marking a task done starts a process carrying the person who acted", async
   ]);
 });
 
-test("marking a task waiting does not start a done-or-cancelled process", async ({ orm, seed }) => {
-  const assignee = await seed.employee();
-  const task = await seed.task({ assigneeEmployeeId: assignee.id, askedByEmployeeId: assignee.id });
-  const definition = eventProcess("tasks.task_status_changed", {
-    field: "to",
-    in: ["done", "cancelled"],
-  });
-  const { key } = await seedProcess(orm, { key: "follow_up", definition });
-  const transact = transactWithProcesses(orm, { today });
-  const tasks = taskService(orm, { transact });
-  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
-
-  await transact((tx) => tasks.markWaiting(ctx, tx, task.id));
-
-  expect((await tasks.readTask(ctx, task.id)).status).toBe("waiting");
-  expect(await processService(orm).listRuns(ADMIN, key)).toEqual([]);
-});
-
 test("a run's tasks start another process in the same transaction", async ({ orm }) => {
   const first = await seedProcess(orm, {
     key: "welcome",

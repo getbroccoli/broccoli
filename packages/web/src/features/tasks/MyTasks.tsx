@@ -10,7 +10,6 @@ import { t } from "@/i18n";
 import { calendarDayOf } from "@/lib/calendarDay";
 import { cn } from "@/lib/class-names";
 
-import { TaskStatus } from "./TaskStatus";
 import { dueText, isLate, isOpen, taskFact, taskSource, type TaskRow } from "./taskText";
 import { useTaskActions } from "./useTaskActions";
 
@@ -91,11 +90,6 @@ export function MyTasks() {
             {dueText(task, today)}
           </span>
         ),
-    },
-    {
-      id: "where",
-      header: t("tasks.column.where"),
-      cell: ({ task }) => <TaskStatus status={task.status} />,
     },
     {
       id: "act",

@@ -5,7 +5,7 @@ A task is work asked of one person, its assignee: by a person who asked (`manual
 ## Rules
 
 - A task asks for work and never grants authority. A feature creates its tasks with `TaskService.createTasks` in its own transaction, passing an unstored `sourceKey` that `tasks.task_created` publishes.
-- Statuses: `to_do`, `waiting`, `done` and `cancelled`; done and cancelled are final. Only the assignee marks a to-do done, whatever created it; a feature follows from `tasks.task_status_changed` before the commit. Only the person who asked deletes an open task. Only the feature that created a task cancels it, with a reason its assignee reads (`cancelInTransaction`).
+- Statuses: `to_do`, `done` and `cancelled`; done and cancelled are final. Only the assignee marks a to-do done, whatever created it; a feature follows from `tasks.task_status_changed` before the commit. Only the person who asked deletes an open task. Only the feature that created a task cancels it, with a reason its assignee reads (`cancelInTransaction`).
 - The first change wins: each change locks the task's row, so a second Mark done gets "This task is already done."
 - Every change appends a history line for record type `task`, in its transaction, and returns it. Tasks register their own reading rule with core's records: `recordHistory` and `Task.history` serve a task's lines to its assignee and the person who asked, and refuse anyone else.
 - Deleting the assignee or the person who asked deletes the task; deleting the person it is about or who finished it leaves it, without them. Reset setup and Exit demo forget the tasks' history. A deleted task's history line records its deletion.
@@ -16,4 +16,4 @@ A task is work asked of one person, its assignee: by a person who asked (`manual
 
 ## My tasks
 
-`TaskService.listMyTasks` groups the caller's tasks by where the ball is: **Needs you** (tasks they hold to do, by due date), **Waiting on others** (open tasks they asked someone else for, and their own waiting tasks) and **Resolved recently** (done or cancelled in the last 14 days, newest first).
+`TaskService.listMyTasks` groups the caller's tasks by where the ball is: **Needs you** (tasks they hold to do, by due date), **Waiting on others** (open tasks they asked someone else for) and **Resolved recently** (done or cancelled in the last 14 days, newest first).
