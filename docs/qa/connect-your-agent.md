@@ -43,6 +43,8 @@ A manual check of connecting a person's own agent over MCP against a development
 - [ ] A refused call (such as `find_people` with an invalid `after`) shows "Searched people" with a grey "Refused" badge.
 - [ ] More calls than fit scroll inside the list, which stops at about 340 px; the page itself does not grow.
 - [ ] Reloading the page starts the list empty again: only calls made while the page is open show.
+- [ ] "Show history" adds, in the same box, a sticky "Earlier · last 30 days" divider and the calls from before the page opened: date and time, label, a "Refused" or "Didn’t work" badge when not answered, and the agent's name. Calls of an agent that was disconnected or replaced since show with its name.
+- [ ] With more than 30 earlier calls, scrolling to the end of the box loads the next ones; "Hide history" removes the earlier lines and keeps the live ones.
 - [ ] Under reduced motion (DevTools rendering, `prefers-reduced-motion: reduce`), new lines appear without sliding, flashing or the Live dot pulsing.
 - [ ] "Disconnect", then "Disconnect" in the confirm, shows "You disconnected Claude Code."; the agent's next call is refused.
 - [ ] After a password reset by email and signing in again, the page says the agent was disconnected when the password was reset.

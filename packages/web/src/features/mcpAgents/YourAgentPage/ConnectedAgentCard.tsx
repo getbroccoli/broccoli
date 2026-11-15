@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
 import { AgentActivity } from "./AgentActivity";
+import { dateAndTimeOf } from "./dateAndTime";
 import { AgentWelcome } from "./AgentWelcome";
 import { DisconnectAgentDialog } from "./DisconnectAgentDialog";
 import { timeAgo } from "./timeAgo";
@@ -73,15 +74,4 @@ export function ConnectedAgentCard({ connection, openedAt, personName }: Props) 
       />
     </div>
   );
-}
-
-const dateAndTime = new Intl.DateTimeFormat("en-GB", {
-  day: "numeric",
-  month: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-});
-
-function dateAndTimeOf(dateTime: string): string {
-  return dateAndTime.format(new Date(dateTime));
 }

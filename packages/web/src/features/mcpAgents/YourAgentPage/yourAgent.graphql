@@ -50,3 +50,23 @@ query YourAgentActivity {
     }
   }
 }
+
+# Not refetched on live nudges, which would drop the pages already loaded.
+query YourAgentActivityHistory($after: String) {
+  myAgentActivity(first: 30, after: $after) {
+    edges {
+      node {
+        id
+        clientName
+        tool
+        outcome
+        resultCount
+        calledAt
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}

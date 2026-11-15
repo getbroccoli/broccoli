@@ -1,0 +1,95 @@
+import { useQuery } from "@apollo/client/react";
+import { useEffect, useRef, useState } from "react";
+
+import { YourAgentActivityHistoryDocument } from "@/__generated__/graphql";
+import { t } from "@/i18n";
+
+import { labelOf } from "../agentActivityLabel";
+import { OutcomeBadge } from "./AgentActivityLine";
+import { dateAndTimeOf } from "./dateAndTime";
+
+type Props = {
+  /** The lines the live list already shows, left out here. */
+  liveIds: ReadonlySet<string>;
+};
+
+/**
+ * The person's earlier agent calls of the last 30 days, of every agent they connected, newest
+ * first; the next page loads as the person scrolls to the end.
+ */
+export function AgentActivityHistory({ liveIds }: Props) {
+  const { data, error, fetchMore } = useQuery(YourAgentActivityHistoryDocument, {
+    fetchPolicy: "network-only",
+  });
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreFailed, setMoreFailed] = useState(false);
+  const history = data?.myAgentActivity;
+  const lines = history?.edges.map(({ node }) => node).filter(({ id }) => !liveIds.has(id));
+  const endCursor = history?.pageInfo.hasNextPage ? history.pageInfo.endCursor : null;
+
+  const end = useRef<HTMLDivElement>(null);
+
+  // Loads the next page whenever the end of the list scrolls into view.
+  useEffect(() => {
+    const element = end.current;
+    if (!element || !endCursor || loadingMore || moreFailed) return;
+    const loadMore = async () => {
+      setLoadingMore(true);
+      try {
+        await fetchMore({
+          variables: { after: endCursor },
+          updateQuery: (current, { fetchMoreResult }) => ({
+            myAgentActivity: {
+              ...fetchMoreResult.myAgentActivity,
+              edges: [...current.myAgentActivity.edges, ...fetchMoreResult.myAgentActivity.edges],
+            },
+          }),
+        });
+      } catch {
+        setMoreFailed(true);
+      } finally {
+        setLoadingMore(false);
+      }
+    };
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry?.isIntersecting) void loadMore();
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [endCursor, fetchMore, loadingMore, moreFailed]);
+
+  return (
+    <>
+      <div className="sticky top-0 border-y bg-muted px-4 py-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        {t("mcpAgents.activity.earlier")}
+      </div>
+      {lines && lines.length > 0 && (
+        <ol className="divide-y bg-muted/40">
+          {lines.map((line) => (
+            <li key={line.id} className="flex items-center gap-3 px-4 py-2 text-[13px]">
+              <span className="w-28 shrink-0 text-muted-foreground tabular-nums">
+                {dateAndTimeOf(line.calledAt)}
+              </span>
+              <span className="min-w-0 flex-1">{labelOf(line)}</span>
+              <OutcomeBadge outcome={line.outcome} />
+              <span className="w-28 shrink-0 truncate text-right text-muted-foreground">
+                {line.clientName ?? t("mcpAgents.unnamedClient")}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+      {lines?.length === 0 && !endCursor && (
+        <p className="px-4 py-2 text-[13px] text-muted-foreground">
+          {t("mcpAgents.activity.noEarlier")}
+        </p>
+      )}
+      {(error || moreFailed) && (
+        <p className="px-4 py-2 text-[13px] text-muted-foreground">
+          {t("mcpAgents.activity.historyFailed")}
+        </p>
+      )}
+      <div ref={end} aria-hidden className="h-px" />
+    </>
+  );
+}
