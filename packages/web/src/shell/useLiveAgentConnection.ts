@@ -2,12 +2,17 @@
 import { useApolloClient } from "@apollo/client/react";
 import { useEffect } from "react";
 
-/** The open queries that show the person's agent connection. */
-const AGENT_CONNECTION_QUERIES = new Set(["YourAgent", "LeftNavAgentConnection"]);
+/** The open queries that show the person's agent connection and what their agent does. */
+const AGENT_CONNECTION_QUERIES = new Set([
+  "YourAgent",
+  "YourAgentActivity",
+  "LeftNavAgentConnection",
+]);
 
 /**
  * Keeps the person's agent connection current while they are signed in: the server nudges this
- * tab when their agent connects or a connection ends, and the open queries that show it read again.
+ * tab when their agent connects, a connection ends or the agent calls a tool, and the open
+ * queries that show it read again.
  * They read again each time the stream opens too, for a change made while it was not yet or no
  * longer open; the browser reopens a dropped stream by itself.
  */
