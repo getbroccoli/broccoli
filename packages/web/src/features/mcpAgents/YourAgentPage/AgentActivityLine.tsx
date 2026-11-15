@@ -4,7 +4,7 @@ import type { AgentActivityOutcome, YourAgentActivityQuery } from "@/__generated
 import { cn } from "@/lib/class-names";
 import { type MessageKey, t } from "@/i18n";
 
-import { labelOf } from "../agentActivityLabel";
+import { agentActivityLabel } from "../agentActivityLabel";
 import { timeAgo } from "./timeAgo";
 
 type Props = {
@@ -19,7 +19,7 @@ export function AgentActivityLine({ line }: Props) {
       <span className={cn("grid size-7 shrink-0 place-items-center rounded-lg", tile)}>
         <Icon size={14} weight="bold" aria-hidden />
       </span>
-      <span className="min-w-0 flex-1 text-sm">{labelOf(line)}</span>
+      <span className="min-w-0 flex-1 text-sm">{agentActivityLabel(line)}</span>
       {badge && (
         <span
           className={cn(

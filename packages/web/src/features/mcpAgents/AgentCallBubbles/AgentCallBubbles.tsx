@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { AgentCallBubblesDocument, type AgentCallBubblesQuery } from "@/__generated__/graphql";
 import { cn } from "@/lib/class-names";
 
-import { labelOf } from "../agentActivityLabel";
+import { agentActivityLabel } from "../agentActivityLabel";
 import "./agentCallBubbles.css";
 import { callsAfter } from "./callsAfter";
 
@@ -76,7 +76,7 @@ export function AgentCallBubbles() {
                       setBubbles((shown) => shown.filter(({ id }) => id !== call.id))
                     }
                   >
-                    {labelOf(call)}
+                    {agentActivityLabel(call)}
                   </span>
                 </span>
               );

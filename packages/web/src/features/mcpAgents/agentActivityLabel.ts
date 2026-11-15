@@ -3,7 +3,7 @@ import { t } from "@/i18n";
 type AgentCall = { tool: string; resultCount?: number | null };
 
 /** What the agent did, in the person's words; never what it read or asked. */
-export function labelOf({ tool, resultCount }: AgentCall): string {
+export function agentActivityLabel({ tool, resultCount }: AgentCall): string {
   switch (tool) {
     case "who_am_i":
       return t("mcpAgents.activity.whoAmI");
