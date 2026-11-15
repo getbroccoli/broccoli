@@ -5,13 +5,6 @@ import type { Notifications } from "./app";
 export { createNotifications } from "./app";
 
 // Public types.
-export type {
-  NotificationEmailContext,
-  NotificationEmailTemplateRegistration,
-  NotificationEmailTemplateRegistrations,
-  Notifications,
-  NotifyParams,
-} from "./app";
 export type { NotificationPeoplePort } from "./ports";
 
 /** Telling people about their records: the notify action process steps run, and its email. */
