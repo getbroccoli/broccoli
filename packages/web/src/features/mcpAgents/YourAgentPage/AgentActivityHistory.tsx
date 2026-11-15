@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { YourAgentActivityHistoryDocument } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 
-import { labelOf } from "../agentActivityLabel";
+import { agentActivityLabel } from "../agentActivityLabel";
 import { dateAndTime } from "./dateAndTime";
 import { OutcomeBadge } from "./OutcomeBadge";
 
@@ -72,7 +72,7 @@ export function AgentActivityHistory({ openedAt }: Props) {
               <span className="w-24 shrink-0 text-muted-foreground tabular-nums">
                 {dateAndTime(line.calledAt)}
               </span>
-              <span className="min-w-40 flex-1">{labelOf(line)}</span>
+              <span className="min-w-40 flex-1">{agentActivityLabel(line)}</span>
               <OutcomeBadge outcome={line.outcome} />
               <span className="ml-auto max-w-28 shrink-0 truncate text-right text-muted-foreground">
                 {line.clientName ?? t("mcpAgents.unnamedClient")}
