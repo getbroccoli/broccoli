@@ -40,10 +40,13 @@ export {
   createLocationService,
   createOwnWorkingWeekService,
   createTermsService,
+  EMPLOYEE_TRIGGERING_EVENTS,
   employeeDirectory,
   employeeNotFound,
+  employeeRecordType,
   termsRecordType,
 } from "./app";
+export { createPeopleAdapter, createWorkingCalendarsAdapter } from "./adapters";
 export {
   cancelOwnChange,
   cancelPlannedVersion,

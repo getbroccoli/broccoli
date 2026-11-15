@@ -18,21 +18,24 @@ import { TASK_DESCRIPTION } from "../taskDescription";
 import { TaskStatus } from "../TaskStatus";
 import { formatTaskDay, isOpen, personName, taskSource, type TaskRow } from "../taskText";
 import { useTaskActions } from "../useTaskActions";
-import { CancelTaskDialog } from "./CancelTaskDialog";
+import { DeleteTaskDialog } from "./DeleteTaskDialog";
 import { PanelCloseButton } from "./PanelCloseButton";
 
-type Props = { task: TaskRow };
+type Props = {
+  task: TaskRow;
+  /** Closes the panel once the task is deleted. */
+  onDeleted: () => void;
+};
 
 /** A loaded task: what is asked and by whom on the left, what acting does and where it came from on the right. */
-export function TaskDetails({ task }: Props) {
+export function TaskDetails({ task, onDeleted }: Props) {
   const { me } = useRouteContext({ from: "/_authenticated" });
   const viewerId = me.employee?.id ?? null;
   const actions = useTaskActions();
-  const [cancelling, setCancelling] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const holds = task.assignee.id === viewerId;
   const asked = task.askedBy?.id === viewerId;
-  const canReopen = holds && task.status === "DONE";
-  const canCancel = asked && isOpen(task);
+  const canDelete = asked && isOpen(task);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -69,7 +72,7 @@ export function TaskDetails({ task }: Props) {
             {t("tasks.markDone")}
           </Button>
         )}
-        {(canReopen || canCancel) && (
+        {canDelete && (
           <DropdownMenu>
             <DropdownMenuTrigger
               render={<Button variant="ghost" size="icon" aria-label={t("tasks.more")} />}
@@ -77,16 +80,9 @@ export function TaskDetails({ task }: Props) {
               <DotsThree weight="bold" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {canReopen && (
-                <DropdownMenuItem onClick={() => void actions.reopen(task.id)}>
-                  {t("tasks.reopen")}
-                </DropdownMenuItem>
-              )}
-              {canCancel && (
-                <DropdownMenuItem onClick={() => setCancelling(true)}>
-                  {t("tasks.cancel")}
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem onClick={() => setDeleting(true)}>
+                {t("tasks.delete")}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
@@ -150,12 +146,16 @@ export function TaskDetails({ task }: Props) {
           </section>
         </aside>
       </div>
-      <CancelTaskDialog
-        open={cancelling}
-        onOpenChange={setCancelling}
+      <DeleteTaskDialog
+        open={deleting}
+        onOpenChange={setDeleting}
         assigneeName={task.assignee.firstName}
         isPending={actions.isPending}
-        onCancel={(reason) => actions.cancel(task.id, reason)}
+        onDelete={async () => {
+          const deleted = await actions.delete(task.id);
+          if (deleted) onDeleted();
+          return deleted;
+        }}
       />
     </div>
   );

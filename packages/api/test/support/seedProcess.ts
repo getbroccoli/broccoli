@@ -1,6 +1,6 @@
 import type { Orm } from "../../src/core/db";
-import { processRepository } from "../../src/modules/processes/db";
-import type { ProcessDefinition } from "../../src/modules/processes/domain";
+import { processRepository } from "../../src/core/processes/db";
+import type { ProcessDefinition } from "../../src/core/processes/domain";
 import { testTransactor } from "./testTransactor";
 
 /** A process with its first published version active, without invoking use cases or events. */
@@ -41,15 +41,16 @@ export function eventProcess(
       faultMode: "rollback_transaction",
       ...(when && { when }),
     },
-    startableByAdmin: false,
     steps: [
       {
         key: "follow_up",
         kind: "task",
-        title: "Follow up",
-        description: null,
-        assignee: { kind: "subject" },
-        due: { amount: 0, unit: "calendar_days" },
+        task: {
+          title: "Follow up",
+          description: null,
+          assignee: { kind: "subject" },
+          due: { amount: 0, unit: "calendar_days" },
+        },
       },
     ],
   };

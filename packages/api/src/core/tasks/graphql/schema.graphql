@@ -1,0 +1,90 @@
+"What created a task; every task is finished with Mark done. Features that create tasks add their own."
+enum TaskType {
+  "Asked by a person, who may delete it while it is open."
+  MANUAL_TO_DO
+}
+
+enum TaskStatus {
+  "Its assignee can do it now."
+  TO_DO
+  "It cannot be done until something else happens."
+  WAITING
+  DONE
+  "Stopped by the feature that created it, such as a process; the task keeps its reason."
+  CANCELLED
+}
+
+"Work asked of one person. Only its assignee and the person who asked see it and its history."
+type Task implements AnyRecord {
+  id: ID!
+  type: TaskType!
+  status: TaskStatus!
+  title: String!
+  description: String
+  dueDate: Date
+  doneAt: DateTime
+  cancelledAt: DateTime
+  "Why the feature that created it cancelled it."
+  cancelReason: String
+  createdAt: DateTime!
+  "Changes to this task, newest first."
+  history("Page size, 1 to 10000." first: Int = 50, after: String): RecordChangeConnection!
+  "Always read-only: a task changes through its own actions."
+  access: RecordAccess!
+}
+
+# Adds the task to the shared list of record types that keep history; the server merges them.
+enum RecordType {
+  TASK
+}
+
+"The signed-in person's tasks, by where the ball is."
+type MyTasks {
+  "Tasks they hold to do, by due date."
+  needsYou: [Task!]!
+  "Open tasks they asked someone else for, and their own waiting tasks."
+  waitingOnOthers: [Task!]!
+  "Tasks they hold or asked for, done or cancelled in the last 14 days, newest first."
+  resolvedRecently: [Task!]!
+}
+
+type Query {
+  myTasks: MyTasks!
+  "A task the caller holds or asked for; null for any other."
+  task(id: ID!): Task
+}
+
+input TaskMarkDoneInput {
+  id: ID!
+}
+
+input TaskDeleteInput {
+  id: ID!
+}
+
+"The task after a change, or why it was refused."
+type TaskPayload {
+  task: Task
+  "The line the change added to the task's history."
+  historyLine: RecordChange
+  error: TaskError
+}
+
+"The deleted task's id, or why it was refused."
+type TaskDeletePayload {
+  deletedTaskId: ID
+  error: TaskError
+}
+
+union TaskError = InvalidInputError | NotFoundError | ConflictError
+
+type TasksMutations {
+  "The assignee finishes a task to do, whatever created it."
+  markDone(input: TaskMarkDoneInput!): TaskPayload!
+  "The person who asked deletes an open task, with its place in everyone's tasks."
+  delete(input: TaskDeleteInput!): TaskDeletePayload!
+}
+
+type Mutation {
+  tasks: TasksMutations!
+}

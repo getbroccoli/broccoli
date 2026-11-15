@@ -5,8 +5,7 @@ import { t } from "@/i18n";
 export const TASK_DESCRIPTION: RecordDescription = {
   titleField: "title",
   createdAs: { EDITED_DIRECTLY: "tasks.history.created" },
-  changedAs: ({ field, oldValue, newValue }) =>
-    field === "status" ? statusChangeSentence(oldValue, newValue) : null,
+  changedAs: ({ field, newValue }) => (field === "status" ? statusChangeSentence(newValue) : null),
   fields: [
     {
       key: "title",
@@ -25,12 +24,11 @@ export const TASK_DESCRIPTION: RecordDescription = {
   ],
 };
 
-/** "marked it done", "reopened it", "cancelled it" or "put it on hold". */
-function statusChangeSentence(oldValue: string | null, newValue: string | null): string | null {
+/** "marked it done", "cancelled it" or "put it on hold". */
+function statusChangeSentence(newValue: string | null): string | null {
   if (newValue === "done") return t("tasks.history.markedDone");
   if (newValue === "cancelled") return t("tasks.history.cancelled");
   if (newValue === "waiting") return t("tasks.history.waiting");
-  if (newValue === "to_do" && oldValue === "done") return t("tasks.history.reopened");
   return null;
 }
 

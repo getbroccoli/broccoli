@@ -5,14 +5,12 @@ import {
   employeeServices,
   employeeInviteService,
   companyService,
-  taskService,
   mailSettings,
   importServices,
   systemService,
 } from "./services";
 import { recordCloneService } from "./recordCloneService";
 import { recordHistory } from "./statelessServices";
-import { signedIn } from "./signedIn";
 import { OWNER } from "./testSecurityContext";
 import { TEST_SECRET_BOX } from "./testSecretBox";
 import type { TestSeed } from "./testSeed";
@@ -167,21 +165,6 @@ export async function storedTextProbe(
       expected,
       act: () => service.update(OWNER, { name: value }),
       read: async () => (await service.getCompany(OWNER)).name,
-    };
-  }
-  if (entry === "task.cancelReason") {
-    const asker = await seed.employee();
-    const holder = await seed.employee();
-    const task = await seed.task({
-      askedByEmployeeId: asker.id,
-      assigneeEmployeeId: holder.id,
-    });
-    const ctx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
-    const service = taskService(orm);
-    return {
-      expected,
-      act: () => service.cancel(ctx, task.id, value),
-      read: async () => (await service.readTask(ctx, task.id)).cancelReason,
     };
   }
   if (entry === "invite.note") {

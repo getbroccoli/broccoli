@@ -4,7 +4,7 @@ import type { Tx } from "../../../core/db";
 import { PrincipalSecurityContext, type SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseRasterImage, type RasterImage, todayInUtc } from "../../../utils";
 import { createEmployeeSetupService } from "../../employees";
-import type { TaskService } from "../../tasks";
+import type { TaskService } from "../../../core/tasks";
 import type { TimeOffService } from "../../timeOff";
 import { type DemoTask, demoPeople, demoTasks } from "../domain";
 

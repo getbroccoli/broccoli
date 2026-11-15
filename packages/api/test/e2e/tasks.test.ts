@@ -137,6 +137,46 @@ test("refuses my tasks without a session", async ({ env }) => {
   });
 });
 
+test("the asker deletes a task over GraphQL and it disappears from the assignee's tasks", async ({
+  env,
+}) => {
+  await env.signInAsOwner();
+  const assigneeCredentials = { email: "assignee@example.com", password: TEST_OWNER.password };
+  const askerCredentials = { email: "asker@example.com", password: TEST_OWNER.password };
+  const assigneeUser = await env.seed.user(assigneeCredentials);
+  const askerUser = await env.seed.user(askerCredentials);
+  const assignee = await env.seed.employee({ userId: assigneeUser.id });
+  const asker = await env.seed.employee({ userId: askerUser.id });
+  const task = await env.seed.task({
+    assigneeEmployeeId: assignee.id,
+    askedByEmployeeId: asker.id,
+  });
+  const { browser: assigneeBrowser } = await env.signIn(assigneeCredentials);
+  const before = await assigneeBrowser.graphql("query { myTasks { needsYou { id } } }");
+  expect(await before.json()).toEqual({ data: { myTasks: { needsYou: [{ id: task.id }] } } });
+  const { browser } = await env.signIn(askerCredentials);
+
+  const deleted = await browser.graphql(
+    `mutation DeleteTask($id: ID!) {
+    tasks { delete(input: { id: $id }) {
+      deletedTaskId
+      error { __typename ... on NotFoundError { message } }
+    } }
+  }`,
+    { id: task.id },
+  );
+
+  expect(await deleted.json()).toEqual({
+    data: { tasks: { delete: { deletedTaskId: task.id, error: null } } },
+  });
+  const after = await assigneeBrowser.graphql(
+    "query { myTasks { needsYou { id } waitingOnOthers { id } resolvedRecently { id } } }",
+  );
+  expect(await after.json()).toEqual({
+    data: { myTasks: { needsYou: [], waitingOnOthers: [], resolvedRecently: [] } },
+  });
+});
+
 const MARK_DONE_WITH_HISTORY = `mutation MarkDone($id: ID!) {
   tasks { markDone(input: { id: $id }) {
     task { id history(first: 5) { edges { node { operation } } } }
