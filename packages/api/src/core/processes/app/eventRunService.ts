@@ -16,12 +16,6 @@ import {
 import type { RunSubject } from "../ports";
 import type { DefinitionReader, RunStarter } from "./runStarter";
 
-/** How many after-commit jobs in a row may start more: a loop of processes beyond it is a bug. */
-export const MAX_AFTER_COMMIT_HOPS = 10;
-
-/** What an after-commit job carries: one process version and the event that triggered it. */
-export type AfterCommitJob = Jobs["processes.startRunsAfterCommit"];
-
 /** Starts the runs that a transaction's events trigger, inside it or after it commits. */
 export interface EventRunService {
   /**
@@ -38,6 +32,9 @@ export interface EventRunService {
    */
   startRunsAfterCommit(ctx: SecurityContext, job: AfterCommitJob): Promise<void>;
 }
+
+/** What an after-commit job carries: one process version and the event that triggered it. */
+export type AfterCommitJob = Jobs["processes.startRunsAfterCommit"];
 
 interface EventRunDependencies {
   transact: Transact;
@@ -110,6 +107,9 @@ async function startRunsOf(
     throw error;
   }
 }
+
+/** How many after-commit jobs in a row may start more: a loop of processes beyond it is a bug. */
+const MAX_AFTER_COMMIT_HOPS = 10;
 
 /** One job per event, carrying the process's version; none past the hop limit, which is logged. */
 async function queueAfterCommit(
