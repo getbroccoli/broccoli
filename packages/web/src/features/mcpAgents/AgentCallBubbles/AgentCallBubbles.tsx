@@ -7,7 +7,7 @@ import { cn } from "@/lib/class-names";
 
 import { agentActivityLabel } from "../agentActivityLabel";
 import "./agentCallBubbles.css";
-import { callsAfter } from "./callsAfter";
+import { unshownCalls } from "./unshownCalls";
 
 type Call = AgentCallBubblesQuery["myAgentActivity"]["edges"][number]["node"];
 
@@ -20,18 +20,18 @@ export function AgentCallBubbles() {
     fetchPolicy: "network-only",
   }).data?.myAgentActivity.edges.map(({ node }) => node);
   // undefined until the first read; the calls it finds are from before and never show.
-  const [lastShownId, setLastShownId] = useState<string | null>();
+  const [startId, setStartId] = useState<string | null>();
+  // Each id once, as parallel calls may commit out of order.
+  const [shownIds, setShownIds] = useState<ReadonlySet<string>>(new Set());
   const [bubbles, setBubbles] = useState<Call[]>([]);
   if (calls) {
-    if (lastShownId === undefined) {
-      setLastShownId(calls[0]?.id ?? null);
+    if (startId === undefined) {
+      setStartId(calls[0]?.id ?? null);
     } else {
-      // By id, so a read older than the last one shown adds nothing.
-      const newCalls = callsAfter(calls, lastShownId);
-      const newest = newCalls.at(-1);
-      if (newest) {
+      const newCalls = unshownCalls(calls, startId, shownIds);
+      if (newCalls.length > 0) {
         setBubbles([...bubbles, ...newCalls].slice(-OPACITIES.length));
-        setLastShownId(newest.id);
+        setShownIds(new Set([...shownIds, ...newCalls.map(({ id }) => id)]));
       }
     }
   }
