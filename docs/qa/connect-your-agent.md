@@ -37,7 +37,13 @@ A manual check of connecting a person's own agent over MCP against a development
 - [ ] With Your agent open in two tabs, Disconnect in one turns the other to "You disconnected Claude Code." within a second.
 - [ ] With Your agent open, a password reset in another browser turns it to "Claude Code was disconnected when your password was reset." within a second.
 - [ ] After the network drops and comes back (DevTools offline, then online), a Disconnect made meanwhile shows without a reload.
-- [ ] Within an hour of connecting, the card opens with "Claude Code is connected. Nice."; × hides it. Each "Try asking" prompt's Copy copies it, and pasting it into a new session of the agent gets an answer (Codex loads Broccoli's tools only in a session started after login).
+- [ ] Within an hour of connecting, the card opens with "Claude Code is connected. Nice."; × hides it. Each "Try asking" chip copies its prompt, and pasting it into a new session of the agent gets an answer (Codex loads Broccoli's tools only in a session started after login).
+- [ ] Connected with no call since the page opened, "What Claude Code is doing" shows "Nothing yet. Ask Claude Code something and watch it happen here." with the prompt chips inside a dashed box.
+- [ ] With Your agent open and not focused, asking the agent "Who is my manager in Broccoli?" adds "Looked you up" at the top of the list within a second, sliding in with a brief green flash; a search adds "Searched people · N found", never the name searched for. Times tick ("12 seconds ago").
+- [ ] A refused call (such as `find_people` with an invalid `after`) shows "Searched people" with a grey "Refused" badge.
+- [ ] More calls than fit scroll inside the list, which stops at about 340 px; the page itself does not grow.
+- [ ] Reloading the page starts the list empty again: only calls made while the page is open show.
+- [ ] Under reduced motion (DevTools rendering, `prefers-reduced-motion: reduce`), new lines appear without sliding, flashing or the Live dot pulsing.
 - [ ] "Disconnect", then "Disconnect" in the confirm, shows "You disconnected Claude Code."; the agent's next call is refused.
 - [ ] After a password reset by email and signing in again, the page says the agent was disconnected when the password was reset.
 - [ ] At phone width the tabs scroll sideways, and the address and Copy stay on one line.
