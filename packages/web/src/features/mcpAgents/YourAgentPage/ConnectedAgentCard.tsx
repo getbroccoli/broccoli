@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
 import { AgentActivity } from "./AgentActivity";
-import { dateAndTimeOf } from "./dateAndTime";
+import { dateAndTime } from "./dateAndTime";
 import { AgentWelcome } from "./AgentWelcome";
 import { DisconnectAgentDialog } from "./DisconnectAgentDialog";
 import { timeAgo } from "./timeAgo";
@@ -52,7 +52,7 @@ export function ConnectedAgentCard({ connection, openedAt, personName }: Props) 
             <span className="text-xs text-muted-foreground">
               {t("mcpAgents.connected.since", {
                 name: personName,
-                date: dateAndTimeOf(connection.connectedAt),
+                date: dateAndTime(connection.connectedAt),
                 lastActive: timeAgo(connection.lastUsedAt),
               })}
             </span>

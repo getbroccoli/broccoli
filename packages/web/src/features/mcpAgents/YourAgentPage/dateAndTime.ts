@@ -1,4 +1,4 @@
-const dateAndTime = new Intl.DateTimeFormat("en-GB", {
+const DATE_AND_TIME = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "short",
   hour: "2-digit",
@@ -6,6 +6,6 @@ const dateAndTime = new Intl.DateTimeFormat("en-GB", {
 });
 
 /** A moment as "12 Nov, 14:25". */
-export function dateAndTimeOf(dateTime: string): string {
-  return dateAndTime.format(new Date(dateTime));
+export function dateAndTime(dateTime: string): string {
+  return DATE_AND_TIME.format(new Date(dateTime));
 }

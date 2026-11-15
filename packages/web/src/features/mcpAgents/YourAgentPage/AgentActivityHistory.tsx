@@ -5,8 +5,8 @@ import { YourAgentActivityHistoryDocument } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 
 import { labelOf } from "../agentActivityLabel";
-import { OutcomeBadge } from "./AgentActivityLine";
-import { dateAndTimeOf } from "./dateAndTime";
+import { dateAndTime } from "./dateAndTime";
+import { OutcomeBadge } from "./OutcomeBadge";
 
 type Props = {
   /** The lines the live list already shows, left out here. */
@@ -71,7 +71,7 @@ export function AgentActivityHistory({ liveIds }: Props) {
               className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-[13px]"
             >
               <span className="w-24 shrink-0 text-muted-foreground tabular-nums">
-                {dateAndTimeOf(line.calledAt)}
+                {dateAndTime(line.calledAt)}
               </span>
               {/* At phone width the badge and agent wrap under the label. */}
               <span className="min-w-40 flex-1">{labelOf(line)}</span>
