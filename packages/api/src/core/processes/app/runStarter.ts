@@ -152,7 +152,7 @@ export function createRunStarter({
       const subject = run.subjectEmployeeId
         ? ((await readPeople(tx, [run.subjectEmployeeId])).get(run.subjectEmployeeId) ?? null)
         : null;
-      return new Map(steps.map(({ key, title }) => [key, filled(title, subject)]));
+      return new Map(steps.map(({ key, task }) => [key, filled(task.title, subject)]));
     },
   };
 }
@@ -186,14 +186,16 @@ async function resolveAssignees(
       subjects_manager: subject ? (managersByDay.get(startDay)!.get(subject.id) ?? null) : null,
       workspace_owner: owner,
     };
-    return definition.steps.map((step) => resolveAssignee(step.assignee, candidates));
+    return definition.steps.map((step) => resolveAssignee(step.task.assignee, candidates));
   });
 }
 
 /** The subjects of runs with a step due in business days, which count their own working days. */
 function subjectsCountingBusinessDays(starts: readonly RunStart[]): string[] {
   const ids = starts.flatMap(({ definition, subject }) =>
-    subject && definition.steps.some(({ due }) => due.unit === "business_days") ? [subject.id] : [],
+    subject && definition.steps.some(({ task }) => task.due.unit === "business_days")
+      ? [subject.id]
+      : [],
   );
   return [...new Set(ids)];
 }
@@ -230,12 +232,13 @@ function newTasksOf({ run, start, assignees, isWorkingDay }: RunPlan): NewTask[]
       {
         type: PROCESS_STEP_TO_DO,
         sourceKey: start.process.key,
-        title: filled(step.title, start.subject),
-        description: step.description === null ? null : filled(step.description, start.subject),
+        title: filled(step.task.title, start.subject),
+        description:
+          step.task.description === null ? null : filled(step.task.description, start.subject),
         assigneeEmployeeId: assignee.employeeId,
         subjectEmployeeId: start.subject?.id ?? null,
         record: { recordType: run.recordType, recordId: run.recordId },
-        dueDate: addDayOffset(start.startDay, step.due, isWorkingDay),
+        dueDate: addDayOffset(start.startDay, step.task.due, isWorkingDay),
         cause: { kind: "PROCESS_RUN", ref: run.id },
       },
     ];

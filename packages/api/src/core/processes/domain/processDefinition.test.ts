@@ -63,7 +63,7 @@ test("refuses a trigger more than 366 calendar days after its date", () => {
 
 test("refuses a task due more than 366 calendar days before the start", () => {
   const definition = welcomeDefinition();
-  definition.steps[0]!.due.amount = -367;
+  definition.steps[0]!.task.due.amount = -367;
 
   expect(() => parseProcessDefinition(1, definition, catalog)).toThrow(
     "An offset of -367 calendar_days is beyond the limit of 366.",
@@ -81,7 +81,7 @@ test("refuses a trigger more than 260 business days before its date", () => {
 
 test("refuses a task due more than 260 business days after the start", () => {
   const definition = welcomeDefinition();
-  definition.steps[1]!.due.amount = 261;
+  definition.steps[1]!.task.due.amount = 261;
 
   expect(() => parseProcessDefinition(1, definition, catalog)).toThrow(
     "An offset of 261 business_days is beyond the limit of 260.",
@@ -91,15 +91,15 @@ test("refuses a task due more than 260 business days after the start", () => {
 test("accepts offsets at the calendar and business day limits", () => {
   const definition = welcomeDefinition();
   definition.trigger.offset.amount = -366;
-  definition.steps[0]!.due.amount = 366;
-  definition.steps[1]!.due.amount = 260;
+  definition.steps[0]!.task.due.amount = 366;
+  definition.steps[1]!.task.due.amount = 260;
 
   expect(parseProcessDefinition(1, definition, catalog)).toEqual(definition);
 });
 
 test("refuses an unknown assignee kind", () => {
   const definition = welcomeDefinition();
-  definition.steps[0]!.assignee.kind = "department";
+  definition.steps[0]!.task.assignee.kind = "department";
 
   expect(() => parseProcessDefinition(1, definition, catalog)).toThrow();
 });
@@ -210,18 +210,22 @@ function welcomeDefinition() {
       {
         key: "welcome_one_to_one",
         kind: "task",
-        assignee: { kind: "subjects_manager", otherwise: { kind: "workspace_owner" } },
-        title: "Have a welcome 1:1 with {firstName}",
-        description: "Welcome the new person.",
-        due: { amount: 0, unit: "calendar_days" },
+        task: {
+          assignee: { kind: "subjects_manager", otherwise: { kind: "workspace_owner" } },
+          title: "Have a welcome 1:1 with {firstName}",
+          description: "Welcome the new person.",
+          due: { amount: 0, unit: "calendar_days" },
+        },
       },
       {
         key: "coffee_calls",
         kind: "task",
-        assignee: { kind: "subject" },
-        title: "Have coffee calls with 3 colleagues",
-        description: "Meet the team.",
-        due: { amount: 5, unit: "business_days" },
+        task: {
+          assignee: { kind: "subject" },
+          title: "Have coffee calls with 3 colleagues",
+          description: "Meet the team.",
+          due: { amount: 5, unit: "business_days" },
+        },
       },
     ],
   };

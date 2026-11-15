@@ -102,16 +102,16 @@ INSERT INTO "process_versions" ("process_id", "version", "status", "definition_s
 		"trigger": { "kind": "on_record_date", "recordType": "employee", "dateField": "startDate",
 			"offset": { "amount": 0, "unit": "calendar_days" }, "maxDaysLate": 7 },
 		"steps": [
-			{ "key": "welcome_one_to_one", "kind": "task",
+			{ "key": "welcome_one_to_one", "kind": "task", "task": {
 				"assignee": { "kind": "subjects_manager", "otherwise": { "kind": "workspace_owner" } },
 				"title": "Have a welcome 1:1 with {firstName}",
 				"description": "Meet {firstName} on their first day: say hello, walk through their first week and answer their questions.",
-				"due": { "amount": 0, "unit": "calendar_days" } },
-			{ "key": "coffee_calls", "kind": "task",
+				"due": { "amount": 0, "unit": "calendar_days" } } },
+			{ "key": "coffee_calls", "kind": "task", "task": {
 				"assignee": { "kind": "subject" },
 				"title": "Have coffee calls with 3 colleagues",
 				"description": "Book three short calls with people outside your team to get to know them.",
-				"due": { "amount": 5, "unit": "business_days" } }
+				"due": { "amount": 5, "unit": "business_days" } } }
 		]
 	}'::jsonb FROM "processes" WHERE "key" = 'welcome_new_starter';--> statement-breakpoint
 UPDATE "processes" SET "active_version_id" = v."id" FROM "process_versions" v

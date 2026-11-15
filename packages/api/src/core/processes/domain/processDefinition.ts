@@ -47,10 +47,15 @@ export interface EventTrigger {
   faultMode: "rollback_transaction";
 }
 
-/** A step that gives one person a task; `title` and `description` may name `{firstName}`. */
+/** A step that gives one person a task. */
 export interface TaskStep {
   key: string;
   kind: "task";
+  task: StepTask;
+}
+
+/** The task a task step gives; `title` and `description` may name `{firstName}`. */
+export interface StepTask {
   assignee: AssigneeRule;
   title: string;
   description: string | null;
@@ -84,7 +89,7 @@ export function parseProcessDefinition(
   refuseSubjectOtherThanTrigger(parsed, catalog);
   refuseRepeatedStepKeys(parsed.steps);
   const triggerOffsets = parsed.trigger.kind === "on_record_date" ? [parsed.trigger.offset] : [];
-  for (const offset of [...triggerOffsets, ...parsed.steps.map(({ due }) => due)]) {
+  for (const offset of [...triggerOffsets, ...parsed.steps.map(({ task }) => task.due)]) {
     refuseOffsetBeyondLimit(offset);
   }
   return parsed;
@@ -192,10 +197,12 @@ const definitionSchema = z.object({
       z.object({
         key: z.string().trim().min(1),
         kind: z.literal("task"),
-        assignee: assigneeRuleSchema,
-        title: z.string().trim().min(1),
-        description: z.string().nullable().default(null),
-        due: offsetSchema,
+        task: z.object({
+          assignee: assigneeRuleSchema,
+          title: z.string().trim().min(1),
+          description: z.string().nullable().default(null),
+          due: offsetSchema,
+        }),
       }),
     )
     .min(1),

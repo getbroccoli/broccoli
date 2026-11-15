@@ -24,7 +24,7 @@ test("adding a person commits exactly one process run and a task for their manag
   });
   const manager = await seed.employee();
   const definition = eventProcess("employees.added");
-  definition.steps[0]!.assignee = { kind: "subjects_manager" };
+  definition.steps[0]!.task.assignee = { kind: "subjects_manager" };
   const { key } = await seedProcess(orm, { key: "welcome", definition });
   const transact = transactWithProcesses(orm, { today });
 
@@ -126,7 +126,7 @@ test("three events in one transaction start three runs", async ({ orm, seed }) =
 
 test("a run that cannot calculate its due date rolls back adding the person", async ({ orm }) => {
   const definition = eventProcess("employees.added");
-  definition.steps[0]!.due = { amount: 1, unit: "business_days" };
+  definition.steps[0]!.task.due = { amount: 1, unit: "business_days" };
   const { key } = await seedProcess(orm, { key: "welcome", definition });
   const transact = transactWithProcesses(orm, { today: () => calendarDate("2031-06-02") });
   const employees = employeeServices(orm, { transact });
@@ -268,7 +268,7 @@ test("a run's tasks start another process in the same transaction", async ({ orm
 test("two matching events start two runs when every step is skipped", async ({ orm, seed }) => {
   const employee = await seed.employee();
   const definition = eventProcess("employees.added");
-  definition.steps[0]!.assignee = { kind: "subjects_manager" };
+  definition.steps[0]!.task.assignee = { kind: "subjects_manager" };
   const { key } = await seedProcess(orm, { key: "welcome", definition });
   const transact = transactWithProcesses(orm, { today });
 

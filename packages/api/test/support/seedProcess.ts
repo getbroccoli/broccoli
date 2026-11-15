@@ -45,10 +45,12 @@ export function eventProcess(
       {
         key: "follow_up",
         kind: "task",
-        title: "Follow up",
-        description: null,
-        assignee: { kind: "subject" },
-        due: { amount: 0, unit: "calendar_days" },
+        task: {
+          title: "Follow up",
+          description: null,
+          assignee: { kind: "subject" },
+          due: { amount: 0, unit: "calendar_days" },
+        },
       },
     ],
   };

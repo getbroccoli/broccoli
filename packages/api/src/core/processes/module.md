@@ -23,10 +23,12 @@ Ids are shortened; columns are shown as rows are stored.
        {
          "key": "order_laptop",
          "kind": "task",
-         "assignee": { "kind": "subjects_manager", "otherwise": { "kind": "workspace_owner" } },
-         "title": "Order a laptop for {firstName}",
-         "description": null,
-         "due": { "amount": 3, "unit": "business_days" }
+         "task": {
+           "assignee": { "kind": "subjects_manager", "otherwise": { "kind": "workspace_owner" } },
+           "title": "Order a laptop for {firstName}",
+           "description": null,
+           "due": { "amount": 3, "unit": "business_days" }
+         }
        }
      ]
    }
