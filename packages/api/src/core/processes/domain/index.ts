@@ -21,7 +21,6 @@ export {
   type TaskStep,
   ONBOARDING_EXAMPLE,
   type StoredProcessDefinition,
-  taskStepsOf,
   WELCOME_NEW_STARTER,
 } from "./processDefinition";
 export {

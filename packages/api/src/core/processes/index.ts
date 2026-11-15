@@ -10,7 +10,6 @@ export { type IsWorkingDay, MAX_SEARCH_DAYS, workingDaysOf } from "./domain";
 
 // Public types.
 export type {
-  ActionContext,
   ProcessActionRegistration,
   ProcessActionRegistrations,
   ProcessActions,

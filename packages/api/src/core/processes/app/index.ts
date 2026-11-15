@@ -1,5 +1,4 @@
 export type {
-  ActionContext,
   ProcessActionRegistration,
   ProcessActionRegistrations,
   ProcessActions,

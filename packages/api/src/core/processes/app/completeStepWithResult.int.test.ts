@@ -12,7 +12,6 @@ import {
   type TaskStepsDefinition,
 } from "#test/support";
 
-
 test("copies the step form onto its task and completes the step with the task result", async ({
   orm,
   seed,

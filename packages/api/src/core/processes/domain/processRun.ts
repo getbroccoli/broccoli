@@ -150,10 +150,9 @@ export interface StepStart {
 }
 
 /**
- * Starts the ready steps among `progress` and marks the not reached, again while that decides
- * more. An action step completes at once: the caller runs its action in the same transaction,
- * which rolls back if it throws. Returns, in order, the task steps started (their task ids still
- * null) and the action steps completed, and the progress with them.
+ * Starts the ready steps among `progress` and marks the not reached, again while that decides more;
+ * an action step completes at once, as the caller runs its action in this transaction. Returns, in
+ * order, the task steps started (task ids still null), the action steps completed, and the progress.
  */
 export function startReadySteps(
   steps: readonly ProcessStep[],

@@ -137,7 +137,10 @@ export function parseProcessDefinition(
   refuseUnrunnableWaits(parsed.steps);
   refuseResultsNotOffered(parsed.steps);
   const triggerOffsets = parsed.trigger.kind === "on_record_date" ? [parsed.trigger.offset] : [];
-  for (const offset of [...triggerOffsets, ...taskStepsOf(parsed.steps).map(({ task }) => task.due)]) {
+  for (const offset of [
+    ...triggerOffsets,
+    ...taskStepsOf(parsed.steps).map(({ task }) => task.due),
+  ]) {
     refuseOffsetBeyondLimit(offset);
   }
   return { ...parsed, steps: parsed.steps.map((step) => withParsedParams(step, catalog)) };
