@@ -7,7 +7,7 @@ import type { ProcessActionRegistration, ProcessActionRegistrations } from "../.
 import type { RecordTypeRegistry } from "../../records";
 import { type EmailTemplate, MailRefusedError, senderName } from "../../../integrations/mail";
 import type { NotificationPeoplePort } from "../ports";
-import type { NotifyParams } from "./registrations";
+import type { NotifyOutcome, NotifyParams } from "./registrations";
 
 /** What every notification email gets besides its own values. */
 export interface NotificationEmailContext {
@@ -88,11 +88,7 @@ function notifyAction({
       const byEmployeeId = (
         run.triggerEvent?.payload as { byEmployeeId?: string | null } | undefined
       )?.byEmployeeId;
-      const outcome = !recipientId
-        ? "no_recipient_for_step"
-        : recipientId === byEmployeeId
-          ? "recipient_made_the_change"
-          : "queued";
+      const outcome = notifyOutcome(recipientId, byEmployeeId ?? null);
       if (outcome === "queued") {
         await jobs.send(tx, "notifications.send", {
           recipient: { employeeId: recipientId! },
@@ -172,6 +168,12 @@ function sendJob({
         ),
       ),
   };
+}
+
+/** Nobody is told about their own change; a record with nobody in the field tells nobody. */
+function notifyOutcome(recipientId: string | null, byEmployeeId: string | null): NotifyOutcome {
+  if (!recipientId) return "no_recipient_for_step";
+  return recipientId === byEmployeeId ? "recipient_made_the_change" : "queued";
 }
 
 /** A string among `values`; none registered refuses every value. */

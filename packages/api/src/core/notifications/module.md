@@ -2,6 +2,41 @@
 
 Notifications tell an employee about a record without them opening Broccoli. Processes decide who is told about what: a step of kind `action` runs `notifications.notify`, so no feature sends its own notices. Email is the only channel, with no settings.
 
+## Example
+
+1. Sam asks Mia to book the team offsite. The task's creation publishes `tasks.task_created` with `{ "taskId": "t1", "assigneeEmployeeId": "mia", "askedByEmployeeId": "sam", "byEmployeeId": "sam" }`, and the built-in `notifications.task_created` (on, `after_commit`) queues its start.
+2. Its run on task `t1` reaches the one step:
+
+   ```json
+   {
+     "key": "notify_assignee",
+     "kind": "action",
+     "action": {
+       "name": "notifications.notify",
+       "params": {
+         "recipient": { "kind": "record_employee", "field": "assignee" },
+         "emailTemplateKey": "tasks.task_assigned"
+       }
+     }
+   }
+   ```
+
+3. The task's `assignee` is Mia, not Sam who made the change, so the action queues, in the run's transaction:
+
+   ```json
+   {
+     "name": "notifications.send",
+     "payload": {
+       "recipient": { "employeeId": "mia" },
+       "emailTemplateKey": "tasks.task_assigned",
+       "record": { "recordType": "task", "recordId": "t1" },
+       "key": "run1:notify_assignee"
+     }
+   }
+   ```
+
+4. The job reads Mia (joined, `mia@example.com`) and the task as it is now, and sends "Sam Lee asked you: Book the team offsite" from "Sam Lee via Acme Corp", linking `<origin>/tasks/t1`, with `run1:notify_assignee` as the idempotency key. Nothing is stored besides the job.
+
 ## Rules
 
 - `notifications.notify` takes a `recipient` (`{ "kind": "record_employee", "field": "assignee" }`: an employee field the run's record type lists in `employeeFields`, read with `readEmployees` in the run's transaction) and an `emailTemplateKey` a module registered. A definition naming an unlisted field or an unregistered template is refused.

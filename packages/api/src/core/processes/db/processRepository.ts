@@ -286,11 +286,16 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
 
     async reset() {
       await orm.delete(processRuns);
+      const now = new Date();
       // Built-in processes start on in a fresh workspace, as the migration seeds them.
-      await orm.update(processes).set({
-        turnedOnAt: sql`case when ${processes.builtIn} then now() end`,
-        updatedAt: new Date(),
-      });
+      await orm
+        .update(processes)
+        .set({ turnedOnAt: now, updatedAt: now })
+        .where(eq(processes.builtIn, true));
+      await orm
+        .update(processes)
+        .set({ turnedOnAt: null, updatedAt: now })
+        .where(eq(processes.builtIn, false));
     },
   };
 }
