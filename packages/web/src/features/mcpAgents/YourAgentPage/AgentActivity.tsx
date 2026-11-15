@@ -11,17 +11,22 @@ import { PromptIdeas } from "./PromptIdeas";
 /** How often the lines' times ("12 seconds ago") read again. */
 const TICK_MS = 1_000;
 
-type Props = { client: string };
+type Props = {
+  client: string;
+  /** When the agent connected; an agent that replaced another lists only its own calls. */
+  connectedAt: string;
+  /** When the page opened, in milliseconds. */
+  openedAt: number;
+};
 
 /**
  * The calls the person's agent makes while the page is open, newest first, each as it happens;
  * calls from before the page opened stay out. The shell's live stream reads the list again on each call.
  * shortcut: shows a visit's newest 50 calls; page back to the opening once history pages this list.
  */
-export function AgentActivity({ client }: Props) {
+export function AgentActivity({ client, connectedAt, openedAt }: Props) {
   const { data } = useQuery(YourAgentActivityDocument, { fetchPolicy: "network-only" });
   const lines = data?.myAgentActivity.edges.map(({ node }) => node);
-  const [openedAt] = useState(Date.now);
   // The lines the first read finds from before the page opened; any later line is live.
   const [earlierIds, setEarlierIds] = useState<ReadonlySet<string>>();
   if (lines && !earlierIds) {
@@ -30,7 +35,9 @@ export function AgentActivity({ client }: Props) {
     );
   }
   useTicking();
-  const liveLines = earlierIds ? (lines ?? []).filter(({ id }) => !earlierIds.has(id)) : [];
+  const liveLines = earlierIds
+    ? (lines ?? []).filter(({ id, calledAt }) => !earlierIds.has(id) && calledAt >= connectedAt)
+    : [];
 
   return (
     <section aria-labelledby="agent-activity" className="flex flex-col gap-2.5">

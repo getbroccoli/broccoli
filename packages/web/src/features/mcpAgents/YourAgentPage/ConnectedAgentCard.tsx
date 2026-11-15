@@ -15,12 +15,14 @@ const WELCOME_MS = 60 * 60 * 1000;
 
 type Props = {
   connection: NonNullable<YourAgentQuery["myAgentConnection"]>;
+  /** When the page opened, in milliseconds; calls before it are history. */
+  openedAt: number;
   /** Who the agent acts as: the person's name, or their email without an employee. */
   personName: string;
 };
 
 /** The person's connected agent with Disconnect, a welcome right after connecting, and what it is doing. */
-export function ConnectedAgentCard({ connection, personName }: Props) {
+export function ConnectedAgentCard({ connection, openedAt, personName }: Props) {
   const [confirming, setConfirming] = useState(false);
   // Decided once per visit, so the welcome stays put while the person reads it.
   const [welcoming, setWelcoming] = useState(
@@ -63,8 +65,7 @@ export function ConnectedAgentCard({ connection, personName }: Props) {
           </Button>
         </div>
       </section>
-      {/* A replacing agent starts its own list. */}
-      <AgentActivity key={connection.id} client={client} />
+      <AgentActivity client={client} connectedAt={connection.connectedAt} openedAt={openedAt} />
       <DisconnectAgentDialog
         open={confirming}
         onOpenChange={setConfirming}
