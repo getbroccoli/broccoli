@@ -6,7 +6,7 @@ import { processRepository } from "../../src/core/processes/db";
 import { processes, processVersions } from "../../src/core/processes/db/processesTable";
 import {
   PROCESS_DEFINITION_SCHEMA_VERSION,
-  type ProcessDefinition,
+  type StoredProcessDefinition,
 } from "../../src/core/processes/domain";
 import { testTransactor } from "./testTransactor";
 
@@ -19,7 +19,7 @@ export function seedProcess(
     turnedOn = true,
   }: {
     key: string;
-    definition: ProcessDefinition;
+    definition: StoredProcessDefinition;
     turnedOn?: boolean;
   },
 ): Promise<{ id: string; key: string }> {
@@ -38,7 +38,7 @@ export function seedProcess(
 export function eventProcess(
   event: "employees.added" | "tasks.task_created" | "tasks.task_status_changed",
   when?: { field: string; in: (string | null)[] },
-): ProcessDefinition {
+): StoredProcessDefinition {
   return {
     subject: { recordType: event === "employees.added" ? "employee" : "task" },
     trigger: {
@@ -68,7 +68,7 @@ export function eventProcess(
 export function afterCommitProcess(
   event: "employees.added" | "tasks.task_created" | "tasks.task_status_changed",
   when?: { field: string; in: (string | null)[] },
-): ProcessDefinition {
+): StoredProcessDefinition {
   return {
     ...eventProcess(event),
     trigger: { kind: "on_event", event, run: "after_commit", ...(when && { when }) },
@@ -78,7 +78,7 @@ export function afterCommitProcess(
 /** Publishes and activates a second version without changing the first version. */
 export function seedSecondProcessVersion(
   orm: Orm,
-  { processId, definition }: { processId: string; definition: ProcessDefinition },
+  { processId, definition }: { processId: string; definition: StoredProcessDefinition },
 ) {
   return orm.transaction(async (tx) => {
     const [version] = await tx

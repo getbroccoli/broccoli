@@ -11,7 +11,7 @@ import {
   type ProcessDefinition,
   type ProcessRun,
   type ProcessRunFields,
-  readyStepKeys,
+  decideWaitingSteps,
   resolveAssignee,
   type RunStep,
   startReadySteps,
@@ -34,9 +34,9 @@ export interface StepStarter {
   /** Trusted: creates the first steps' tasks as Broccoli, and stores every step of the runs. */
   saveFirstSteps(tx: Tx, runs: readonly NewRunSteps[]): Promise<void>;
   /**
-   * Trusted, under the run's lock: starts its waiting steps whose listed steps are all done,
-   * giving their tasks to whom their rules name on `day`, and saves them. Returns the run with
-   * them, finished when nothing is left to do.
+   * Trusted, under the run's lock: starts its waiting steps that their join lets start, giving
+   * their tasks to whom their rules name on `day`, marks those that never can not reached, and
+   * saves them. Returns the run with them, finished when nothing is left to do.
    */
   startReadySteps(tx: Tx, run: ProcessRun, day: CalendarDate): Promise<ProcessRun>;
   /** Each step's title as its task gets it, in the order the run's version lists the steps. */
@@ -125,7 +125,10 @@ export function createStepStarter(dependencies: StepStarterDependencies): StepSt
   };
 }
 
-/** Starts the run's ready steps with their tasks, and saves them; the run as it was when none is ready. */
+/**
+ * Starts the run's ready steps with their tasks, marks the not reached, and saves them; the run as
+ * it was when no waiting step is decided.
+ */
 async function startReadyStepsOf(
   { tasks, people, workingCalendars, definitionOf }: StepStarterDependencies,
   tx: Tx,
@@ -135,7 +138,8 @@ async function startReadyStepsOf(
   if (!run.steps.some(({ status }) => status === "step_waiting_to_start")) return run;
   const processes = processRepository(tx);
   const definition = definitionOf((await processes.findVersion(run.processVersionId))!);
-  if (readyStepKeys(definition.steps, run.steps).length === 0) return run;
+  const { ready, notReached } = decideWaitingSteps(definition.steps, run.steps);
+  if (ready.length + notReached.length === 0) return run;
   const subject = await readSubject(people, tx, run);
   const [candidates] = await readCandidates(people, tx, [{ subject, day }]);
   const now = new Date();
@@ -149,14 +153,14 @@ async function startReadyStepsOf(
     definition,
     starts: next.starts,
   };
-  const startedKeys = new Set(next.starts.map(({ step }) => step.key));
-  const [started] = withTaskIds(
+  const statusBefore = new Map(run.steps.map(({ stepKey, status }) => [stepKey, status]));
+  const [decided] = withTaskIds(
     [plan],
-    [next.progress.filter(({ stepKey }) => startedKeys.has(stepKey))],
+    [next.progress.filter(({ stepKey, status }) => status !== statusBefore.get(stepKey))],
     await createStepTasks({ tasks, workingCalendars }, tx, [plan]),
   );
-  await runStepRepository(tx).saveStartedSteps(started!);
-  return run.withStartedSteps(started!, now);
+  await runStepRepository(tx).saveDecidedSteps(decided!);
+  return run.withDecidedSteps(decided!, now);
 }
 
 /** The steps starting together in one run, with what their tasks need. */

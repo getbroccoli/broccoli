@@ -40,12 +40,13 @@ declare module "../../events" {
     };
     /**
      * A run's steps completed as their tasks were marked done, and the steps that started after
-     * them; logged once the change commits.
+     * them or will never start; logged once the change commits.
      */
     "processes.steps_completed": {
       runId: string;
       taskIds: string[];
       startedStepKeys: string[];
+      notReachedStepKeys: string[];
       runStatus: string;
     };
   }

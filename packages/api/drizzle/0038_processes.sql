@@ -39,10 +39,10 @@ CREATE TABLE "process_run_step_progress" (
 	CONSTRAINT "process_run_step_progress_run_id_step_key_pk" PRIMARY KEY("run_id","step_key"),
 	CONSTRAINT "process_run_step_progress_task_id_unique" UNIQUE("task_id"),
 	CONSTRAINT "process_run_step_progress_key_not_blank" CHECK (btrim("process_run_step_progress"."step_key") <> ''),
-	CONSTRAINT "process_run_step_progress_status_known" CHECK ("process_run_step_progress"."status" in ('step_waiting_to_start', 'step_awaiting_task_completion', 'step_completed', 'step_skipped', 'step_cancelled')),
+	CONSTRAINT "process_run_step_progress_status_known" CHECK ("process_run_step_progress"."status" in ('step_waiting_to_start', 'step_awaiting_task_completion', 'step_completed', 'step_skipped', 'step_not_reached', 'step_cancelled')),
 	CONSTRAINT "process_run_step_progress_assignee_note_known" CHECK ("process_run_step_progress"."assignee_note" in ('assignee_is_owner_because_subject_has_no_manager')),
 	CONSTRAINT "process_run_step_progress_columns_follow_status" CHECK (("process_run_step_progress"."status" in ('step_waiting_to_start', 'step_awaiting_task_completion')) = ("process_run_step_progress"."finished_at" is null)
-        and ("process_run_step_progress"."status" <> 'step_waiting_to_start' or "process_run_step_progress"."task_id" is null)
+        and ("process_run_step_progress"."status" not in ('step_waiting_to_start', 'step_not_reached') or "process_run_step_progress"."task_id" is null)
         and ("process_run_step_progress"."status" = 'step_skipped') = ("process_run_step_progress"."skip_reason" is not null)
         and ("process_run_step_progress"."skip_reason" is null or "process_run_step_progress"."skip_reason" = 'no_assignee_for_step')
         and ("process_run_step_progress"."result_code" is null or "process_run_step_progress"."status" = 'step_completed')
@@ -155,7 +155,19 @@ INSERT INTO "process_versions" ("process_id", "version", "status", "definition_s
 				"due": { "amount": 2, "unit": "business_days" },
 				"resultForm": { "kind": "choice", "display": "buttons", "options": [
 					{ "code": "yes", "label": "Yes" },
-					{ "code": "no", "label": "No", "commentRequired": true } ] } } }
+					{ "code": "no", "label": "No", "commentRequired": true } ] } } },
+			{ "key": "fix_accounts", "kind": "task",
+				"after": [{ "step": "ensure_provision", "when": { "result": "no" } }], "task": {
+				"assignee": { "kind": "workspace_owner" },
+				"title": "Fix {firstName}''s accounts",
+				"description": "{firstName} says their accounts do not work. Fix them and tell {firstName}.",
+				"due": { "amount": 1, "unit": "business_days" } } },
+			{ "key": "welcome_lunch", "kind": "task", "join": "any",
+				"after": ["fix_accounts", { "step": "ensure_provision", "when": { "result": "yes" } }], "task": {
+				"assignee": { "kind": "subjects_manager", "otherwise": { "kind": "workspace_owner" } },
+				"title": "Take {firstName} to lunch",
+				"description": "Take {firstName} out for lunch to welcome them to the team.",
+				"due": { "amount": 5, "unit": "business_days" } } }
 		]
 	}'::jsonb FROM "processes" WHERE "key" = 'onboarding_example';--> statement-breakpoint
 UPDATE "processes" SET "active_version_id" = v."id" FROM "process_versions" v

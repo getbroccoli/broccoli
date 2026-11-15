@@ -1,6 +1,6 @@
 # Processes
 
-A process gives people tasks when something happens to a record, and follows each run of it to its end. Two are ready-made: **Welcome a new starter**, which on a person's start date gives their manager "Have a welcome 1:1" and the person "Have coffee calls with 3 colleagues"; and the **Onboarding example**, whose last step, "Check that your accounts work", waits until the owner has provisioned the person's accounts, then asks the person whether everything works.
+A process gives people tasks when something happens to a record, and follows each run of it to its end. Two are ready-made: **Welcome a new starter**, which on a person's start date gives their manager "Have a welcome 1:1" and the person "Have coffee calls with 3 colleagues"; and the **Onboarding example**, whose last step, "Check that your accounts work", waits until the owner has provisioned the person's accounts, then asks the person whether everything works; on No the owner gets "Fix their accounts", and either way the manager then gets "Take them to lunch".
 
 ## How a run works
 
@@ -144,6 +144,25 @@ Ada answers with the ordinary mark done (`result: { "code": "no", "comment": "VP
 }
 ```
 
+### Steps that branch on a result
+
+An `after` entry may name a result of its step; `join` `any` lets a step start once one entry is met, so the branches meet again:
+
+```json
+{ "key": "fix_accounts", "after": [{ "step": "ensure_provision", "when": { "result": "no" } }], "task": { … } }
+{ "key": "welcome_lunch", "join": "any",
+  "after": ["fix_accounts", { "step": "ensure_provision", "when": { "result": "yes" } }], "task": { … } }
+```
+
+Ada answers Yes, and in the same transaction the No branch is never reached and the lunch starts:
+
+```json
+// process_run_step_progress
+{ "run_id": "run3", "step_key": "ensure_provision", "status": "step_completed", "result_code": "yes" }
+{ "run_id": "run3", "step_key": "fix_accounts", "status": "step_not_reached", "task_id": null }
+{ "run_id": "run3", "step_key": "welcome_lunch", "status": "step_awaiting_task_completion", "task_id": "t8" }
+```
+
 ## Rules
 
 - A process is off until an admin turns it on (`MANAGE_WORKSPACE`); turning it on or off appends a history line for record type `process`, which only those who manage the workspace read. Turning it on starts today's due runs at once, and never anyone whose date was before that day.
@@ -151,8 +170,8 @@ Ada answers with the ordinary mark done (`result: { "code": "no", "comment": "VP
 - An `on_event` trigger names an event its publishing module registered as triggering (`employees.added`, and `tasks.task_created` and `tasks.task_status_changed`, which processes registers for tasks), with an optional `when` on one payload field, and a `run` mode. `in_same_transaction` (with `faultMode` `rollback_transaction`): before the change commits, `startRunsOnEvents` starts one run per event and record the event is about, batched per process, skipping a record whose run is in progress or that is gone; a run that cannot start fails the change. `after_commit` (no `faultMode`): before the change commits, it queues one `processes.startRunsAfterCommit` job per process and matching event, carrying the process's version; after the commit, the job locks the process and starts those runs in its own transaction, with the version it carries, unless the process was turned off, the record is gone, has a run in progress or already has this event's run (`start_key`, so a retry or a second delivery starts nothing). A job is tried three times; a last failure is logged. Jobs run in no particular order. Each job counts its hop (`tx.hop`): one queued from a job's transaction is one hop further, and none is queued past 10 hops, so processes that trigger each other stop. Either way the run keeps the event (`trigger_event`).
 - The daily job (`processes.startDueRuns`, 06:00 London) starts a run for each record whose trigger date is today or up to the trigger's `maxDaysLate` days ago, if it never had a run of that process, one transaction each. It also cancels runs that can no longer run.
 - An admin starts a run by hand for a record of the process's record type (`create` on `process_run` for its subject), whether the process is on or off, unless one is in progress for it. Before the subject's start date, the run counts from their start date.
-- A step starts once every step in its `after` is completed or skipped; a step with an empty `after` starts with the run. Until then it waits (`step_waiting_to_start`) without a task. A definition naming an unknown step, a step itself, a step twice or a cycle is refused. A step's task goes to its assignee rule's person on the day the step starts (never before the run's start day), else its fallback, with a note when the owner covers a missing manager; with nobody, the step is skipped, and the steps waiting for it start. Due dates count from the run's start day. Due dates count calendar days, or business days by the person's own working weeks and bank holidays, refusing a year with no known bank holidays.
-- A step's task (`process_step_to_do`) is marked done with the ordinary task command. Before the commit, processes completes the step from `tasks.task_status_changed`, starts the steps that waited for it, and finishes the run when every step is done or skipped. Steps start under the run's lock, so two people finishing the last two steps a step waits for start it once. It locks the run after the task, never the process; every transaction that locks both takes the task first.
+- A step waits (`step_waiting_to_start`) without a task until its `after` lets it start; with an empty `after` it starts with the run. An entry naming a step alone is met once that step is completed or skipped; one with `when` only once it is completed with that result code. With `join` `all` (the default) the step starts once every entry is met; with `any`, once one is. A step whose entries can no longer be met (another result, a skipped step that gave none, a step itself not reached) is not reached (`step_not_reached`): it never gets a task, and the steps after it may be not reached in turn. A run branches on the codes of its own version. A definition naming an unknown step, a step itself, a step twice, a cycle, or a result its step does not offer is refused. A step's task goes to its assignee rule's person on the day the step starts (never before the run's start day), else its fallback, with a note when the owner covers a missing manager; with nobody, the step is skipped, and the steps waiting for it start. Due dates count from the run's start day. Due dates count calendar days, or business days by the person's own working weeks and bank holidays, refusing a year with no known bank holidays.
+- A step's task (`process_step_to_do`) is marked done with the ordinary task command. Before the commit, processes completes the step from `tasks.task_status_changed`, starts the steps that waited for it or marks them not reached, and finishes the run when every step is completed, skipped or not reached. Steps start under the run's lock, so two people finishing the last two steps a step waits for start it once. It locks the run after the task, never the process; every transaction that locks both takes the task first.
 - The daily job cancels a run whose subject was removed, or whose step still awaiting its task lost it with its assignee, cancelling its waiting steps too, locking the run's open tasks before the run. A task marked done meanwhile stays done. Assignees read "This process was cancelled."; the cause stays on the run for admins.
 - Processes reads people, managers, the owner and working days through `PeoplePort` and `WorkingCalendarsPort` in `ports/`, which the employees module fills from its `adapters/`, and the records it runs on through their record types' registered process capabilities. It imports no module.
 - Runs are read through `process_run` permissions: admins and the owner read and change every run; others read none. A task's readers see the run's progress as counts, never the other steps.

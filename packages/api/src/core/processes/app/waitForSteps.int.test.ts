@@ -17,7 +17,7 @@ import {
 
 import { ormOf } from "../../db";
 import { processRepository } from "../db";
-import { ONBOARDING_EXAMPLE, type ProcessDefinition } from "../domain";
+import { ONBOARDING_EXAMPLE, type StoredProcessDefinition } from "../domain";
 
 test("starts independent steps; dependent steps wait without tasks", async ({ orm, seed }) => {
   const manager = await seed.employee();
@@ -237,7 +237,7 @@ test("Onboarding waits for provisioning before the account check", async ({ orm,
     processKey: ONBOARDING_EXAMPLE,
     recordId: employee.id,
   });
-  expect(started.steps).toMatchObject([
+  expect(started.steps.slice(0, 4)).toMatchObject([
     { key: "one_to_one", task: { status: "to_do", assigneeEmployeeId: manager.id } },
     { key: "coffee_breaks", task: { status: "to_do", assigneeEmployeeId: employee.id } },
     { key: "provision_accounts", task: { status: "to_do", assigneeEmployeeId: ownerEmployee.id } },
@@ -276,7 +276,7 @@ test("Onboarding waits for provisioning before the account check", async ({ orm,
   });
 });
 
-function handoverDefinition(): ProcessDefinition {
+function handoverDefinition(): StoredProcessDefinition {
   return {
     subject: { recordType: "employee" },
     trigger: {

@@ -1,69 +1,32 @@
 import { expect, test } from "vitest";
 
 import { parseCalendarDate } from "../../../utils";
-import { ProcessRun, readyStepKeys, type RunStatus, type RunStep } from "./processRun";
+import type { TaskStep } from "./processDefinition";
+import { ProcessRun, startReadySteps, type RunStatus, type RunStep } from "./processRun";
 
-test("waiting steps are ready in definition order once all their listed steps are completed", () => {
-  const ready = readyStepKeys(
-    [
-      { key: "a", after: [] },
-      { key: "b", after: [] },
-      { key: "d", after: ["a", "b"] },
-      { key: "c", after: ["a", "b"] },
-    ],
-    [
-      { stepKey: "c", status: "step_waiting_to_start" },
-      { stepKey: "d", status: "step_waiting_to_start" },
-      { stepKey: "b", status: "step_completed" },
-      { stepKey: "a", status: "step_completed" },
-    ],
+test("finishes after the last task completes and its remaining branch is not reached", () => {
+  const run = runIn("in_progress", [step("answer"), step("follow_up", "step_waiting_to_start")]);
+  const now = new Date("2026-11-09T12:00:00Z");
+  const completed = run.completeTasks(
+    new Map([["task-answer", { code: "yes", comment: null }]]),
+    now,
+    true,
+  );
+  const decided = startReadySteps(
+    [taskStep("answer"), taskStep("follow_up", [{ step: "answer", when: { result: "no" } }])],
+    completed.steps,
+    () => null,
+    now,
   );
 
-  expect(ready).toEqual(["d", "c"]);
+  const finished = completed.withDecidedSteps(decided.progress, now);
+
+  expect(finished).toMatchObject({ status: "finished", finishedAt: now });
+  expect(finished.steps).toMatchObject([
+    { stepKey: "answer", status: "step_completed", result: { code: "yes", comment: null } },
+    { stepKey: "follow_up", status: "step_not_reached", taskId: null, finishedAt: now },
+  ]);
 });
-
-test("a waiting step is not ready while one listed step still awaits its task", () => {
-  const ready = readyStepKeys(
-    [
-      { key: "a", after: [] },
-      { key: "b", after: [] },
-      { key: "c", after: ["a", "b"] },
-    ],
-    [
-      { stepKey: "a", status: "step_completed" },
-      { stepKey: "b", status: "step_awaiting_task_completion" },
-      { stepKey: "c", status: "step_waiting_to_start" },
-    ],
-  );
-
-  expect(ready).toEqual([]);
-});
-
-test("a skipped listed step counts as done when deciding what is ready", () => {
-  const ready = readyStepKeys(
-    [
-      { key: "a", after: [] },
-      { key: "b", after: [] },
-      { key: "c", after: ["a", "b"] },
-    ],
-    [
-      { stepKey: "a", status: "step_completed" },
-      { stepKey: "b", status: "step_skipped" },
-      { stepKey: "c", status: "step_waiting_to_start" },
-    ],
-  );
-
-  expect(ready).toEqual(["c"]);
-});
-
-test.each(["step_awaiting_task_completion", "step_completed"] as const)(
-  "does not start a step already marked %s",
-  (status) => {
-    const ready = readyStepKeys([{ key: "a", after: [] }], [{ stepKey: "a", status }]);
-
-    expect(ready).toEqual([]);
-  },
-);
 
 test("completing the only awaiting task keeps a run with a waiting step in progress", () => {
   const run = runIn("in_progress", [step("handbook"), step("equipment", "step_waiting_to_start")]);
@@ -338,7 +301,11 @@ function step(
     stepKey,
     status,
     taskId:
-      status === "step_skipped" || status === "step_waiting_to_start" ? null : `task-${stepKey}`,
+      status === "step_skipped" ||
+      status === "step_waiting_to_start" ||
+      status === "step_not_reached"
+        ? null
+        : `task-${stepKey}`,
     assigneeNote: null,
     skipReason: status === "step_skipped" ? "no_assignee_for_step" : null,
     finishedAt:
@@ -351,4 +318,20 @@ function step(
 
 function doneWithoutResults(...taskIds: string[]) {
   return new Map(taskIds.map((taskId) => [taskId, null]));
+}
+
+function taskStep(key: string, after: TaskStep["after"] = []): TaskStep {
+  return {
+    key,
+    kind: "task",
+    after,
+    join: "all",
+    task: {
+      assignee: { kind: "subject" },
+      title: key,
+      description: null,
+      due: { amount: 0, unit: "calendar_days" },
+      resultForm: null,
+    },
+  };
 }

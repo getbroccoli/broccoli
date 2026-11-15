@@ -134,7 +134,7 @@ export const runStepProgress = pgTable(
     check("process_run_step_progress_key_not_blank", sql`btrim(${table.stepKey}) <> ''`),
     check(
       "process_run_step_progress_status_known",
-      sql`${table.status} in ('step_waiting_to_start', 'step_awaiting_task_completion', 'step_completed', 'step_skipped', 'step_cancelled')`,
+      sql`${table.status} in ('step_waiting_to_start', 'step_awaiting_task_completion', 'step_completed', 'step_skipped', 'step_not_reached', 'step_cancelled')`,
     ),
     check(
       "process_run_step_progress_assignee_note_known",
@@ -143,7 +143,7 @@ export const runStepProgress = pgTable(
     check(
       "process_run_step_progress_columns_follow_status",
       sql`(${table.status} in ('step_waiting_to_start', 'step_awaiting_task_completion')) = (${table.finishedAt} is null)
-        and (${table.status} <> 'step_waiting_to_start' or ${table.taskId} is null)
+        and (${table.status} not in ('step_waiting_to_start', 'step_not_reached') or ${table.taskId} is null)
         and (${table.status} = 'step_skipped') = (${table.skipReason} is not null)
         and (${table.skipReason} is null or ${table.skipReason} = 'no_assignee_for_step')
         and (${table.resultCode} is null or ${table.status} = 'step_completed')
