@@ -1,20 +1,26 @@
 import { expect, test } from "vitest";
 
-import { parseProcessDefinition } from "./processDefinition";
+import { parseProcessDefinition, type StoredProcessDefinition } from "./processDefinition";
 
 test("normalises mixed dependencies and defaults the join to all while keeping any", () => {
-  const definition = welcomeDefinition(choiceForm);
-  const { kind, task } = definition.steps[1]!;
-  definition.steps.push({
-    key: "lunch",
-    kind,
-    task,
-    after: ["coffee_calls", { step: "welcome_one_to_one", when: { result: "yes" } }],
-    join: "any",
-  });
-  const steps = [...definition.steps, { key: "follow_up", kind, task, after: [{ step: "lunch" }] }];
+  const welcome = welcomeDefinition(choiceForm);
+  const { task } = welcome.steps[1]!;
+  const definition: StoredProcessDefinition = {
+    ...welcome,
+    steps: [
+      ...welcome.steps,
+      {
+        key: "lunch",
+        kind: "task",
+        task,
+        after: ["coffee_calls", { step: "welcome_one_to_one", when: { result: "yes" } }],
+        join: "any",
+      },
+      { key: "follow_up", kind: "task", task, after: [{ step: "lunch" }] },
+    ],
+  };
 
-  const parsed = parseProcessDefinition(1, { ...definition, steps }, catalog);
+  const parsed = parseProcessDefinition(1, definition, catalog);
 
   expect(parsed.steps.slice(2)).toMatchObject([
     {
@@ -27,7 +33,6 @@ test("normalises mixed dependencies and defaults the join to all while keeping a
     },
     { key: "follow_up", after: [{ step: "lunch", when: null }], join: "all" },
   ]);
-  expect(definition.steps[2]!.after[0]).toBe("coffee_calls");
 });
 
 test("refuses a result dependency on a step that asks for none", () => {
@@ -73,13 +78,13 @@ test("refuses a cycle through a result dependency even with an any join", () => 
 
 test("refuses an unknown join", () => {
   const definition = welcomeDefinition();
-  definition.steps[1]!.join = "majority";
+  const steps = [{ ...definition.steps[0]!, join: "majority" }];
 
-  expect(() => parseProcessDefinition(1, definition, catalog)).toThrow();
+  expect(() => parseProcessDefinition(1, { ...definition, steps }, catalog)).toThrow();
 });
 
-function welcomeDefinition(resultForm: unknown = null) {
-  const task = {
+function welcomeDefinition(resultForm: unknown = null): StoredProcessDefinition {
+  const task: StoredProcessDefinition["steps"][number]["task"] = {
     assignee: { kind: "subject" },
     title: "Welcome",
     due: { amount: 0, unit: "calendar_days" },
@@ -97,14 +102,14 @@ function welcomeDefinition(resultForm: unknown = null) {
       {
         key: "welcome_one_to_one",
         kind: "task",
-        after: [] as (string | { step: string; when?: { result: string } })[],
+        after: [],
         join: "all",
         task: { ...task, resultForm },
       },
       {
         key: "coffee_calls",
         kind: "task",
-        after: [] as (string | { step: string; when?: { result: string } })[],
+        after: [],
         join: "all",
         task: { ...task, resultForm: null },
       },

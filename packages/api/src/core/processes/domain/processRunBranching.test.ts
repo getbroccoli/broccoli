@@ -174,23 +174,26 @@ test("not reached cascades through reverse display order even when nothing can s
     resultForm: null,
   };
   const steps: TaskStep[] = [
-    taskStep("last", [{ step: "middle", when: null }]),
-    taskStep("middle", [{ step: "answer", when: { result: "no" } }]),
-    taskStep("answer"),
-  ].map((step) => ({ ...step, kind: "task", task }));
-  const answer = { ...step("answer", "step_completed"), result: { code: "yes", comment: null } };
+    { key: "last", kind: "task", after: [{ step: "middle", when: null }], join: "all", task },
+    {
+      key: "middle",
+      kind: "task",
+      after: [{ step: "answer", when: { result: "no" } }],
+      join: "all",
+      task,
+    },
+    { key: "answer", kind: "task", after: [], join: "all", task },
+  ];
   const progress: RunStep[] = [
-    step("last", "step_waiting_to_start"),
-    step("middle", "step_waiting_to_start"),
-    answer,
-  ].map((row) => ({
-    runId: "run-onboarding",
-    taskId: null,
-    assigneeNote: null,
-    skipReason: null,
-    finishedAt: row.status === "step_completed" ? new Date("2026-11-08T12:00:00Z") : null,
-    ...row,
-  }));
+    fullRow("last"),
+    fullRow("middle"),
+    {
+      ...fullRow("answer"),
+      status: "step_completed",
+      result: { code: "yes", comment: null },
+      finishedAt: new Date("2026-11-08T12:00:00Z"),
+    },
+  ];
   const now = new Date("2026-11-09T12:00:00Z");
 
   const decided = startReadySteps(steps, progress, () => null, now);
@@ -215,4 +218,17 @@ function step(
   status: RunStep["status"] = "step_awaiting_task_completion",
 ): Pick<RunStep, "stepKey" | "status" | "result"> {
   return { stepKey, status, result: null };
+}
+
+function fullRow(stepKey: string): RunStep {
+  return {
+    runId: "run-onboarding",
+    stepKey,
+    status: "step_waiting_to_start",
+    taskId: null,
+    assigneeNote: null,
+    skipReason: null,
+    finishedAt: null,
+    result: null,
+  };
 }

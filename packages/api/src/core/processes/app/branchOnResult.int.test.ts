@@ -63,7 +63,7 @@ test("a Yes answer leaves the fix not reached and starts lunch before the run fi
     seed,
   );
 
-  await tasks.markDone(ctx, ready.steps[3]!.task!.id, { result: { code: "yes" } });
+  await tasks.markDone(ctx, ready.steps[3]!.task!.id, { result: { code: "yes", comment: null } });
 
   const lunch = await processes.readRun(ADMIN, ready.run.id);
   expect(lunch.steps[4]).toMatchObject({
@@ -103,7 +103,7 @@ test("saves a pass with only not-reached changes and finishes the run", async ({
   const tasks = taskService(orm, { transact });
   const started = await processes.startRun(ADMIN, { processKey: key, recordId: employee.id });
 
-  await tasks.markDone(ctx, started.steps[0]!.task!.id, { result: { code: "yes" } });
+  await tasks.markDone(ctx, started.steps[0]!.task!.id, { result: { code: "yes", comment: null } });
 
   const finished = await processes.readRun(ADMIN, started.run.id);
   expect(finished.run).toMatchObject({
@@ -165,7 +165,7 @@ test("concurrent branch completions start an any follower once", async ({ orm, s
   const leftDone = transact(async (tx) => {
     const leftTasks = taskService(orm, { transact: (work) => work(tx) });
     const result = await leftTasks.markDone(ctx, started.steps[0]!.task!.id, {
-      result: { code: "yes" },
+      result: { code: "yes", comment: null },
     });
     await processRepository(tx).lockRun(started.run.id);
     const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
@@ -174,7 +174,9 @@ test("concurrent branch completions start an any follower once", async ({ orm, s
     return result;
   });
   await Promise.race([locked.promise, leftDone]);
-  const rightDone = tasks.markDone(ctx, started.steps[1]!.task!.id, { result: { code: "yes" } });
+  const rightDone = tasks.markDone(ctx, started.steps[1]!.task!.id, {
+    result: { code: "yes", comment: null },
+  });
   const results = Promise.allSettled([leftDone, rightDone]);
 
   try {
@@ -218,7 +220,7 @@ test("an existing run branches on its version's codes after a renamed version is
     },
   );
 
-  await tasks.markDone(ctx, started.steps[0]!.task!.id, { result: { code: "no" } });
+  await tasks.markDone(ctx, started.steps[0]!.task!.id, { result: { code: "no", comment: null } });
 
   const progress = await processes.readRun(ADMIN, started.run.id);
   expect(progress.steps).toMatchObject([
@@ -245,7 +247,7 @@ test("step progress excludes not-reached steps from the total", async ({ orm, se
     totalSteps: 2,
   });
 
-  await tasks.markDone(ctx, taskId, { result: { code: "yes" } });
+  await tasks.markDone(ctx, taskId, { result: { code: "yes", comment: null } });
 
   expect(await processes.readStepProgress(ctx, taskId)).toMatchObject({
     status: "finished",
