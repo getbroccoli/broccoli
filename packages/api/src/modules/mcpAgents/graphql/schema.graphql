@@ -33,6 +33,8 @@ enum AgentConnectionEndReason {
 "One tool call of the caller's agent: which tool and how Broccoli ended it, never what it read."
 type AgentActivity {
   id: ID!
+  "The name the agent gave itself; null when it gave none."
+  clientName: String
   "The tool's name, such as who_am_i."
   tool: String!
   outcome: AgentActivityOutcome!
