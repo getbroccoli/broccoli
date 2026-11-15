@@ -1,6 +1,6 @@
 import type { Orm } from "../../src/core/db";
 import { processRepository } from "../../src/core/processes/db";
-import { EventTrigger, type ProcessDefinition } from "../../src/core/processes/domain";
+import type { ProcessDefinition } from "../../src/core/processes/domain";
 import { testTransactor } from "./testTransactor";
 
 /** A process with its first published version active, without invoking use cases or events. */
@@ -34,13 +34,13 @@ export function eventProcess(
 ): ProcessDefinition {
   return {
     subject: { recordType: event === "employees.added" ? "employee" : "task" },
-    trigger: EventTrigger.restore({
+    trigger: {
       kind: "on_event",
       event,
       run: "in_same_transaction",
       faultMode: "rollback_transaction",
       ...(when && { when }),
-    }),
+    },
     steps: [
       {
         key: "follow_up",

@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import { EventTrigger } from "./eventTrigger";
-
 /** The shape of `process_versions.definition` this code reads; a migration moves older shapes on. */
 export const PROCESS_DEFINITION_SCHEMA_VERSION = 1;
 
@@ -33,6 +31,20 @@ export interface RecordDateTrigger {
   offset: DayOffset;
   /** How many days after that date a missed run still starts. */
   maxDaysLate: number;
+}
+
+/**
+ * Starts a run for each record an event is about, inside the transaction that published it: the
+ * run commits with the change, and a run that fails fails the change.
+ */
+export interface EventTrigger {
+  kind: "on_event";
+  /** An event a module registered as triggering. */
+  event: string;
+  /** Only events whose payload field holds one of these values. */
+  when?: { field: string; in: (string | null)[] };
+  run: "in_same_transaction";
+  faultMode: "rollback_transaction";
 }
 
 /** A step that gives one person a task. */
@@ -72,11 +84,7 @@ export function parseProcessDefinition(
     throw new Error(`Process definition schema version ${schemaVersion} is not known.`);
   }
   refuseUnbuiltTrigger(definition, catalog);
-  const { trigger, ...rest } = definitionSchema.parse(definition);
-  const parsed: ProcessDefinition = {
-    ...rest,
-    trigger: trigger.kind === "on_event" ? EventTrigger.restore(trigger) : trigger,
-  };
+  const parsed: ProcessDefinition = definitionSchema.parse(definition);
   refuseUnregisteredRecord(parsed, catalog);
   refuseSubjectOtherThanTrigger(parsed, catalog);
   refuseRepeatedStepKeys(parsed.steps);
