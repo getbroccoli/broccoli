@@ -32,10 +32,13 @@ A manual check of My tasks, against a development stack.
 
 ## Task emails
 
-Mailpit catches every email in development; open it from the address the development launcher prints.
+Mailpit catches every email in development; open it from the address `pnpm dev` prints. No screen creates a task for a person who joined yet, so this uses a terminal and the development database (`docker exec <dev postgres container> psql -U broccoli -d broccoli`).
 
-- [ ] In the demo, nothing in Mailpit mentions a task: the demo's tasks email nobody.
-- [ ] Invite Priya Shah from People, accept her invite from Mailpit in a private window and sign in as her. On "Check the laptop budget for new starters" Mark done: within seconds Oliver Bennett gets "Priya Shah marked done: Check the laptop budget for new starters", with "Done by Priya Shah on <today>" and an Open task button.
-- [ ] Open task signs in if needed and opens the task at `/tasks/<id>` for Oliver.
-- [ ] As Oliver, Mark done "Approve the hiring plan for next quarter", which Priya asked for: Priya gets an email, Oliver none.
-- [ ] A task someone gives you (such as Welcome a new starter's "Have a welcome 1:1 with …") emails you "New task: …" with the description, the due day and Open task; a person who has not joined gets nothing.
+1. Start the demo from a terminal and create the owner, as in [QA setup](setup.md). Link the owner to Oliver Bennett: `update employees set user_id = (select owner_user_id from instance) where email = 'oliver.bennett@example.com'`.
+2. Add Avery as "Add employees" in [QA setup](setup.md) shows, invite her from People and join from the invite in Mailpit, in a private window.
+
+- [ ] Starting the demo sends no task email: its tasks email nobody.
+- [ ] Turn on a process that gives the owner a task when a person is added (insert one on `employees.added` with `"run": "after_commit"` and a `task` step for the `workspace_owner`), then add another person: within seconds Oliver gets "New task: …" from Acme Corp, with the description, "Due …", Open task and the task's link.
+- [ ] Insert a `manual_to_do` that Oliver asks of Avery. As Avery, Mark done: Oliver gets "Avery Abbott marked done: …" from "Avery Abbott via Acme Corp", with "Done by Avery Abbott on <today>".
+- [ ] Signed out, the email's link asks Oliver to sign in, then opens the task at `/tasks/<id>`.
+- [ ] As Oliver, Mark done the process task: nobody gets an email, since nobody asked for it.
