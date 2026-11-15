@@ -9,9 +9,8 @@ import {
   taskService,
   test,
   transactWithProcesses,
+  type TaskStepsDefinition,
 } from "#test/support";
-
-import type { StoredProcessDefinition } from "../domain";
 
 test("copies the step form onto its task and completes the step with the task result", async ({
   orm,
@@ -66,7 +65,7 @@ test("keeps a completed step's result after its assignee and task are removed", 
   ]);
 });
 
-function checkDefinition(): StoredProcessDefinition {
+function checkDefinition(): TaskStepsDefinition {
   return {
     subject: { recordType: "employee" },
     trigger: {

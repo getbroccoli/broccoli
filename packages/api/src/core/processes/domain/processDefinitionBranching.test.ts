@@ -83,8 +83,10 @@ test("refuses an unknown join", () => {
   expect(() => parseProcessDefinition(1, { ...definition, steps }, catalog)).toThrow();
 });
 
-function welcomeDefinition(resultForm: unknown = null): StoredProcessDefinition {
-  const task: StoredProcessDefinition["steps"][number]["task"] = {
+function welcomeDefinition(
+  resultForm: unknown = null,
+): StoredProcessDefinition & { steps: StoredTaskStep[] } {
+  const task: StoredTaskStep["task"] = {
     assignee: { kind: "subject" },
     title: "Welcome",
     due: { amount: 0, unit: "calendar_days" },
@@ -125,4 +127,10 @@ const choiceForm = {
   ],
 };
 
-const catalog = { recordTypes: { employee: { dateFields: ["startDate"] } }, triggeringEvents: {} };
+type StoredTaskStep = Extract<StoredProcessDefinition["steps"][number], { kind: "task" }>;
+
+const catalog = {
+  recordTypes: { employee: { dateFields: ["startDate"] } },
+  triggeringEvents: {},
+  actions: {},
+};

@@ -9,7 +9,12 @@ export { createProcessService, PROCESS_STEP_TO_DO } from "./app";
 export { type IsWorkingDay, MAX_SEARCH_DAYS, workingDaysOf } from "./domain";
 
 // Public types.
-export type { ProcessService } from "./app";
+export type {
+  ProcessActionRegistration,
+  ProcessActionRegistrations,
+  ProcessActions,
+  ProcessService,
+} from "./app";
 export type { PeoplePort, RunSubject, WorkingCalendarsPort } from "./ports";
 export type { TriggeringEventRegistration, TriggeringEvents } from "./domain";
 

@@ -9,12 +9,14 @@ export {
   type TriggeringEvents,
 } from "./eventTrigger";
 export {
+  type ActionStep,
   type AssigneeRule,
   type DayOffset,
   parseProcessDefinition,
   type ProcessCatalog,
   PROCESS_DEFINITION_SCHEMA_VERSION,
   type ProcessDefinition,
+  type ProcessStep,
   type RecordDateTrigger,
   type TaskStep,
   ONBOARDING_EXAMPLE,

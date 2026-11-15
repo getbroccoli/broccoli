@@ -163,6 +163,21 @@ Ada answers Yes, and in the same transaction the No branch is never reached and 
 { "run_id": "run3", "step_key": "welcome_lunch", "status": "step_awaiting_task_completion", "task_id": "t8" }
 ```
 
+### A step that runs an action
+
+Every step has `key`, `after` and `join`; its kind adds its own settings under its name. Besides `task`, a step may be an `action`: Broccoli does something itself, by naming an action a module registered and its params:
+
+```json
+{ "key": "tell_owner", "kind": "action", "after": ["provision_accounts"],
+  "action": { "name": "notifications.notify", "params": { … } } }
+```
+
+When it is ready, the step completes, without a task, in the transaction that made it ready, and its action runs there after the steps are saved:
+
+```json
+{ "run_id": "run4", "step_key": "tell_owner", "status": "step_completed", "task_id": null }
+```
+
 ## Rules
 
 - A process is off until an admin turns it on (`MANAGE_WORKSPACE`); turning it on or off appends a history line for record type `process`, which only those who manage the workspace read. Turning it on starts today's due runs at once, and never anyone whose date was before that day.
@@ -171,6 +186,7 @@ Ada answers Yes, and in the same transaction the No branch is never reached and 
 - The daily job (`processes.startDueRuns`, 06:00 London) starts a run for each record whose trigger date is today or up to the trigger's `maxDaysLate` days ago, if it never had a run of that process, one transaction each. It also cancels runs that can no longer run.
 - An admin starts a run by hand for a record of the process's record type (`create` on `process_run` for its subject), whether the process is on or off, unless one is in progress for it. Before the subject's start date, the run counts from their start date.
 - A step waits (`step_waiting_to_start`) without a task until its `after` lets it start; with an empty `after` it starts with the run. An entry naming a step alone is met once that step is completed or skipped; one with `when` only once it is completed with that result code. With `join` `all` (the default) the step starts once every entry is met; with `any`, once one is. A step whose entries can no longer be met (another result, a skipped step that gave none, a step itself not reached) is not reached (`step_not_reached`): it never gets a task, and the steps after it may be not reached in turn. A run branches on the codes of its own version. A definition naming an unknown step, a step itself, a step twice, a cycle, or a result its step does not offer is refused. A step's task goes to its assignee rule's person on the day the step starts (never before the run's start day), else its fallback, with a note when the owner covers a missing manager; with nobody, the step is skipped, and the steps waiting for it start. Due dates count from the run's start day. Due dates count calendar days, or business days by the person's own working weeks and bank holidays, refusing a year with no known bank holidays.
+- A module registers an action with `ProcessActionRegistration`: a zod schema for its params and `run(ctx, tx, { run, step, params })`, and declares its name and params by merging into `ProcessActions`; `modules/index.ts` collects the registrations. A definition naming an unregistered action, params its schema refuses, a `when` on an action step (actions give no result), or a step kind not built yet (`wait`, `subprocess`, `agent`, `end`) is refused. A ready action step completes at once, and its action runs as Broccoli in that transaction once the steps are saved: at a run's start, or in the mark done that made it ready. So an action writes in `tx` and queues jobs only, never another transaction or outside I/O, and needs a lock-order review if it locks records it did not create, since the run's lock is held. If it throws, the whole transaction rolls back: the mark done or in-same-transaction run fails, and an after-commit job retries with every run it starts. An action with nothing to do returns; the step completes. A step not reached runs no action. Run id plus step key is an action's key for idempotency.
 - A step's task (`process_step_to_do`) is marked done with the ordinary task command. Before the commit, processes completes the step from `tasks.task_status_changed`, starts the steps that waited for it or marks them not reached, and finishes the run when every step is completed, skipped or not reached. Steps start under the run's lock, so two people finishing the last two steps a step waits for start it once. It locks the run after the task, never the process; every transaction that locks both takes the task first.
 - The daily job cancels a run whose subject was removed, or whose step still awaiting its task lost it with its assignee, cancelling its waiting steps too, locking the run's open tasks before the run. A task marked done meanwhile stays done. Assignees read "This process was cancelled."; the cause stays on the run for admins.
 - Processes reads people, managers, the owner and working days through `PeoplePort` and `WorkingCalendarsPort` in `ports/`, which the employees module fills from its `adapters/`, and the records it runs on through their record types' registered process capabilities. It imports no module.

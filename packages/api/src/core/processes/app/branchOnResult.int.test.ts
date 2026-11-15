@@ -13,11 +13,12 @@ import {
   test,
   type TestSeed,
   transactWithProcesses,
+  type TaskStepsDefinition,
 } from "#test/support";
 
 import { type Orm, ormOf } from "../../db";
 import { processRepository } from "../db";
-import { ONBOARDING_EXAMPLE, type StoredProcessDefinition } from "../domain";
+import { ONBOARDING_EXAMPLE } from "../domain";
 
 test("a No answer gives the owner a fix task and waits for its completion before lunch", async ({
   orm,
@@ -277,7 +278,7 @@ async function provisionedOnboarding(orm: Orm, seed: TestSeed) {
   return { processes, tasks, employee, manager, ownerEmployee, ctx, ownerCtx, managerCtx, ready };
 }
 
-function branchDefinition(repairCode = "no"): StoredProcessDefinition {
+function branchDefinition(repairCode = "no"): TaskStepsDefinition {
   return {
     subject: { recordType: "employee" },
     trigger: {

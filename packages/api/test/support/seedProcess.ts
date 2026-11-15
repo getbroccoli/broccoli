@@ -10,6 +10,11 @@ import {
 } from "../../src/core/processes/domain";
 import { testTransactor } from "./testTransactor";
 
+/** A stored definition whose steps are all task steps, so a test can change their task. */
+export type TaskStepsDefinition = StoredProcessDefinition & {
+  steps: Extract<StoredProcessDefinition["steps"][number], { kind: "task" }>[];
+};
+
 /** A process with its first published version active, without invoking use cases or events. */
 export function seedProcess(
   orm: Orm,
@@ -38,7 +43,7 @@ export function seedProcess(
 export function eventProcess(
   event: "employees.added" | "tasks.task_created" | "tasks.task_status_changed",
   when?: { field: string; in: (string | null)[] },
-): StoredProcessDefinition {
+): TaskStepsDefinition {
   return {
     subject: { recordType: event === "employees.added" ? "employee" : "task" },
     trigger: {
@@ -68,7 +73,7 @@ export function eventProcess(
 export function afterCommitProcess(
   event: "employees.added" | "tasks.task_created" | "tasks.task_status_changed",
   when?: { field: string; in: (string | null)[] },
-): StoredProcessDefinition {
+): TaskStepsDefinition {
   return {
     ...eventProcess(event),
     trigger: { kind: "on_event", event, run: "after_commit", ...(when && { when }) },

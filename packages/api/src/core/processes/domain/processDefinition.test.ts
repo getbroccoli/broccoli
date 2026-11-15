@@ -265,7 +265,7 @@ test("parses a step's result form with defaults", () => {
 
   const parsed = parseProcessDefinition(1, definition, catalog);
 
-  expect(parsed.steps[0]!.task.resultForm).toEqual({
+  expect(parsed.steps[0]).toHaveProperty("task.resultForm", {
     kind: "choice",
     display: "buttons",
     options: [
@@ -289,7 +289,7 @@ test("parses a step without a result form as null", () => {
     catalog,
   );
 
-  expect(parsed.steps[0]!.task.resultForm).toBeNull();
+  expect(parsed.steps[0]).toHaveProperty("task.resultForm", null);
 });
 
 test("refuses a definition with an invalid result form", () => {
@@ -356,6 +356,7 @@ function welcomeDefinition(resultForm: unknown = null) {
 }
 
 const catalog = {
+  actions: {},
   recordTypes: { employee: { dateFields: ["startDate"] }, task: { dateFields: [] } },
   triggeringEvents: {
     "employees.added": { recordType: "employee" },
