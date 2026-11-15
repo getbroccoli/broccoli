@@ -172,6 +172,8 @@ function taskWith(overrides: Partial<TaskRow> = {}): TaskRow {
     doneBy: null,
     cancelledAt: null,
     cancelReason: null,
+    resultForm: null,
+    result: null,
     processSource: null,
     assignee: assignee,
     askedBy: asker,

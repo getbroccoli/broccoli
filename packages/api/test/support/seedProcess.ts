@@ -57,6 +57,7 @@ export function eventProcess(
           description: null,
           assignee: { kind: "subject" },
           due: { amount: 0, unit: "calendar_days" },
+          resultForm: null,
         },
       },
     ],

@@ -249,6 +249,7 @@ function newTasksOf(
             subjectEmployeeId: subject?.id ?? null,
             record: { recordType: run.recordType, recordId: run.recordId },
             dueDate: addDayOffset(startDay, step.task.due, isWorkingDay),
+            resultForm: step.task.resultForm,
             cause: { kind: "PROCESS_RUN", ref: run.id },
           },
         ]
@@ -286,6 +287,7 @@ function waitingRow(stepKey: string): RunStep {
     assigneeNote: null,
     skipReason: null,
     finishedAt: null,
+    result: null,
   };
 }
 

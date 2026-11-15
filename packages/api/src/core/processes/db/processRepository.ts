@@ -4,7 +4,7 @@ import { ormOf, type Orm, type OrmTransaction, type Tx } from "../../db";
 import { inRecordScope, type RecordScope } from "../../security";
 import { PROCESS_DEFINITION_SCHEMA_VERSION, ProcessRun, type ProcessRunFields } from "../domain";
 import { processes, processVersions } from "./processesTable";
-import { processRuns, runStepProgress } from "./processRunsTable";
+import { processRuns, resultColumnsOf, runStepProgress, toRunStep } from "./processRunsTable";
 
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
 export const INSERT_BATCH_SIZE = 1_000;
@@ -200,7 +200,7 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
         .for("update");
       if (!row) return null;
       const steps = await orm.select().from(runStepProgress).where(eq(runStepProgress.runId, id));
-      return ProcessRun.restore(row, steps);
+      return ProcessRun.restore(row, steps.map(toRunStep));
     },
 
     async saveRun({ steps, ...run }) {
@@ -209,10 +209,10 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
         .set({ ...run, updatedAt: new Date() })
         .where(eq(processRuns.id, run.id));
       // Only what a run changes: a step's task reference is the database's to clear.
-      for (const { runId, stepKey, status, finishedAt } of steps) {
+      for (const { runId, stepKey, status, finishedAt, result } of steps) {
         await orm
           .update(runStepProgress)
-          .set({ status, finishedAt })
+          .set({ status, finishedAt, ...resultColumnsOf({ result }) })
           .where(and(eq(runStepProgress.runId, runId), eq(runStepProgress.stepKey, stepKey)));
       }
     },

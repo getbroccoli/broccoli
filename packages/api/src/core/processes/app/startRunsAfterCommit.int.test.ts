@@ -107,6 +107,7 @@ test("an event that does not match when queues no job", async ({ orm, seed }) =>
       from: "to_do",
       to: "cancelled",
       byEmployeeId: employee.id,
+      result: null,
     });
     return Promise.resolve();
   });

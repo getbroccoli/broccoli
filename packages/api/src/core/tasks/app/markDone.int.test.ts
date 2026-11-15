@@ -1,5 +1,7 @@
 import { domainEvents, expect, signedIn, taskService, test } from "#test/support";
 
+import type { TaskResultForm } from "../domain";
+
 test("marks a held task done and shows the asker who completed it", async ({ orm, seed }) => {
   const assignee = await seed.employee();
   const asker = await seed.employee();
@@ -71,6 +73,7 @@ test("returns the history line appended by completion", async ({ orm, seed }) =>
     recordType: "task",
     recordId: task.id,
     operation: "UPDATED",
+    reason: null,
     changes: [{ field: "status", oldValue: "to_do", newValue: "done" }],
   });
 });
@@ -121,7 +124,58 @@ test("publishes a status change with the assignee who marked the task done", asy
         from: "to_do",
         to: "done",
         byEmployeeId: assignee.id,
+        result: null,
       },
     },
   ]);
 });
+
+test("stores and publishes the result with a readable completion history line", async ({
+  orm,
+  seed,
+}) => {
+  const assignee = await seed.employee();
+  const task = await seed.task({ assigneeEmployeeId: assignee.id, resultForm });
+  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
+  const { transact, events } = domainEvents(orm);
+  const tasks = taskService(orm, { transact });
+  const result = { code: "no", comment: "VPN login fails" };
+
+  const { task: done, historyLine } = await tasks.markDone(ctx, task.id, { result });
+
+  expect(done).toMatchObject({ status: "done", result });
+  expect(await tasks.readTask(ctx, task.id)).toEqual(done);
+  expect(historyLine.reason).toBe("No — VPN login fails");
+  expect((await tasks.readTaskHistory(ctx, task.id, { first: 5 })).edges[0]!.node.reason).toBe(
+    "No — VPN login fails",
+  );
+  expect(events).toEqual([
+    {
+      type: "tasks.task_status_changed",
+      payload: { taskId: task.id, from: "to_do", to: "done", byEmployeeId: assignee.id, result },
+    },
+  ]);
+});
+
+test("leaves a task to do when its required result is missing", async ({ orm, seed }) => {
+  const assignee = await seed.employee();
+  const task = await seed.task({ assigneeEmployeeId: assignee.id, resultForm });
+  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
+  const tasks = taskService(orm);
+
+  await expect(tasks.markDone(ctx, task.id)).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    message: "Choose a result for this task.",
+  });
+
+  expect(await tasks.readTask(ctx, task.id)).toEqual(task);
+});
+
+const resultForm: TaskResultForm = {
+  kind: "choice",
+  display: "buttons",
+  options: [
+    { code: "yes", label: "Yes", commentRequired: false },
+    { code: "no", label: "No", commentRequired: true },
+  ],
+};

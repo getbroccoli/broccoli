@@ -19,10 +19,7 @@ import { ormOf } from "../../db";
 import { processRepository } from "../db";
 import { ONBOARDING_EXAMPLE, type ProcessDefinition } from "../domain";
 
-test("starts only steps with nothing to wait for and stores the others waiting without tasks", async ({
-  orm,
-  seed,
-}) => {
+test("starts independent steps; dependent steps wait without tasks", async ({ orm, seed }) => {
   const manager = await seed.employee();
   const employee = await seed.employee();
   await seed.manager(employee.id, manager.id);
@@ -105,10 +102,8 @@ test("finishes the run once the task of the waiting step is done too", async ({ 
   await tasks.markDone(ctx, ready.steps[2]!.task!.id);
 
   const completed = await processes.readRun(ADMIN, started.run.id);
-  expect(completed.run).toMatchObject({
-    status: "finished",
-    finishedAt: expect.any(Date) as unknown,
-  });
+  expect(completed.run.status).toBe("finished");
+  expect(completed.run.finishedAt).toBeInstanceOf(Date);
   expect(completed.steps).toMatchObject([
     { key: "prepare", status: "step_completed", task: { status: "done" } },
     { key: "read", status: "step_completed", task: { status: "done" } },
@@ -116,10 +111,7 @@ test("finishes the run once the task of the waiting step is done too", async ({ 
   ]);
 });
 
-test("two assignees completing the listed tasks concurrently start the waiting step once", async ({
-  orm,
-  seed,
-}) => {
+test("concurrent completions start the waiting step once", async ({ orm, seed }) => {
   const manager = await seed.employee();
   const employee = await seed.employee();
   await seed.manager(employee.id, manager.id);
@@ -173,10 +165,7 @@ test("two assignees completing the listed tasks concurrently start the waiting s
   ]);
 });
 
-test("starts a step whose listed step was skipped for want of an assignee", async ({
-  orm,
-  seed,
-}) => {
+test("starts a step after its prerequisite was skipped", async ({ orm, seed }) => {
   const employee = await seed.employee();
   const definition = handoverDefinition();
   definition.steps = [definition.steps[0]!, { ...definition.steps[2]!, after: ["prepare"] }];
@@ -201,10 +190,7 @@ test("starts a step whose listed step was skipped for want of an assignee", asyn
   ]);
 });
 
-test("the daily check cancels waiting steps when their run's subject was removed", async ({
-  orm,
-  seed,
-}) => {
+test("cancels waiting steps after the subject was removed", async ({ orm, seed }) => {
   const manager = await seed.employee();
   const employee = await seed.employee();
   await seed.manager(employee.id, manager.id);
@@ -236,10 +222,7 @@ test("the daily check cancels waiting steps when their run's subject was removed
   });
 });
 
-test("Onboarding waits for the owner to provision accounts before asking the person to check them", async ({
-  orm,
-  seed,
-}) => {
+test("Onboarding waits for provisioning before the account check", async ({ orm, seed }) => {
   const owner = await seed.owner();
   const ownerEmployee = await seed.employee({ userId: owner.user!.userId });
   const manager = await seed.employee();
@@ -273,6 +256,23 @@ test("Onboarding waits for the owner to provision accounts before asking the per
     title: "Check that your accounts work",
     status: "to_do",
     assigneeEmployeeId: employee.id,
+    resultForm: {
+      kind: "choice",
+      display: "buttons",
+      options: [
+        { code: "yes", label: "Yes", commentRequired: false },
+        { code: "no", label: "No", commentRequired: true },
+      ],
+    },
+  });
+
+  await tasks.markDone(ctx, progress.steps[3]!.task!.id, {
+    result: { code: "no", comment: "VPN login fails" },
+  });
+
+  expect((await processes.readRun(ADMIN, started.run.id)).steps[3]).toMatchObject({
+    status: "step_completed",
+    result: { code: "no", comment: "VPN login fails" },
   });
 });
 
@@ -295,6 +295,7 @@ function handoverDefinition(): ProcessDefinition {
           assignee: { kind: "subjects_manager" },
           title: "Prepare the handover",
           description: null,
+          resultForm: null,
           due: { amount: 0, unit: "calendar_days" },
         },
       },
@@ -306,6 +307,7 @@ function handoverDefinition(): ProcessDefinition {
           assignee: { kind: "subject" },
           title: "Read the handbook",
           description: null,
+          resultForm: null,
           due: { amount: 0, unit: "calendar_days" },
         },
       },
@@ -317,6 +319,7 @@ function handoverDefinition(): ProcessDefinition {
           assignee: { kind: "subject" },
           title: "Check the handover",
           description: null,
+          resultForm: null,
           due: { amount: 0, unit: "calendar_days" },
         },
       },

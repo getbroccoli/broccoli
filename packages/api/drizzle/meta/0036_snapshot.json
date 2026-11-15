@@ -2319,6 +2319,24 @@
           "primaryKey": false,
           "notNull": false
         },
+        "result_form": {
+          "name": "result_form",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "result_code": {
+          "name": "result_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "result_comment": {
+          "name": "result_comment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -2407,6 +2425,10 @@
         "tasks_columns_follow_status": {
           "name": "tasks_columns_follow_status",
           "value": "(\"tasks\".\"status\" = 'done') = (\"tasks\".\"done_at\" is not null)\n        and (\"tasks\".\"done_at\" is null or \"tasks\".\"cancelled_at\" is null)\n        and (\"tasks\".\"status\" = 'cancelled') = (\"tasks\".\"cancelled_at\" is not null)\n        and (\"tasks\".\"cancelled_at\" is null) = (\"tasks\".\"cancel_reason\" is null)\n        and (\"tasks\".\"cancel_reason\" is null or btrim(\"tasks\".\"cancel_reason\") <> '')"
+        },
+        "tasks_result_follows_form": {
+          "name": "tasks_result_follows_form",
+          "value": "(\"tasks\".\"result_code\" is null or \"tasks\".\"status\" = 'done')\n        and (\"tasks\".\"status\" <> 'done' or \"tasks\".\"result_form\" is null or \"tasks\".\"result_code\" is not null)\n        and (\"tasks\".\"result_code\" is null or \"tasks\".\"result_form\" is not null)\n        and (\"tasks\".\"result_comment\" is null or \"tasks\".\"result_code\" is not null)\n        and (\"tasks\".\"result_comment\" is null or btrim(\"tasks\".\"result_comment\") <> '')"
         }
       },
       "isRLSEnabled": false

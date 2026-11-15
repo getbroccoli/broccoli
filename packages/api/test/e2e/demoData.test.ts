@@ -39,7 +39,7 @@ test("skipping import fills the directory and serves demo avatars", async ({ env
   expect(bytes.toString("ascii", 8, 12)).toBe("WEBP");
 });
 
-test("the demo owner is Oliver Bennett with two tasks needing him", async ({ env }) => {
+test("the demo owner is Oliver Bennett with three tasks needing him", async ({ env }) => {
   const { browser } = await env.startDemo();
 
   const response = await browser.graphql(`query {
@@ -54,6 +54,7 @@ test("the demo owner is Oliver Bennett with two tasks needing him", async ({ env
         needsYou: [
           { title: "Sign James Whitfield's new contract" },
           { title: "Approve the hiring plan for next quarter" },
+          { title: "Choose the venue for the summer party" },
         ],
       },
     },

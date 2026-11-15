@@ -69,7 +69,7 @@ test("completing the only awaiting task keeps a run with a waiting step in progr
   const run = runIn("in_progress", [step("handbook"), step("equipment", "step_waiting_to_start")]);
   const now = new Date("2026-11-09T12:00:00Z");
 
-  const completed = run.completeTasks(new Set(["task-handbook"]), now, true);
+  const completed = run.completeTasks(doneWithoutResults("task-handbook"), now, true);
 
   expect(completed).toMatchObject({ status: "in_progress", finishedAt: null });
   expect(completed.steps).toEqual([
@@ -103,7 +103,7 @@ test("completes one task while another keeps the run in progress", () => {
   const original = structuredClone({ ...run });
   const now = new Date("2026-11-09T12:00:00Z");
 
-  const completed = run.completeTasks(new Set(["task-handbook"]), now, true);
+  const completed = run.completeTasks(doneWithoutResults("task-handbook"), now, true);
 
   expect(completed).toBeInstanceOf(ProcessRun);
   expect(completed).not.toBe(run);
@@ -119,7 +119,7 @@ test("finishes the run when its last task completes", () => {
   const run = runIn("in_progress", [step("handbook", "step_completed"), step("equipment")]);
   const now = new Date("2026-11-09T12:00:00Z");
 
-  const finished = run.completeTasks(new Set(["task-equipment"]), now, true);
+  const finished = run.completeTasks(doneWithoutResults("task-equipment"), now, true);
 
   expect(finished).toMatchObject({ status: "finished", finishedAt: now });
   expect(finished.steps).toEqual([
@@ -132,7 +132,7 @@ test("counts a skipped step as done when finishing the run", () => {
   const run = runIn("in_progress", [step("handbook", "step_skipped"), step("equipment")]);
   const now = new Date("2026-11-09T12:00:00Z");
 
-  const finished = run.completeTasks(new Set(["task-equipment"]), now, true);
+  const finished = run.completeTasks(doneWithoutResults("task-equipment"), now, true);
 
   expect(finished).toMatchObject({ status: "finished", finishedAt: now });
   expect(finished.steps[0]).toEqual(run.steps[0]);
@@ -142,7 +142,7 @@ test("completes a task but keeps a run that cannot go on in progress", () => {
   const run = runIn("in_progress", [step("handbook")]);
   const now = new Date("2026-11-09T12:00:00Z");
 
-  const completed = run.completeTasks(new Set(["task-handbook"]), now, false);
+  const completed = run.completeTasks(doneWithoutResults("task-handbook"), now, false);
 
   expect(completed).toMatchObject({ status: "in_progress", finishedAt: null });
   expect(completed.steps).toEqual([{ ...run.steps[0], status: "step_completed", finishedAt: now }]);
@@ -152,7 +152,9 @@ test("completes all matching tasks together", () => {
   const run = runIn("in_progress", [step("handbook"), step("equipment")]);
   const now = new Date("2026-11-09T12:00:00Z");
 
-  const finished = run.completeTasks(new Set(["task-handbook", "task-equipment"]), now, true);
+  const done = doneWithoutResults("task-handbook", "task-equipment");
+
+  const finished = run.completeTasks(done, now, true);
 
   expect(finished).toMatchObject({ status: "finished", finishedAt: now });
   expect(finished.steps).toEqual([
@@ -170,11 +172,9 @@ test("leaves steps not awaiting tasks unchanged when their tasks complete", () =
   ]);
   const original = structuredClone({ ...run });
 
-  const completed = run.completeTasks(
-    new Set(["task-handbook", "task-introduction", "unrelated-task"]),
-    new Date("2026-11-09T12:00:00Z"),
-    true,
-  );
+  const done = doneWithoutResults("task-handbook", "task-introduction", "unrelated-task");
+
+  const completed = run.completeTasks(done, new Date("2026-11-09T12:00:00Z"), true);
 
   expect(completed.steps).toEqual(original.steps);
   expect(completed.status).toBe("in_progress");
@@ -185,7 +185,7 @@ test("refuses to complete tasks of a cancelled run", () => {
   const run = runIn("cancelled", [step("handbook", "step_cancelled")]);
 
   expect(() =>
-    run.completeTasks(new Set(["task-handbook"]), new Date("2026-11-09T12:00:00Z"), true),
+    run.completeTasks(doneWithoutResults("task-handbook"), new Date("2026-11-09T12:00:00Z"), true),
   ).toThrowError(
     expect.objectContaining({ code: "CONFLICT", message: "This process was cancelled." }),
   );
@@ -345,5 +345,10 @@ function step(
       status === "step_awaiting_task_completion" || status === "step_waiting_to_start"
         ? null
         : new Date("2026-11-08T12:00:00Z"),
+    result: null,
   };
+}
+
+function doneWithoutResults(...taskIds: string[]) {
+  return new Map(taskIds.map((taskId) => [taskId, null]));
 }

@@ -59,6 +59,11 @@ export function taskSource(task: TaskRow, viewerId: string | null): string {
   return `${processKey} · ${stepKey}`;
 }
 
+/** "No — VPN login fails", or "Yes" without a comment. */
+export function resultText({ label, comment }: NonNullable<TaskRow["result"]>): string {
+  return comment === null ? label : `${label} — ${comment}`;
+}
+
 export function personName(person: Person | null): string {
   return person ? `${person.firstName} ${person.lastName}` : "";
 }

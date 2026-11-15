@@ -16,10 +16,19 @@ import { t } from "@/i18n";
 
 import { TASK_DESCRIPTION } from "../taskDescription";
 import { TaskStatus } from "../TaskStatus";
-import { formatTaskDay, isOpen, personName, taskSource, type TaskRow } from "../taskText";
+import {
+  formatTaskDay,
+  isOpen,
+  personName,
+  resultText,
+  taskSource,
+  type TaskRow,
+} from "../taskText";
 import { useTaskActions } from "../useTaskActions";
 import { DeleteTaskDialog } from "./DeleteTaskDialog";
 import { PanelCloseButton } from "./PanelCloseButton";
+import { TaskResultButtons } from "./TaskResultButtons";
+import { TaskResultForm } from "./TaskResultForm";
 
 type Props = {
   task: TaskRow;
@@ -33,13 +42,16 @@ export function TaskDetails({ task, onDeleted }: Props) {
   const viewerId = me.employee?.id ?? null;
   const actions = useTaskActions();
   const [deleting, setDeleting] = useState(false);
+  const [chosenCode, setChosenCode] = useState<string | null>(null);
   const holds = task.assignee.id === viewerId;
   const asked = task.askedBy?.id === viewerId;
   const canDelete = asked && isOpen(task);
+  const canFinish = holds && task.status === "TO_DO";
+  const form = task.resultForm;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex items-center gap-4 border-b border-border px-6 py-5">
+      <header className="flex flex-wrap items-center gap-4 border-b border-border px-6 py-5">
         {task.askedBy ? (
           <Avatar
             url={task.askedBy.avatarUrl}
@@ -62,8 +74,14 @@ export function TaskDetails({ task, onDeleted }: Props) {
               {t("tasks.panel.about", { name: personName(task.subject) })}
             </p>
           )}
+          {/* Clamped so a long comment never pushes the body away; history keeps it whole. */}
+          {task.result && (
+            <p className="line-clamp-2 text-[13px] break-words">
+              {t("tasks.panel.result", { result: resultText(task.result) })}
+            </p>
+          )}
         </div>
-        {holds && task.status === "TO_DO" && (
+        {canFinish && !form && (
           <Button
             size="sm"
             disabled={actions.isPending}
@@ -71,6 +89,18 @@ export function TaskDetails({ task, onDeleted }: Props) {
           >
             {t("tasks.markDone")}
           </Button>
+        )}
+        {canFinish && form?.display === "BUTTONS" && (
+          <TaskResultButtons
+            options={form.options}
+            chosenCode={chosenCode}
+            isPending={actions.isPending}
+            onChoose={(option) =>
+              option.commentRequired
+                ? setChosenCode(option.code)
+                : void actions.markDone(task.id, { code: option.code, comment: null })
+            }
+          />
         )}
         {canDelete && (
           <DropdownMenu>
@@ -107,6 +137,15 @@ export function TaskDetails({ task, onDeleted }: Props) {
               </p>
             )}
           </section>
+          {canFinish && form && (
+            <TaskResultForm
+              form={form}
+              chosenCode={chosenCode}
+              onChoose={setChosenCode}
+              isPending={actions.isPending}
+              onSend={(result) => void actions.markDone(task.id, result)}
+            />
+          )}
           <RecordHistory recordType="TASK" recordId={task.id} description={TASK_DESCRIPTION} />
         </div>
         <aside className="flex flex-col gap-6 self-start rounded-xl bg-muted/50 p-4 text-sm">

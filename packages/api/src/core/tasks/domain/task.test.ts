@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 
 import { Task, type TaskStatus } from "./task";
+import type { TaskResultForm } from "./taskResult";
 
 test("marks a task to do as done by its assignee", () => {
   const task = taskIn("to_do");
@@ -16,6 +17,7 @@ test("marks a task to do as done by its assignee", () => {
     doneByEmployeeId: task.assigneeEmployeeId,
     cancelledAt: null,
     cancelReason: null,
+    result: null,
   });
   expect(task).toEqual(original);
 });
@@ -119,7 +121,78 @@ test.each([
   );
 });
 
-function taskIn(status: TaskStatus): Task {
+test("stores the chosen result with its comment trimmed", () => {
+  const task = taskIn("to_do", resultForm);
+
+  const done = task.markDone(task.assigneeEmployeeId, new Date("2026-11-09T12:00:00Z"), {
+    code: "no",
+    comment: "  VPN login fails \n",
+  });
+
+  expect(done).toMatchObject({
+    status: "done",
+    result: { code: "no", comment: "VPN login fails" },
+  });
+  expect(task.result).toBeNull();
+});
+
+test("stores a blank optional comment as null", () => {
+  const task = taskIn("to_do", resultForm);
+
+  const done = task.markDone(task.assigneeEmployeeId, new Date("2026-11-09T12:00:00Z"), {
+    code: "yes",
+    comment: " \t\n ",
+  });
+
+  expect(done.result).toEqual({ code: "yes", comment: null });
+});
+
+test.each([
+  {
+    name: "a result without a form",
+    hasForm: false,
+    result: { code: "yes", comment: null },
+    message: "This task does not ask for a result.",
+  },
+  {
+    name: "a missing result",
+    hasForm: true,
+    result: null,
+    message: "Choose a result for this task.",
+  },
+  {
+    name: "a result its form does not list",
+    hasForm: true,
+    result: { code: "maybe", comment: null },
+    message: "Choose one of this task's results.",
+  },
+  {
+    name: "a missing required comment",
+    hasForm: true,
+    result: { code: "no", comment: null },
+    message: "Add a comment to this result.",
+  },
+  {
+    name: "a blank required comment",
+    hasForm: true,
+    result: { code: "no", comment: " \t\n " },
+    message: "Add a comment to this result.",
+  },
+  {
+    name: "a comment beyond 2000 characters",
+    hasForm: true,
+    result: { code: "yes", comment: "a".repeat(2001) },
+    message: "A comment has at most 2000 characters.",
+  },
+])("refuses $name", ({ hasForm, result, message }) => {
+  const task = taskIn("to_do", hasForm ? resultForm : null);
+
+  expect(() =>
+    task.markDone(task.assigneeEmployeeId, new Date("2026-11-09T12:00:00Z"), result),
+  ).toThrowError(expect.objectContaining({ code: "INVALID_INPUT", message }));
+});
+
+function taskIn(status: TaskStatus, resultForm: TaskResultForm | null = null): Task {
   const createdAt = new Date("2026-11-01T12:00:00Z");
   const closedAt = new Date("2026-11-08T12:00:00Z");
   return Task.restore({
@@ -133,6 +206,8 @@ function taskIn(status: TaskStatus): Task {
     subjectEmployeeId: "00000000-0000-4000-8000-000000000004",
     record: null,
     dueDate: null,
+    resultForm,
+    result: null,
     doneAt: status === "done" ? closedAt : null,
     doneByEmployeeId: status === "done" ? "00000000-0000-4000-8000-000000000002" : null,
     cancelledAt: status === "cancelled" ? closedAt : null,
@@ -141,3 +216,12 @@ function taskIn(status: TaskStatus): Task {
     updatedAt: createdAt,
   });
 }
+
+const resultForm: TaskResultForm = {
+  kind: "choice",
+  display: "buttons",
+  options: [
+    { code: "yes", label: "Yes", commentRequired: false },
+    { code: "no", label: "No", commentRequired: true },
+  ],
+};

@@ -1,5 +1,5 @@
 // What this module adds to core's shared registries.
-import type { TaskStatus } from "../domain";
+import type { TaskResult, TaskStatus } from "../domain";
 
 declare module "../../records" {
   interface RecordTypes {
@@ -28,6 +28,8 @@ declare module "../../events" {
       from: TaskStatus;
       to: TaskStatus;
       byEmployeeId: string | null;
+      /** What the assignee gave with Mark done; null for a task without a form and other changes. */
+      result: TaskResult | null;
     };
   }
 }

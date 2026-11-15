@@ -1,5 +1,6 @@
 import { ApplicationError } from "../../applicationError";
 import type { CalendarDate } from "../../../utils";
+import type { TaskResult } from "../../tasks";
 import type { TriggerEvent } from "./eventTrigger";
 import type { AssigneeRule, TaskStep } from "./processDefinition";
 
@@ -78,6 +79,8 @@ export interface RunStep {
   assigneeNote: AssigneeNote | null;
   skipReason: SkipReason | null;
   finishedAt: Date | null;
+  /** What the task's assignee gave, kept on the step as the task goes with its assignee. */
+  result: TaskResult | null;
 }
 
 /** The person a step's task goes to, and why, when it is not the obvious one. */
@@ -204,16 +207,27 @@ export class ProcessRun implements Readonly<ProcessRunFields> {
   }
 
   /**
-   * Completes the steps awaiting these tasks, and finishes the run once no step awaits a task; a
-   * run that cannot go on stays in progress, for the daily check to cancel.
+   * Completes the steps awaiting these done tasks with their results, and finishes the run once no
+   * step awaits a task; a run that cannot go on stays in progress, for the daily check to cancel.
    */
-  completeTasks(taskIds: ReadonlySet<string>, now: Date, canGoOn: boolean): ProcessRun {
+  completeTasks(
+    resultsByTaskId: ReadonlyMap<string, TaskResult | null>,
+    now: Date,
+    canGoOn: boolean,
+  ): ProcessRun {
     if (this.status === "cancelled") {
       throw new ApplicationError("CONFLICT", PROCESS_CANCELLED);
     }
     const steps = this.steps.map((step) =>
-      step.status === "step_awaiting_task_completion" && step.taskId && taskIds.has(step.taskId)
-        ? { ...step, status: "step_completed" as const, finishedAt: now }
+      step.status === "step_awaiting_task_completion" &&
+      step.taskId &&
+      resultsByTaskId.has(step.taskId)
+        ? {
+            ...step,
+            status: "step_completed" as const,
+            finishedAt: now,
+            result: resultsByTaskId.get(step.taskId) ?? null,
+          }
         : step,
     );
     if (!canGoOn || this.status === "finished") return this.with({}, steps);

@@ -1,4 +1,4 @@
-"What created a task; every task is finished with Mark done. Features that create tasks add their own."
+"What created a task; every task is finished with Mark done, with a result when it has a form. Features that create tasks add their own."
 enum TaskType {
   "Asked by a person, who may delete it while it is open."
   MANUAL_TO_DO
@@ -24,11 +24,49 @@ type Task implements AnyRecord {
   cancelledAt: DateTime
   "Why the feature that created it cancelled it."
   cancelReason: String
+  "What its assignee gives when they mark it done; null for a task finished with Mark done alone."
+  resultForm: TaskResultForm
+  "What its assignee gave, once done."
+  result: TaskResult
   createdAt: DateTime!
   "Changes to this task, newest first."
   history("Page size, 1 to 10000." first: Int = 50, after: String): RecordChangeConnection!
   "Always read-only: a task changes through its own actions."
   access: RecordAccess!
+}
+
+"What a task asks its assignee to give when they mark it done."
+type TaskResultForm {
+  kind: TaskResultKind!
+  display: TaskResultDisplay!
+  options: [TaskResultOption!]!
+}
+
+enum TaskResultKind {
+  "One of the form's options, with a comment when the option requires one."
+  CHOICE
+}
+
+enum TaskResultDisplay {
+  "One button per option, at most three, in place of Mark done."
+  BUTTONS
+  "A list of options to choose from, then Send."
+  CHOICES
+}
+
+"One answer a form offers; features match its code, never its label."
+type TaskResultOption {
+  code: String!
+  label: String!
+  commentRequired: Boolean!
+}
+
+"What a task's assignee gave when they marked it done."
+type TaskResult {
+  code: String!
+  "The chosen option's label."
+  label: String!
+  comment: String
 }
 
 # Adds the task to the shared list of record types that keep history; the server merges them.
@@ -54,6 +92,15 @@ type Query {
 
 input TaskMarkDoneInput {
   id: ID!
+  "Required by a task with a result form, refused by one without."
+  result: TaskResultInput
+}
+
+input TaskResultInput {
+  "One of the codes the task's form lists."
+  code: String!
+  "Required when the chosen option asks for one; at most 2000 characters."
+  comment: String
 }
 
 input TaskDeleteInput {
@@ -77,7 +124,7 @@ type TaskDeletePayload {
 union TaskError = InvalidInputError | NotFoundError | ConflictError
 
 type TasksMutations {
-  "The assignee finishes a task to do, whatever created it."
+  "The assignee finishes a task to do, whatever created it, with a result when it has a form."
   markDone(input: TaskMarkDoneInput!): TaskPayload!
   "The person who asked deletes an open task, with its place in everyone's tasks."
   delete(input: TaskDeleteInput!): TaskDeletePayload!

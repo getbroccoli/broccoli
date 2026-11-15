@@ -254,6 +254,53 @@ test("refuses a subject differing from the triggering event's record type", () =
   );
 });
 
+test("parses a step's result form with defaults", () => {
+  const definition = welcomeDefinition({
+    kind: "choice",
+    options: [
+      { code: "yes", label: "Yes" },
+      { code: "no", label: "No", commentRequired: true },
+    ],
+  });
+
+  const parsed = parseProcessDefinition(1, definition, catalog);
+
+  expect(parsed.steps[0]!.task.resultForm).toEqual({
+    kind: "choice",
+    display: "buttons",
+    options: [
+      { code: "yes", label: "Yes", commentRequired: false },
+      { code: "no", label: "No", commentRequired: true },
+    ],
+  });
+});
+
+test("parses a step without a result form as null", () => {
+  const definition = welcomeDefinition();
+  const step = definition.steps[0]!;
+  const { assignee, title, description, due } = step.task;
+
+  const parsed = parseProcessDefinition(
+    1,
+    {
+      ...definition,
+      steps: [{ ...step, task: { assignee, title, description, due } }],
+    },
+    catalog,
+  );
+
+  expect(parsed.steps[0]!.task.resultForm).toBeNull();
+});
+
+test("refuses a definition with an invalid result form", () => {
+  const definition = welcomeDefinition({
+    kind: "choice",
+    options: [{ code: "yes", label: "Yes" }],
+  });
+
+  expect(() => parseProcessDefinition(1, definition, catalog)).toThrow();
+});
+
 function eventDefinition(event: string, recordType = "employee") {
   return {
     ...welcomeDefinition(),
@@ -267,7 +314,7 @@ function eventDefinition(event: string, recordType = "employee") {
   };
 }
 
-function welcomeDefinition() {
+function welcomeDefinition(resultForm: unknown = null) {
   return {
     subject: { recordType: "employee" },
     trigger: {
@@ -286,6 +333,7 @@ function welcomeDefinition() {
           assignee: { kind: "subjects_manager", otherwise: { kind: "workspace_owner" } },
           title: "Have a welcome 1:1 with {firstName}",
           description: "Welcome the new person.",
+          resultForm,
           due: { amount: 0, unit: "calendar_days" },
         },
       },
@@ -297,6 +345,7 @@ function welcomeDefinition() {
           assignee: { kind: "subject" },
           title: "Have coffee calls with 3 colleagues",
           description: "Meet the team.",
+          resultForm: null,
           due: { amount: 5, unit: "business_days" },
         },
       },

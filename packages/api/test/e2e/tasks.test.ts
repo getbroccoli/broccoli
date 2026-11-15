@@ -177,6 +177,80 @@ test("the asker deletes a task over GraphQL and it disappears from the assignee'
   });
 });
 
+test("returns the chosen result and its form when marking a task done over GraphQL", async ({
+  env,
+}) => {
+  await env.signInAsOwner();
+  const credentials = { email: "assignee@example.com", password: TEST_OWNER.password };
+  const user = await env.seed.user(credentials);
+  const assignee = await env.seed.employee({ userId: user.id });
+  const task = await env.seed.task({ assigneeEmployeeId: assignee.id, resultForm });
+  const { browser } = await env.signIn(credentials);
+
+  const response = await browser.graphql(
+    `mutation MarkDone($id: ID!) {
+    tasks { markDone(input: { id: $id, result: { code: "no", comment: "VPN login fails" } }) {
+      task { result { code label comment } resultForm { display options { code } } }
+      error { __typename ... on Error { message } }
+    } }
+  }`,
+    { id: task.id },
+  );
+
+  expect(await response.json()).toEqual({
+    data: {
+      tasks: {
+        markDone: {
+          task: {
+            result: { code: "no", label: "No", comment: "VPN login fails" },
+            resultForm: { display: "BUTTONS", options: [{ code: "yes" }, { code: "no" }] },
+          },
+          error: null,
+        },
+      },
+    },
+  });
+});
+
+test("returns InvalidInputError when a task's required result is missing", async ({ env }) => {
+  await env.signInAsOwner();
+  const credentials = { email: "assignee@example.com", password: TEST_OWNER.password };
+  const user = await env.seed.user(credentials);
+  const assignee = await env.seed.employee({ userId: user.id });
+  const task = await env.seed.task({ assigneeEmployeeId: assignee.id, resultForm });
+  const { browser } = await env.signIn(credentials);
+
+  const response = await browser.graphql(
+    `mutation MarkDone($id: ID!) {
+    tasks { markDone(input: { id: $id }) {
+      task { id }
+      error { __typename ... on Error { message } }
+    } }
+  }`,
+    { id: task.id },
+  );
+
+  expect(await response.json()).toEqual({
+    data: {
+      tasks: {
+        markDone: {
+          task: null,
+          error: { __typename: "InvalidInputError", message: "Choose a result for this task." },
+        },
+      },
+    },
+  });
+});
+
+const resultForm = {
+  kind: "choice" as const,
+  display: "buttons" as const,
+  options: [
+    { code: "yes", label: "Yes", commentRequired: false },
+    { code: "no", label: "No", commentRequired: true },
+  ],
+};
+
 const MARK_DONE_WITH_HISTORY = `mutation MarkDone($id: ID!) {
   tasks { markDone(input: { id: $id }) {
     task { id history(first: 5) { edges { node { operation } } } }

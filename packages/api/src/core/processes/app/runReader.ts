@@ -96,6 +96,7 @@ function stepView(step: RunStep, title: string, runTasks: readonly Task[]): Proc
     assigneeNote: step.assigneeNote,
     skipReason: step.skipReason,
     finishedAt: step.finishedAt,
+    result: step.result,
     task: task
       ? {
           id: task.id,

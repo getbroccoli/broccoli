@@ -1,6 +1,6 @@
 # Processes
 
-A process gives people tasks when something happens to a record, and follows each run of it to its end. Two are ready-made: **Welcome a new starter**, which on a person's start date gives their manager "Have a welcome 1:1" and the person "Have coffee calls with 3 colleagues"; and the **Onboarding example**, whose last step, "Check that your accounts work", waits until the owner has provisioned the person's accounts.
+A process gives people tasks when something happens to a record, and follows each run of it to its end. Two are ready-made: **Welcome a new starter**, which on a person's start date gives their manager "Have a welcome 1:1" and the person "Have coffee calls with 3 colleagues"; and the **Onboarding example**, whose last step, "Check that your accounts work", waits until the owner has provisioned the person's accounts, then asks the person whether everything works.
 
 ## How a run works
 
@@ -62,7 +62,13 @@ Ids are shortened; columns are shown as rows are stored.
    ```json
    {
      "type": "tasks.task_status_changed",
-     "payload": { "taskId": "t1", "from": "to_do", "to": "done", "byEmployeeId": "owner" }
+     "payload": {
+       "taskId": "t1",
+       "from": "to_do",
+       "to": "done",
+       "byEmployeeId": "owner",
+       "result": null
+     }
    }
    ```
 
@@ -117,6 +123,27 @@ When the owner marks `t6` done, the same transaction completes that step and sta
 { "run_id": "run3", "step_key": "ensure_provision", "status": "step_awaiting_task_completion", "task_id": "t7" }
 ```
 
+### A step that asks for a result
+
+A step's task may carry a result form, which its task copies; `ensure_provision` asks Yes or No, No with a comment:
+
+```json
+"resultForm": { "kind": "choice", "display": "buttons", "options": [
+  { "code": "yes", "label": "Yes" }, { "code": "no", "label": "No", "commentRequired": true } ] }
+```
+
+Ada answers with the ordinary mark done (`result: { "code": "no", "comment": "VPN login fails" }`); the status event carries the result, and the step keeps its own copy, which stays when her task goes with her:
+
+```json
+{
+  "run_id": "run3",
+  "step_key": "ensure_provision",
+  "status": "step_completed",
+  "result_code": "no",
+  "result_comment": "VPN login fails"
+}
+```
+
 ## Rules
 
 - A process is off until an admin turns it on (`MANAGE_WORKSPACE`); turning it on or off appends a history line for record type `process`, which only those who manage the workspace read. Turning it on starts today's due runs at once, and never anyone whose date was before that day.
@@ -135,4 +162,4 @@ When the owner marks `t6` done, the same transaction completes that step and sta
 - **`processes`:** `key`, `name`, `description`, `active_version_id` (one of its own published versions), `turned_on_at` (null while off).
 - **`process_versions`:** `version`, `status` (`draft` or `published`, one draft per process), `definition_schema_version`, `definition`.
 - **`process_runs`:** the version it started with, the record it is about (`record_type`, `record_id`: a record type with process capabilities, today an employee or a task) and its subject (`subject_employee_id`, no foreign key so a removal is noticed; a task's subject, which may be null), how it started, `trigger_date` or `trigger_event` and `start_key` (unique per process, so a trigger starts once), `start_day`, `status` (`in_progress`, `finished`, `cancelled`) with its columns. One run in progress per process and record.
-- **`process_run_step_progress`:** a run's progress on each step of its version's definition (the steps themselves live in `process_versions.definition`): one row per step from the run's start: `status`, `task_id` (null while the step waits, set null when the task goes with its assignee), `assignee_note`, `skip_reason`, `finished_at`.
+- **`process_run_step_progress`:** a run's progress on each step of its version's definition (the steps themselves live in `process_versions.definition`): one row per step from the run's start: `status`, `task_id` (null while the step waits, set null when the task goes with its assignee), `assignee_note`, `skip_reason`, `finished_at`, `result_code` and `result_comment` (the task's result, once completed).

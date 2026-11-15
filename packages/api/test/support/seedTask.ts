@@ -18,6 +18,8 @@ export function seedTask(
         subjectEmployeeId: null,
         record: null,
         dueDate: null,
+        resultForm: null,
+        result: null,
         doneAt: null,
         doneByEmployeeId: null,
         cancelledAt: null,
