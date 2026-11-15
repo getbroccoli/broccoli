@@ -8,8 +8,8 @@ export { createTaskService, TASK_TRIGGERING_EVENTS, taskRecordType } from "./app
 
 // Public types.
 export type { NewTask, TaskService } from "./app";
-export { MANUAL_TO_DO } from "./domain";
-export type { Task, TaskStatus } from "./domain";
+export { MANUAL_TO_DO, TASK_RESULT_FORM_SCHEMA } from "./domain";
+export type { Task, TaskResult, TaskResultForm, TaskStatus } from "./domain";
 
 /** Work asked of people, and each person's My tasks. */
 export function tasksModule({

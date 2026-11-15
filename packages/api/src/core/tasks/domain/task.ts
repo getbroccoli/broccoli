@@ -1,5 +1,6 @@
 import { ApplicationError } from "../../applicationError";
 import type { CalendarDate } from "../../../utils";
+import { acceptResult, type TaskResult, type TaskResultForm } from "./taskResult";
 
 /** A task a person asked for; features that create tasks, such as processes, name their own types. */
 export const MANUAL_TO_DO = "manual_to_do";
@@ -30,6 +31,10 @@ export interface TaskFields {
   doneByEmployeeId: string | null;
   cancelledAt: Date | null;
   cancelReason: string | null;
+  /** What it asks its assignee to give when they mark it done; null for a plain to-do. */
+  resultForm: TaskResultForm | null;
+  /** What its assignee gave, once done. */
+  result: TaskResult | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,6 +58,8 @@ export class Task implements Readonly<TaskFields> {
   declare readonly doneByEmployeeId: string | null;
   declare readonly cancelledAt: Date | null;
   declare readonly cancelReason: string | null;
+  declare readonly resultForm: TaskResultForm | null;
+  declare readonly result: TaskResult | null;
   declare readonly createdAt: Date;
   declare readonly updatedAt: Date;
 
@@ -70,8 +77,8 @@ export class Task implements Readonly<TaskFields> {
     return this.assigneeEmployeeId === employeeId || this.askedByEmployeeId === employeeId;
   }
 
-  /** Its assignee finishes it, whatever created it. */
-  markDone(byEmployeeId: string, now: Date): Task {
+  /** Its assignee finishes it, whatever created it, with a result its form lists when it has one. */
+  markDone(byEmployeeId: string, now: Date, result: TaskResult | null = null): Task {
     if (this.assigneeEmployeeId !== byEmployeeId) {
       throw new ApplicationError(
         "FORBIDDEN",
@@ -79,7 +86,12 @@ export class Task implements Readonly<TaskFields> {
       );
     }
     this.refuseClosed();
-    return this.with({ status: "done", doneAt: now, doneByEmployeeId: byEmployeeId });
+    return this.with({
+      status: "done",
+      doneAt: now,
+      doneByEmployeeId: byEmployeeId,
+      result: acceptResult(this.resultForm, result),
+    });
   }
 
   /** `reason` is the trimmed, non-blank reason the caller checked. */

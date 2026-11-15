@@ -4,7 +4,7 @@ import { createRecordHistoryService, type CauseKinds } from "../../records";
 import type { SecurityContext } from "../../security";
 import type { CalendarDate } from "../../../utils";
 import { type NewTaskRow, taskRepository } from "../db";
-import type { Task, TaskRecord } from "../domain";
+import type { Task, TaskRecord, TaskResultForm } from "../domain";
 
 /**
  * A task a person, a feature or the demo asks of someone. A `manual_to_do` has the person who
@@ -21,6 +21,8 @@ export interface NewTask {
   subjectEmployeeId?: string | null;
   record?: TaskRecord | null;
   dueDate?: CalendarDate | null;
+  /** What its assignee gives when they mark it done, as the feature parsed it. */
+  resultForm?: TaskResultForm | null;
   /** Why the task exists, for its history; a direct edit when left out. */
   cause?: TaskCause;
 }
@@ -77,6 +79,8 @@ function newTaskRow({ title, description = null, ...task }: NewTask): NewTaskRow
     doneByEmployeeId: null,
     cancelledAt: null,
     cancelReason: null,
+    resultForm: task.resultForm ?? null,
+    result: null,
   };
 }
 

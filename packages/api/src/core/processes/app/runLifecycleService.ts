@@ -49,29 +49,31 @@ export function createRunLifecycleService({
 }): RunLifecycleService {
   return {
     async completeStepsOfDoneTasks(tx, events) {
-      const doneTaskIds = new Set(
+      const resultsByTaskId = new Map(
         events.flatMap(({ type, payload }) =>
-          type === "tasks.task_status_changed" && payload.to === "done" ? [payload.taskId] : [],
+          type === "tasks.task_status_changed" && payload.to === "done"
+            ? [[payload.taskId, payload.result] as const]
+            : [],
         ),
       );
-      if (doneTaskIds.size === 0) return;
+      if (resultsByTaskId.size === 0) return;
       const runs = processRepository(tx);
-      const awaiting = (await runStepRepository(tx).findStepsByTaskIds([...doneTaskIds])).filter(
-        ({ status }) => status === "step_awaiting_task_completion",
-      );
+      const awaiting = (
+        await runStepRepository(tx).findStepsByTaskIds([...resultsByTaskId.keys()])
+      ).filter(({ status }) => status === "step_awaiting_task_completion");
       const now = new Date();
       for (const runId of [...new Set(awaiting.map((step) => step.runId))].sort()) {
         const run = (await runs.lockRun(runId))!;
         // A run that can no longer run stays in progress for the daily check, which cancels it.
         const canGoOn = (await removalOf(starter, tx, run)) === null;
-        const completed = run.completeTasks(doneTaskIds, now, canGoOn);
+        const completed = run.completeTasks(resultsByTaskId, now, canGoOn);
         const changed = canGoOn
           ? await steps.startReadySteps(tx, completed, laterOf(today(), run.startDay))
           : completed;
         await runs.saveRun(changed);
         tx.publish("processes.steps_completed", {
           runId,
-          taskIds: run.openTaskIds().filter((taskId) => doneTaskIds.has(taskId)),
+          taskIds: run.openTaskIds().filter((taskId) => resultsByTaskId.has(taskId)),
           startedStepKeys: startedStepKeys(completed, changed),
           runStatus: changed.status,
         });

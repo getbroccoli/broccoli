@@ -14,6 +14,9 @@ CREATE TABLE "tasks" (
 	"done_by_employee_id" uuid,
 	"cancelled_at" timestamp with time zone,
 	"cancel_reason" text,
+	"result_form" jsonb,
+	"result_code" text,
+	"result_comment" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "tasks_title_not_blank" CHECK (btrim("tasks"."title") <> ''),
@@ -23,7 +26,12 @@ CREATE TABLE "tasks" (
         and ("tasks"."done_at" is null or "tasks"."cancelled_at" is null)
         and ("tasks"."status" = 'cancelled') = ("tasks"."cancelled_at" is not null)
         and ("tasks"."cancelled_at" is null) = ("tasks"."cancel_reason" is null)
-        and ("tasks"."cancel_reason" is null or btrim("tasks"."cancel_reason") <> ''))
+        and ("tasks"."cancel_reason" is null or btrim("tasks"."cancel_reason") <> '')),
+	CONSTRAINT "tasks_result_follows_form" CHECK (("tasks"."result_code" is null or "tasks"."status" = 'done')
+        and ("tasks"."status" <> 'done' or "tasks"."result_form" is null or "tasks"."result_code" is not null)
+        and ("tasks"."result_code" is null or "tasks"."result_form" is not null)
+        and ("tasks"."result_comment" is null or "tasks"."result_code" is not null)
+        and ("tasks"."result_comment" is null or btrim("tasks"."result_comment") <> ''))
 );
 --> statement-breakpoint
 CREATE INDEX "tasks_assignee_idx" ON "tasks" USING btree ("assignee_employee_id");--> statement-breakpoint

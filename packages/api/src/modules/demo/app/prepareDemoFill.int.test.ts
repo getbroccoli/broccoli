@@ -90,7 +90,10 @@ test("does not fill demo data when a real employee exists", async ({ orm, seed, 
   expect(await demo.getDemoData(OWNER)).toEqual({ isPresent: false });
 });
 
-test("fills Oliver's tasks with two to do and two waiting on others", async ({ orm, transact }) => {
+test("fills Oliver's tasks with three to do, two of them asking for a result, and two waiting on others", async ({
+  orm,
+  transact,
+}) => {
   await transact(await demoFillService(orm).prepareDemoFill(today));
   const { edges } = await employeeServices(orm).listEmployees(OWNER, { first: 100 });
   const oliver = edges.find(({ node }) => node.email === "oliver.bennett@example.com")!.node;
@@ -100,13 +103,45 @@ test("fills Oliver's tasks with two to do and two waiting on others", async ({ o
 
   const tasks = await taskService(orm).listMyTasks(ctx);
 
-  expect(tasks.needsYou).toHaveLength(2);
+  expect(tasks.needsYou).toHaveLength(3);
   expect(tasks.needsYou).toMatchObject([
-    { assigneeEmployeeId: oliver.id, askedByEmployeeId: priya.id, status: "to_do" },
-    { assigneeEmployeeId: oliver.id, askedByEmployeeId: priya.id, status: "to_do" },
+    {
+      title: "Sign James Whitfield's new contract",
+      assigneeEmployeeId: oliver.id,
+      askedByEmployeeId: priya.id,
+      status: "to_do",
+      dueDate: "2026-10-11",
+      resultForm: null,
+    },
+    {
+      title: "Approve the hiring plan for next quarter",
+      assigneeEmployeeId: oliver.id,
+      askedByEmployeeId: priya.id,
+      status: "to_do",
+      dueDate: "2026-10-16",
+    },
+    {
+      title: "Choose the venue for the summer party",
+      description: "Four places can take all of us on the last Friday of June.",
+      assigneeEmployeeId: oliver.id,
+      askedByEmployeeId: james.id,
+      status: "to_do",
+      dueDate: "2026-10-20",
+    },
   ]);
-  expect(tasks.needsYou[0]!.dueDate! < today).toBe(true);
-  expect(tasks.needsYou[1]!.dueDate! > today).toBe(true);
+  expect(tasks.needsYou[1]!.resultForm).toMatchObject({
+    display: "buttons",
+    options: [{ code: "approve" }, { code: "decline" }],
+  });
+  expect(tasks.needsYou[2]!.resultForm).toMatchObject({
+    display: "choices",
+    options: [
+      { code: "riverside_terrace" },
+      { code: "rooftop_bar" },
+      { code: "office_garden" },
+      { code: "somewhere_else" },
+    ],
+  });
   expect(tasks.waitingOnOthers).toHaveLength(2);
   expect(tasks.waitingOnOthers).toEqual(
     expect.arrayContaining([
@@ -114,11 +149,13 @@ test("fills Oliver's tasks with two to do and two waiting on others", async ({ o
         assigneeEmployeeId: james.id,
         askedByEmployeeId: oliver.id,
         status: "to_do",
+        resultForm: null,
       }),
       expect.objectContaining({
         assigneeEmployeeId: priya.id,
         askedByEmployeeId: oliver.id,
         status: "to_do",
+        resultForm: null,
       }),
     ]),
   );

@@ -3,7 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { ormOf, type Orm, type Tx } from "../../db";
 import type { RunStep } from "../domain";
 import { INSERT_BATCH_SIZE } from "./processRepository";
-import { runStepProgress } from "./processRunsTable";
+import { resultColumnsOf, runStepProgress, toRunStep } from "./processRunsTable";
 
 /** Stored progress of runs' steps, read and written without their run. */
 export interface RunStepRepository {
@@ -21,12 +21,15 @@ export function runStepRepository(db: Orm | Tx): RunStepRepository {
   return {
     async insertSteps(steps) {
       for (let start = 0; start < steps.length; start += INSERT_BATCH_SIZE) {
-        await orm.insert(runStepProgress).values(steps.slice(start, start + INSERT_BATCH_SIZE));
+        await orm
+          .insert(runStepProgress)
+          .values(steps.slice(start, start + INSERT_BATCH_SIZE).map(toStepRow));
       }
     },
 
     async saveStartedSteps(steps) {
-      for (const { runId, stepKey, ...started } of steps) {
+      for (const step of steps) {
+        const { runId, stepKey, ...started } = toStepRow(step);
         await orm
           .update(runStepProgress)
           .set(started)
@@ -41,15 +44,21 @@ export function runStepRepository(db: Orm | Tx): RunStepRepository {
     },
 
     async findSteps(runId) {
-      return orm.select().from(runStepProgress).where(eq(runStepProgress.runId, runId));
+      const rows = await orm.select().from(runStepProgress).where(eq(runStepProgress.runId, runId));
+      return rows.map(toRunStep);
     },
 
     async findStepsByTaskIds(taskIds) {
       if (taskIds.length === 0) return [];
-      return orm
+      const rows = await orm
         .select()
         .from(runStepProgress)
         .where(inArray(runStepProgress.taskId, [...taskIds]));
+      return rows.map(toRunStep);
     },
   };
+}
+
+function toStepRow({ result, ...step }: RunStep) {
+  return { ...step, ...resultColumnsOf({ result }) };
 }

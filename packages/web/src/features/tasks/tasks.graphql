@@ -17,6 +17,19 @@ fragment TaskFields on Task {
   doneAt
   cancelledAt
   cancelReason
+  resultForm {
+    display
+    options {
+      code
+      label
+      commentRequired
+    }
+  }
+  result {
+    code
+    label
+    comment
+  }
   processSource {
     processKey
     stepKey

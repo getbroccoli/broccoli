@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { TASK_RESULT_FORM_SCHEMA, type TaskResultForm } from "../../tasks";
+
 /** The shape of `process_versions.definition` this code reads; a migration moves older shapes on. */
 export const PROCESS_DEFINITION_SCHEMA_VERSION = 1;
 
@@ -68,6 +70,8 @@ export interface StepTask {
   title: string;
   description: string | null;
   due: DayOffset;
+  /** What the task asks its assignee to give when they mark it done; copied onto the task. */
+  resultForm: TaskResultForm | null;
 }
 
 /** Days before (negative) or after (positive) a date. */
@@ -259,6 +263,7 @@ const definitionSchema = z.object({
           title: z.string().trim().min(1),
           description: z.string().nullable().default(null),
           due: offsetSchema,
+          resultForm: TASK_RESULT_FORM_SCHEMA.nullable().default(null),
         }),
       }),
     )

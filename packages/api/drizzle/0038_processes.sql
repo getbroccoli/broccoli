@@ -34,6 +34,8 @@ CREATE TABLE "process_run_step_progress" (
 	"assignee_note" text,
 	"skip_reason" text,
 	"finished_at" timestamp with time zone,
+	"result_code" text,
+	"result_comment" text,
 	CONSTRAINT "process_run_step_progress_run_id_step_key_pk" PRIMARY KEY("run_id","step_key"),
 	CONSTRAINT "process_run_step_progress_task_id_unique" UNIQUE("task_id"),
 	CONSTRAINT "process_run_step_progress_key_not_blank" CHECK (btrim("process_run_step_progress"."step_key") <> ''),
@@ -42,7 +44,9 @@ CREATE TABLE "process_run_step_progress" (
 	CONSTRAINT "process_run_step_progress_columns_follow_status" CHECK (("process_run_step_progress"."status" in ('step_waiting_to_start', 'step_awaiting_task_completion')) = ("process_run_step_progress"."finished_at" is null)
         and ("process_run_step_progress"."status" <> 'step_waiting_to_start' or "process_run_step_progress"."task_id" is null)
         and ("process_run_step_progress"."status" = 'step_skipped') = ("process_run_step_progress"."skip_reason" is not null)
-        and ("process_run_step_progress"."skip_reason" is null or "process_run_step_progress"."skip_reason" = 'no_assignee_for_step'))
+        and ("process_run_step_progress"."skip_reason" is null or "process_run_step_progress"."skip_reason" = 'no_assignee_for_step')
+        and ("process_run_step_progress"."result_code" is null or "process_run_step_progress"."status" = 'step_completed')
+        and ("process_run_step_progress"."result_comment" is null or "process_run_step_progress"."result_code" is not null))
 );
 --> statement-breakpoint
 CREATE TABLE "process_runs" (
@@ -147,8 +151,11 @@ INSERT INTO "process_versions" ("process_id", "version", "status", "definition_s
 			{ "key": "ensure_provision", "kind": "task", "after": ["provision_accounts"], "task": {
 				"assignee": { "kind": "subject" },
 				"title": "Check that your accounts work",
-				"description": "Sign in to your email and the tools you were given, and mark this done once everything works.",
-				"due": { "amount": 2, "unit": "business_days" } } }
+				"description": "Sign in to your email and the tools you were given, then tell us whether everything works.",
+				"due": { "amount": 2, "unit": "business_days" },
+				"resultForm": { "kind": "choice", "display": "buttons", "options": [
+					{ "code": "yes", "label": "Yes" },
+					{ "code": "no", "label": "No", "commentRequired": true } ] } } }
 		]
 	}'::jsonb FROM "processes" WHERE "key" = 'onboarding_example';--> statement-breakpoint
 UPDATE "processes" SET "active_version_id" = v."id" FROM "process_versions" v

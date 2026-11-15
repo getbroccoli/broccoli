@@ -11,7 +11,14 @@ import type { SecurityContext } from "../../security";
 import { parseUuid } from "../../../utils";
 import { taskRepository } from "../db";
 import { createTasks, DIRECT_EDIT, type NewTask, requireText, type TaskCause } from "./createTasks";
-import { groupMyTasks, type MyTasks, resolvedRecentlySince, type Task } from "../domain";
+import {
+  groupMyTasks,
+  type MyTasks,
+  resolvedRecentlySince,
+  resultText,
+  type Task,
+  type TaskResult,
+} from "../domain";
 import { taskRecordType } from "./taskRecordType";
 
 /**
@@ -47,10 +54,10 @@ export interface TaskService {
     args: PageArgs,
   ): Promise<Connection<HistoryLine>>;
   /**
-   * The assignee finishes a task to do, whatever created it; a feature follows from the task's
-   * status change before the commit, in the same transaction.
+   * The assignee finishes a task to do, whatever created it, with a result when it has a form; a
+   * feature follows from the task's status change before the commit, in the same transaction.
    */
-  markDone(ctx: SecurityContext, taskId: string): Promise<TaskChange>;
+  markDone(ctx: SecurityContext, taskId: string, input?: MarkDoneInput): Promise<TaskChange>;
   /** The person who asked deletes an open task; a feature's task has nobody who asked. */
   deleteTask(ctx: SecurityContext, taskId: string): Promise<{ deletedTaskId: string }>;
   /**
@@ -63,6 +70,12 @@ export interface TaskService {
    * whose deletion took their tasks: forgets the tasks' history.
    */
   resetTasks(ctx: SecurityContext, tx: Tx): Promise<void>;
+}
+
+/** What the assignee gives with Mark done. */
+export interface MarkDoneInput {
+  /** Required by a task with a form, refused by one without. */
+  result?: TaskResult | null;
 }
 
 /** A task after a change, with the history line the change appended. */
@@ -121,13 +134,18 @@ export function createTaskService({
 
     readTaskHistory: (ctx, taskId, args) => historyReader.readHistory(ctx, "task", taskId, args),
 
-    async markDone(ctx, taskId) {
+    async markDone(ctx, taskId, { result = null } = {}) {
       const done = await transact(async (tx) => {
         const { task, employeeId } = await lockVisible(ctx, tx, taskId);
-        const saved = await taskRepository(tx).saveStatus(task.markDone(employeeId, new Date()));
+        const saved = await taskRepository(tx).saveStatus(
+          task.markDone(employeeId, new Date(), result),
+        );
         return { task: saved, historyLine: await appendStatusChange(ctx, tx, task, saved) };
       });
-      logger.info({ taskId: done.task.id, type: done.task.type }, "Task marked done");
+      logger.info(
+        { taskId: done.task.id, type: done.task.type, resultCode: done.task.result?.code ?? null },
+        "Task marked done",
+      );
       return done;
     },
 
@@ -191,12 +209,13 @@ async function appendStatusChange(
     from: before.status,
     to: after.status,
     byEmployeeId: ctx.user?.employeeId ?? null,
+    result: after.result,
   });
   const [line] = await history.append(ctx, tx, {
     recordType: "task",
     operation: "UPDATED",
     cause,
-    reason: after.cancelReason,
+    reason: after.result ? resultText(after.resultForm!, after.result) : after.cancelReason,
     records: [
       {
         recordId: after.id,

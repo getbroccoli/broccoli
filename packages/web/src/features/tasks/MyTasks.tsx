@@ -95,9 +95,18 @@ export function MyTasks() {
       id: "act",
       header: "",
       className: "w-28 text-right",
-      cell: ({ task }) =>
-        task.status === "TO_DO" &&
-        task.assignee.id === viewerId && (
+      cell: ({ task }) => {
+        if (task.status !== "TO_DO" || task.assignee.id !== viewerId) return null;
+        // A task that asks for a result is answered in its panel, not with one click.
+        return task.resultForm ? (
+          <Button
+            size="xs"
+            variant="outline"
+            render={<Link to="/tasks/$taskId" params={{ taskId: task.id }} />}
+          >
+            {t("tasks.answer")}
+          </Button>
+        ) : (
           <Button
             size="xs"
             variant="outline"
@@ -106,7 +115,8 @@ export function MyTasks() {
           >
             {t("tasks.markDone")}
           </Button>
-        ),
+        );
+      },
     },
   ];
 

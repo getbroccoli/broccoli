@@ -1,5 +1,5 @@
 import type { CalendarDate } from "../../../utils";
-import type { TaskStatus } from "../../tasks";
+import type { TaskResult, TaskStatus } from "../../tasks";
 import type { ProcessRunFields as StoredRun, RunStatus, RunStep } from "../domain";
 
 // The shapes the process service returns.
@@ -40,6 +40,7 @@ export interface ProcessRunStep {
   assigneeNote: RunStep["assigneeNote"];
   skipReason: RunStep["skipReason"];
   finishedAt: Date | null;
+  result: TaskResult | null;
   task: {
     id: string;
     assigneeEmployeeId: string;

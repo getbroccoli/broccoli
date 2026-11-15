@@ -21,7 +21,7 @@ export interface TaskRepository {
   lockAll(): Promise<void>;
   /** Deletes the task. */
   delete(id: string): Promise<void>;
-  /** Writes the task's status and the columns that follow it. */
+  /** Writes the task's status and the columns that follow it, its result among them. */
   saveStatus(task: Task): Promise<Task>;
   /**
    * The tasks the employee holds or asked for that are open, or that were done or cancelled
@@ -80,10 +80,19 @@ export function taskRepository(db: Orm | Tx): TaskRepository {
       await orm.delete(tasks).where(eq(tasks.id, id));
     },
 
-    async saveStatus({ id, status, doneAt, doneByEmployeeId, cancelledAt, cancelReason }) {
+    async saveStatus({ id, status, doneAt, doneByEmployeeId, cancelledAt, cancelReason, result }) {
       const [row] = await orm
         .update(tasks)
-        .set({ status, doneAt, doneByEmployeeId, cancelledAt, cancelReason, updatedAt: new Date() })
+        .set({
+          status,
+          doneAt,
+          doneByEmployeeId,
+          cancelledAt,
+          cancelReason,
+          resultCode: result?.code ?? null,
+          resultComment: result?.comment ?? null,
+          updatedAt: new Date(),
+        })
         .where(eq(tasks.id, id))
         .returning();
       return toTask(row!);
@@ -113,17 +122,20 @@ type TaskRow = typeof tasks.$inferSelect;
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
 const INSERT_BATCH_SIZE = 1_000;
 
-function toRow({ record, ...task }: NewTaskRow) {
+function toRow({ record, result, ...task }: NewTaskRow) {
   return {
     ...task,
     recordType: record?.recordType ?? null,
     recordId: record?.recordId ?? null,
+    resultCode: result?.code ?? null,
+    resultComment: result?.comment ?? null,
   };
 }
 
-function toTask({ recordType, recordId, ...row }: TaskRow): Task {
+function toTask({ recordType, recordId, resultCode, resultComment, ...row }: TaskRow): Task {
   return Task.restore({
     ...row,
     record: recordType && recordId ? { recordType, recordId } : null,
+    result: resultCode === null ? null : { code: resultCode, comment: resultComment },
   });
 }

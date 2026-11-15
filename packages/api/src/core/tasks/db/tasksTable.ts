@@ -1,8 +1,9 @@
 import { sql } from "drizzle-orm";
 import { check, date, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
+import { jsonb } from "../../db";
 import type { CalendarDate } from "../../../utils";
-import { TASK_STATUSES } from "../domain";
+import { TASK_STATUSES, type TaskResultForm } from "../domain";
 
 /**
  * Work asked of one person. The migration adds the foreign keys to employees, which another
@@ -29,6 +30,10 @@ export const tasks = pgTable(
     doneByEmployeeId: uuid("done_by_employee_id"),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     cancelReason: text("cancel_reason"),
+    resultForm: jsonb("result_form").$type<TaskResultForm>(),
+    /** What its assignee gave once done: an option's code, and their comment. */
+    resultCode: text("result_code"),
+    resultComment: text("result_comment"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -53,6 +58,15 @@ export const tasks = pgTable(
         and (${table.status} = 'cancelled') = (${table.cancelledAt} is not null)
         and (${table.cancelledAt} is null) = (${table.cancelReason} is null)
         and (${table.cancelReason} is null or btrim(${table.cancelReason}) <> '')`,
+    ),
+    // A result comes with done, and a done task with a form has one.
+    check(
+      "tasks_result_follows_form",
+      sql`(${table.resultCode} is null or ${table.status} = 'done')
+        and (${table.status} <> 'done' or ${table.resultForm} is null or ${table.resultCode} is not null)
+        and (${table.resultCode} is null or ${table.resultForm} is not null)
+        and (${table.resultComment} is null or ${table.resultCode} is not null)
+        and (${table.resultComment} is null or btrim(${table.resultComment}) <> '')`,
     ),
   ],
 );

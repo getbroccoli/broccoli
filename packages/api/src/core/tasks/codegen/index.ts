@@ -4,4 +4,5 @@ export const codegenMappers = {
   TasksMutations: "Record<PropertyKey, never>",
   Task: "../tasks/domain#Task as TaskModel",
   MyTasks: "../tasks/domain#MyTasks as MyTasksModel",
+  TaskResultForm: "../tasks/domain#TaskResultForm as TaskResultFormModel",
 };

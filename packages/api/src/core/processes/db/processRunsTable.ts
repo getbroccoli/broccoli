@@ -20,6 +20,7 @@ import {
   RUN_STATUSES,
   SKIP_REASONS,
   START_CAUSES,
+  type RunStep,
   STEP_STATUSES,
   type TriggerEvent,
 } from "../domain";
@@ -119,6 +120,9 @@ export const runStepProgress = pgTable(
     assigneeNote: text("assignee_note", { enum: ASSIGNEE_NOTES }),
     skipReason: text("skip_reason", { enum: SKIP_REASONS }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
+    /** The task's result, kept here as removing the assignee takes the task. */
+    resultCode: text("result_code"),
+    resultComment: text("result_comment"),
   },
   (table) => [
     primaryKey({ columns: [table.runId, table.stepKey] }),
@@ -141,7 +145,26 @@ export const runStepProgress = pgTable(
       sql`(${table.status} in ('step_waiting_to_start', 'step_awaiting_task_completion')) = (${table.finishedAt} is null)
         and (${table.status} <> 'step_waiting_to_start' or ${table.taskId} is null)
         and (${table.status} = 'step_skipped') = (${table.skipReason} is not null)
-        and (${table.skipReason} is null or ${table.skipReason} = 'no_assignee_for_step')`,
+        and (${table.skipReason} is null or ${table.skipReason} = 'no_assignee_for_step')
+        and (${table.resultCode} is null or ${table.status} = 'step_completed')
+        and (${table.resultComment} is null or ${table.resultCode} is not null)`,
     ),
   ],
 );
+
+/** A stored step row as the run sees it, its result columns as one result. */
+export function toRunStep({
+  resultCode,
+  resultComment,
+  ...row
+}: typeof runStepProgress.$inferSelect): RunStep {
+  return {
+    ...row,
+    result: resultCode === null ? null : { code: resultCode, comment: resultComment },
+  };
+}
+
+/** A step's result as its columns. */
+export function resultColumnsOf({ result }: Pick<RunStep, "result">) {
+  return { resultCode: result?.code ?? null, resultComment: result?.comment ?? null };
+}

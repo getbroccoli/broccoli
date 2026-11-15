@@ -4,6 +4,7 @@ import {
   DeleteTaskDocument,
   MarkTaskDoneDocument,
   type TaskErrorFragment,
+  type TaskResultInput,
 } from "@/__generated__/graphql";
 import { PayloadFailure, useCache, usePayloadMutation } from "@/apollo";
 import { t } from "@/i18n";
@@ -11,7 +12,7 @@ import { t } from "@/i18n";
 import { addTaskHistoryLine, forgetStaleTask } from "./cache";
 
 /**
- * Mark done, and Delete for the person who asked. Mark done returns the task, which updates in
+ * Mark done, with the result a task's form asks for, and Delete for the person who asked. Mark done returns the task, which updates in
  * place; the groups it belongs to change when Tasks next loads. A refusal, such as a change someone
  * made first, shows its reason and loads the task again as it now stands.
  */
@@ -31,8 +32,8 @@ export function useTaskActions() {
 
   return {
     isPending: markDoneState.loading || deleteState.loading,
-    markDone: (id: string) =>
-      markDone({ variables: { input: { id } } }).then(
+    markDone: (id: string, result?: TaskResultInput) =>
+      markDone({ variables: { input: { id, result } } }).then(
         () => void toast(t("tasks.markedDone")),
         refused(id),
       ),
