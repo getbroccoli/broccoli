@@ -105,7 +105,7 @@ export const processRuns = pgTable(
 );
 
 /** A run's progress on each step of its version's definition, by `step_key`; created with the run. */
-export const processRunStepProgress = pgTable(
+export const runStepProgress = pgTable(
   "process_run_step_progress",
   {
     runId: uuid("run_id").notNull(),

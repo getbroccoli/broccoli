@@ -9,7 +9,7 @@ import {
   type RunStep,
 } from "../domain";
 import { processes, processVersions } from "./processesTable";
-import { processRuns, processRunStepProgress } from "./processRunsTable";
+import { processRuns, runStepProgress } from "./processRunsTable";
 
 /** A process with the stored definition of its active version, not yet parsed. */
 export interface StoredProcess {
@@ -201,7 +201,7 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
 
     async insertSteps(steps) {
       for (let start = 0; start < steps.length; start += INSERT_BATCH_SIZE) {
-        await orm.insert(processRunStepProgress).values(steps.slice(start, start + INSERT_BATCH_SIZE));
+        await orm.insert(runStepProgress).values(steps.slice(start, start + INSERT_BATCH_SIZE));
       }
     },
 
@@ -217,7 +217,7 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
         .where(eq(processRuns.id, id))
         .for("update");
       if (!row) return null;
-      const steps = await orm.select().from(processRunStepProgress).where(eq(processRunStepProgress.runId, id));
+      const steps = await orm.select().from(runStepProgress).where(eq(runStepProgress.runId, id));
       return ProcessRun.restore(row, steps);
     },
 
@@ -229,36 +229,36 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
       // Only what a run changes: a step's task reference is the database's to clear.
       for (const { runId, stepKey, status, finishedAt } of steps) {
         await orm
-          .update(processRunStepProgress)
+          .update(runStepProgress)
           .set({ status, finishedAt })
-          .where(and(eq(processRunStepProgress.runId, runId), eq(processRunStepProgress.stepKey, stepKey)));
+          .where(and(eq(runStepProgress.runId, runId), eq(runStepProgress.stepKey, stepKey)));
       }
     },
 
     async findSteps(runId) {
-      return orm.select().from(processRunStepProgress).where(eq(processRunStepProgress.runId, runId));
+      return orm.select().from(runStepProgress).where(eq(runStepProgress.runId, runId));
     },
 
     async findStepsByTaskIds(taskIds) {
       if (taskIds.length === 0) return [];
       return orm
         .select()
-        .from(processRunStepProgress)
-        .where(inArray(processRunStepProgress.taskId, [...taskIds]));
+        .from(runStepProgress)
+        .where(inArray(runStepProgress.taskId, [...taskIds]));
     },
 
     async findTaskSources(taskIds) {
       if (taskIds.length === 0) return new Map();
       const rows = await orm
         .select({
-          taskId: processRunStepProgress.taskId,
+          taskId: runStepProgress.taskId,
           processKey: processes.key,
-          stepKey: processRunStepProgress.stepKey,
+          stepKey: runStepProgress.stepKey,
         })
-        .from(processRunStepProgress)
-        .innerJoin(processRuns, eq(processRuns.id, processRunStepProgress.runId))
+        .from(runStepProgress)
+        .innerJoin(processRuns, eq(processRuns.id, runStepProgress.runId))
         .innerJoin(processes, eq(processes.id, processRuns.processId))
-        .where(inArray(processRunStepProgress.taskId, [...taskIds]));
+        .where(inArray(runStepProgress.taskId, [...taskIds]));
       return new Map(rows.map(({ taskId, ...source }) => [taskId!, source]));
     },
 
