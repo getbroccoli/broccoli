@@ -4,6 +4,7 @@ import type { AgentActivityOutcome, YourAgentActivityQuery } from "@/__generated
 import { cn } from "@/lib/class-names";
 import { type MessageKey, t } from "@/i18n";
 
+import { labelOf } from "../agentActivityLabel";
 import { timeAgo } from "./timeAgo";
 
 type Props = {
@@ -55,17 +56,3 @@ const LOOKS = {
 } satisfies Record<AgentActivityOutcome, Look>;
 
 type Look = { Icon: Icon; tile: string; badge: MessageKey | null };
-
-/** What the agent did, in the person's words; never what it read or asked. */
-function labelOf({ tool, resultCount }: Props["line"]): string {
-  switch (tool) {
-    case "who_am_i":
-      return t("mcpAgents.activity.whoAmI");
-    case "find_people":
-      return resultCount === null || resultCount === undefined
-        ? t("mcpAgents.activity.findPeople")
-        : t("mcpAgents.activity.findPeopleFound", { count: String(resultCount) });
-    default:
-      return t("mcpAgents.activity.otherTool", { tool });
-  }
-}
