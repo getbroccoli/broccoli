@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { eventAboutRecord, matchEventStarts } from "./eventTrigger";
+import { eventAboutRecord, EventTrigger, matchEventStarts } from "./eventTrigger";
 import type { ProcessDefinition } from "./processDefinition";
 
 test("starts each added person in event, process and record order", () => {
@@ -121,13 +121,13 @@ function onEvent(
   event: "employees.added" | "tasks.task_created" | "tasks.task_status_changed",
   when?: { field: string; in: (string | null)[] },
 ): ProcessDefinition["trigger"] {
-  return {
+  return EventTrigger.restore({
     kind: "on_event",
     event,
     run: "in_same_transaction",
     faultMode: "rollback_transaction",
     ...(when && { when }),
-  };
+  });
 }
 
 const triggeringEvents = {
