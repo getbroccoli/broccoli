@@ -66,13 +66,17 @@ export function AgentActivityHistory({ liveIds }: Props) {
       {lines && lines.length > 0 && (
         <ol className="divide-y bg-muted/40">
           {lines.map((line) => (
-            <li key={line.id} className="flex items-center gap-3 px-4 py-2 text-[13px]">
-              <span className="w-28 shrink-0 text-muted-foreground tabular-nums">
+            <li
+              key={line.id}
+              className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-[13px]"
+            >
+              <span className="w-24 shrink-0 text-muted-foreground tabular-nums">
                 {dateAndTimeOf(line.calledAt)}
               </span>
-              <span className="min-w-0 flex-1">{labelOf(line)}</span>
+              {/* At phone width the badge and agent wrap under the label. */}
+              <span className="min-w-40 flex-1">{labelOf(line)}</span>
               <OutcomeBadge outcome={line.outcome} />
-              <span className="w-28 shrink-0 truncate text-right text-muted-foreground">
+              <span className="ml-auto max-w-28 shrink-0 truncate text-right text-muted-foreground">
                 {line.clientName ?? t("mcpAgents.unnamedClient")}
               </span>
             </li>
