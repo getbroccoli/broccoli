@@ -1,7 +1,102 @@
 import { expect, test } from "vitest";
 
 import { parseCalendarDate } from "../../../utils";
-import { ProcessRun, type RunStatus, type RunStep } from "./processRun";
+import { ProcessRun, readyStepKeys, type RunStatus, type RunStep } from "./processRun";
+
+test("waiting steps are ready in definition order once all their listed steps are completed", () => {
+  const ready = readyStepKeys(
+    [
+      { key: "a", after: [] },
+      { key: "b", after: [] },
+      { key: "d", after: ["a", "b"] },
+      { key: "c", after: ["a", "b"] },
+    ],
+    [
+      { stepKey: "c", status: "step_waiting_to_start" },
+      { stepKey: "d", status: "step_waiting_to_start" },
+      { stepKey: "b", status: "step_completed" },
+      { stepKey: "a", status: "step_completed" },
+    ],
+  );
+
+  expect(ready).toEqual(["d", "c"]);
+});
+
+test("a waiting step is not ready while one listed step still awaits its task", () => {
+  const ready = readyStepKeys(
+    [
+      { key: "a", after: [] },
+      { key: "b", after: [] },
+      { key: "c", after: ["a", "b"] },
+    ],
+    [
+      { stepKey: "a", status: "step_completed" },
+      { stepKey: "b", status: "step_awaiting_task_completion" },
+      { stepKey: "c", status: "step_waiting_to_start" },
+    ],
+  );
+
+  expect(ready).toEqual([]);
+});
+
+test("a skipped listed step counts as done when deciding what is ready", () => {
+  const ready = readyStepKeys(
+    [
+      { key: "a", after: [] },
+      { key: "b", after: [] },
+      { key: "c", after: ["a", "b"] },
+    ],
+    [
+      { stepKey: "a", status: "step_completed" },
+      { stepKey: "b", status: "step_skipped" },
+      { stepKey: "c", status: "step_waiting_to_start" },
+    ],
+  );
+
+  expect(ready).toEqual(["c"]);
+});
+
+test.each(["step_awaiting_task_completion", "step_completed"] as const)(
+  "does not start a step already marked %s",
+  (status) => {
+    const ready = readyStepKeys([{ key: "a", after: [] }], [{ stepKey: "a", status }]);
+
+    expect(ready).toEqual([]);
+  },
+);
+
+test("completing the only awaiting task keeps a run with a waiting step in progress", () => {
+  const run = runIn("in_progress", [step("handbook"), step("equipment", "step_waiting_to_start")]);
+  const now = new Date("2026-11-09T12:00:00Z");
+
+  const completed = run.completeTasks(new Set(["task-handbook"]), now, true);
+
+  expect(completed).toMatchObject({ status: "in_progress", finishedAt: null });
+  expect(completed.steps).toEqual([
+    { ...run.steps[0], status: "step_completed", finishedAt: now },
+    run.steps[1],
+  ]);
+});
+
+test("cancelling a run cancels its waiting steps", () => {
+  const run = runIn("in_progress", [step("handbook"), step("equipment", "step_waiting_to_start")]);
+  const now = new Date("2026-11-09T12:00:00Z");
+
+  const cancelled = run.cancel({
+    cause: "cancelled_because_subject_was_removed",
+    reason: "The person this process is about was removed from Broccoli.",
+    byEmployeeId: null,
+    now,
+  });
+
+  expect(cancelled.status).toBe("cancelled");
+  expect(cancelled.steps[1]).toEqual({
+    ...run.steps[1],
+    status: "step_cancelled",
+    taskId: null,
+    finishedAt: now,
+  });
+});
 
 test("completes one task while another keeps the run in progress", () => {
   const run = runIn("in_progress", [step("handbook"), step("equipment")]);
@@ -242,10 +337,13 @@ function step(
     runId: "run-onboarding",
     stepKey,
     status,
-    taskId: status === "step_skipped" ? null : `task-${stepKey}`,
+    taskId:
+      status === "step_skipped" || status === "step_waiting_to_start" ? null : `task-${stepKey}`,
     assigneeNote: null,
     skipReason: status === "step_skipped" ? "no_assignee_for_step" : null,
     finishedAt:
-      status === "step_awaiting_task_completion" ? null : new Date("2026-11-08T12:00:00Z"),
+      status === "step_awaiting_task_completion" || status === "step_waiting_to_start"
+        ? null
+        : new Date("2026-11-08T12:00:00Z"),
   };
 }
