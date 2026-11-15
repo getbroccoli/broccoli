@@ -1,6 +1,6 @@
 import { useQuery } from "@apollo/client/react";
 import { CaretDown } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -64,6 +64,14 @@ export function BookTimeOffDialog({
   const canBook = Boolean(
     draft.input && current && !current.refusal && current.cost > 0 && !booking.loading,
   );
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const save = async () => {
     const booked = await book({ variables: { input: draft.input! } }).catch((error: unknown) => {
@@ -80,7 +88,8 @@ export function BookTimeOffDialog({
       return;
     }
     toast(bookedToast(booked.timeOff.cost ?? 0, person.firstName, person.id === viewerEmployeeId));
-    onClose();
+    // Browser Back may have closed this dialog and opened another while booking.
+    if (mounted.current) onClose();
   };
 
   return (
