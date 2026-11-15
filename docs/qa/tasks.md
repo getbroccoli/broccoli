@@ -12,7 +12,7 @@ A manual check of My tasks, against a development stack.
 - [ ] Tasks follows Today in the menu, above People, with a count of 2.
 - [ ] An owner with an account (see "Create the owner" in [QA setup](setup.md)) lands on Today (`/`) after signing in; "Tasks" in the menu opens `/tasks`.
 - [ ] Under the title: "2 things need you. Everything else you asked for is below."
-- [ ] One table with Task, Type, From, Due and Where it is. Needs you lists "Sign James Whitfield's new contract" (Due in amber, "Late, was …") then "Approve the hiring plan for next quarter", each from Priya Shah with Mark done.
+- [ ] One table with Task, Type, From and Due. Needs you lists "Sign James Whitfield's new contract" (Due in amber, "Late, was …") then "Approve the hiring plan for next quarter", each from Priya Shah with Mark done.
 - [ ] Waiting on others lists "Agree the updated expenses policy" ("With James Whitfield", from You) and "Check the laptop budget for new starters" ("With Priya Shah", from You).
 - [ ] An owner who is no employee, such as one created after the demo started from a terminal, sees "Nothing is asked of you right now." and no count.
 - [ ] At phone width the table scrolls sideways in its box.
