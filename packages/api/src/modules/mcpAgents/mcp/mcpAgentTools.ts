@@ -37,29 +37,12 @@ export interface AgentCaller {
 /** Adds the tools to `server`, each acting as the person behind `caller` and recording its call. */
 export function registerMcpAgentTools(
   server: McpServer,
-  { ctx, clientId }: AgentCaller,
-  {
-    tools,
-    activity,
-    logger,
-  }: { tools: McpAgentToolService; activity: AgentActivityService; logger: Logger },
+  caller: AgentCaller,
+  dependencies: { tools: McpAgentToolService; activity: AgentActivityService; logger: Logger },
 ): void {
-  const run = <T extends object>(
-    tool: string,
-    answer: () => Promise<T>,
-    countOf: (value: T) => number | null = () => null,
-  ) =>
-    resultOf(tool, answer, {
-      userId: ctx.user?.userId,
-      logger,
-      record: (outcome, value) =>
-        activity.recordCall(ctx, {
-          clientId,
-          tool,
-          outcome,
-          resultCount: value ? countOf(value) : null,
-        }),
-    });
+  const { ctx } = caller;
+  const { tools } = dependencies;
+  const run = <T extends object>(call: ToolCall<T>) => resultOf(call, caller, dependencies);
   server.registerTool(
     "who_am_i",
     {
@@ -74,7 +57,7 @@ export function registerMcpAgentTools(
       },
       annotations: { readOnlyHint: true },
     },
-    () => run("who_am_i", () => tools.whoAmI(ctx)),
+    () => run({ tool: "who_am_i", answer: () => tools.whoAmI(ctx) }),
   );
   server.registerTool(
     "find_people",
@@ -90,34 +73,36 @@ export function registerMcpAgentTools(
       annotations: { readOnlyHint: true },
     },
     (input) =>
-      run(
-        "find_people",
-        () => tools.findPeople(ctx, input),
-        (found) => found.people.length,
-      ),
+      run({
+        tool: "find_people",
+        answer: () => tools.findPeople(ctx, input),
+        countOf: (found) => found.people.length,
+      }),
   );
+}
+
+/** One tool call: its answer, and how many records it returned for tools that count. */
+interface ToolCall<T> {
+  tool: string;
+  answer: () => Promise<T>;
+  countOf?: (value: T) => number;
 }
 
 /**
  * The tool's answer; a refusal the person may read, or a failure that hides its cause. Records how
- * it ended, with the answer when there is one.
+ * it ended as the person's agent activity.
  */
 async function resultOf<T extends object>(
-  tool: string,
-  answer: () => Promise<T>,
-  {
-    userId,
-    logger,
-    record,
-  }: {
-    userId: string | undefined;
-    logger: Logger;
-    record: (outcome: AgentActivityOutcome, value?: T) => Promise<void>;
-  },
+  { tool, answer, countOf }: ToolCall<T>,
+  { ctx, clientId }: AgentCaller,
+  { activity, logger }: { activity: AgentActivityService; logger: Logger },
 ) {
+  const userId = ctx.user?.userId;
+  const record = (outcome: AgentActivityOutcome, resultCount: number | null = null) =>
+    activity.recordCall(ctx, { clientId, tool, outcome, resultCount });
   try {
     const value = await answer();
-    await record("answered_by_broccoli", value);
+    await record("answered_by_broccoli", countOf ? countOf(value) : null);
     return {
       content: [{ type: "text" as const, text: JSON.stringify(value) }],
       structuredContent: value as Record<string, unknown>,

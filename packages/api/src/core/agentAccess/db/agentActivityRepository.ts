@@ -46,7 +46,14 @@ export function agentActivityRepository(db: Orm | Tx): AgentActivityRepository {
     },
     async findPage(userId, { after, limit }) {
       const rows = await orm()
-        .select()
+        .select({
+          id: agentActivity.id,
+          clientId: agentActivity.clientId,
+          tool: agentActivity.tool,
+          outcome: agentActivity.outcome,
+          resultCount: agentActivity.resultCount,
+          calledAt: agentActivity.calledAt,
+        })
         .from(agentActivity)
         .where(
           and(
@@ -56,7 +63,7 @@ export function agentActivityRepository(db: Orm | Tx): AgentActivityRepository {
         )
         .orderBy(desc(agentActivity.id))
         .limit(limit);
-      return rows.map(({ id, userId: _userId, ...line }) => ({
+      return rows.map(({ id, ...line }) => ({
         node: { id: String(id), ...line },
         values: [String(id)],
       }));

@@ -63,25 +63,34 @@ export function mcpAgentRouter(
       refuseBatches,
       asAgent(publicOrigin, resolveAgentSecurity, { activity, logger }),
       perPerson,
-      async (request, response) => {
-        const server = new McpServer(
-          { name: "broccoli", version: "1" },
-          { instructions: INSTRUCTIONS },
-        );
-        registerMcpAgentTools(server, agentOf(response), { tools, activity, logger });
-        const transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: undefined,
-          enableJsonResponse: true,
-        });
-        response.on("close", () => {
-          void transport.close();
-          void server.close();
-        });
-        await server.connect(transport);
-        await transport.handleRequest(request, response, request.body);
-      },
+      answerWithTools({ tools, activity, logger }),
     )
     .use(mcpErrorHandler(logger));
+}
+
+/** Answers the call with a fresh MCP server holding the tools, acting as the call's person. */
+function answerWithTools(dependencies: {
+  tools: McpAgentToolService;
+  activity: AgentActivityService;
+  logger: Logger;
+}): express.RequestHandler {
+  return async (request, response) => {
+    const server = new McpServer(
+      { name: "broccoli", version: "1" },
+      { instructions: INSTRUCTIONS },
+    );
+    registerMcpAgentTools(server, agentOf(response), dependencies);
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined,
+      enableJsonResponse: true,
+    });
+    response.on("close", () => {
+      void transport.close();
+      void server.close();
+    });
+    await server.connect(transport);
+    await transport.handleRequest(request, response, request.body);
+  };
 }
 
 /**

@@ -106,7 +106,9 @@
       "src/core/db",
       "src/core/events",
       "src/core/instance",
+      "src/core/jobs",
       "src/core/logger",
+      "src/core/pagination",
       "src/core/security"
     ],
     "src/core/instance": [
