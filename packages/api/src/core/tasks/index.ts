@@ -4,10 +4,15 @@ import { taskRecordType, type TaskService } from "./app";
 import { createResolvers } from "./graphql";
 
 // Public values.
-export { createTaskService, TASK_TRIGGERING_EVENTS, taskRecordType } from "./app";
+export {
+  createTaskService,
+  TASK_TRIGGERING_EVENTS,
+  taskEmailTemplates,
+  taskRecordType,
+} from "./app";
 
 // Public types.
-export type { NewTask, TaskService } from "./app";
+export type { NewTask, ReadEmployeeNames, TaskService } from "./app";
 export { MANUAL_TO_DO, TASK_RESULT_FORM_SCHEMA } from "./domain";
 export type { Task, TaskResult, TaskResultForm, TaskStatus } from "./domain";
 

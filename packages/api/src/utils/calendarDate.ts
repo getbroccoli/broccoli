@@ -122,6 +122,16 @@ export function dateInLondon(moment: Date): CalendarDate {
   ) as CalendarDate;
 }
 
+/** The day as an email names it, such as "Fri 20 Nov". */
+export function formatShortDay(date: CalendarDate): string {
+  return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+}
+
 /**
  * A column of dates: ISO, or d/m/yyyy or m/d/yyyy with `/`, `.` or `-`. The order is
  * read from the whole column; when no cell tells, only ISO dates are read.

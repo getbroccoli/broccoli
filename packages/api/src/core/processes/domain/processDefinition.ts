@@ -51,8 +51,8 @@ export type EventTrigger = {
   kind: "on_event";
   /** An event a module registered as triggering. */
   event: string;
-  /** Only events whose payload field holds one of these values. */
-  when?: { field: string; in: (string | null)[] };
+  /** Only events whose payload field holds one of `in`, or none of `notIn`; a missing field is null. */
+  when?: { field: string } & ({ in: (string | null)[] } | { notIn: (string | null)[] });
 } & (
   | /** Inside the transaction that published the event: a run that fails fails the change. */
     { run: "in_same_transaction"; faultMode: "rollback_transaction" }
@@ -304,6 +304,9 @@ const assigneeRuleSchema: z.ZodType<AssigneeRule> = z.lazy(() =>
   }),
 );
 
+const whenFieldSchema = z.string().trim().min(1);
+const whenValuesSchema = z.array(z.string().nullable()).min(1);
+
 const triggerSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("on_record_date"),
@@ -327,10 +330,10 @@ function eventTriggerSchema<Shape extends z.ZodRawShape>(runShape: Shape) {
     kind: z.literal("on_event"),
     event: z.string().min(1),
     when: z
-      .object({
-        field: z.string().trim().min(1),
-        in: z.array(z.string().nullable()).min(1),
-      })
+      .union([
+        z.object({ field: whenFieldSchema, in: whenValuesSchema }).strict(),
+        z.object({ field: whenFieldSchema, notIn: whenValuesSchema }).strict(),
+      ])
       .optional(),
     ...runShape,
   });

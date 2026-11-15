@@ -27,6 +27,12 @@ export function taskRecordType(orm: Orm): RecordTypeRegistration {
         const tasks = await taskRepository(tx).findByIds(ids.flatMap((id) => parseUuid(id) ?? []));
         return new Map(tasks.map(({ id, subjectEmployeeId }) => [id, subjectEmployeeId]));
       },
+      employeeFields: ["assignee", "asker"],
+      readEmployees: async (tx, id) => {
+        const taskId = parseUuid(id);
+        const [task] = taskId ? await taskRepository(tx).findByIds([taskId]) : [];
+        return task ? { assignee: task.assigneeEmployeeId, asker: task.askedByEmployeeId } : null;
+      },
     },
   };
 }

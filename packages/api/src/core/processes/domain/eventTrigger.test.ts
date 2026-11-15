@@ -60,6 +60,19 @@ test.each([
   ).toEqual(matches ? [{ processId: "follow_up", event, recordId: "task-1" }] : []);
 });
 
+test.each([
+  { payload: { taskId: "task-1", sourceKey: "welcome_new_starter" }, matches: true },
+  { payload: { taskId: "task-1" }, matches: true },
+  { payload: { taskId: "task-1", sourceKey: "demo_fill" }, matches: false },
+])("excludes demo tasks with notIn: $payload", ({ payload, matches }) => {
+  const event = { id: "event-1", type: "tasks.task_created", payload };
+  const trigger = onEvent("tasks.task_created", { field: "sourceKey", notIn: ["demo_fill"] });
+
+  expect(matchEventStarts([{ processId: "notify", trigger }], [event], triggeringEvents)).toEqual(
+    matches ? [{ processId: "notify", event, recordId: "task-1" }] : [],
+  );
+});
+
 test("does not start a date-triggered process from an event", () => {
   const trigger: ProcessDefinition["trigger"] = {
     kind: "on_record_date",
@@ -119,7 +132,7 @@ test("keeps only the selected record in a multi-record event's payload", () => {
 
 function onEvent(
   event: "employees.added" | "tasks.task_created" | "tasks.task_status_changed",
-  when?: { field: string; in: (string | null)[] },
+  when?: { field: string; in: (string | null)[] } | { field: string; notIn: (string | null)[] },
 ): ProcessDefinition["trigger"] {
   return {
     kind: "on_event",

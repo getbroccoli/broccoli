@@ -19,6 +19,7 @@ CREATE TABLE "processes" (
 	"description" text NOT NULL,
 	"active_version_id" uuid,
 	"turned_on_at" timestamp with time zone,
+	"built_in" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "processes_key_unique" UNIQUE("key"),
@@ -171,4 +172,42 @@ INSERT INTO "process_versions" ("process_id", "version", "status", "definition_s
 		]
 	}'::jsonb FROM "processes" WHERE "key" = 'onboarding_example';--> statement-breakpoint
 UPDATE "processes" SET "active_version_id" = v."id" FROM "process_versions" v
-	WHERE v."process_id" = "processes"."id" AND "processes"."key" = 'onboarding_example';
+	WHERE v."process_id" = "processes"."id" AND "processes"."key" = 'onboarding_example';;--> statement-breakpoint
+-- The built-in notification processes, on: each emails someone about a task through the notify action.
+INSERT INTO "processes" ("key", "name", "description", "built_in", "turned_on_at") VALUES (
+	'notifications.task_created',
+	'Tell the assignee about a new task',
+	'Emails a task''s assignee when someone else or a process gives them the task.',
+	true,
+	now()
+), (
+	'notifications.task_done',
+	'Tell the asker a task is done',
+	'Emails the person who asked for a task when someone else marks it done.',
+	true,
+	now()
+);--> statement-breakpoint
+INSERT INTO "process_versions" ("process_id", "version", "status", "definition_schema_version", "definition")
+	SELECT "id", 1, 'published', 1, '{
+		"subject": { "recordType": "task" },
+		"trigger": { "kind": "on_event", "event": "tasks.task_created",
+			"when": { "field": "sourceKey", "notIn": ["demo_fill"] }, "run": "after_commit" },
+		"steps": [
+			{ "key": "notify_assignee", "kind": "action", "action": { "name": "notifications.notify",
+				"params": { "recipient": { "kind": "record_employee", "field": "assignee" },
+					"emailTemplateKey": "tasks.task_assigned" } } }
+		]
+	}'::jsonb FROM "processes" WHERE "key" = 'notifications.task_created';--> statement-breakpoint
+INSERT INTO "process_versions" ("process_id", "version", "status", "definition_schema_version", "definition")
+	SELECT "id", 1, 'published', 1, '{
+		"subject": { "recordType": "task" },
+		"trigger": { "kind": "on_event", "event": "tasks.task_status_changed",
+			"when": { "field": "to", "in": ["done"] }, "run": "after_commit" },
+		"steps": [
+			{ "key": "notify_asker", "kind": "action", "action": { "name": "notifications.notify",
+				"params": { "recipient": { "kind": "record_employee", "field": "asker" },
+					"emailTemplateKey": "tasks.task_done" } } }
+		]
+	}'::jsonb FROM "processes" WHERE "key" = 'notifications.task_done';--> statement-breakpoint
+UPDATE "processes" SET "active_version_id" = v."id" FROM "process_versions" v
+	WHERE v."process_id" = "processes"."id" AND "processes"."built_in";

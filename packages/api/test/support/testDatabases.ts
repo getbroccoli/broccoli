@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import pg from "pg";
 
 import { connectDatabase } from "../../src/core/db";
@@ -23,6 +24,8 @@ export async function createTemplateDatabase(run: TestRun): Promise<void> {
   const database = connectDatabase(databaseUrl(run, name), createLogger("silent"));
   try {
     await database.migrate();
+    // Off in tests, so creating a task starts no notification run unless a test turns one on.
+    await database.orm.execute(sql`update processes set turned_on_at = null where built_in`);
   } finally {
     await database.close();
   }

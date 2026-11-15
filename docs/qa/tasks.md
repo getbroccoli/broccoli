@@ -29,3 +29,39 @@ A manual check of My tasks, against a development stack.
 - [ ] On "Check the laptop budget for new starters", which you asked for, "…" offers Delete task. "Delete this task?" names Priya; Keep it leaves it, Delete task closes the panel, says "Task deleted" and the task is gone from Waiting on others.
 - [ ] An unknown id, such as `/tasks/00000000-0000-4000-8000-000000000001`, says "This task is not yours to see, or it is gone."
 - [ ] At phone width the panel is full screen.
+
+## Task emails
+
+Mailpit catches every email in development; open it from the address `pnpm dev` prints. No screen creates a task for a person who joined yet, so this uses a terminal and the development database (`docker exec <dev postgres container> psql -U broccoli -d broccoli`).
+
+1. Start the demo from a terminal and create the owner, as in [QA setup](setup.md). Link the owner to Oliver Bennett: `update employees set user_id = (select owner_user_id from instance) where email = 'oliver.bennett@example.com'`.
+2. Add Avery as "Add employees" in [QA setup](setup.md) shows, invite her from People and join from the invite in Mailpit, in a private window.
+
+- [ ] Starting the demo sends no task email: its tasks email nobody.
+- [ ] Add a process that gives the owner a task when a person is added, then add another person: within seconds Oliver gets "New task: Prepare a desk and laptop for …" from Acme Corp, with the description, "Due …", Open task and the task's link.
+
+  ```sql
+  insert into processes (key, name, description, turned_on_at) values ('qa_new_person', 'QA: prepare for a new person', 'QA only', now());
+  insert into process_versions (process_id, version, status, definition_schema_version, definition)
+    select id, 1, 'published', 1, '{"subject": {"recordType": "employee"},
+      "trigger": {"kind": "on_event", "event": "employees.added", "run": "after_commit"},
+      "steps": [{"key": "prepare_desk", "kind": "task", "task": {"assignee": {"kind": "workspace_owner"},
+        "title": "Prepare a desk and laptop for {firstName}",
+        "description": "Book a desk near the team and order a laptop before their first day.",
+        "due": {"amount": 3, "unit": "business_days"}}}]}'::jsonb
+    from processes where key = 'qa_new_person';
+  update processes set active_version_id = v.id from process_versions v
+    where v.process_id = processes.id and processes.key = 'qa_new_person';
+  ```
+
+- [ ] Insert a to-do that Oliver asks of Avery. As Avery, Mark done: Oliver gets "Avery Abbott marked done: …" from "Avery Abbott via Acme Corp", with "Done by Avery Abbott on <today>".
+
+  ```sql
+  insert into tasks (type, status, title, description, assignee_employee_id, asked_by_employee_id, due_date)
+    select 'manual_to_do', 'to_do', 'Book the team offsite', 'Choose somewhere near the station.', avery.id, oliver.id, current_date + 5
+    from employees avery, employees oliver
+    where avery.email = 'avery@example.com' and oliver.email = 'oliver.bennett@example.com';
+  ```
+
+- [ ] Signed out, the email's link asks Oliver to sign in, then opens the task at `/tasks/<id>`.
+- [ ] As Oliver, Mark done the process task: nobody gets an email, since nobody asked for it.
