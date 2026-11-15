@@ -23,9 +23,7 @@ export function groupMyTasks(tasks: readonly Task[], employeeId: string): MyTask
   const holds = (task: Task) => task.assigneeEmployeeId === employeeId;
   return {
     needsYou: tasks.filter((task) => holds(task) && task.status === "to_do").sort(byDueDate),
-    waitingOnOthers: tasks
-      .filter((task) => !holds(task) && isOpen(task))
-      .sort(byCreation),
+    waitingOnOthers: tasks.filter((task) => !holds(task) && isOpen(task)).sort(byCreation),
     resolvedRecently: tasks.filter((task) => !isOpen(task)).sort(byLatestClose),
   };
 }
