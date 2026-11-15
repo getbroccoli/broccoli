@@ -11,7 +11,7 @@ import {
   type ProcessDefinition,
   type TriggeringEvents,
 } from "../domain";
-import type { RunSubject } from "./ports";
+import type { RunSubject } from "../ports";
 import type { DefinitionReader, RunStarter } from "./runStarter";
 
 /** Starts the runs that a transaction's events trigger, inside that transaction. */

@@ -18,7 +18,7 @@ import {
   type StartCause,
   type TriggerEvent,
 } from "../domain";
-import type { PeoplePort, RunSubject, WorkingCalendarsPort } from "./ports";
+import type { PeoplePort, RunSubject, WorkingCalendarsPort } from "../ports";
 
 /** A process's own task type: a step's to-do, whose done step processes follows. */
 export const PROCESS_STEP_TO_DO = "process_step_to_do";

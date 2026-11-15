@@ -1,5 +1,4 @@
 import { ApplicationError } from "../../../core/applicationError";
-import type { DomainEvents } from "../../../core/events";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import {
   type IsWorkingDay,
@@ -11,16 +10,19 @@ import {
 import { PrincipalSecurityContext } from "../../../core/security";
 import { addDays, type CalendarDate } from "../../../utils";
 import type { BankHolidayService } from "../../bankHolidays";
+import {
+  createEmployeeReadService,
+  createEmployeeWorkingPatternService,
+  employeeDirectory,
+} from "../app";
 import { employmentRepository } from "../db";
-import { employeeDirectory } from "./employeeDirectory";
-import { readEmployeesByName } from "./employeeReadService";
-import { createEmployeeWorkingPatternService } from "./employmentTerms/employeeWorkingPatternService";
 
 /** Processes read people through this: whom a run is about, their managers and the owner. */
-export function createPeopleAdapter(): PeoplePort {
+export function createPeopleAdapter({ orm }: Pick<ModuleDependencies, "orm">): PeoplePort {
+  const employeeReads = createEmployeeReadService({ orm });
   return {
     async readPeople(tx, employeeIds) {
-      const found = await readEmployeesByName(tx, employeeIds);
+      const found = await employeeReads.readEmployeesByName(tx, employeeIds);
       const startDates = await employmentRepository(tx).findStartDates(found.map(({ id }) => id));
       return new Map(
         found.map(({ id, firstName }) => [
@@ -75,17 +77,6 @@ export function createWorkingCalendarsAdapter({
     },
   };
 }
-
-/** Employees' events that may start a process: one run per employee added. */
-export const EMPLOYEE_TRIGGERING_EVENTS = {
-  "employees.added": {
-    recordType: "employee",
-    recordIds: ({ employeeIds }: DomainEvents["employees.added"]) => employeeIds,
-    payloadFor: (_: DomainEvents["employees.added"], employeeId: string) => ({
-      employeeIds: [employeeId],
-    }),
-  },
-};
 
 function isBankHolidayIn(
   weeks: readonly { bankHolidayCalendar: string | null }[],

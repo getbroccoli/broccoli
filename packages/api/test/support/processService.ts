@@ -37,7 +37,7 @@ export function processService(
     transact,
     logger: createLogger("silent"),
     tasks: taskService(orm, { transact }),
-    people: createPeopleAdapter(),
+    people: createPeopleAdapter({ orm }),
     workingCalendars: createWorkingCalendarsAdapter({
       transact,
       bankHolidays: bankHolidayService(),

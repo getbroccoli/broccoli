@@ -72,7 +72,7 @@ export function createModules(
   const processes = createProcessService({
     ...core,
     tasks,
-    people: createPeopleAdapter(),
+    people: createPeopleAdapter(core),
     workingCalendars: createWorkingCalendarsAdapter({ ...core, bankHolidays }),
     // The record types a process may run on, registered by the modules that own them.
     recordTypes: { employee: employeeRecordType(core.orm), task: taskRecordType(core.orm) },

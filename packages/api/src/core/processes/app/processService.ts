@@ -16,7 +16,7 @@ import { parseProcessDefinition, type TriggeringEvents } from "../domain";
 import { createDueRunService } from "./dueRunService";
 import { createEventRunService, type EventRunService } from "./eventRunService";
 import { processRecordType } from "./processRecordType";
-import type { PeoplePort, WorkingCalendarsPort } from "./ports";
+import type { PeoplePort, WorkingCalendarsPort } from "../ports";
 import type { Process, ProcessRun, ProcessRunDetails, StepProgress } from "./processViews";
 import { createRunLifecycleService, type RunLifecycleService } from "./runLifecycleService";
 import { createRunReader, type RunReader } from "./runReader";
