@@ -97,7 +97,7 @@ export function taskRepository(db: Orm | Tx): TaskRepository {
           and(
             or(eq(tasks.assigneeEmployeeId, employeeId), eq(tasks.askedByEmployeeId, employeeId)),
             or(
-              inArray(tasks.status, ["to_do", "waiting"]),
+              eq(tasks.status, "to_do"),
               gte(tasks.doneAt, closedSince),
               gte(tasks.cancelledAt, closedSince),
             ),

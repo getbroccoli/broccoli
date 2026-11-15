@@ -2,7 +2,7 @@ import { isUniqueViolation, type Orm, type Transact, type Tx } from "../../db";
 import type { Logger } from "../../logger";
 import type { SecurityContext } from "../../security";
 import { addDays, type CalendarDate, dateInLondon } from "../../../utils";
-import { processRepository, type StoredProcess } from "../db";
+import { processRepository, runStepRepository, type StoredProcess } from "../db";
 import type { TaskService } from "../../tasks";
 import {
   dueTriggerDate,
@@ -86,7 +86,7 @@ async function checkRun(
   runId: string,
 ): Promise<ProcessRun | null> {
   const runs = processRepository(tx);
-  const locked = openTaskIdsOf(await runs.findSteps(runId));
+  const locked = openTaskIdsOf(await runStepRepository(tx).findSteps(runId));
   await tasks.lockInTransaction(tx, locked);
   const run = (await runs.lockRun(runId))!;
   if (String(run.openTaskIds()) !== String(locked)) return null;

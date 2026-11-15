@@ -28,7 +28,7 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Primitive**: one of the four building blocks every HR feature is made of: records, tasks, calendar and processes.
 - **Record**: a module's main entity, such as an employee or the company.
 - **Today**: the home page, where a person lands after setup and after signing in. It shows what needs them today; for now only the agent invitation.
-- **Task**: work asked of one person, its assignee, by its asker or a process step. To do, Waiting, Done or Cancelled; only its assignee and its asker see it.
+- **Task**: work asked of one person, its assignee, by its asker or a process step. To do, Done or Cancelled; only its assignee and its asker see it.
 - **Assignee**: the person who does a task. Not "holder", which is the setup holder. Code: `assignee_employee_id`.
 - **Asker**: the person who asked for a task; none on a process step's task. Code: `asked_by_employee_id`.
 - **Subject**: the employee a record is about, which permission scopes are measured against (see [permissions](permissions.md)). A task's subject is shown and gives them no access. Code: `subject_employee_id`.

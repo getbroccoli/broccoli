@@ -10,6 +10,60 @@ test("reads a welcome definition with its trigger, fallback and parallel steps",
   expect(parsed).toEqual(definition);
 });
 
+test("a step without after waits for no steps", () => {
+  const definition = welcomeDefinition();
+  const { key, kind, task } = definition.steps[0]!;
+
+  const parsed = parseProcessDefinition(
+    1,
+    { ...definition, steps: [{ key, kind, task }] },
+    catalog,
+  );
+
+  expect(parsed.steps[0]!.after).toEqual([]);
+});
+
+test("refuses a step that waits for an unknown step", () => {
+  const definition = welcomeDefinition();
+  definition.steps[0]!.key = "ensure_provision";
+  definition.steps[0]!.after = ["laptop"];
+
+  expect(() => parseProcessDefinition(1, definition, catalog)).toThrow(
+    "Step ensure_provision waits for laptop, which is not a step.",
+  );
+});
+
+test("refuses a step that waits for itself", () => {
+  const definition = welcomeDefinition();
+  definition.steps[0]!.key = "a";
+  definition.steps[0]!.after = ["a"];
+
+  expect(() => parseProcessDefinition(1, definition, catalog)).toThrow("Step a waits for itself.");
+});
+
+test("refuses a step that lists another step twice", () => {
+  const definition = welcomeDefinition();
+  definition.steps[0]!.key = "a";
+  definition.steps[1]!.key = "c";
+  definition.steps[1]!.after = ["a", "a"];
+
+  expect(() => parseProcessDefinition(1, definition, catalog)).toThrow("Step c lists a twice.");
+});
+
+test("reports only the steps on a cycle in definition order", () => {
+  const definition = welcomeDefinition();
+  const step = definition.steps[0]!;
+  definition.steps = [
+    { ...step, key: "c", after: ["b"] },
+    { ...step, key: "a", after: ["b"] },
+    { ...step, key: "b", after: ["a"] },
+  ];
+
+  expect(() => parseProcessDefinition(1, definition, catalog)).toThrow(
+    "Steps a, b wait for each other.",
+  );
+});
+
 test("refuses an unknown definition schema version", () => {
   expect(() => parseProcessDefinition(2, welcomeDefinition(), catalog)).toThrow(
     "Process definition schema version 2 is not known.",
@@ -145,11 +199,28 @@ test("refuses an event condition without any accepted values", () => {
   expect(() => parseProcessDefinition(1, { ...definition, trigger }, catalog)).toThrow();
 });
 
-test("refuses an event trigger that runs after commit", () => {
+test("accepts an after-commit trigger without a fault mode", () => {
+  const definition = eventDefinition("employees.added");
+  const trigger = { kind: "on_event", event: "employees.added", run: "after_commit" };
+
+  expect(parseProcessDefinition(1, { ...definition, trigger }, catalog)).toEqual({
+    ...definition,
+    trigger,
+  });
+});
+
+test("refuses an after-commit trigger with a fault mode", () => {
   const definition = eventDefinition("employees.added");
   definition.trigger.run = "after_commit";
 
   expect(() => parseProcessDefinition(1, definition, catalog)).toThrow();
+});
+
+test("refuses an in-same-transaction trigger without a fault mode", () => {
+  const definition = eventDefinition("employees.added");
+  const trigger = { kind: "on_event", event: "employees.added", run: "in_same_transaction" };
+
+  expect(() => parseProcessDefinition(1, { ...definition, trigger }, catalog)).toThrow();
 });
 
 test("refuses an event trigger that silently ignores failures", () => {
@@ -210,6 +281,7 @@ function welcomeDefinition() {
       {
         key: "welcome_one_to_one",
         kind: "task",
+        after: [] as string[],
         task: {
           assignee: { kind: "subjects_manager", otherwise: { kind: "workspace_owner" } },
           title: "Have a welcome 1:1 with {firstName}",
@@ -220,6 +292,7 @@ function welcomeDefinition() {
       {
         key: "coffee_calls",
         kind: "task",
+        after: [] as string[],
         task: {
           assignee: { kind: "subject" },
           title: "Have coffee calls with 3 colleagues",

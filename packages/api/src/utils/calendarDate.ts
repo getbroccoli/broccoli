@@ -70,6 +70,11 @@ export function daysBetween(from: CalendarDate, until: CalendarDate): number {
   return (Date.parse(until) - Date.parse(from)) / MILLISECONDS_IN_A_DAY;
 }
 
+/** The later of a day and another, when there is one. */
+export function laterOf(day: CalendarDate, other: CalendarDate | null): CalendarDate {
+  return other !== null && other > day ? other : day;
+}
+
 /** The day of the week, 0 for Monday to 6 for Sunday. */
 export function weekdayOf(date: CalendarDate): number {
   return (new Date(date).getUTCDay() + 6) % 7;

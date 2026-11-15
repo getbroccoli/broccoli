@@ -37,24 +37,6 @@ test("refuses completion by the person who asked", async ({ orm, seed }) => {
   expect(await tasks.readTask(ctx, task.id)).toEqual(task);
 });
 
-test("refuses completion while a task is waiting", async ({ orm, seed }) => {
-  const assignee = await seed.employee();
-  const asker = await seed.employee();
-  const task = await seed.task({
-    assigneeEmployeeId: assignee.id,
-    askedByEmployeeId: asker.id,
-    status: "waiting",
-  });
-  const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
-  const tasks = taskService(orm);
-
-  await expect(tasks.markDone(ctx, task.id)).rejects.toMatchObject({
-    code: "CONFLICT",
-    message: "This task is waiting.",
-  });
-  expect(await tasks.readTask(ctx, task.id)).toEqual(task);
-});
-
 test("accepts only the first of two concurrent completions", async ({ orm, seed }) => {
   const assignee = await seed.employee();
   const asker = await seed.employee();

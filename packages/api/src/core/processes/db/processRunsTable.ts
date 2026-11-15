@@ -104,7 +104,10 @@ export const processRuns = pgTable(
   ],
 );
 
-/** A run's progress on each step of its version's definition, by `step_key`; created with the run. */
+/**
+ * A run's progress on each step of its version's definition, by `step_key`; created with the run,
+ * a step that waits for others without a task until it starts.
+ */
 export const runStepProgress = pgTable(
   "process_run_step_progress",
   {
@@ -127,7 +130,7 @@ export const runStepProgress = pgTable(
     check("process_run_step_progress_key_not_blank", sql`btrim(${table.stepKey}) <> ''`),
     check(
       "process_run_step_progress_status_known",
-      sql`${table.status} in ('step_awaiting_task_completion', 'step_completed', 'step_skipped', 'step_cancelled')`,
+      sql`${table.status} in ('step_waiting_to_start', 'step_awaiting_task_completion', 'step_completed', 'step_skipped', 'step_cancelled')`,
     ),
     check(
       "process_run_step_progress_assignee_note_known",
@@ -135,7 +138,8 @@ export const runStepProgress = pgTable(
     ),
     check(
       "process_run_step_progress_columns_follow_status",
-      sql`(${table.status} = 'step_awaiting_task_completion') = (${table.finishedAt} is null)
+      sql`(${table.status} in ('step_waiting_to_start', 'step_awaiting_task_completion')) = (${table.finishedAt} is null)
+        and (${table.status} <> 'step_waiting_to_start' or ${table.taskId} is null)
         and (${table.status} = 'step_skipped') = (${table.skipReason} is not null)
         and (${table.skipReason} is null or ${table.skipReason} = 'no_assignee_for_step')`,
     ),

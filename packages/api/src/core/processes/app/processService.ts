@@ -9,7 +9,7 @@ import {
   type RecordTypeRegistry,
 } from "../../records";
 import { PrincipalSecurityContext, type SecurityContext } from "../../security";
-import { type CalendarDate, dateInLondon } from "../../../utils";
+import { type CalendarDate, dateInLondon, laterOf } from "../../../utils";
 import type { TaskService } from "../../tasks";
 import { processRepository, type StoredProcess } from "../db";
 import { parseProcessDefinition, type TriggeringEvents } from "../domain";
@@ -21,6 +21,7 @@ import type { Process, ProcessRun, ProcessRunDetails, StepProgress } from "./pro
 import { createRunLifecycleService, type RunLifecycleService } from "./runLifecycleService";
 import { createRunReader, type RunReader } from "./runReader";
 import { createRunStarter, type DefinitionReader, type ProcessRecordTypes } from "./runStarter";
+import { createStepStarter } from "./stepStarter";
 
 /**
  * Processes give people tasks when something happens to a record, and follow each run to its end.
@@ -65,10 +66,12 @@ export interface ProcessService {
   /** Back to a fresh workspace: deletes every run, turns every process off, forgets their history; the people's deletion took the tasks. */
   resetProcesses(ctx: SecurityContext, tx: Tx): Promise<void>;
   /**
-   * Trusted, as the system, before a transaction commits: starts the runs its events trigger, so
-   * they commit with the change or not at all.
+   * Trusted, as the system, before a transaction commits: starts the in-transaction runs its events
+   * trigger and queues the after-commit ones, so either commits with the change or not at all.
    */
   startRunsOnEvents: EventRunService["startRunsOnEvents"];
+  /** Trusted, as the system, for an after-commit job: starts its runs in their own transaction. */
+  startRunsAfterCommit: EventRunService["startRunsAfterCommit"];
   /**
    * The process and step behind each of these tasks that a step created, by task id; the caller
    * shows it only on tasks the person may read.
@@ -83,6 +86,7 @@ export interface ProcessService {
 export function createProcessService({
   orm,
   transact,
+  jobs,
   logger,
   tasks,
   people,
@@ -90,7 +94,7 @@ export function createProcessService({
   recordTypes: registeredRecordTypes,
   triggeringEvents,
   now = () => new Date(),
-}: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
+}: Pick<ModuleDependencies, "orm" | "transact" | "jobs" | "logger"> & {
   tasks: TaskService;
   people: PeoplePort;
   workingCalendars: WorkingCalendarsPort;
@@ -103,9 +107,10 @@ export function createProcessService({
   const today = () => dateInLondon(now());
   const recordTypes = processRecordTypesOf(registeredRecordTypes);
   const definitionOf = definitionReader(recordTypes, triggeringEvents);
-  const starter = createRunStarter({ tasks, people, workingCalendars, recordTypes, definitionOf });
-  const reader = createRunReader({ transact, tasks, starter });
-  const lifecycle = createRunLifecycleService({ orm, transact, tasks, starter });
+  const steps = createStepStarter({ tasks, people, workingCalendars, definitionOf, logger });
+  const starter = createRunStarter({ people, recordTypes, steps });
+  const reader = createRunReader({ transact, tasks, stepStarter: steps });
+  const lifecycle = createRunLifecycleService({ orm, transact, tasks, starter, steps, today });
   const dueRuns = createDueRunService({
     orm,
     transact,
@@ -117,6 +122,8 @@ export function createProcessService({
     definitionOf,
   });
   const eventRuns = createEventRunService({
+    transact,
+    jobs,
     logger,
     starter,
     today,
@@ -213,6 +220,8 @@ export function createProcessService({
 
     startRunsOnEvents: (ctx, tx, events) => eventRuns.startRunsOnEvents(ctx, tx, events),
 
+    startRunsAfterCommit: (ctx, job) => eventRuns.startRunsAfterCommit(ctx, job),
+
     completeStepsOfDoneTasks: (tx, events) => lifecycle.completeStepsOfDoneTasks(tx, events),
 
     readTaskSources: (taskIds) => processRepository(orm).findTaskSources(taskIds),
@@ -296,10 +305,6 @@ function definitionReader(
   };
   return ({ schemaVersion, definition }) =>
     parseProcessDefinition(schemaVersion, definition, catalog);
-}
-
-function laterOf(day: CalendarDate, other: CalendarDate | null): CalendarDate {
-  return other !== null && other > day ? other : day;
 }
 
 function recordNotFound(): ApplicationError {

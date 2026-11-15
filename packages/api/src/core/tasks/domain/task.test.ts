@@ -34,7 +34,6 @@ test("refuses to mark a task done by someone other than its assignee", () => {
 });
 
 test.each([
-  ["waiting", "This task is waiting."],
   ["done", "This task is already done."],
   ["cancelled", "This task was cancelled."],
 ] as const)("refuses to mark a %s task done", (status, message) => {
@@ -45,8 +44,8 @@ test.each([
   ).toThrowError(expect.objectContaining({ code: "CONFLICT", message }));
 });
 
-test.each(["to_do", "waiting"] as const)("cancels a %s task with a reason", (status) => {
-  const task = taskIn(status);
+test("cancels a task to do with a reason", () => {
+  const task = taskIn("to_do");
   const original = { ...task };
   const now = new Date("2026-11-09T12:00:00Z");
 
@@ -74,32 +73,6 @@ test.each([
   );
 });
 
-test("puts a task to do into waiting", () => {
-  const task = taskIn("to_do");
-  const original = { ...task };
-
-  const waiting = task.markWaiting();
-
-  expect(waiting).toBeInstanceOf(Task);
-  expect(waiting.status).toBe("waiting");
-  expect(task).toEqual(original);
-});
-
-test.each([
-  ["waiting", "Only a task to do can wait."],
-  ["done", "Only a task to do can wait."],
-  ["cancelled", "This task was cancelled."],
-] as const)("refuses to put a %s task into waiting", (status, message) => {
-  const task = taskIn(status);
-
-  expect(() => task.markWaiting()).toThrowError(
-    expect.objectContaining({
-      code: "CONFLICT",
-      message,
-    }),
-  );
-});
-
 test("shows a task to its assignee", () => {
   const task = taskIn("to_do");
 
@@ -118,8 +91,8 @@ test("hides a task from its subject", () => {
   expect(task.isVisibleTo("00000000-0000-4000-8000-000000000004")).toBe(false);
 });
 
-test.each(["to_do", "waiting"] as const)("allows the asker to delete a %s task", (status) => {
-  const task = taskIn(status);
+test("allows the asker to delete a task to do", () => {
+  const task = taskIn("to_do");
 
   expect(() => task.requireDeletableBy("00000000-0000-4000-8000-000000000003")).not.toThrow();
 });

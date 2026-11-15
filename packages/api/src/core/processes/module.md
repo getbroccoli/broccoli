@@ -1,6 +1,6 @@
 # Processes
 
-A process gives people tasks when something happens to a record, and follows each run of it to its end. The first one is ready-made: **Welcome a new starter**, which on a person's start date gives their manager "Have a welcome 1:1" and the person "Have coffee calls with 3 colleagues".
+A process gives people tasks when something happens to a record, and follows each run of it to its end. Two are ready-made: **Welcome a new starter**, which on a person's start date gives their manager "Have a welcome 1:1" and the person "Have coffee calls with 3 colleagues"; and the **Onboarding example**, whose last step, "Check that your accounts work", waits until the owner has provisioned the person's accounts.
 
 ## How a run works
 
@@ -94,16 +94,39 @@ The daily job finds people whose `startDate` is today, or up to `maxDaysLate` (7
 
 Ben's manager's task is due the same day, and Ben's own task five of his working days later. From there the run finishes as in steps 4 and 5. The unique `start_key` keeps a second pass from starting it again.
 
+### A step that waits: the Onboarding example
+
+A step lists the steps it waits for in `after`; with none, it starts with the run:
+
+```json
+{ "key": "ensure_provision", "kind": "task", "after": ["provision_accounts"], "task": { … } }
+```
+
+The run stores it waiting, without a task, beside the three steps that started:
+
+```json
+// process_run_step_progress
+{ "run_id": "run3", "step_key": "provision_accounts", "status": "step_awaiting_task_completion", "task_id": "t6" }
+{ "run_id": "run3", "step_key": "ensure_provision", "status": "step_waiting_to_start", "task_id": null }
+```
+
+When the owner marks `t6` done, the same transaction completes that step and starts the waiting one with its task:
+
+```json
+{ "run_id": "run3", "step_key": "provision_accounts", "status": "step_completed" }
+{ "run_id": "run3", "step_key": "ensure_provision", "status": "step_awaiting_task_completion", "task_id": "t7" }
+```
+
 ## Rules
 
 - A process is off until an admin turns it on (`MANAGE_WORKSPACE`); turning it on or off appends a history line for record type `process`, which only those who manage the workspace read. Turning it on starts today's due runs at once, and never anyone whose date was before that day.
 - What a process does lives in its published version's definition (JSON, read by `parseProcessDefinition` for the `definition_schema_version` it was written in). A published version never changes; a new release ships a new version. The trigger fires on a record's date plus an offset (`on_record_date`, a date field its record type registered, such as an employee's `startDate`), or on a domain event (`on_event`); schedule triggers are refused. A definition naming a record type, date field or event nobody registered is refused.
-- An `on_event` trigger names an event its publishing module registered as triggering (`employees.added`, and `tasks.task_created` and `tasks.task_status_changed`, which processes registers for tasks), with an optional `when` on one payload field, and runs `in_same_transaction` with `faultMode` `rollback_transaction`: before the change commits, `startRunsOnEvents` starts one run per event and record the event is about, batched per process, skipping a record whose run is in progress or that is gone. The run keeps the event (`trigger_event`); a run that cannot start fails the change.
+- An `on_event` trigger names an event its publishing module registered as triggering (`employees.added`, and `tasks.task_created` and `tasks.task_status_changed`, which processes registers for tasks), with an optional `when` on one payload field, and a `run` mode. `in_same_transaction` (with `faultMode` `rollback_transaction`): before the change commits, `startRunsOnEvents` starts one run per event and record the event is about, batched per process, skipping a record whose run is in progress or that is gone; a run that cannot start fails the change. `after_commit` (no `faultMode`): before the change commits, it queues one `processes.startRunsAfterCommit` job per process and matching event, carrying the process's version; after the commit, the job locks the process and starts those runs in its own transaction, with the version it carries, unless the process was turned off, the record is gone, has a run in progress or already has this event's run (`start_key`, so a retry or a second delivery starts nothing). A job is tried three times; a last failure is logged. Jobs run in no particular order. Each job counts its hop (`tx.hop`): one queued from a job's transaction is one hop further, and none is queued past 10 hops, so processes that trigger each other stop. Either way the run keeps the event (`trigger_event`).
 - The daily job (`processes.startDueRuns`, 06:00 London) starts a run for each record whose trigger date is today or up to the trigger's `maxDaysLate` days ago, if it never had a run of that process, one transaction each. It also cancels runs that can no longer run.
 - An admin starts a run by hand for a record of the process's record type (`create` on `process_run` for its subject), whether the process is on or off, unless one is in progress for it. Before the subject's start date, the run counts from their start date.
-- Steps run in parallel. Each step's task goes to its assignee rule's person on the run's start day, else its fallback, with a note when the owner covers a missing manager; with nobody, the step is skipped. Due dates count calendar days, or business days by the person's own working weeks and bank holidays, refusing a year with no known bank holidays.
-- A step's task (`process_step_to_do`) is marked done with the ordinary task command. Before the commit, processes completes the step from `tasks.task_status_changed` and finishes the run when every step is done or skipped. It locks the run after the task, never the process; every transaction that locks both takes the task first.
-- The daily job cancels a run whose subject was removed, or whose step still waiting lost its task with its assignee, locking the run's open tasks before the run. A task marked done meanwhile stays done. Assignees read "This process was cancelled."; the cause stays on the run for admins.
+- A step starts once every step in its `after` is completed or skipped; a step with an empty `after` starts with the run. Until then it waits (`step_waiting_to_start`) without a task. A definition naming an unknown step, a step itself, a step twice or a cycle is refused. A step's task goes to its assignee rule's person on the day the step starts (never before the run's start day), else its fallback, with a note when the owner covers a missing manager; with nobody, the step is skipped, and the steps waiting for it start. Due dates count from the run's start day. Due dates count calendar days, or business days by the person's own working weeks and bank holidays, refusing a year with no known bank holidays.
+- A step's task (`process_step_to_do`) is marked done with the ordinary task command. Before the commit, processes completes the step from `tasks.task_status_changed`, starts the steps that waited for it, and finishes the run when every step is done or skipped. Steps start under the run's lock, so two people finishing the last two steps a step waits for start it once. It locks the run after the task, never the process; every transaction that locks both takes the task first.
+- The daily job cancels a run whose subject was removed, or whose step still awaiting its task lost it with its assignee, cancelling its waiting steps too, locking the run's open tasks before the run. A task marked done meanwhile stays done. Assignees read "This process was cancelled."; the cause stays on the run for admins.
 - Processes reads people, managers, the owner and working days through `PeoplePort` and `WorkingCalendarsPort` in `ports/`, which the employees module fills from its `adapters/`, and the records it runs on through their record types' registered process capabilities. It imports no module.
 - Runs are read through `process_run` permissions: admins and the owner read and change every run; others read none. A task's readers see the run's progress as counts, never the other steps.
 
@@ -112,4 +135,4 @@ Ben's manager's task is due the same day, and Ben's own task five of his working
 - **`processes`:** `key`, `name`, `description`, `active_version_id` (one of its own published versions), `turned_on_at` (null while off).
 - **`process_versions`:** `version`, `status` (`draft` or `published`, one draft per process), `definition_schema_version`, `definition`.
 - **`process_runs`:** the version it started with, the record it is about (`record_type`, `record_id`: a record type with process capabilities, today an employee or a task) and its subject (`subject_employee_id`, no foreign key so a removal is noticed; a task's subject, which may be null), how it started, `trigger_date` or `trigger_event` and `start_key` (unique per process, so a trigger starts once), `start_day`, `status` (`in_progress`, `finished`, `cancelled`) with its columns. One run in progress per process and record.
-- **`process_run_step_progress`:** a run's progress on each step of its version's definition (the steps themselves live in `process_versions.definition`): `status`, `task_id` (set null when the task goes with its assignee), `assignee_note`, `skip_reason`, `finished_at`.
+- **`process_run_step_progress`:** a run's progress on each step of its version's definition (the steps themselves live in `process_versions.definition`): one row per step from the run's start: `status`, `task_id` (null while the step waits, set null when the task goes with its assignee), `assignee_note`, `skip_reason`, `finished_at`.

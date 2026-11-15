@@ -13,14 +13,18 @@ import { isUnstorableText } from "./uniqueViolation";
 export interface Tx {
   /** Queues an event: handed to before-commit handlers inside the transaction, dispatched after it commits. */
   publish<Type extends EventType>(type: Type, payload: DomainEvents[Type]): void;
+  /** How many after-commit jobs led to this transaction: 0 for a change nobody's job made. */
+  readonly hop: number;
 }
 
 class Transaction implements Tx {
   readonly events: PublishedEvent[] = [];
+  readonly hop: number;
   #orm: OrmTransaction | undefined;
 
-  constructor(orm: OrmTransaction) {
+  constructor(orm: OrmTransaction, hop: number) {
     this.#orm = orm;
+    this.hop = hop;
   }
 
   get orm(): OrmTransaction {
@@ -42,8 +46,8 @@ class Transaction implements Tx {
   }
 }
 
-/** Runs work in one transaction, as `runInTransaction` describes. */
-export type Transact = <T>(work: (tx: Tx) => Promise<T>) => Promise<T>;
+/** Runs work in one transaction, as `runInTransaction` describes; `hop` becomes its `tx.hop`. */
+export type Transact = <T>(work: (tx: Tx) => Promise<T>, options?: { hop?: number }) => Promise<T>;
 
 /** Binds `runInTransaction` to the database and the event buses, once at startup. */
 export function transactor(
@@ -51,7 +55,7 @@ export function transactor(
   eventBus: EventBus,
   beforeCommit: BeforeCommitBus = createBeforeCommitBus(),
 ): Transact {
-  return (work) => runInTransaction(orm, { eventBus, beforeCommit }, work);
+  return (work, { hop = 0 } = {}) => runInTransaction(orm, { eventBus, beforeCommit, hop }, work);
 }
 
 /** How many rounds of events before a commit may publish more: a loop of reactions beyond it is a bug. */
@@ -69,14 +73,18 @@ export function ormOf(db: Orm | Tx): Orm | OrmTransaction {
  */
 async function runInTransaction<T>(
   orm: Orm,
-  { eventBus, beforeCommit }: { eventBus: EventBus; beforeCommit: BeforeCommitBus },
+  {
+    eventBus,
+    beforeCommit,
+    hop,
+  }: { eventBus: EventBus; beforeCommit: BeforeCommitBus; hop: number },
   work: (tx: Tx) => Promise<T>,
 ): Promise<T> {
   let transaction: Transaction | undefined;
   let result: T;
   try {
     result = await orm.transaction(async (ormTransaction) => {
-      transaction = new Transaction(ormTransaction);
+      transaction = new Transaction(ormTransaction, hop);
       const value = await work(transaction);
       await handBeforeCommit(transaction, beforeCommit);
       return value;

@@ -8,8 +8,6 @@ export interface DemoTask {
   assigneeEmail: string;
   askedByEmail: string;
   dueDate: CalendarDate | null;
-  /** Shown as waiting on something else rather than to do. */
-  isWaiting: boolean;
 }
 
 /** The demo company's tasks, with due dates counted from `today`. */
@@ -29,7 +27,6 @@ const DEMO_TASKS = [
     assignee: "Oliver Bennett",
     askedBy: "Priya Shah",
     dueInDays: 3,
-    isWaiting: false,
   },
   {
     title: "Sign James Whitfield's new contract",
@@ -37,15 +34,13 @@ const DEMO_TASKS = [
     assignee: "Oliver Bennett",
     askedBy: "Priya Shah",
     dueInDays: -2,
-    isWaiting: false,
   },
   {
     title: "Agree the updated expenses policy",
-    description: "Waiting for the finance review before it can be agreed.",
-    assignee: "Oliver Bennett",
-    askedBy: "James Whitfield",
+    description: "The finance review is done; it needs agreeing before month end.",
+    assignee: "James Whitfield",
+    askedBy: "Oliver Bennett",
     dueInDays: null,
-    isWaiting: true,
   },
   {
     title: "Check the laptop budget for new starters",
@@ -53,6 +48,5 @@ const DEMO_TASKS = [
     assignee: "Priya Shah",
     askedBy: "Oliver Bennett",
     dueInDays: 5,
-    isWaiting: false,
   },
 ] as const;

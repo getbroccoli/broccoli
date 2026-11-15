@@ -4,7 +4,7 @@ import type { CalendarDate } from "../../../utils";
 /** A task a person asked for; features that create tasks, such as processes, name their own types. */
 export const MANUAL_TO_DO = "manual_to_do";
 
-export const TASK_STATUSES = ["to_do", "waiting", "done", "cancelled"] as const;
+export const TASK_STATUSES = ["to_do", "done", "cancelled"] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 
 /** The record a task acts on, as the records registry names it. */
@@ -79,9 +79,6 @@ export class Task implements Readonly<TaskFields> {
       );
     }
     this.refuseClosed();
-    if (this.status === "waiting") {
-      throw new ApplicationError("CONFLICT", "This task is waiting.");
-    }
     return this.with({ status: "done", doneAt: now, doneByEmployeeId: byEmployeeId });
   }
 
@@ -89,16 +86,6 @@ export class Task implements Readonly<TaskFields> {
   cancel(reason: string, now: Date): Task {
     this.refuseClosed();
     return this.with({ status: "cancelled", cancelledAt: now, cancelReason: reason });
-  }
-
-  markWaiting(): Task {
-    if (this.status === "cancelled") {
-      throw cancelledConflict();
-    }
-    if (this.status !== "to_do") {
-      throw new ApplicationError("CONFLICT", "Only a task to do can wait.");
-    }
-    return this.with({ status: "waiting" });
   }
 
   /** Only the person who asked deletes it, while it is open; a feature's task has nobody who asked. */
@@ -115,15 +102,11 @@ export class Task implements Readonly<TaskFields> {
       throw new ApplicationError("CONFLICT", "This task is already done.");
     }
     if (this.status === "cancelled") {
-      throw cancelledConflict();
+      throw new ApplicationError("CONFLICT", "This task was cancelled.");
     }
   }
 
   private with(changes: Partial<TaskFields>): Task {
     return new Task({ ...this, ...changes });
   }
-}
-
-function cancelledConflict(): ApplicationError {
-  return new ApplicationError("CONFLICT", "This task was cancelled.");
 }

@@ -8,7 +8,6 @@ test("groups held tasks by status", async ({ orm, seed }) => {
   const ctx = signedIn(orm, { employeeId: assignee.id, profiles: ["EMPLOYEE"] });
   const people = { assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id };
   const toDo = await seed.task(people);
-  const waiting = await seed.task({ ...people, status: "waiting" });
   const done = await seed.task({
     ...people,
     status: "done",
@@ -24,7 +23,7 @@ test("groups held tasks by status", async ({ orm, seed }) => {
 
   expect(await taskService(orm).listMyTasks(ctx)).toEqual({
     needsYou: [toDo],
-    waitingOnOthers: [waiting],
+    waitingOnOthers: [],
     resolvedRecently: [done, cancelled],
   });
 });
@@ -34,7 +33,6 @@ test("shows the asker's open tasks under waiting on others", async ({ orm, seed 
   const asker = await seed.employee();
   const ctx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
   const people = { assigneeEmployeeId: assignee.id, askedByEmployeeId: asker.id };
-  const waiting = await seed.task({ ...people, status: "waiting" });
   const toDo = await seed.task(people);
   const done = await seed.task({
     ...people,
@@ -51,7 +49,7 @@ test("shows the asker's open tasks under waiting on others", async ({ orm, seed 
 
   expect(await taskService(orm).listMyTasks(ctx)).toEqual({
     needsYou: [],
-    waitingOnOthers: [waiting, toDo],
+    waitingOnOthers: [toDo],
     resolvedRecently: [done, cancelled],
   });
 });
@@ -61,7 +59,6 @@ test("lists a task once when the caller holds it and asked for it", async ({ orm
   const ctx = signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] });
   const people = { assigneeEmployeeId: employee.id, askedByEmployeeId: employee.id };
   const toDo = await seed.task(people);
-  const waiting = await seed.task({ ...people, status: "waiting" });
   const done = await seed.task({
     ...people,
     status: "done",
@@ -77,7 +74,7 @@ test("lists a task once when the caller holds it and asked for it", async ({ orm
 
   expect(await taskService(orm).listMyTasks(ctx)).toEqual({
     needsYou: [toDo],
-    waitingOnOthers: [waiting],
+    waitingOnOthers: [],
     resolvedRecently: [done, cancelled],
   });
 });
@@ -107,7 +104,7 @@ test("orders tasks needing the caller by due date then oldest first with undated
   ]);
 });
 
-test("orders waiting tasks oldest first across tasks held and asked for", async ({ orm, seed }) => {
+test("orders tasks asked of others oldest first and excludes held tasks", async ({ orm, seed }) => {
   const employee = await seed.employee();
   const other = await seed.employee();
   const ctx = signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] });
@@ -116,21 +113,20 @@ test("orders waiting tasks oldest first across tasks held and asked for", async 
     askedByEmployeeId: employee.id,
     dueDate: calendarDate("2026-11-12"),
   });
-  const held = await seed.task({
+  await seed.task({
     assigneeEmployeeId: employee.id,
     askedByEmployeeId: other.id,
-    status: "waiting",
     dueDate: calendarDate("2026-11-10"),
   });
-  const askedWaiting = await seed.task({
+  const newerAsked = await seed.task({
     assigneeEmployeeId: other.id,
     askedByEmployeeId: employee.id,
-    status: "waiting",
+    dueDate: calendarDate("2026-11-09"),
   });
 
   const tasks = await taskService(orm).listMyTasks(ctx);
 
-  expect(tasks.waitingOnOthers.map(({ id }) => id)).toEqual([asked.id, held.id, askedWaiting.id]);
+  expect(tasks.waitingOnOthers.map(({ id }) => id)).toEqual([asked.id, newerAsked.id]);
 });
 
 test("orders resolved tasks by their closing time newest first", async ({ orm, seed }) => {
@@ -225,7 +221,6 @@ test("hides tasks from the person they are about", async ({ orm, seed }) => {
     subjectEmployeeId: about.id,
   };
   await seed.task(people);
-  await seed.task({ ...people, status: "waiting" });
   await seed.task({
     ...people,
     status: "done",
