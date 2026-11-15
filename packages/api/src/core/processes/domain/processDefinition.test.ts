@@ -206,7 +206,6 @@ function welcomeDefinition() {
       offset: { amount: 0, unit: "calendar_days" },
       maxDaysLate: 7,
     },
-    startableByAdmin: true,
     steps: [
       {
         key: "welcome_one_to_one",

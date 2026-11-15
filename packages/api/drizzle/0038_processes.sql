@@ -101,7 +101,6 @@ INSERT INTO "process_versions" ("process_id", "version", "status", "definition_s
 		"subject": { "recordType": "employee" },
 		"trigger": { "kind": "on_record_date", "recordType": "employee", "dateField": "startDate",
 			"offset": { "amount": 0, "unit": "calendar_days" }, "maxDaysLate": 7 },
-		"startableByAdmin": true,
 		"steps": [
 			{ "key": "welcome_one_to_one", "kind": "task",
 				"assignee": { "kind": "subjects_manager", "otherwise": { "kind": "workspace_owner" } },

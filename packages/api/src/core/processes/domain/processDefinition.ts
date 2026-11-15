@@ -11,7 +11,6 @@ export interface ProcessDefinition {
   /** The record a run is about, the trigger's record type. */
   subject: { recordType: string };
   trigger: RecordDateTrigger | EventTrigger;
-  startableByAdmin: boolean;
   steps: TaskStep[];
 }
 
@@ -188,7 +187,6 @@ const triggerSchema = z.discriminatedUnion("kind", [
 const definitionSchema = z.object({
   subject: z.object({ recordType: z.string().min(1) }),
   trigger: triggerSchema,
-  startableByAdmin: z.boolean(),
   steps: z
     .array(
       z.object({

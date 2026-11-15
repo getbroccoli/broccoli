@@ -32,7 +32,6 @@ Ids are shortened; columns are shown as rows are stored.
        "run": "in_same_transaction",
        "faultMode": "rollback_transaction"
      },
-     "startableByAdmin": false,
      "steps": [
        {
          "key": "order_laptop",

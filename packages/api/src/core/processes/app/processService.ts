@@ -155,9 +155,6 @@ export function createProcessService({
       const process = await reader.requireProcess(orm, processKey);
       const definition = definitionOf(process.activeVersion);
       const { recordType } = definition.subject;
-      if (!definition.startableByAdmin) {
-        throw new ApplicationError("FORBIDDEN", "This process starts only by itself.");
-      }
       const run = await transact(async (tx) => {
         await processRepository(tx).lockProcess(process.id);
         // Keyed by the record's own id, such as an employee's lowercase uuid.

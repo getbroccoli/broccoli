@@ -41,7 +41,6 @@ export function eventProcess(
       faultMode: "rollback_transaction",
       ...(when && { when }),
     },
-    startableByAdmin: false,
     steps: [
       {
         key: "follow_up",

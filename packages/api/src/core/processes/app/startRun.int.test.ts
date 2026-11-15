@@ -240,9 +240,10 @@ test("refuses a manual welcome without a create grant", async ({ orm, seed }) =>
 });
 
 test("refuses a malformed task record id as not found", async ({ orm }) => {
-  const definition = eventProcess("tasks.task_created");
-  definition.startableByAdmin = true;
-  const { key } = await seedProcess(orm, { key: "follow_up", definition });
+  const { key } = await seedProcess(orm, {
+    key: "follow_up",
+    definition: eventProcess("tasks.task_created"),
+  });
 
   await expect(
     processService(orm).startRun(ADMIN, { processKey: key, recordId: "not-a-uuid" }),
