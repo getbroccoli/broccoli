@@ -1,4 +1,5 @@
 import { useQuery } from "@apollo/client/react";
+import { useEffect, useRef } from "react";
 
 import { TaskPanelDocument } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,13 @@ type Props = { taskId: string; onClose: () => void };
  * where it came from on the right. Only its assignee and the person who asked open it.
  */
 export function TaskPanel({ taskId, onClose }: Props) {
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const { data, error, loading, refetch } = useQuery(TaskPanelDocument, {
     variables: { id: taskId },
   });
@@ -23,7 +31,12 @@ export function TaskPanel({ taskId, onClose }: Props) {
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent aria-describedby={undefined} className={PANEL}>
         {data?.task ? (
-          <TaskDetails task={data.task} onDeleted={onClose} />
+          <TaskDetails
+            task={data.task}
+            onDeleted={() => {
+              if (mounted.current) onClose();
+            }}
+          />
         ) : (
           <div className="flex flex-col gap-4 p-6">
             <div className="flex items-center justify-between gap-4">
