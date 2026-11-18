@@ -21,7 +21,14 @@ export function LocationStack({ locationId, onClose }: Props) {
   const location = data?.locations.find(({ id }) => id === locationId) ?? null;
 
   if (data && (locationId === null || location)) {
-    return <LocationEditor location={location} allTerms={data.allTerms} onClose={onClose} />;
+    return (
+      <LocationEditor
+        key={locationId ?? "new"}
+        location={location}
+        allTerms={data.allTerms}
+        onClose={onClose}
+      />
+    );
   }
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
