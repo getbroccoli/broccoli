@@ -1,7 +1,8 @@
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 import { DeleteLocationDocument } from "@/__generated__/graphql";
-import { usePayloadMutation } from "@/apollo";
+import { useCache, usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
@@ -15,11 +16,16 @@ type Props = {
 
 /** Deletes a location nobody is in; with people in it, says why it can't. */
 export function DeleteLocation({ location, disabled, onDeleted }: Props) {
-  const [deleteLocation, deletion] = usePayloadMutation(DeleteLocationDocument, {
-    update: (cache, { data }) => {
-      if (data?.employees.deleteLocation.deletedLocationId) forgetLocation(cache, location.id);
-    },
-  });
+  const [deleteLocation, deletion] = usePayloadMutation(DeleteLocationDocument);
+  const cache = useCache();
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   if (location.peopleCount > 0) {
     return (
@@ -31,7 +37,8 @@ export function DeleteLocation({ location, disabled, onDeleted }: Props) {
     try {
       await deleteLocation({ variables: { input: { id: location.id } } });
       toast(t("settings.locations.deleted", { name: location.name }));
-      onDeleted();
+      if (mounted.current) onDeleted();
+      forgetLocation(cache, location.id);
     } catch {
       // The refusal shows next to the button.
     }
