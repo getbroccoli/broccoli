@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -59,16 +59,13 @@ export interface OwnWeekEdit {
 }
 
 /** A person's week edit: closed until `open`, then the week or date picked and its save. */
-export function useOwnWeekEdit({
-  employeeId,
-  firstName,
-}: {
-  employeeId: string;
-  firstName: string;
-}): OwnWeekEdit {
+export function useOwnWeekEdit(person: { employeeId: string; firstName: string }): OwnWeekEdit {
+  const { employeeId, firstName } = person;
   const [opened, setOpened] = useState<Parameters<OwnWeekEdit["open"]>[0] | null>(null);
   const [draft, setDraft] = useState<OwnWeekDraft | null>(null);
   const [failed, setFailed] = useState(false);
+  // A pending save belongs to the opening that submitted it, not a later draft.
+  const opening = useRef(0);
   const [setOwn, setting] = usePayloadMutation(SetOwnWorkingWeekDocument, {
     update: forgetHistory,
   });
@@ -80,9 +77,12 @@ export function useOwnWeekEdit({
   const valid = opened !== null && hasNoErrors(opened.mode, shown, opened.earliest);
   const termsName = opened?.termsNameOn(shown.startDate) ?? "";
   const close = () => {
+    opening.current++;
     setOpened(null);
     setDraft(null);
     setFailed(false);
+    setting.reset();
+    returning.reset();
   };
   const lineOf = (mode: OwnWeekMode) => {
     const values = { firstName, startDate: shown.startDate, today };
@@ -104,6 +104,7 @@ export function useOwnWeekEdit({
       changedFrom(opened.current, draft, laterOf(opened.earliest, today)),
     saving: setting.loading || returning.loading,
     open: (start) => {
+      opening.current++;
       setOpened(start);
       setDraft({ ...weekDraftOf(start.current), startDate: laterOf(start.earliest, today) });
     },
@@ -111,19 +112,22 @@ export function useOwnWeekEdit({
     close,
     save: async () => {
       if (!opened || !valid) return;
+      const submittedOpening = opening.current;
       setFailed(false);
       const input = { employeeId, startDate: shown.startDate };
       try {
-        if (opened.mode === "own") {
-          await setOwn({ variables: { input: { ...input, ...weekInput(shown) } } });
-          toast(ownWeekSavedToast(firstName));
-        } else {
-          await returnToTerms({ variables: { input } });
-          toast(termsWeekSavedToast({ firstName, termsName, ...input }));
-        }
+        await (opened.mode === "own"
+          ? setOwn({ variables: { input: { ...input, ...weekInput(shown) } } })
+          : returnToTerms({ variables: { input } }));
+        if (submittedOpening !== opening.current) return;
+        toast(
+          opened.mode === "own"
+            ? ownWeekSavedToast(firstName)
+            : termsWeekSavedToast({ firstName, termsName, ...input }),
+        );
         close();
       } catch {
-        setFailed(true);
+        if (submittedOpening === opening.current) setFailed(true);
       }
     },
   };
