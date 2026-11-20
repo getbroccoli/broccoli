@@ -66,7 +66,6 @@ export function useOwnWeekEdit(person: { employeeId: string; firstName: string }
   const [failed, setFailed] = useState(false);
   // A pending save belongs to the opening that submitted it, not a later draft.
   const opening = useRef(0);
-  const [savingOpening, setSavingOpening] = useState<typeof opened>(null);
   const [setOwn, setting] = usePayloadMutation(SetOwnWorkingWeekDocument, {
     update: forgetHistory,
   });
@@ -101,7 +100,7 @@ export function useOwnWeekEdit(person: { employeeId: string; firstName: string }
       opened !== null &&
       draft !== null &&
       changedFrom(opened.current, draft, laterOf(opened.earliest, today)),
-    saving: savingOpening === opened && (opened?.mode === "own" ? setting : returning).loading,
+    saving: setting.loading || returning.loading,
     open: (start) => {
       opening.current++;
       setOpened(start);
@@ -112,7 +111,6 @@ export function useOwnWeekEdit(person: { employeeId: string; firstName: string }
     save: async () => {
       if (!opened || !valid) return;
       const submittedOpening = opening.current;
-      setSavingOpening(opened);
       setFailed(false);
       const input = { employeeId, startDate: shown.startDate };
       try {

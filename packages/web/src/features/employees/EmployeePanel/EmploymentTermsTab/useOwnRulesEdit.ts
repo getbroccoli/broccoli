@@ -86,7 +86,6 @@ export function useOwnRulesEdit(person: { employeeId: string; firstName: string 
   const [failure, setFailure] = useState<string | null>(null);
   // A pending save belongs to the opening that submitted it, not a later draft.
   const opening = useRef(0);
-  const [savingOpening, setSavingOpening] = useState<typeof opened>(null);
   const [setOwn, setting] = usePayloadMutation(SetOwnRulesDocument, { update: forgetHistory });
   const [returnToTerms, returning] = usePayloadMutation(UseTermsRulesDocument, {
     update: forgetHistory,
@@ -124,7 +123,7 @@ export function useOwnRulesEdit(person: { employeeId: string; firstName: string 
       ? t("ownRules.loadFailed", { name: firstName })
       : (failure ?? formError ?? null),
     changed: isChanged(opened, draft),
-    saving: savingOpening === opened && (opened?.mode === "own" ? setting : returning).loading,
+    saving: setting.loading || returning.loading,
     open: (start) => {
       opening.current++;
       setOpened(start);
@@ -138,7 +137,6 @@ export function useOwnRulesEdit(person: { employeeId: string; firstName: string 
     save: async () => {
       if (!opened || !versions || formError) return;
       const submittedOpening = opening.current;
-      setSavingOpening(opened);
       setFailure(null);
       const input = {
         employeeId,
