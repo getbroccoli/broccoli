@@ -61,9 +61,13 @@ export function InviteDialog({ people, open, onOpenChange, onInvited }: Props) {
   const [admin, setAdmin] = useState(false);
   const [note, setNote] = useState("");
   const [links, setLinks] = useState<CopiedLink[] | null>(null);
-  const [invite, { loading, error, payloadError }] = usePayloadMutation(InviteEmployeesDocument, {
-    update: (cache, { data }) => addInviteHistoryLines(cache, data?.employees.invite.invites ?? []),
-  });
+  const [invite, { loading, error, payloadError, reset }] = usePayloadMutation(
+    InviteEmployeesDocument,
+    {
+      update: (cache, { data }) =>
+        addInviteHistoryLines(cache, data?.employees.invite.invites ?? []),
+    },
+  );
   const { invited, skipped } = groupInvitees(people);
   const tooMany = invited.length > MAX_PEOPLE;
   const delivery = data?.setup.inviteDelivery ?? "COPIED_BY_OWNER";
@@ -108,6 +112,7 @@ export function InviteDialog({ people, open, onOpenChange, onInvited }: Props) {
 
   const close = () => {
     onOpenChange(false);
+    reset();
     setLinks(null);
     setNote("");
     setAdmin(false);
