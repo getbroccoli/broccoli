@@ -4,7 +4,10 @@ import { TimeOffTypeStack } from "@/features/settings";
 
 export const Route = createFileRoute("/_authenticated/settings/time-off/$timeOffTypeId")({
   component: function TimeOffTypeStackPage() {
-    const { timeOffTypeId } = Route.useParams();
+    const {
+      params: { timeOffTypeId },
+      pathname,
+    } = Route.useMatch();
     const navigate = useNavigate();
     const router = useRouter();
     const locationKey = useLocation({ select: ({ state }) => state.__TSR_key });
@@ -14,6 +17,7 @@ export const Route = createFileRoute("/_authenticated/settings/time-off/$timeOff
         timeOffTypeId={timeOffTypeId}
         onClose={() => {
           // A pending route can leave this panel mounted until its session check finishes.
+          if (router.latestLocation.pathname !== pathname) return;
           if (router.latestLocation.state.__TSR_key !== locationKey) return;
           void navigate({ to: "/settings/time-off" });
         }}

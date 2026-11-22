@@ -1,10 +1,28 @@
 import type { ApolloCache } from "@apollo/client";
 
+import { TimeOffSettingsDocument } from "@/__generated__/graphql";
 import { evictRecord } from "@/apollo";
 
 /** Removes a deleted time off type from every cached list, such as a person's balances. */
 export function forgetTimeOffType(cache: ApolloCache, id: string): void {
-  evictRecord(cache, "TimeOffType", id);
+  cache.batch({
+    update(cache) {
+      cache.updateQuery({ query: TimeOffSettingsDocument }, (data) =>
+        data
+          ? {
+              ...data,
+              timeOffSettings: {
+                ...data.timeOffSettings,
+                timeOffTypes: data.timeOffSettings.timeOffTypes.filter(
+                  ({ timeOffType }) => timeOffType.id !== id,
+                ),
+              },
+            }
+          : data,
+      );
+      evictRecord(cache, "TimeOffType", id);
+    },
+  });
 }
 
 /** Removes a deleted location from every cached list. */
