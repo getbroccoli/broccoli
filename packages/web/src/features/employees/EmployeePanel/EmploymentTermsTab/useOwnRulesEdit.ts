@@ -1,5 +1,5 @@
 import { useQuery } from "@apollo/client/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -79,16 +79,13 @@ export interface OwnRulesEdit {
 }
 
 /** A person's rules edit for a type: closed until `open`, then the rules or date picked and its save. */
-export function useOwnRulesEdit({
-  employeeId,
-  firstName,
-}: {
-  employeeId: string;
-  firstName: string;
-}): OwnRulesEdit {
+export function useOwnRulesEdit(person: { employeeId: string; firstName: string }): OwnRulesEdit {
+  const { employeeId, firstName } = person;
   const [opened, setOpened] = useState<Parameters<OwnRulesEdit["open"]>[0] | null>(null);
   const [draft, setDraft] = useState<OwnRulesDraft | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  // A pending save belongs to the opening that submitted it, not a later draft.
+  const opening = useRef(0);
   const [setOwn, setting] = usePayloadMutation(SetOwnRulesDocument, { update: forgetHistory });
   const [returnToTerms, returning] = usePayloadMutation(UseTermsRulesDocument, {
     update: forgetHistory,
@@ -101,6 +98,7 @@ export function useOwnRulesEdit({
   const formError =
     opened && formErrorOf(opened, shown, { versions, termsBalance: termsRules?.balance ?? null });
   const close = () => {
+    opening.current++;
     setOpened(null);
     setDraft(null);
     setFailure(null);
@@ -127,6 +125,7 @@ export function useOwnRulesEdit({
     changed: isChanged(opened, draft),
     saving: setting.loading || returning.loading,
     open: (start) => {
+      opening.current++;
       setOpened(start);
       setDraft(startDraftOf(start));
     },
@@ -137,6 +136,7 @@ export function useOwnRulesEdit({
     close,
     save: async () => {
       if (!opened || !versions || formError) return;
+      const submittedOpening = opening.current;
       setFailure(null);
       const input = {
         employeeId,
@@ -147,6 +147,7 @@ export function useOwnRulesEdit({
         await (opened.mode === "own"
           ? setOwn({ variables: { input: { ...input, rules: rulesInputOf(shown) } } })
           : returnToTerms({ variables: { input } }));
+        if (submittedOpening !== opening.current) return;
         toast(
           savedToastOf(opened, {
             firstName,
@@ -157,7 +158,9 @@ export function useOwnRulesEdit({
         );
         close();
       } catch (error) {
-        setFailure(failureOf(error, { name: firstName, type: opened.timeOffType.name }));
+        if (submittedOpening === opening.current) {
+          setFailure(failureOf(error, { name: firstName, type: opened.timeOffType.name }));
+        }
       }
     },
   };
