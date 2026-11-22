@@ -8,6 +8,7 @@ export const Route = createFileRoute("/_authenticated/settings/time-off/$timeOff
     const navigate = useNavigate();
     return (
       <TimeOffTypeStack
+        key={timeOffTypeId}
         timeOffTypeId={timeOffTypeId}
         onClose={() => void navigate({ to: "/settings/time-off" })}
       />
