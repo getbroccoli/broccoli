@@ -4,6 +4,7 @@ import {
   calendarDate,
   expect,
   processService,
+  notificationFlow,
   signedIn,
   taskService,
   test,
@@ -105,17 +106,31 @@ test("reports an unknown run", async ({ orm }) => {
 });
 
 // The tasks go with the people: every path that resets processes deletes the employees first.
-test("reset removes runs and turns automatic starts off", async ({ orm, seed, transact }) => {
+test("reset removes runs, turns built-in processes on and other processes off", async ({
+  orm,
+  seed,
+  transact,
+}) => {
   const manager = await seed.employee();
   const employee = await seed.employee();
   await seed.manager(employee.id, manager.id);
   const processes = processService(orm, { today: () => calendarDate("2026-12-03") });
-  const original = await processes.listProcesses(ADMIN);
   await processes.turnOn(ADMIN, WELCOME_NEW_STARTER);
   await processes.startRun(ADMIN, { processKey: WELCOME_NEW_STARTER, recordId: employee.id });
+
+  const notifications = notificationFlow(orm, { today: () => calendarDate("2026-12-03") });
+  await notifications.processes.turnOff(ADMIN, "notifications.task_created");
+  await notifications.processes.turnOff(ADMIN, "notifications.task_done");
 
   await transact((tx) => processes.resetProcesses(ADMIN, tx));
 
   expect(await processes.listRuns(ADMIN, WELCOME_NEW_STARTER)).toEqual([]);
-  expect(await processes.listProcesses(ADMIN)).toEqual(original);
+  const reset = await notifications.processes.listProcesses(ADMIN);
+  expect(reset.filter(({ key }) => key.startsWith("notifications."))).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ key: "notifications.task_created", isOn: true }),
+      expect.objectContaining({ key: "notifications.task_done", isOn: true }),
+    ]),
+  );
+  expect(reset.find(({ key }) => key === WELCOME_NEW_STARTER)).toMatchObject({ turnedOnAt: null });
 });

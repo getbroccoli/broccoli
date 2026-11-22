@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
+  boolean,
   check,
   foreignKey,
   integer,
@@ -30,6 +31,8 @@ export const processes = pgTable(
     /** Set once its first version is published; always one of its own published versions. */
     activeVersionId: uuid("active_version_id"),
     turnedOnAt: timestamp("turned_on_at", { withTimezone: true }),
+    /** Built into Broccoli: its definition lives in code and changes with releases; a reset turns it on. */
+    builtIn: boolean("built_in").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

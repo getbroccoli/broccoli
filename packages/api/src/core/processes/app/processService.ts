@@ -64,7 +64,7 @@ export interface ProcessService {
    * reset waits for a run's start instead of deadlocking with it.
    */
   lockProcesses(ctx: SecurityContext, tx: Tx): Promise<void>;
-  /** Back to a fresh workspace: deletes every run, turns every process off, forgets their history; the people's deletion took the tasks. */
+  /** Back to a fresh workspace: deletes every run, turns every built-in process on and every other off, forgets their history; the people's deletion took the tasks. */
   resetProcesses(ctx: SecurityContext, tx: Tx): Promise<void>;
   /**
    * Trusted, as the system, before a transaction commits: starts the in-transaction runs its events

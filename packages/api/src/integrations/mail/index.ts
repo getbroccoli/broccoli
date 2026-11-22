@@ -2,6 +2,7 @@
 export { createMailer } from "./mailer";
 export { MailRefusedError } from "./mailRefusedError";
 export { createRelayMailer } from "./relayMailer";
+export { senderName } from "./senderName";
 export { verifySmtpServer } from "./smtpMailer";
 
 // Public types.

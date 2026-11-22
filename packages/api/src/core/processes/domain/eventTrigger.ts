@@ -62,6 +62,9 @@ export function eventAboutRecord(
 function isTriggeredBy(trigger: EventTrigger, { type, payload }: TriggerEvent): boolean {
   if (type !== trigger.event) return false;
   if (!trigger.when) return true;
-  const value = (payload as Record<string, unknown>)[trigger.when.field] ?? null;
-  return trigger.when.in.some((expected) => expected === value);
+  const { when } = trigger;
+  const value = (payload as Record<string, unknown>)[when.field] ?? null;
+  return "in" in when
+    ? when.in.includes(value as string | null)
+    : !when.notIn.includes(value as string | null);
 }
