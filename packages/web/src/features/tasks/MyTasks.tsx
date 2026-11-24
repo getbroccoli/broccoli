@@ -102,7 +102,7 @@ export function MyTasks() {
           <Link
             to="/tasks/$taskId"
             params={{ taskId: task.id }}
-            className={buttonVariants({ size: "xs", variant: "outline" })}
+            className={cn(buttonVariants({ size: "xs", variant: "outline" }))}
           >
             {t("tasks.answer")}
           </Link>
