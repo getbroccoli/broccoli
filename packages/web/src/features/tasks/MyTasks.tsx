@@ -35,7 +35,7 @@ export function MyTasks() {
     {
       id: "task",
       header: t("tasks.column.task"),
-      className: "min-w-72",
+      className: "max-sm:max-w-[50vw] sm:min-w-72",
       cell: ({ task }) => (
         <div className="flex items-center gap-3">
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-muted text-foreground/75">
