@@ -782,6 +782,7 @@ input TimeOffTypeCreateInput {
   colour: TimeOffTypeColour!
   "Colleagues see that the person is off, not why."
   private: Boolean!
+  "Who approves a person's own time off of it."
   approval: TimeOffApproval!
   "The rules offering the type on terms starts from."
   defaultRules: TimeOffRulesInput!

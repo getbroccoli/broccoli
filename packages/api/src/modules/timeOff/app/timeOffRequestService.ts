@@ -1,5 +1,5 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
-import { type ApprovalProcessKey, createApprovalService } from "../../../core/approvals";
+import { createApprovalService } from "../../../core/approvals";
 import type { BeforeCommitHandler, Orm, Transact, Tx } from "../../../core/db";
 import type { Logger } from "../../../core/logger";
 import {
@@ -29,6 +29,7 @@ import {
   createBookTimeOffService,
 } from "./bookTimeOffService";
 import {
+  approvalProcessOf,
   begin,
   type BookingDependencies,
   bookingDependencies,
@@ -163,6 +164,10 @@ function saveRequest(
     .transact(async (tx) => {
       const person = await begin(dependencies, tx, booking);
       const approvalProcessKey = await approvalProcessOf(tx, booking.timeOffTypeId);
+      // A type booked straight away, such as Sickness, is never asked for.
+      if (!approvalProcessKey) {
+        throw invalidInput([{ field: "timeOffTypeId", code: "needs_no_approval" }]);
+      }
       const { days, refusal } = await checkBooking(dependencies, tx, booking, person);
       if (refusal) {
         throw invalidInput([{ field: "dates", code: refusal.reason }]);
@@ -199,19 +204,6 @@ async function requireRequest(ctx: SecurityContext, employeeId: string): Promise
   if (mode === "direct") {
     throw new ApplicationError("FORBIDDEN", "You can book this time off straight away.");
   }
-}
-
-/**
- * The approval the type asks, read as the request is saved, so a later change of the type's choice
- * never reaches it; refuses a type booked straight away, such as Sickness.
- */
-async function approvalProcessOf(tx: Tx, timeOffTypeId: string): Promise<ApprovalProcessKey> {
-  const types = await timeOffPolicyRepository(tx).findAllTypes();
-  const key = types.find(({ id }) => id === timeOffTypeId)?.approvalProcessKey;
-  if (!key) {
-    throw invalidInput([{ field: "timeOffTypeId", code: "needs_no_approval" }]);
-  }
-  return key;
 }
 
 /** The approver's task: who asks for which type and when, then the days, the cost and the note. */
