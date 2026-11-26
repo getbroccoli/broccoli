@@ -6,6 +6,8 @@ it.each([
   ["my_leave_balance", "Checked your leave"],
   ["preview_leave", "Worked out a leave request"],
   ["request_leave", "Asked for leave"],
+  ["show_approval", "Showed you an approval"],
+  ["decide_approval", "You decided on the card"],
 ])("describes %s in the person's activity", (tool, label) => {
   expect(agentActivityLabel({ tool })).toBe(label);
 });

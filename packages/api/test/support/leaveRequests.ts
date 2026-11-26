@@ -81,6 +81,11 @@ export async function leaveRequestSetup(
     tasks,
     timeOff,
     agentTools: mcpAgentToolService(orm, { transact, today, timeOff, tasks, approvals }),
+    managerAgent: signedIn(orm, {
+      employeeId: rachel.id,
+      profiles: ["EMPLOYEE"],
+      agentConnection: { id: "rachel-agent", scopes: ["broccoli:read", "broccoli:write"] },
+    }),
     requesterAgent: signedIn(orm, {
       employeeId: amira.id,
       profiles: ["EMPLOYEE"],

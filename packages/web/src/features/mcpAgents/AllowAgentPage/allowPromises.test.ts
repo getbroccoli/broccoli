@@ -10,11 +10,11 @@ it("shows the promises for read-only access", () => {
   ]);
 });
 
-it("adds asking for leave when the agent requests write access", () => {
+it("promises that the agent can ask for leave and the person decides with write access", () => {
   expect(allowPromises(new Set(["broccoli:read", "broccoli:write"]))).toEqual([
     "mcpAgents.allow.reads",
     "mcpAgents.allow.asksForLeave",
-    "mcpAgents.allow.neverApproves",
+    "mcpAgents.allow.youDecide",
     "mcpAgents.allow.disconnect",
   ]);
 });
