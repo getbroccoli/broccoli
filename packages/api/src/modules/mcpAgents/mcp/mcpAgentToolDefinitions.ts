@@ -45,6 +45,7 @@ const WHEN_YOU_ASK = z.enum(["BOOKED_STRAIGHT_AWAY", "ASK_FOR_APPROVAL", "NOT_AL
 
 const AGENT_TASK = z.object({
   taskId: z.string(),
+  decidable: z.boolean().describe("Whether show_approval shows a card to decide it."),
   title: z.string(),
   description: z.string().nullable(),
   dueOn: z.string().nullable(),

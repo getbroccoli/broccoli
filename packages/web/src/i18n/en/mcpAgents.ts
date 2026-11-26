@@ -9,7 +9,7 @@ export const mcpAgentsEn = {
   "mcpAgents.allow.asksForLeave":
     "It asks for leave for you, or books it when you’d book it yourself, after showing you the dates and cost.",
   "mcpAgents.allow.youDecide":
-    "It shows you approval tasks with Approve and Reject buttons. You decide, not it.",
+    "In chats that show cards, it shows you approvals with Approve and Reject buttons; elsewhere it gives you the link. You decide, not it.",
   "mcpAgents.allow.widenTitle": "Allow {client} to also change things for you?",
   "mcpAgents.allow.widenConnected": "{client} is connected and can read.",
   "mcpAgents.allow.neverApproves": "It never approves anything.",
@@ -85,7 +85,7 @@ export const mcpAgentsEn = {
   "mcpAgents.activity.listMyTasks": "Listed your tasks",
   "mcpAgents.activity.listMyTasksFound": "Listed your tasks · {count} found",
   "mcpAgents.activity.showApproval": "Showed you an approval",
-  "mcpAgents.activity.decideApproval": "You decided on the card",
+  "mcpAgents.activity.decideApproval": "Your decision on the card",
   "mcpAgents.activity.otherTool": "Used {tool}",
   "mcpAgents.activity.loadFailed": "Couldn’t load what your agent is doing. Try again in a moment.",
   "mcpAgents.activity.showHistory": "Show history",

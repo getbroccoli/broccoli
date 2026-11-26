@@ -94,6 +94,13 @@ export class Task implements Readonly<TaskFields> {
     });
   }
 
+  /** Whether the employee may decide it now: they hold it, it is open and it has a result form. */
+  isDecidableBy(employeeId: string): boolean {
+    return (
+      this.assigneeEmployeeId === employeeId && this.status === "to_do" && this.resultForm !== null
+    );
+  }
+
   /** Only its assignee decides an open task with a result form, such as an approval. */
   requireDecidableBy(employeeId: string): void {
     if (this.assigneeEmployeeId !== employeeId) {

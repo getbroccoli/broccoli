@@ -55,7 +55,7 @@ export interface TaskService {
   issueDecisionToken(
     ctx: SecurityContext,
     taskId: string,
-  ): Promise<{ token: string; expiresAt: Date }>;
+  ): Promise<{ task: Task; token: string; expiresAt: Date }>;
   /** A task's history, newest first, for its assignee and the person who asked; others get FORBIDDEN. */
   readTaskHistory(
     ctx: SecurityContext,
@@ -145,11 +145,11 @@ export function createTaskService({
 
     readTaskHistory: (ctx, taskId, args) => historyReader.readHistory(ctx, "task", taskId, args),
 
-    async issueDecisionToken(ctx, taskId) {
-      const id = parseUuid(taskId);
-      const visible = requireVisible(ctx, id ? await taskRepository(orm).findById(id) : null);
-      return issueDecisionToken(orm, ctx, visible);
-    },
+    issueDecisionToken: (ctx, taskId) =>
+      transact(async (tx) => {
+        const visible = await lockVisible(ctx, tx, taskId);
+        return { task: visible.task, ...(await issueDecisionToken(tx, ctx, visible)) };
+      }),
 
     async markDone(ctx, taskId, { result = null, decisionToken = null } = {}) {
       const done = await transact(async (tx) => {

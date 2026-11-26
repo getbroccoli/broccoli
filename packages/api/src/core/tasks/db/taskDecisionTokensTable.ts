@@ -23,5 +23,6 @@ export const taskDecisionTokens = pgTable(
     usedAt: timestamp("used_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("task_decision_tokens_user_idx").on(table.userId)],
+  // Deleting a task deletes its tokens; the index keeps that from scanning every token.
+  (table) => [index("task_decision_tokens_task_idx").on(table.taskId)],
 );

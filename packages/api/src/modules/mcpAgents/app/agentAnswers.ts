@@ -123,6 +123,8 @@ export interface AgentTasks {
 
 export interface AgentTask {
   taskId: string;
+  /** Whether `show_approval` shows a card for it: the caller's own open task to decide. */
+  decidable: boolean;
   title: string;
   description: string | null;
   dueOn: string | null;
@@ -204,10 +206,15 @@ export function previewOf(preview: BookingPreview, whenYouAsk: WhenYouAsk): Leav
 
 export function agentTaskOf(
   task: Task,
-  { names, origin }: { names: ReadonlyMap<string, string>; origin: string },
+  {
+    names,
+    origin,
+    employeeId,
+  }: { names: ReadonlyMap<string, string>; origin: string; employeeId: string },
 ): AgentTask {
   return {
     taskId: task.id,
+    decidable: task.isDecidableBy(employeeId),
     title: task.title,
     description: task.description,
     dueOn: task.dueDate,

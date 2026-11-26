@@ -25,7 +25,7 @@ export function mcpAgentsModule(
     timeOff: TimeOffService;
     bankHolidays: BankHolidayService;
     approvals: Pick<ApprovalService, "requestApproval" | "cancelApproval">;
-    tasks: Pick<TaskService, "listMyTasks" | "readTask" | "issueDecisionToken" | "markDone">;
+    tasks: Pick<TaskService, "listMyTasks" | "issueDecisionToken" | "markDone">;
   },
 ): ModuleManifest {
   const { logger } = dependencies;

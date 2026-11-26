@@ -139,6 +139,7 @@
   <body>
     <main aria-live="polite">
       <p id="waiting" class="note">Loading…</p>
+      <p id="problem" class="error" role="alert" hidden></p>
       <section id="card" hidden>
         <h1 id="title"></h1>
         <p id="meta" class="meta"></p>
@@ -151,7 +152,10 @@
         <p id="no-buttons" class="note" hidden>Decide it in Broccoli.</p>
         <p id="outcome" class="outcome" hidden></p>
         <p id="error" class="error" role="alert" hidden></p>
-        <p class="note"><a id="open" href="#">Open in Broccoli ↗</a></p>
+        <p class="note">
+          <a id="open" href="#" target="_blank" rel="noopener noreferrer">Open in Broccoli ↗</a>
+        </p>
+        <p id="address" class="note" hidden></p>
       </section>
     </main>
     <script>
@@ -205,7 +209,10 @@
       // Shows the task the tool result names; buttons only when the card's token arrived.
       function show(result) {
         const card = result.structuredContent;
-        if (!card || !card.taskId) return;
+        if (result.isError || !card || !card.taskId) {
+          showProblem(textOf(result));
+          return;
+        }
         const token = result._meta && result._meta["broccoli/cardToken"];
         shown = { card, token };
         $("title").textContent = card.title;
@@ -237,11 +244,27 @@
               .join(" or ") +
             ")"
           : "Comment (optional)";
+        $("open").href = card.link;
         $("decide").hidden = !token;
         $("no-buttons").hidden = Boolean(token);
         $("waiting").hidden = true;
         $("card").hidden = false;
-        reportSize();
+        const expiresAt = result._meta && Date.parse(result._meta["broccoli/expiresAt"]);
+        if (token && expiresAt) setTimeout(expire, Math.max(0, expiresAt - Date.now()));
+      }
+
+      // Without the chat app's help, or once refused, the card says why and keeps no live buttons.
+      function showProblem(message) {
+        $("waiting").hidden = true;
+        $("problem").textContent = message;
+        $("problem").hidden = false;
+      }
+
+      function expire() {
+        if ($("decide").hidden) return;
+        $("decide").hidden = true;
+        $("error").textContent = "This card has expired. Ask your agent to show it again.";
+        $("error").hidden = false;
       }
 
       async function decide(option) {
@@ -251,7 +274,6 @@
           $("error").textContent = "Add a comment to " + option.label.toLowerCase() + ".";
           $("error").hidden = false;
           $("comment").focus();
-          reportSize();
           return;
         }
         const buttons = [...$("actions").querySelectorAll("button")];
@@ -273,12 +295,11 @@
             "You chose " + decided.label + (decided.comment ? " — " + decided.comment : ".");
           $("outcome").hidden = false;
         } catch (error) {
+          // Expired, decided elsewhere or refused: pressing again can't work, so the buttons stay off.
           $("error").textContent =
             (error && error.message) || "Broccoli couldn't save it. Open the task in Broccoli.";
           $("error").hidden = false;
-          buttons.forEach((button) => (button.disabled = false));
         }
-        reportSize();
       }
 
       window.addEventListener("message", (event) => {
@@ -293,22 +314,35 @@
           return;
         }
         if (message.method === "ui/notifications/tool-result") show(message.params);
+        if (message.method === "ui/notifications/tool-cancelled") {
+          showProblem("Your agent stopped before showing this approval.");
+        }
+        if (message.method === "ui/resource-teardown") send({ id: message.id, result: {} });
         if (message.method === "ui/notifications/host-context-changed") setTheme(message.params);
       });
 
       $("open").addEventListener("click", (event) => {
         event.preventDefault();
-        if (shown) request("ui/open-link", { url: shown.card.link }).catch(() => {});
+        if (!shown) return;
+        // The chat app opens links; where it can't, the address is there to copy.
+        request("ui/open-link", { url: shown.card.link }).catch(() => {
+          $("address").textContent = shown.card.link;
+          $("address").hidden = false;
+        });
       });
+
+      new ResizeObserver(reportSize).observe(document.body);
 
       request("ui/initialize", {
         appInfo: { name: "Broccoli approval card", version: "1" },
         appCapabilities: {},
         protocolVersion: PROTOCOL_VERSION,
-      }).then((result) => {
-        setTheme(result && result.hostContext);
-        send({ method: "ui/notifications/initialized", params: {} });
-      });
+      })
+        .then((result) => {
+          setTheme(result && result.hostContext);
+          send({ method: "ui/notifications/initialized", params: {} });
+        })
+        .catch(() => showProblem("This chat can't show the card. Open the task in Broccoli."));
     </script>
   </body>
 </html>

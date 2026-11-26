@@ -11,4 +11,4 @@ CREATE TABLE "task_decision_tokens" (
 );
 --> statement-breakpoint
 ALTER TABLE "task_decision_tokens" ADD CONSTRAINT "task_decision_tokens_task_id_tasks_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."tasks"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "task_decision_tokens_user_idx" ON "task_decision_tokens" USING btree ("user_id");
+CREATE INDEX "task_decision_tokens_task_idx" ON "task_decision_tokens" USING btree ("task_id");

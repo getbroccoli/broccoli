@@ -1,4 +1,4 @@
-import { and, eq, lt } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { ormOf, type Orm, type Tx } from "../../db";
 import { taskDecisionTokens } from "./taskDecisionTokensTable";
@@ -9,8 +9,6 @@ export interface TaskDecisionTokenRepository {
   /** The token with this hash, locked until the transaction ends; null when there is none. */
   lockByHash(tokenHash: string): Promise<StoredDecisionToken | null>;
   markUsed(id: string, now: Date): Promise<void>;
-  /** Forgets the user's tokens that expired before `now`. */
-  deleteExpired(userId: string, now: Date): Promise<void>;
 }
 
 export type NewDecisionToken = Omit<StoredDecisionToken, "id" | "usedAt">;
@@ -52,11 +50,6 @@ export function taskDecisionTokenRepository(db: Orm | Tx): TaskDecisionTokenRepo
         .update(taskDecisionTokens)
         .set({ usedAt: now })
         .where(eq(taskDecisionTokens.id, id));
-    },
-    async deleteExpired(userId, now) {
-      await orm()
-        .delete(taskDecisionTokens)
-        .where(and(eq(taskDecisionTokens.userId, userId), lt(taskDecisionTokens.expiresAt, now)));
     },
   };
 }

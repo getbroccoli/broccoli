@@ -80,7 +80,7 @@ export function createMcpAgentToolService({
   timeOff: TimeOffService;
   bankHolidays: BankHolidayService;
   approvals: Pick<ApprovalService, "requestApproval" | "cancelApproval">;
-  tasks: Pick<TaskService, "listMyTasks" | "readTask" | "issueDecisionToken" | "markDone">;
+  tasks: Pick<TaskService, "listMyTasks" | "issueDecisionToken" | "markDone">;
   today?: () => CalendarDate;
 }): McpAgentToolService {
   const employees = createEmployeeReadService(dependencies);
@@ -157,7 +157,8 @@ export function createMcpAgentToolService({
       };
     },
     async listMyTasks(ctx, { origin }) {
-      if (!ctx.user?.employeeId) {
+      const employeeId = ctx.user?.employeeId;
+      if (!employeeId) {
         return { needsYou: [], waitingOnOthers: [], resolvedRecently: [], reason: NO_EMPLOYEE };
       }
       const mine = await tasks.listMyTasks(ctx);
@@ -167,7 +168,7 @@ export function createMcpAgentToolService({
         ...mine.resolvedRecently,
       ]);
       const shown = (list: readonly Task[]) =>
-        list.map((task) => agentTaskOf(task, { names, origin }));
+        list.map((task) => agentTaskOf(task, { names, origin, employeeId }));
       return {
         needsYou: shown(mine.needsYou),
         waitingOnOthers: shown(mine.waitingOnOthers),
@@ -176,8 +177,7 @@ export function createMcpAgentToolService({
       };
     },
     async showApproval(ctx, { taskId, origin }) {
-      const task = await tasks.readTask(ctx, taskId);
-      const { token, expiresAt } = await tasks.issueDecisionToken(ctx, task.id);
+      const { task, token, expiresAt } = await tasks.issueDecisionToken(ctx, taskId);
       const names = await namesOf(employees, ctx, [task]);
       return {
         card: approvalCardOf(task, { names, origin }),

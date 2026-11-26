@@ -1,5 +1,5 @@
 {
-  "id": "f8324c58-72ff-426d-9ba5-6d67d5eeabf2",
+  "id": "9d5b5e41-9120-4a5a-8d84-3c51b53adc36",
   "prevId": "dfbba65b-850c-46dd-bba4-a8067ee065ae",
   "version": "7",
   "dialect": "postgresql",
@@ -2688,11 +2688,11 @@
         }
       },
       "indexes": {
-        "task_decision_tokens_user_idx": {
-          "name": "task_decision_tokens_user_idx",
+        "task_decision_tokens_task_idx": {
+          "name": "task_decision_tokens_task_idx",
           "columns": [
             {
-              "expression": "user_id",
+              "expression": "task_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
