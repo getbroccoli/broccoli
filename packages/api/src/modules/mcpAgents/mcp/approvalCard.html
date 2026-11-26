@@ -187,6 +187,16 @@
         });
       }
 
+      // A calendar date as people read it, such as "Mon 30 Nov"; it has no time zone.
+      function dayOf(date) {
+        return new Date(date + "T00:00:00Z").toLocaleDateString("en-GB", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+          timeZone: "UTC",
+        });
+      }
+
       function textOf(result) {
         const text = (result.content || []).find((part) => part.type === "text");
         return text ? text.text : "Broccoli couldn't answer. Open the task in Broccoli.";
@@ -201,7 +211,7 @@
         $("title").textContent = card.title;
         $("meta").textContent = [
           card.askedBy && "Asked by " + card.askedBy,
-          card.dueOn && "due " + card.dueOn,
+          card.dueOn && "due " + dayOf(card.dueOn),
         ]
           .filter(Boolean)
           .join(" · ");
@@ -259,9 +269,8 @@
           if (result.isError) throw new Error(textOf(result));
           const decided = result.structuredContent.result;
           $("decide").hidden = true;
-          $("outcome").textContent = decided.comment
-            ? decided.label + " — " + decided.comment
-            : decided.label;
+          $("outcome").textContent =
+            "You chose " + decided.label + (decided.comment ? " — " + decided.comment : ".");
           $("outcome").hidden = false;
         } catch (error) {
           $("error").textContent =

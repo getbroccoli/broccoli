@@ -24,8 +24,18 @@ services:
   api:
     <<: *dev-service
     working_dir: /repo/packages/api
-    # Modules read their SDL at startup, so a changed .graphql file restarts the API too.
-    command: [node_modules/.bin/tsx, watch, --include, "src/**/*.graphql", src/main.ts]
+    # Modules read their SDL and the agent's approval card at startup, so a changed .graphql or
+    # .html file restarts the API too.
+    command:
+      [
+        node_modules/.bin/tsx,
+        watch,
+        --include,
+        "src/**/*.graphql",
+        --include,
+        "src/**/*.html",
+        src/main.ts,
+      ]
     environment:
       DATABASE_URL: postgres://broccoli@postgres:5432/broccoli
       LOG_LEVEL: ${LOG_LEVEL:-}
