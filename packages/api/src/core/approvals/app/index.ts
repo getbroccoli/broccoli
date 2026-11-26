@@ -1,5 +1,4 @@
 export {
-  APPROVAL_NOT_STARTED,
   type ApprovalRequest,
   type ApprovalService,
   createApprovalService,

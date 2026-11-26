@@ -1,6 +1,6 @@
 import type { Tx } from "../../db";
 import { processRepository } from "../db";
-import { outcomeOf, type ProcessRunFields, type RunStep } from "../domain";
+import { type OutcomeRule, outcomeOf, type ProcessRunFields, type RunStep } from "../domain";
 import type { DefinitionReader } from "./runStarter";
 
 /** Tells other modules, before the commit, that runs finished or were cancelled, with their outcome. */
@@ -26,8 +26,15 @@ export function createRunEndings({ definitionOf }: { definitionOf: DefinitionRea
         ...new Set(ended.map(({ processId }) => processId)),
       ]);
       const keyOf = new Map(processes.map(({ id, key }) => [id, key]));
+      const outcomeRuleOf = new Map<string, OutcomeRule | null>();
+      for (const versionId of new Set(ended.map(({ processVersionId }) => processVersionId))) {
+        outcomeRuleOf.set(
+          versionId,
+          definitionOf((await repository.findVersion(versionId))!).outcome,
+        );
+      }
       for (const run of ended) {
-        const { outcome } = definitionOf((await repository.findVersion(run.processVersionId))!);
+        const outcome = outcomeRuleOf.get(run.processVersionId)!;
         const step = outcomeOf(outcome, run.steps);
         tx.publish("processes.run_ended", {
           runId: run.id,

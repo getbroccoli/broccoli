@@ -3,6 +3,7 @@ import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
 import { processRunDetail, type TaskRow } from "../taskText";
+import { SECTION_LABEL } from "./sectionLabel";
 
 const TONE_DOT: Record<ProcessRunStatus, string> = {
   IN_PROGRESS: "bg-amber-500",
@@ -44,5 +45,3 @@ export function TaskProcessRun({ task, viewerId }: Props) {
     </section>
   );
 }
-
-const SECTION_LABEL = "text-[11px] font-medium tracking-wider text-muted-foreground uppercase";

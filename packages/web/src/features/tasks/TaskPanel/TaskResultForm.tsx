@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
 import type { TaskRow } from "../taskText";
+import { SECTION_LABEL } from "./sectionLabel";
 
 type Props = {
   form: NonNullable<TaskRow["resultForm"]>;
@@ -81,5 +82,3 @@ export function TaskResultForm({ form, chosenCode, onChoose, isPending, onSend }
 
 /** The API's limit on a result's comment. */
 const MAX_COMMENT_LENGTH = 2000;
-
-const SECTION_LABEL = "text-[11px] font-medium tracking-wider text-muted-foreground uppercase";

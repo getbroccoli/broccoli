@@ -30,6 +30,7 @@ import { PanelCloseButton } from "./PanelCloseButton";
 import { TaskResultButtons } from "./TaskResultButtons";
 import { TaskProcessRun } from "./TaskProcessRun";
 import { TaskResultForm } from "./TaskResultForm";
+import { SECTION_LABEL } from "./sectionLabel";
 
 type Props = {
   task: TaskRow;
@@ -213,5 +214,3 @@ function originLine(task: TaskRow, asked: boolean, viewerId: string | null): str
   if (task.askedBy) return t("tasks.panel.askedBy", { name: personName(task.askedBy), date });
   return taskSource(task, viewerId);
 }
-
-const SECTION_LABEL = "text-[11px] font-medium tracking-wider text-muted-foreground uppercase";

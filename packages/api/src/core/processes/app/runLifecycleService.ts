@@ -112,10 +112,14 @@ export function createRunLifecycleService({
           ),
         );
         const taskOf = new Map(readable.map((task) => [task.id, task]));
+        const ruleOf = new Map<string, OutcomeRule | null>();
+        for (const versionId of new Set([...runOf.values()].map(versionIdOf))) {
+          ruleOf.set(versionId, definitionOf((await runs.findVersion(versionId))!).outcome);
+        }
         const progress = new Map<string, StepProgress>();
         for (const step of taskSteps) {
           const run = runOf.get(step.runId)!;
-          const { outcome } = definitionOf((await runs.findVersion(run.processVersionId))!);
+          const outcome = ruleOf.get(run.processVersionId)!;
           const task = taskOf.get(step.taskId!)!;
           progress.set(task.id, progressOf(run, processOf.get(run.processId)!.name, outcome, task));
         }
@@ -186,6 +190,10 @@ function byId({ id }: { id: string }): string {
 
 function processIdOf({ processId }: { processId: string }): string {
   return processId;
+}
+
+function versionIdOf({ processVersionId }: { processVersionId: string }): string {
+  return processVersionId;
 }
 
 /**

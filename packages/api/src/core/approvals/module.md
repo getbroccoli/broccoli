@@ -45,7 +45,11 @@ Approvals let a feature ask for approval of one of its records and hear how it e
        "recordType": "time_off_request",
        "recordId": "r1",
        "runId": "run1",
-       "outcome": { "code": "rejected", "comment": "Clashes with the release week.", "byEmployeeId": "mia" },
+       "outcome": {
+         "code": "rejected",
+         "comment": "Clashes with the release week.",
+         "byEmployeeId": "mia"
+       },
        "endedWithoutOutcome": null
      }
    }

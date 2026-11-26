@@ -29,7 +29,7 @@ export interface ApprovalRequest {
 }
 
 /** Why a request started no run, as the feature's caller reads it. */
-export const APPROVAL_NOT_STARTED =
+const APPROVAL_NOT_STARTED =
   "The approval could not start: its process is off or this record already has an approval in progress.";
 
 export function createApprovalService(): ApprovalService {
