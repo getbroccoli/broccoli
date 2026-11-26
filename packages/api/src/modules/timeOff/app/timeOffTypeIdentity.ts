@@ -13,7 +13,14 @@ import {
 
 type Dependencies = Pick<ModuleDependencies, "transact" | "logger">;
 
-const IDENTITY_FIELDS = ["name", "icon", "colour", "private", "defaultRules"] as const;
+const IDENTITY_FIELDS = [
+  "name",
+  "icon",
+  "colour",
+  "private",
+  "approvalProcessKey",
+  "defaultRules",
+] as const;
 
 /** Adds a company time off type; no terms offer it until they get rules for it. Admins only. */
 export async function createType(
@@ -32,6 +39,7 @@ export async function createType(
       icon: type.icon,
       colour: type.colour,
       private: type.private,
+      approvalProcessKey: type.approvalProcessKey,
       defaultBalance: type.defaultRules.balance,
     },
     "Added a time off type",
@@ -76,6 +84,7 @@ export async function changeType(
         (field) => JSON.stringify(before[field]) !== JSON.stringify(after[field]),
       ),
       defaultBalance: after.defaultRules.balance,
+      approvalProcessKey: after.approvalProcessKey,
     },
     "Changed a time off type",
   );

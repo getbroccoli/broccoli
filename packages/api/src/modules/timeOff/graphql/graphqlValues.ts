@@ -18,7 +18,7 @@ export function toGraphqlType(type: TimeOffType) {
     colour: toEnum(type.colour ?? DEFAULT_TIME_OFF_TYPE_LOOK.colour),
     typeKey: type.typeKey && toEnum(type.typeKey),
     private: type.private,
-    needsApproval: type.needsApproval,
+    approval: type.approvalProcessKey ? toEnum(type.approvalProcessKey) : ("NO_APPROVAL" as const),
     defaultRules: {
       balance: BALANCE_KINDS[type.defaultRules.balance],
       entitlementDays: type.defaultRules.entitlementDays,

@@ -140,7 +140,7 @@ CREATE TABLE "time_off" (
 CREATE TABLE "time_off_types" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"name" text NOT NULL,
-	"needs_approval" boolean NOT NULL,
+	"approval_process_key" text,
 	"private" boolean NOT NULL,
 	"type_key" text,
 	"unit" text DEFAULT 'day' NOT NULL,
@@ -151,6 +151,7 @@ CREATE TABLE "time_off_types" (
 	"default_bank_holidays" text,
 	CONSTRAINT "time_off_types_type_key_unique" UNIQUE("type_key"),
 	CONSTRAINT "time_off_types_unit_known" CHECK ("time_off_types"."unit" in ('day', 'hour')),
+	CONSTRAINT "time_off_types_approval_process_known" CHECK ("time_off_types"."approval_process_key" in ('manager_approval', 'owner_approval')),
 	CONSTRAINT "time_off_types_default_allowance_with_balance" CHECK (("time_off_types"."default_entitlement_days" is not null and "time_off_types"."default_bank_holidays" is not null)
         = ("time_off_types"."default_balance" = 'balance_from_allowance')),
 	CONSTRAINT "time_off_types_default_allowance_in_range" CHECK ("time_off_types"."default_entitlement_days" between 0 and 366)

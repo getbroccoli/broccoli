@@ -5,7 +5,12 @@ import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseUuid, todayInLondon } from "../../../utils";
 import type { BankHolidayService } from "../../bankHolidays";
-import { timeOffRepository, timeOffRequestRepository, type TimeOffStatus } from "../db";
+import {
+  timeOffPolicyRepository,
+  timeOffRepository,
+  timeOffRequestRepository,
+  type TimeOffStatus,
+} from "../db";
 import { type BookingRefusal, type CostedDay, totalCost } from "../domain";
 import { readPeople } from "./allowanceEngine";
 import {
@@ -133,9 +138,12 @@ async function bookTimeOff(
   input: BookingInput,
 ): Promise<BookedTimeOff> {
   const booking = parseBooking(input);
-  await writeModes.requireDirectCreate(ctx, "time_off", booking.employeeId, NEEDS_REQUEST);
+  const mode = await writeModes.requireCreate(ctx, "time_off", booking.employeeId);
   const result = await dependencies.transact(async (tx) => {
     const person = await begin(dependencies, tx, booking);
+    if (mode === "request") {
+      await requireBookedStraightAway(tx, booking.timeOffTypeId);
+    }
     const { days, refusal } = await checkBooking(dependencies, tx, booking, person);
     if (refusal) {
       throw invalidInput([{ field: "dates", code: refusal.reason }]);
@@ -155,6 +163,7 @@ async function bookTimeOff(
       timeOffTypeId: booking.timeOffTypeId,
       dayCount: result.booked.length,
       cost,
+      ownTimeOffWithoutApproval: mode === "request",
       ...result.ensured,
     },
     "Booked time off",
@@ -246,6 +255,19 @@ const NOT_CANCELLABLE: Record<Exclude<TimeOffStatus, "approved">, string> = {
 
 /** Why booking refuses a caller who may only ask for this person's time off, such as their own. */
 const NEEDS_REQUEST = "Your time off needs to be requested.";
+
+/**
+ * Refuses one's own time off that must be requested: a type nobody approves, such as Sickness, is
+ * booked straight away. Read in the booking's transaction, as a request reads the type's approval.
+ */
+async function requireBookedStraightAway(tx: Tx, timeOffTypeId: string): Promise<void> {
+  const types = await timeOffPolicyRepository(tx).findAllTypes();
+  // An unknown type is refused by the booking rules, with their reason.
+  const type = types.find(({ id }) => id === timeOffTypeId);
+  if (type && type.approvalProcessKey !== null) {
+    throw new ApplicationError("FORBIDDEN", NEEDS_REQUEST);
+  }
+}
 
 /** Thrown to roll a preview's writes back, carrying what it found. */
 class PreviewDone extends Error {

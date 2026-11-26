@@ -168,7 +168,7 @@ test("returns used days and null figures for a person's unlimited policy", async
         icon: null,
         colour: null,
         private: false,
-        needsApproval: true,
+        approvalProcessKey: "manager_approval",
         defaultRules: { balance: "no_balance", entitlementDays: null, bankHolidays: null },
       },
       balance: "unlimited_balance",

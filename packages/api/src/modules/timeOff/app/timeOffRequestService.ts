@@ -1,5 +1,5 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
-import { createApprovalService, MANAGER_APPROVAL } from "../../../core/approvals";
+import { type ApprovalProcessKey, createApprovalService } from "../../../core/approvals";
 import type { BeforeCommitHandler, Orm, Transact, Tx } from "../../../core/db";
 import type { Logger } from "../../../core/logger";
 import {
@@ -134,6 +134,7 @@ async function requestTimeOff(
       timeOffId: saved.id,
       employeeId: booking.employeeId,
       timeOffTypeId: booking.timeOffTypeId,
+      approvalProcessKey: saved.approvalProcessKey,
       dayCount: saved.booked.length,
       cost,
     },
@@ -161,19 +162,19 @@ function saveRequest(
   return dependencies
     .transact(async (tx) => {
       const person = await begin(dependencies, tx, booking);
-      await requireApprovalType(tx, booking.timeOffTypeId);
+      const approvalProcessKey = await approvalProcessOf(tx, booking.timeOffTypeId);
       const { days, refusal } = await checkBooking(dependencies, tx, booking, person);
       if (refusal) {
         throw invalidInput([{ field: "dates", code: refusal.reason }]);
       }
       const result = await saveTimeOff(ctx, tx, booking, { days, status: "requested" });
       await approvals.requestApproval(ctx, tx, {
-        approvalProcessKey: MANAGER_APPROVAL,
+        approvalProcessKey,
         record: { recordType: "time_off", recordId: result.id },
         requesterEmployeeId: booking.employeeId,
         ...(await approvalWords(dependencies, tx, { booking, booked: result.booked, balances })),
       });
-      return result;
+      return { ...result, approvalProcessKey };
     })
     .catch((error: unknown) => {
       // Only the approval refuses with a conflict here: its process is off, a setup fault to look at.
@@ -200,12 +201,17 @@ async function requireRequest(ctx: SecurityContext, employeeId: string): Promise
   }
 }
 
-/** Refuses a type that is recorded without approval, such as Sickness. */
-async function requireApprovalType(tx: Tx, timeOffTypeId: string): Promise<void> {
+/**
+ * The approval the type asks, read as the request is saved, so a later change of the type's choice
+ * never reaches it; refuses a type booked straight away, such as Sickness.
+ */
+async function approvalProcessOf(tx: Tx, timeOffTypeId: string): Promise<ApprovalProcessKey> {
   const types = await timeOffPolicyRepository(tx).findAllTypes();
-  if (!types.find(({ id }) => id === timeOffTypeId)?.needsApproval) {
+  const key = types.find(({ id }) => id === timeOffTypeId)?.approvalProcessKey;
+  if (!key) {
     throw invalidInput([{ field: "timeOffTypeId", code: "needs_no_approval" }]);
   }
+  return key;
 }
 
 /** The approver's task: who asks for which type and when, then the days, the cost and the note. */

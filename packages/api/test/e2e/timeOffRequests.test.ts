@@ -1,19 +1,16 @@
-import { afterEach, beforeEach, onTestFinished, vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 
 import {
   expect,
-  giveDefaultTermsStatutoryMinimum,
+  giveTermsPolicies,
   readTermsPolicies,
   seedTimeOff,
   test,
-  TEST_OWNER,
+  setUpRequests,
+  signInEmployee,
   testTransactor,
-  type TestEnv,
   type Browser,
 } from "#test/support";
-
-import { connectDatabase } from "../../src/core/db";
-import { createLogger } from "../../src/core/logger";
 
 test("requestTimeOff returns the request and its waiting figure", async ({ env }) => {
   const { amira, input } = await setUpRequests(env);
@@ -36,6 +33,58 @@ test("requestTimeOff returns the request and its waiting figure", async ({ env }
   );
   expect(await figures.json()).toEqual({
     data: { employee: { timeOffTypes: [{ waiting: 2.5, remaining: 20 }] } },
+  });
+});
+
+test("an admin selects owner approval for Annual leave and an employee books their own Sickness", async ({
+  env,
+}) => {
+  const { amira, orm, input } = await setUpRequests(env);
+  const admin = await signInEmployee(env, "Hannah", ["ADMIN"]);
+  const termsId = await env.seed.defaultTermsId();
+  await giveTermsPolicies(orm, testTransactor(orm), {
+    termsId,
+    policies: [{ recordOnly: "sickness" }],
+  });
+  const sickness = (await readTermsPolicies(orm, termsId)).find(
+    ({ typeKey }) => typeKey === "sickness",
+  )!;
+
+  const changed = await admin.browser.graphql(
+    `mutation Change($id: ID!) {
+    timeOff { changeType(input: {
+      timeOffTypeId: $id, name: "Annual leave", icon: SUN, colour: GREEN, private: false
+      approval: OWNER_APPROVAL, defaultRules: { balance: NO_BALANCE }
+    }) { error { __typename } } }
+  }`,
+    { id: input.timeOffTypeId },
+  );
+  expect(await changed.json()).toEqual({ data: { timeOff: { changeType: { error: null } } } });
+  const settings = await admin.browser.graphql(
+    "{ timeOffSettings { timeOffTypes { timeOffType { id approval } } } }",
+  );
+  expect(await settings.json()).toHaveProperty(
+    "data.timeOffSettings.timeOffTypes",
+    expect.arrayContaining([
+      { timeOffType: { id: input.timeOffTypeId, approval: "OWNER_APPROVAL" } },
+    ]),
+  );
+
+  const booked = await amira.browser.graphql(
+    `mutation Book($input: TimeOffBookInput!) {
+    timeOff { bookTimeOff(input: $input) { timeOff { status } error { __typename } } }
+  }`,
+    {
+      input: {
+        employeeId: amira.id,
+        timeOffTypeId: sickness.timeOffTypeId,
+        startDate: "2026-12-07",
+        endDate: "2026-12-07",
+      },
+    },
+  );
+  expect(await booked.json()).toEqual({
+    data: { timeOff: { bookTimeOff: { timeOff: { status: "APPROVED" }, error: null } } },
   });
 });
 
@@ -270,35 +319,4 @@ async function submitRequest(
     data: { timeOff: { requestTimeOff: { error: null, timeOff: { status: "REQUESTED" } } } },
   });
   return body.data.timeOff.requestTimeOff.timeOff.id;
-}
-
-async function signInEmployee(env: TestEnv, firstName: string, permissionProfiles: "ADMIN"[] = []) {
-  const credentials = {
-    email: firstName.toLowerCase() + "@example.com",
-    password: TEST_OWNER.password,
-  };
-  const user = await env.seed.user({ ...credentials, permissionProfiles });
-  const employee = await env.seed.employee({ firstName, userId: user.id, startDate: "2025-01-01" });
-  const { browser } = await env.signIn(credentials);
-  return { id: employee.id, browser };
-}
-
-async function setUpRequests(env: TestEnv) {
-  await env.seed.owner();
-  const amira = await signInEmployee(env, "Amira");
-  const rachel = await signInEmployee(env, "Rachel");
-  await env.seed.manager(amira.id, rachel.id);
-  const database = connectDatabase(env.db.url, createLogger("silent"));
-  onTestFinished(() => database.close());
-  const { orm } = database;
-  await giveDefaultTermsStatutoryMinimum(orm, env.seed, testTransactor(orm));
-  const [annual] = await readTermsPolicies(orm, await env.seed.defaultTermsId());
-  const input = {
-    employeeId: amira.id,
-    timeOffTypeId: annual!.timeOffTypeId,
-    startDate: "2026-12-07",
-    endDate: "2026-12-09",
-    halfDays: [{ date: "2026-12-09", dayPart: "MORNING" }],
-  };
-  return { amira, rachel, orm, input };
 }

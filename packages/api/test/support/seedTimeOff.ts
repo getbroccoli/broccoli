@@ -50,7 +50,7 @@ export async function seedTimeOffPolicy(
 export async function seedTimeOffType(orm: Orm, name: string): Promise<{ id: string }> {
   const [type] = await orm
     .insert(timeOffTypes)
-    .values({ name, needsApproval: true, private: false })
+    .values({ name, approvalProcessKey: "manager_approval", private: false })
     .returning({ id: timeOffTypes.id });
   return type!;
 }

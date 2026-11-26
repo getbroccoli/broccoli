@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { boolean, check, numeric, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
+import { MANAGER_APPROVAL, OWNER_APPROVAL } from "../../../core/approvals";
 import { TIME_OFF_TYPE_COLOURS, TIME_OFF_TYPE_ICONS, TIME_OFF_UNITS } from "../domain";
 
 /** A kind of time off: the four the migration inserts, or the company's own. */
@@ -11,7 +12,8 @@ export const timeOffTypes = pgTable(
       .primaryKey()
       .default(sql`uuidv7()`),
     name: text("name").notNull(),
-    needsApproval: boolean("needs_approval").notNull(),
+    /** The approval process a person's own time off of the type asks; null books it straight away. */
+    approvalProcessKey: text("approval_process_key", { enum: [MANAGER_APPROVAL, OWNER_APPROVAL] }),
     /** Colleagues see that the person is off, not why. */
     private: boolean("private").notNull(),
     /** Rules read the key, never the name; null on the company's own types. */
@@ -40,6 +42,10 @@ export const timeOffTypes = pgTable(
     // "Study leave" and " study LEAVE" are one type.
     uniqueIndex(TIME_OFF_TYPE_NAME_UNIQUE).on(sql`lower(btrim(${table.name}))`),
     check("time_off_types_unit_known", sql`${table.unit} in ('day', 'hour')`),
+    check(
+      "time_off_types_approval_process_known",
+      sql`${table.approvalProcessKey} in ('manager_approval', 'owner_approval')`,
+    ),
     check(
       "time_off_types_default_allowance_with_balance",
       sql`(${table.defaultEntitlementDays} is not null and ${table.defaultBankHolidays} is not null)

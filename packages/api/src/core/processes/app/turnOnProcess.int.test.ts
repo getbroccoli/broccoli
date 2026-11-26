@@ -16,6 +16,7 @@ test("lists the seeded processes, with the built-in notifications off in tests",
       turnedOnAt: null,
       activeVersion: { version: 1 },
     },
+    { key: "owner_approval", name: "Owner approval", isOn: true },
     { key: "notifications.task_done", name: "Tell the asker a task is done", isOn: false },
     { key: "notifications.task_created", name: "Tell the assignee about a new task", isOn: false },
     {
