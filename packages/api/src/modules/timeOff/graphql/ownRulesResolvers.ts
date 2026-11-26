@@ -11,7 +11,7 @@ import { toStoredRules } from "./storedRules";
 /** What the own-rules mutations call: the use cases, and the person read back for the payload. */
 export interface OwnRulesServices {
   ownRules: OwnTimeOffRulesService;
-  employees: Pick<EmployeeReadService, "readEmployee">;
+  employees: Pick<EmployeeReadService, "readEmployee" | "readEmployees">;
 }
 
 /** The time off mutations on a person's own rules, each answering with the person afterwards. */

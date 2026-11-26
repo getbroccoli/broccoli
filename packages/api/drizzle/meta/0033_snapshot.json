@@ -3002,6 +3002,30 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "requested_at": {
+          "name": "requested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decided_at": {
+          "name": "decided_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decided_by_employee_id": {
+          "name": "decided_by_employee_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decision_comment": {
+          "name": "decision_comment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -3025,6 +3049,21 @@
           "columns": [
             {
               "expression": "time_off_type_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "time_off_decided_by_idx": {
+          "name": "time_off_decided_by_idx",
+          "columns": [
+            {
+              "expression": "decided_by_employee_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

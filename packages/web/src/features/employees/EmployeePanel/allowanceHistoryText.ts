@@ -23,6 +23,7 @@ export function changeTitle(change: AllowanceChange, readerUserId: string): stri
             : (change.author.email ?? t("people.panel.timeOff.history.someone")),
       });
     case "TIME_OFF_BOOKED":
+    case "TIME_OFF_APPROVED":
     case "TIME_OFF_CANCELLED":
       // A booking can also start a balance, whose grant carries the booking as its cause.
       return change.firstBookedDay && change.lastBookedDay
@@ -83,10 +84,15 @@ function titleSaysItAll({ cause, parts }: Pick<AllowanceChange, "cause" | "parts
   );
 }
 
-const BOOKING_CAUSES = new Set<AllowanceChangeCause>(["TIME_OFF_BOOKED", "TIME_OFF_CANCELLED"]);
+const BOOKING_CAUSES = new Set<AllowanceChangeCause>([
+  "TIME_OFF_BOOKED",
+  "TIME_OFF_APPROVED",
+  "TIME_OFF_CANCELLED",
+]);
 
 const BOOKING_TITLES = {
   TIME_OFF_BOOKED: "people.panel.timeOff.history.booked",
+  TIME_OFF_APPROVED: "people.panel.timeOff.history.approved",
   TIME_OFF_CANCELLED: "people.panel.timeOff.history.cancelled",
 } as const satisfies Partial<Record<AllowanceChangeCause, MessageKey>>;
 

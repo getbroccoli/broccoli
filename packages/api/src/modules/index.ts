@@ -42,7 +42,12 @@ import {
   tasksModule,
 } from "../core/tasks";
 import { collectRegistrations } from "../utils";
-import { createTimeOffSetupService, createTimeOffService, timeOffModule } from "./timeOff";
+import {
+  createTimeOffSetupService,
+  createTimeOffService,
+  timeOffModule,
+  timeOffRecordType,
+} from "./timeOff";
 
 const employeeSetup = createEmployeeSetupService();
 
@@ -76,7 +81,11 @@ export function createModules(
   const timeOff = createTimeOffService({ ...core, bankHolidays });
   const tasks = createTaskService(core);
   // The record types a process may run on, registered by the modules that own them.
-  const recordTypes = { employee: employeeRecordType(core.orm), task: taskRecordType(core.orm) };
+  const recordTypes = {
+    employee: employeeRecordType(core.orm),
+    task: taskRecordType(core.orm),
+    time_off: timeOffRecordType(core.orm),
+  };
   const notificationPeople = createNotificationPeopleAdapter(core);
   const system = PrincipalSecurityContext.system();
   const notifications = createNotifications({

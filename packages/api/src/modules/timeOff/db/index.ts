@@ -1,6 +1,18 @@
 export { allowanceRepository, type Allowance } from "./allowanceRepository";
 export { type PolicyAssignment, timeOffPolicyRepository } from "./timeOffPolicyRepository";
-export { type BookedDay, type Booking, timeOffRepository } from "./timeOffRepository";
+export {
+  type BookedDay,
+  HELD,
+  type Booking,
+  timeOffRepository,
+  type TimeOffStatus,
+} from "./timeOffRepository";
+export {
+  type RequestDecision,
+  type StoredTimeOff,
+  type TimeOffRequest,
+  timeOffRequestRepository,
+} from "./timeOffRequestRepository";
 export { allowanceLedgerLines } from "./allowanceLedgerLinesTable";
 export { allowances } from "./allowancesTable";
 export { timeOffTypes } from "./timeOffTypesTable";

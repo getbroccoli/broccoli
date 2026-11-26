@@ -124,7 +124,7 @@ test("returns no balance kind for a type without a policy", async ({ orm }) => {
   });
 });
 
-test("sums the days everyone took this calendar year", async ({ orm, seed }) => {
+test("counts only approved days taken this calendar year", async ({ orm, seed }) => {
   const employee = await seed.employee();
   const colleague = await seed.employee();
   const service = timeOffService(orm, { today: "2026-11-05" });
@@ -143,7 +143,7 @@ test("sums the days everyone took this calendar year", async ({ orm, seed }) => 
   await seedTimeOff(orm, {
     employeeId: colleague.id,
     timeOffTypeId: annualLeave.id,
-    status: "pending_approval",
+    status: "requested",
     days: [{ date: "2026-04-01", dayPart: "morning" }],
   });
   await seedTimeOff(orm, {
@@ -155,7 +155,7 @@ test("sums the days everyone took this calendar year", async ({ orm, seed }) => 
   await seedTimeOff(orm, {
     employeeId: colleague.id,
     timeOffTypeId: annualLeave.id,
-    status: "declined",
+    status: "rejected",
     days: [{ date: "2026-04-02", dayPart: "full_day" }],
   });
 
@@ -163,7 +163,7 @@ test("sums the days everyone took this calendar year", async ({ orm, seed }) => 
 
   expect(
     result.timeOffTypes.find(({ timeOffType }) => timeOffType.typeKey === "annual_leave"),
-  ).toMatchObject({ daysTakenThisYear: 2.5 });
+  ).toMatchObject({ daysTakenThisYear: 2 });
 });
 
 test("counts the people who have a time off type today", async ({ orm, seed, transact }) => {

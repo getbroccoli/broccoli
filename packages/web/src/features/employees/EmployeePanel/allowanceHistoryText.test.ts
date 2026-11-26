@@ -40,6 +40,7 @@ it.each(["TIME_OFF_BOOKED", "TIME_OFF_CANCELLED"] as const)(
 
 it.each([
   ["TIME_OFF_BOOKED", "Booked 7–9 Dec 2026"],
+  ["TIME_OFF_APPROVED", "Approved 7–9 Dec 2026"],
   ["TIME_OFF_CANCELLED", "Booking for 7–9 Dec 2026 cancelled"],
 ] as const)("names the booked dates for %s", (cause, expected) => {
   const change = { ...grant, cause, firstBookedDay: "2026-12-07", lastBookedDay: "2026-12-09" };

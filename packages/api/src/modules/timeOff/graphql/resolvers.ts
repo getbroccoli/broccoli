@@ -12,6 +12,7 @@ import type {
   BookTimeOffService,
   PersonTimeOff,
   TimeOffPolicyService,
+  TimeOffRequestService,
   TimeOffSetupService,
   TimeOffService,
   TimeOffWithPolicies,
@@ -26,6 +27,7 @@ import {
 import type { CalendarDate } from "../../../utils";
 import { allowanceResolvers } from "./allowanceResolvers";
 import { bookingResolvers } from "./bookingResolvers";
+import { requestResolvers } from "./requestResolvers";
 import { BALANCE_KINDS, toGraphqlTimeOffTypeRow, toGraphqlType } from "./graphqlValues";
 import { ownRulesResolvers, type OwnRulesServices } from "./ownRulesResolvers";
 import { toStoredRules } from "./storedRules";
@@ -42,6 +44,7 @@ export interface TimeOffResolverServices {
   whosOut: WhosOutService;
   ownRules: OwnRulesServices;
   allowances: AllowanceService;
+  requests: TimeOffRequestService;
 }
 
 export function createResolvers({
@@ -52,9 +55,11 @@ export function createResolvers({
   whosOut,
   ownRules,
   allowances,
+  requests,
 }: TimeOffResolverServices): Resolvers {
   const bookings = bookingResolvers(booking, whosOut);
   const allowanceChanges = allowanceResolvers(allowances);
+  const requested = requestResolvers(requests, ownRules.employees);
   const loaders = timeOffLoaders(timeOff);
   return {
     ...bookings,
@@ -96,8 +101,11 @@ export function createResolvers({
     Mutation: {
       timeOff: () => ({}),
     },
+    TimeOff: { ...bookings.TimeOff, ...requested.TimeOff },
+    TimeOffDecision: requested.TimeOffDecision,
     TimeOffMutations: {
       ...bookings.TimeOffMutations,
+      ...requested.TimeOffMutations,
       ...allowanceChanges.TimeOffMutations,
       createType: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["TimeOffTypeCreatePayload"]>(
@@ -163,6 +171,7 @@ export function createResolvers({
     Employee: {
       timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),
       ...bookings.Employee,
+      ...requested.Employee,
     },
     EmployeeEmploymentTerms: {
       timeOff: ({ employeeId, move, from }, args, context) => {

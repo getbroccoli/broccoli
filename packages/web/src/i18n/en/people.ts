@@ -245,6 +245,7 @@ export const peopleEn = {
   "people.panel.timeOff.history.you": "you",
   "people.panel.timeOff.history.someone": "someone",
   "people.panel.timeOff.history.booked": "Booked {dates}",
+  "people.panel.timeOff.history.approved": "Approved {dates}",
   "people.panel.timeOff.history.cancelled": "Booking for {dates} cancelled",
   "people.panel.timeOff.history.timeOffTurnedOn": "Time off turned on",
   "people.panel.timeOff.history.employeeAdded": "Added to Broccoli",

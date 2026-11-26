@@ -328,4 +328,4 @@ const studyLeave = {
     bankHolidays: "bank_holidays_on_top_of_allowance",
   },
 } as const;
-const ownType = { typeKey: null, unit: "day" } as const;
+const ownType = { typeKey: null, unit: "day", needsApproval: true } as const;

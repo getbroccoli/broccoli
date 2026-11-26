@@ -5,6 +5,15 @@ import type { TurnedOnTimeOff } from "./timeOffService";
 declare module "../../../core/events" {
   interface DomainEvents {
     /** Time off was turned on: the terms set up, their Annual leave policies and the allowances made. */
+    /** Requested time off was approved, rejected, or cancelled when its approval ended without a decision. */
+    "timeOff.request_decided": {
+      timeOffId: string;
+      employeeId: string;
+      runId: string;
+      status: "approved" | "rejected" | "cancelled";
+      /** The allowance lines the approval appended; 0 otherwise. */
+      linesAppended: number;
+    };
     "timeOff.time_off_turned_on": TurnedOnTimeOff & {
       annualLeavePolicyKeys: StandardLeavePolicyKey[];
       locationCount: number;

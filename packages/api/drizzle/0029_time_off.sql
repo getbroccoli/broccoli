@@ -130,7 +130,11 @@ CREATE TABLE "time_off" (
 	"note" text,
 	"status" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"created_by_user_id" text
+	"created_by_user_id" text,
+	"requested_at" timestamp with time zone,
+	"decided_at" timestamp with time zone,
+	"decided_by_employee_id" uuid,
+	"decision_comment" text
 );
 --> statement-breakpoint
 CREATE TABLE "time_off_types" (
@@ -181,12 +185,14 @@ CREATE INDEX "time_off_policy_assignments_version_idx" ON "time_off_policy_assig
 CREATE INDEX "time_off_policy_assignments_terms_idx" ON "time_off_policy_assignments" USING btree ("terms_id");--> statement-breakpoint
 CREATE INDEX "time_off_employee_idx" ON "time_off" USING btree ("employee_id");--> statement-breakpoint
 CREATE INDEX "time_off_time_off_type_idx" ON "time_off" USING btree ("time_off_type_id");--> statement-breakpoint
+CREATE INDEX "time_off_decided_by_idx" ON "time_off" USING btree ("decided_by_employee_id");--> statement-breakpoint
 -- Foreign keys to another module's tables, which drizzle cannot declare without importing them.
 ALTER TABLE "time_off_policy_versions" ADD CONSTRAINT "time_off_policy_versions_terms_fk" FOREIGN KEY ("terms_id") REFERENCES "public"."terms"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "time_off_policy_assignments" ADD CONSTRAINT "time_off_policy_assignments_terms_fk" FOREIGN KEY ("terms_id") REFERENCES "public"."terms"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "time_off_policy_assignments" ADD CONSTRAINT "time_off_policy_assignments_employee_id_employees_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."employees"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "allowances" ADD CONSTRAINT "allowances_employee_id_employees_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."employees"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "time_off" ADD CONSTRAINT "time_off_employee_id_employees_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."employees"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "time_off" ADD CONSTRAINT "time_off_decided_by_employee_id_employees_id_fk" FOREIGN KEY ("decided_by_employee_id") REFERENCES "public"."employees"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 -- A null bound is unbounded, as on employments.
 ALTER TABLE "employee_terms" ADD CONSTRAINT "employee_terms_no_overlap" EXCLUDE USING gist ("employee_id" WITH =, daterange("start_date", "end_date", '[]') WITH &&);--> statement-breakpoint
 ALTER TABLE "time_off_policy_assignments" ADD CONSTRAINT "time_off_policy_assignments_employee_no_overlap" EXCLUDE USING gist ("employee_id" WITH =, "time_off_type_id" WITH =, daterange("start_date", "end_date", '[]') WITH &&) WHERE ("employee_id" IS NOT NULL);--> statement-breakpoint

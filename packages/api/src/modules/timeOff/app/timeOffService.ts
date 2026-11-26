@@ -2,6 +2,7 @@ import { ApplicationError } from "../../../core/applicationError";
 import type { Tx } from "../../../core/db";
 import type { SetupTermsInput } from "../../../core/instance";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
+import { createRecordHistoryService } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
 import { type CalendarDate, coversDate, todayInLondon } from "../../../utils";
 import type { BankHolidayService } from "../../bankHolidays";
@@ -35,6 +36,7 @@ import { type EmployeeTimeOffType, readTimeOffTypes } from "./readTimeOffTypes";
 import { changeType, createType, deleteType } from "./timeOffTypeIdentity";
 
 const employeeSetup = createEmployeeSetupService();
+const recordHistory = createRecordHistoryService();
 
 /** Turning time off on for terms, what people have, and the engine that keeps their allowances. */
 export interface TimeOffService {
@@ -200,6 +202,8 @@ export function createTimeOffService({
     async resetTimeOff(ctx, tx) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       await timeOffPolicyRepository(tx).deleteAll();
+      // Time off goes with its people; a reset leaves none of its notes or comments in history.
+      await recordHistory.purge(tx, "time_off");
     },
     async copyTermsPolicies(ctx, tx, { fromTermsId, toTermsId }) {
       ctx.require("MANAGE_WORKSPACE");

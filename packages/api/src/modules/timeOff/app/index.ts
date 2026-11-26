@@ -21,6 +21,9 @@ export {
   type WhosOutService,
   type WhosOutTimeOff,
 } from "./whosOutService";
+export type { RequestDecision, StoredTimeOff } from "../db";
+export { createTimeOffRequestService, type TimeOffRequestService } from "./timeOffRequestService";
+export { timeOffRecordType } from "./timeOffRecordType";
 export { allowanceEventHandlers } from "./allowanceEventHandlers";
 export { ensureAllowancesJob } from "./ensureAllowancesJob";
 export {

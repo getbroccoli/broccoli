@@ -1,12 +1,19 @@
 import { and, asc, between, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 
-import { anyOf, ormOf, type Tx } from "../../../core/db";
+import { anyOf, type Orm, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
 import type { DayPart } from "../domain";
 import { timeOff } from "./timeOffTable";
 import { timeOffDays } from "./timeOffDaysTable";
+import { DAY_COLUMNS, groupDays, TIME_OFF_COLUMNS } from "./timeOffRows";
 
-/** A day of approved time off that has not been cancelled. */
+/** Where time off stands: requested and waiting for approval, approved, rejected or cancelled. */
+export type TimeOffStatus = (typeof timeOff.$inferSelect)["status"];
+
+/** Time off that holds its days: approved, or requested and waiting for approval. */
+export const HELD: readonly TimeOffStatus[] = ["approved", "requested"];
+
+/** A day of time off that has not been cancelled. */
 export interface BookedDay {
   timeOffDayId: string;
   timeOffId: string;
@@ -16,11 +23,12 @@ export interface BookedDay {
   dayPart: DayPart;
 }
 
-/** Approved time off with every one of its days. */
+/** Time off with every one of its days. */
 export interface Booking {
   id: string;
   employeeId: string;
   timeOffTypeId: string;
+  status: TimeOffStatus;
   note: string | null;
   createdAt: Date;
   /** Oldest first. */
@@ -29,22 +37,34 @@ export interface Booking {
 
 /** People's time off, inside a transaction. */
 export interface TimeOffRepository {
-  /** The people's booked days from `from` on, up to `until` when given, oldest first. */
+  /**
+   * The people's days of time off with these statuses (approved unless given) from `from` on, up
+   * to `until` when given, oldest first.
+   */
   findBookedDays(input: {
     employeeIds: readonly string[];
     from: CalendarDate;
     until?: CalendarDate;
+    statuses?: readonly TimeOffStatus[];
   }): Promise<BookedDay[]>;
-  /** The people's approved time off with a day from `from` to `until`, oldest first. */
+  /**
+   * The people's time off that holds its days with a day from `from` to `until`, oldest first:
+   * approved, and requested for `requestedOf`, whose time off the reader may read.
+   */
   findBookings(input: {
     employeeIds: readonly string[];
     from: CalendarDate;
     until: CalendarDate;
+    requestedOf: (employeeId: string) => boolean;
   }): Promise<Booking[]>;
-  /** Approved time off with its days; returns its id and when it was saved. */
-  insertBooking(input: {
+  /**
+   * Time off with its days, approved or requested; returns its id and when it was saved. Requested
+   * time off records when it was asked for.
+   */
+  insertTimeOff(input: {
     employeeId: string;
     timeOffTypeId: string;
+    status: "approved" | "requested";
     note: string | null;
     createdByUserId: string | null;
     days: readonly { date: CalendarDate; dayPart: DayPart }[];
@@ -55,15 +75,14 @@ export interface TimeOffRepository {
   lockTimeOff(id: string): Promise<{
     employeeId: string;
     timeOffTypeId: string;
-    status: string;
+    status: TimeOffStatus;
     firstDate: CalendarDate;
   } | null>;
   /** Marks the time off cancelled; its days stay. */
   cancel(id: string): Promise<void>;
   /**
-   * Days of approved or pending time off from `from` to `until`, per employee, type and calendar
-   * year: a full day counts 1, a morning or an afternoon 0.5. Declined, cancelled and cancelled
-   * days count nothing.
+   * Days of approved time off from `from` to `until`, per employee, type and calendar year: a
+   * full day counts 1, a morning or an afternoon 0.5. Rejected and cancelled days count nothing.
    */
   sumRecordedDays(input: {
     employeeIds: readonly string[];
@@ -75,7 +94,7 @@ export interface TimeOffRepository {
     from: CalendarDate;
     until: CalendarDate;
   }): Promise<{ timeOffTypeId: string; days: number }[]>;
-  /** The days from `from` on that `employeeIds` have approved or pending time off of the type. */
+  /** The days from `from` on that `employeeIds` have approved or requested time off of the type. */
   findDaysFrom(input: {
     employeeIds: readonly string[];
     timeOffTypeId: string;
@@ -83,10 +102,10 @@ export interface TimeOffRepository {
   }): Promise<{ employeeId: string; date: CalendarDate }[]>;
 }
 
-export function timeOffRepository(tx: Tx): TimeOffRepository {
+export function timeOffRepository(tx: Orm | Tx): TimeOffRepository {
   const yearOfDay = sql<number>`extract(year from ${timeOffDays.date})::int`;
   return {
-    async findBookedDays({ employeeIds, from, until }) {
+    async findBookedDays({ employeeIds, from, until, statuses = ["approved"] }) {
       return await ormOf(tx)
         .select({
           timeOffDayId: timeOffDays.id,
@@ -101,52 +120,39 @@ export function timeOffRepository(tx: Tx): TimeOffRepository {
         .where(
           and(
             anyOf(timeOff.employeeId, employeeIds),
-            eq(timeOff.status, "approved"),
+            inArray(timeOff.status, statuses),
             isNull(timeOffDays.cancelledAt),
             until ? between(timeOffDays.date, from, until) : gte(timeOffDays.date, from),
           ),
         )
         .orderBy(asc(timeOffDays.date));
     },
-    async findBookings({ employeeIds, from, until }) {
+    async findBookings({ employeeIds, from, until, requestedOf }) {
       const inRange = ormOf(tx)
         .select({ id: timeOffDays.timeOffId })
         .from(timeOffDays)
         .where(and(between(timeOffDays.date, from, until), isNull(timeOffDays.cancelledAt)));
       const rows = await ormOf(tx)
-        .select({
-          id: timeOff.id,
-          employeeId: timeOff.employeeId,
-          timeOffTypeId: timeOff.timeOffTypeId,
-          note: timeOff.note,
-          createdAt: timeOff.createdAt,
-          date: timeOffDays.date,
-          dayPart: timeOffDays.dayPart,
-        })
+        .select({ timeOff: TIME_OFF_COLUMNS, day: DAY_COLUMNS })
         .from(timeOff)
         .innerJoin(timeOffDays, eq(timeOffDays.timeOffId, timeOff.id))
         .where(
           and(
             anyOf(timeOff.employeeId, employeeIds),
-            eq(timeOff.status, "approved"),
+            inArray(timeOff.status, HELD),
             isNull(timeOffDays.cancelledAt),
             inArray(timeOff.id, inRange),
           ),
         )
         .orderBy(asc(timeOffDays.date), asc(timeOff.id));
-      return [...Map.groupBy(rows, ({ id }) => id).values()].map((days) => ({
-        id: days[0]!.id,
-        employeeId: days[0]!.employeeId,
-        timeOffTypeId: days[0]!.timeOffTypeId,
-        note: days[0]!.note,
-        createdAt: days[0]!.createdAt,
-        days: days.map(({ date, dayPart }) => ({ date, dayPart })),
-      }));
+      return groupDays(rows).filter(
+        ({ status, employeeId }) => status === "approved" || requestedOf(employeeId),
+      );
     },
-    async insertBooking({ days, ...booking }) {
+    async insertTimeOff({ days, status, ...input }) {
       const [saved] = await ormOf(tx)
         .insert(timeOff)
-        .values({ ...booking, status: "approved" })
+        .values({ ...input, status, requestedAt: status === "requested" ? sql`now()` : null })
         .returning({ id: timeOff.id, createdAt: timeOff.createdAt });
       await ormOf(tx)
         .insert(timeOffDays)
@@ -192,7 +198,7 @@ export function timeOffRepository(tx: Tx): TimeOffRepository {
         })
         .from(timeOffDays)
         .innerJoin(timeOff, eq(timeOff.id, timeOffDays.timeOffId))
-        .where(and(anyOf(timeOff.employeeId, employeeIds), counted(from, until)))
+        .where(and(anyOf(timeOff.employeeId, employeeIds), daysIn(["approved"], from, until)))
         .groupBy(timeOff.employeeId, timeOff.timeOffTypeId, yearOfDay);
       return rows.map((row) => ({ ...row, days: Number(row.days) }));
     },
@@ -201,7 +207,7 @@ export function timeOffRepository(tx: Tx): TimeOffRepository {
         .select({ timeOffTypeId: timeOff.timeOffTypeId, days: dayCount })
         .from(timeOffDays)
         .innerJoin(timeOff, eq(timeOff.id, timeOffDays.timeOffId))
-        .where(counted(from, until))
+        .where(daysIn(["approved"], from, until))
         .groupBy(timeOff.timeOffTypeId);
       return rows.map((row) => ({ ...row, days: Number(row.days) }));
     },
@@ -214,7 +220,7 @@ export function timeOffRepository(tx: Tx): TimeOffRepository {
           and(
             anyOf(timeOff.employeeId, employeeIds),
             eq(timeOff.timeOffTypeId, timeOffTypeId),
-            counted(from, LAST_DAY),
+            daysIn(HELD, from, LAST_DAY),
           ),
         );
     },
@@ -227,10 +233,10 @@ const LAST_DAY = "9999-12-31" as CalendarDate;
 /** A full day counts 1, a morning or an afternoon 0.5. */
 const dayCount = sql<string>`sum(case when ${timeOffDays.dayPart} = 'full_day' then 1 else 0.5 end)`;
 
-/** Days of approved or pending time off from `from` to `until`, not cancelled on their own. */
-function counted(from: CalendarDate, until: CalendarDate) {
+/** Days of time off with one of these statuses from `from` to `until`, not cancelled on their own. */
+function daysIn(statuses: readonly TimeOffStatus[], from: CalendarDate, until: CalendarDate) {
   return and(
-    inArray(timeOff.status, ["approved", "pending_approval"]),
+    inArray(timeOff.status, statuses),
     isNull(timeOffDays.cancelledAt),
     between(timeOffDays.date, from, until),
   );

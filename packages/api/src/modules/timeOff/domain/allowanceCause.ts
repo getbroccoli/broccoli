@@ -24,6 +24,7 @@ export type AllowanceCause =
         | "LEAVE_YEAR_STARTED"
         | "DAILY_CHECK"
         | "TIME_OFF_BOOKED"
+        | "TIME_OFF_APPROVED"
         | "TIME_OFF_CANCELLED";
       /** The terms id, employee id, time off id or date the cause names; null when it names none. */
       ref: string | null;

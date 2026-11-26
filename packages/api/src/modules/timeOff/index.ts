@@ -7,8 +7,10 @@ import {
   createBookTimeOffService,
   createOwnTimeOffRulesService,
   createTimeOffPolicyService,
+  createTimeOffRequestService,
   createWhosOutService,
   ensureAllowancesJob,
+  timeOffRecordType,
   type TimeOffSetupService,
   type TimeOffService,
 } from "./app";
@@ -21,9 +23,11 @@ export {
   createBookTimeOffService,
   createOwnTimeOffRulesService,
   createTimeOffPolicyService,
+  createTimeOffRequestService,
   createTimeOffSetupService,
   createTimeOffService,
   createWhosOutService,
+  timeOffRecordType,
 } from "./app";
 
 // Public types.
@@ -36,7 +40,10 @@ export type {
 } from "./app";
 export type { AllowanceCause, StandardLeavePolicyKey } from "./domain";
 
-/** Time off: turning time off on, which policies terms get, and keeping each person's allowances as they change and every day. */
+/**
+ * Time off: turning time off on, which policies terms get, booking and requesting it, and keeping
+ * each person's allowances as they change and every day.
+ */
 export function timeOffModule({
   timeOff,
   timeOffSetup,
@@ -47,6 +54,7 @@ export function timeOffModule({
   timeOffSetup: TimeOffSetupService;
   bankHolidays: BankHolidayService;
 }): ModuleManifest {
+  const requests = createTimeOffRequestService({ ...dependencies, timeOff, bankHolidays });
   return {
     name: "timeOff",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
@@ -61,9 +69,16 @@ export function timeOffModule({
         employees: createEmployeeReadService(dependencies),
       },
       allowances: createAllowanceService(dependencies),
+      requests,
     }),
+    // The decision on requested time off commits with the approval that decided it.
+    eventsBeforeCommit: requests.finishApprovals,
+    recordTypes: { time_off: timeOffRecordType(dependencies.orm) },
     events: {
       ...allowanceEventHandlers({ timeOff, ...dependencies }),
+      // Logged once the decision commits, with identifiers only.
+      "timeOff.request_decided": (decided) =>
+        Promise.resolve(dependencies.logger.info(decided, "Decided time off request")),
       "timeOff.time_off_turned_on": (turnedOn) =>
         Promise.resolve(dependencies.logger.info(turnedOn, "Turned time off on")),
     },

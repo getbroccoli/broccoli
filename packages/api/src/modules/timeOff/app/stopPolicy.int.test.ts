@@ -82,7 +82,7 @@ test("publishing a stop from today leaves the type not offered from today", asyn
   ).toMatchObject([{ endDate: "2026-11-05" }]);
 });
 
-test.for(["approved", "pending_approval"] as const)(
+test.for(["approved", "requested"] as const)(
   "%s time off on the stop date refuses publication and leaves everything unchanged",
   async (status, { orm, seed, transact }) => {
     const employee = await seed.employee({ startDate: "2025-01-01" });
@@ -126,7 +126,7 @@ test.for(["approved", "pending_approval"] as const)(
   },
 );
 
-test("declined time off after the stop date does not prevent stopping the type", async ({
+test("rejected time off after the stop date does not prevent stopping the type", async ({
   orm,
   seed,
   transact,
@@ -138,7 +138,7 @@ test("declined time off after the stop date does not prevent stopping the type",
   await seedTimeOff(orm, {
     employeeId: employee.id,
     timeOffTypeId: policy!.timeOffTypeId,
-    status: "declined",
+    status: "rejected",
     days: [{ date: "2027-01-04", dayPart: "full_day" }],
   });
   const service = timeOffPolicyService(orm, { today: "2026-11-06" });
