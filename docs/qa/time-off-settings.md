@@ -15,7 +15,7 @@ A manual check of the time off types list in Settings, adding a type, changing a
 
 ## Add a type
 
-- [ ] "Add time off type" opens a dialog titled "Add time off type" with an empty name, the sun on yellow, "Show the reason to colleagues" on, and under "Default rules", collapsed, the counts choice at "Doesn't count" once opened.
+- [ ] "Add time off type" opens a dialog titled "Add time off type" with an empty name, the sun on yellow, "Show the reason to colleagues" on, "Who approves" at "Their manager", and under "Default rules", collapsed, the counts choice at "Doesn't count" once opened.
 - [ ] The footer reads "Adds the type for the whole company. Every set of terms shows it as not offered until you offer it.", and names the type once one is typed.
 - [ ] Picking an icon and a colour changes the tile beside the name at once; each of the 30 icons and 10 colours can be picked.
 - [ ] Saving " Study leave " closes the dialog, shows "Study leave added." and lists Study leave after Other, by name.
@@ -25,7 +25,7 @@ A manual check of the time off types list in Settings, adding a type, changing a
 
 ## Change a type
 
-- [ ] Clicking a row, or Tab to a type's name and Enter, opens its panel over the list at `/settings/time-off/<id>` with its icon, colour, name and privacy, and the footer "Name, look and privacy are the same in every terms."
+- [ ] Clicking a row, or Tab to a type's name and Enter, opens its panel over the list at `/settings/time-off/<id>` with its icon, colour, name, privacy and who approves, and the footer "Name, look, privacy and who approves are the same in every terms."
 - [ ] Cancel and Save show in the footer only once something changed; Cancel puts the saved values back.
 - [ ] Renaming Annual leave to "Holiday" with another icon and colour shows "Holiday saved."; the list and every terms stack show the new name and look, with the same rules.
 - [ ] On the demo, Annual leave's "Default rules", collapsed until opened, read From a balance, 28 days, bank holidays not on top: the policy picked when time off was turned on. Sickness, Family leave and Other read "Doesn't count".
@@ -34,6 +34,8 @@ A manual check of the time off types list in Settings, adding a type, changing a
 - [ ] Sickness's switch is off and disabled, with "Sickness is private by law. Colleagues only see “Away”."
 - [ ] Switching off "Show the reason to colleagues" on Annual leave changes the hint to "Colleagues only see “Away”.", and after saving its rule line on a terms stack ends with "· Private".
 - [ ] Sickness's rule line on a terms stack ends with "· Private".
+- [ ] "Who approves" reads "Their manager" on Annual leave, Family leave and Other, and "No approval" on Sickness, with "Applies to new time off. Requests already waiting keep their approver." under it.
+- [ ] Choosing "The owner" on Other and saving shows "Other saved."; reopening it shows "The owner". Sickness can be switched too.
 - [ ] ×, Escape and a click outside close the panel without saving.
 - [ ] Keyboard only: arrow keys move through the icons and the colours, and the focus ring shows on each.
 
