@@ -49,19 +49,47 @@ export function dueText(task: TaskRow, today: string): string {
   return isLate(task, today) ? t("tasks.fact.late", { date }) : t("tasks.fact.due", { date });
 }
 
-/** Who a task comes from: the person who asked, or its process step. */
+/** Who a task comes from: the person who asked, or its process. */
 export function taskSource(task: TaskRow, viewerId: string | null): string {
   if (task.askedBy) {
     return task.askedBy.id === viewerId ? t("tasks.you") : personName(task.askedBy);
   }
-  const { processKey, stepKey } = task.processSource!;
-  // shortcut: shows the keys, as no process creates tasks yet; name them with the first one that does.
-  return `${processKey} · ${stepKey}`;
+  return task.processRun!.processName;
+}
+
+/** The line under a task's process run status: who decided, who holds the decision, or how far it is. */
+export function processRunDetail(task: TaskRow, viewerId: string | null): string {
+  const run = task.processRun!;
+  if (run.outcome) {
+    const date = formatTaskDay(run.outcome.decidedAt);
+    const { decidedBy } = run.outcome;
+    return decidedBy
+      ? t("tasks.processRun.decidedBy", { name: personName(decidedBy), date })
+      : t("tasks.processRun.endedOn", { date });
+  }
+  if (run.status === "IN_PROGRESS") return progressDetail(task, viewerId);
+  const date = formatTaskDay(run.endedAt!);
+  return run.status === "CANCELLED" && run.decidesOutcome
+    ? t("tasks.processRun.cancelledUndecided", { date })
+    : t("tasks.processRun.endedOn", { date });
 }
 
 /** "No — VPN login fails", or "Yes" without a comment. */
 export function resultText({ label, comment }: NonNullable<TaskRow["result"]>): string {
   return comment === null ? label : `${label} — ${comment}`;
+}
+
+function progressDetail(task: TaskRow, viewerId: string | null): string {
+  const run = task.processRun!;
+  if (!run.decidesOutcome) {
+    const counts = { done: String(run.doneSteps), total: String(run.totalSteps) };
+    return t("tasks.processRun.steps", counts);
+  }
+  if (task.assignee.id === viewerId && isOpen(task)) return t("tasks.processRun.waitingForYou");
+  return t("tasks.processRun.withAssignee", {
+    name: personName(task.assignee),
+    date: formatTaskDay(task.createdAt),
+  });
 }
 
 export function personName(person: Person | null): string {

@@ -77,13 +77,6 @@ export interface ProcessService {
   startRunsOnEvents: EventRunService["startRunsOnEvents"];
   /** Trusted, as the system, for an after-commit job: starts its runs in their own transaction. */
   startRunsAfterCommit: EventRunService["startRunsAfterCommit"];
-  /**
-   * The process and step behind each of these tasks that a step created, by task id; the caller
-   * shows it only on tasks the person may read.
-   */
-  readTaskSources(
-    taskIds: readonly string[],
-  ): Promise<Map<string, { processKey: string; stepKey: string }>>;
   /** Trusted, before the commit: completes the steps of the tasks its events marked done. */
   completeStepsOfDoneTasks: RunLifecycleService["completeStepsOfDoneTasks"];
 }
@@ -208,8 +201,6 @@ export function createProcessService(dependencies: ProcessServiceDependencies): 
     startRunsAfterCommit: (ctx, job) => eventRuns.startRunsAfterCommit(ctx, job),
 
     completeStepsOfDoneTasks: (tx, events) => lifecycle.completeStepsOfDoneTasks(tx, events),
-
-    readTaskSources: (taskIds) => processRepository(orm).findTaskSources(taskIds),
 
     async resetProcesses(ctx, tx) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");

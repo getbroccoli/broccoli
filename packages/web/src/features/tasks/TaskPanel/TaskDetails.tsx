@@ -28,6 +28,7 @@ import { useTaskActions } from "../useTaskActions";
 import { DeleteTaskDialog } from "./DeleteTaskDialog";
 import { PanelCloseButton } from "./PanelCloseButton";
 import { TaskResultButtons } from "./TaskResultButtons";
+import { TaskProcessRun } from "./TaskProcessRun";
 import { TaskResultForm } from "./TaskResultForm";
 
 type Props = {
@@ -159,28 +160,31 @@ export function TaskDetails({ task, onDeleted }: Props) {
               </p>
             </section>
           )}
-          <section className="flex flex-col gap-1.5 text-muted-foreground">
-            <h3 className={SECTION_LABEL}>{t("tasks.panel.from")}</h3>
-            <p>{originLine(task, asked, viewerId)}</p>
-            {task.status === "DONE" && (
-              <p>
-                {task.doneBy?.id === viewerId
-                  ? t("tasks.panel.doneByYou", { date: formatTaskDay(task.doneAt!) })
-                  : t("tasks.panel.doneBy", {
-                      name: personName(task.doneBy),
-                      date: formatTaskDay(task.doneAt!),
-                    })}
-              </p>
-            )}
-            {task.status === "CANCELLED" && (
-              <p>
-                {t("tasks.panel.cancelledBy", {
-                  date: formatTaskDay(task.cancelledAt!),
-                  reason: task.cancelReason!,
-                })}
-              </p>
-            )}
-          </section>
+          {hasOrigin(task) && (
+            <section className="flex flex-col gap-1.5 text-muted-foreground">
+              <h3 className={SECTION_LABEL}>{t("tasks.panel.from")}</h3>
+              {(task.askedBy || !task.processRun) && <p>{originLine(task, asked, viewerId)}</p>}
+              {task.status === "DONE" && (
+                <p>
+                  {task.doneBy?.id === viewerId
+                    ? t("tasks.panel.doneByYou", { date: formatTaskDay(task.doneAt!) })
+                    : t("tasks.panel.doneBy", {
+                        name: personName(task.doneBy),
+                        date: formatTaskDay(task.doneAt!),
+                      })}
+                </p>
+              )}
+              {task.status === "CANCELLED" && (
+                <p>
+                  {t("tasks.panel.cancelledBy", {
+                    date: formatTaskDay(task.cancelledAt!),
+                    reason: task.cancelReason!,
+                  })}
+                </p>
+              )}
+            </section>
+          )}
+          {task.processRun && <TaskProcessRun task={task} viewerId={viewerId} />}
         </aside>
       </div>
       <DeleteTaskDialog
@@ -196,6 +200,11 @@ export function TaskDetails({ task, onDeleted }: Props) {
       />
     </div>
   );
+}
+
+/** A process's own task shows no origin line, as its Process section names the process. */
+function hasOrigin(task: TaskRow): boolean {
+  return Boolean(task.askedBy) || !task.processRun || task.status !== "TO_DO";
 }
 
 function originLine(task: TaskRow, asked: boolean, viewerId: string | null): string {

@@ -63,10 +63,6 @@ export interface ProcessRepository {
   readRunsWithSteps(ids: readonly string[]): Promise<ProcessRun[]>;
   /** Writes the run and its steps' status. */
   saveRun(run: ProcessRun): Promise<void>;
-  /** The process key and step key behind each of these tasks that a step created, by task id. */
-  findTaskSources(
-    taskIds: readonly string[],
-  ): Promise<Map<string, { processKey: string; stepKey: string }>>;
   /** The runs of the process whose subject is in `scope`, newest first; FORBIDDEN for "none". */
   listRuns(processId: string, scope: RecordScope): Promise<ProcessRunFields[]>;
   /** Every run in progress, of every process. */
@@ -236,21 +232,6 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
           .set({ status, finishedAt, ...resultColumnsOf({ result }) })
           .where(and(eq(runStepProgress.runId, runId), eq(runStepProgress.stepKey, stepKey)));
       }
-    },
-
-    async findTaskSources(taskIds) {
-      if (taskIds.length === 0) return new Map();
-      const rows = await orm
-        .select({
-          taskId: runStepProgress.taskId,
-          processKey: processes.key,
-          stepKey: runStepProgress.stepKey,
-        })
-        .from(runStepProgress)
-        .innerJoin(processRuns, eq(processRuns.id, runStepProgress.runId))
-        .innerJoin(processes, eq(processes.id, processRuns.processId))
-        .where(inArray(runStepProgress.taskId, [...taskIds]));
-      return new Map(rows.map(({ taskId, ...source }) => [taskId!, source]));
     },
 
     async listRuns(processId, scope) {
