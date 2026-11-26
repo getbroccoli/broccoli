@@ -41,17 +41,19 @@ export async function finishApproval(
     cause: { kind: "PROCESS_RUN", ref: finished.runId },
     decision: finished.outcome ? decision : undefined,
   });
-  if (status === "approved") {
-    await dependencies.timeOff.ensureAllowances(SYSTEM, tx, {
-      employeeIds: [stored.employeeId],
-      cause: { kind: "TIME_OFF_APPROVED", ref: stored.id },
-    });
-  }
+  const ensured =
+    status === "approved"
+      ? await dependencies.timeOff.ensureAllowances(SYSTEM, tx, {
+          employeeIds: [stored.employeeId],
+          cause: { kind: "TIME_OFF_APPROVED", ref: stored.id },
+        })
+      : null;
   tx.publish("timeOff.request_decided", {
     timeOffId: stored.id,
     employeeId: stored.employeeId,
     runId: finished.runId,
     status,
+    linesAppended: ensured?.linesAppended ?? 0,
   });
 }
 
@@ -83,7 +85,7 @@ async function requireStillBookable(
     ]);
     throw new ApplicationError(
       "INVALID_INPUT",
-      `${whyNotApprovable(refusal, employee?.firstName ?? "They")}, so this can't be approved. Reject it instead.`,
+      `${whyNotApprovable(refusal, employee?.firstName ?? "They", range.startDate < window.start)}, so this can't be approved. Reject it instead.`,
       [{ field: "dates", code: refusal.reason }],
     );
   }
@@ -92,7 +94,11 @@ async function requireStillBookable(
 const SYSTEM = PrincipalSecurityContext.system();
 
 /** Why a request's days no longer fit, for its approver. */
-function whyNotApprovable(refusal: BookingRefusal, firstName: string): string {
+function whyNotApprovable(
+  refusal: BookingRefusal,
+  firstName: string,
+  beforeWindow: boolean,
+): string {
   const day = refusal.date && dayLabel(refusal.date);
   switch (refusal.reason) {
     case "outside_employment":
@@ -100,6 +106,8 @@ function whyNotApprovable(refusal: BookingRefusal, firstName: string): string {
     case "type_not_offered":
       return `This type isn't offered to ${firstName} on ${day}`;
     default:
-      return "It's in a leave year that has closed";
+      return beforeWindow
+        ? "It's in a leave year that has closed"
+        : "It's later than time off can be booked now";
   }
 }

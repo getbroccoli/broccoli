@@ -185,6 +185,7 @@ CREATE INDEX "time_off_policy_assignments_version_idx" ON "time_off_policy_assig
 CREATE INDEX "time_off_policy_assignments_terms_idx" ON "time_off_policy_assignments" USING btree ("terms_id");--> statement-breakpoint
 CREATE INDEX "time_off_employee_idx" ON "time_off" USING btree ("employee_id");--> statement-breakpoint
 CREATE INDEX "time_off_time_off_type_idx" ON "time_off" USING btree ("time_off_type_id");--> statement-breakpoint
+CREATE INDEX "time_off_decided_by_idx" ON "time_off" USING btree ("decided_by_employee_id");--> statement-breakpoint
 -- Foreign keys to another module's tables, which drizzle cannot declare without importing them.
 ALTER TABLE "time_off_policy_versions" ADD CONSTRAINT "time_off_policy_versions_terms_fk" FOREIGN KEY ("terms_id") REFERENCES "public"."terms"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "time_off_policy_assignments" ADD CONSTRAINT "time_off_policy_assignments_terms_fk" FOREIGN KEY ("terms_id") REFERENCES "public"."terms"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

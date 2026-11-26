@@ -2645,6 +2645,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "time_off_decided_by_idx": {
+          "name": "time_off_decided_by_idx",
+          "columns": [
+            {
+              "expression": "decided_by_employee_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {

@@ -124,6 +124,10 @@ async function requestTimeOff(
   const [committed] = await dependencies.transact((tx) =>
     timeOffRequestRepository(tx).findByIds([saved.id]),
   );
+  if (!committed) {
+    // The person was deleted just after asking, taking the request with them.
+    throw new ApplicationError("NOT_FOUND", "No time off has this id.");
+  }
   const cost = totalCost(saved.booked);
   dependencies.logger.info(
     {
@@ -140,7 +144,7 @@ async function requestTimeOff(
     employeeId: booking.employeeId,
     timeOffTypeId: booking.timeOffTypeId,
     days: saved.booked.map(({ date, dayPart }) => ({ date, dayPart })),
-    status: committed!.status,
+    status: committed.status,
     cost,
     note: booking.note,
     bookedAt: saved.createdAt,
@@ -238,7 +242,7 @@ async function approvalWords(
         remainingBefore === null
           ? []
           : [
-              `${balances.length > 1 ? `${periodStart.slice(0, 4)}: ` : ""}${remainingBefore} free now, ${remainingAfter} after this.`,
+              `${balances.length > 1 ? `${periodStart.slice(0, 4)}: ` : ""}When asked: ${remainingBefore} free, ${remainingAfter} after this.`,
             ],
       ),
       booking.note ? `${employee!.firstName}'s note: ${booking.note}` : null,

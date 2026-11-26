@@ -11,6 +11,8 @@ declare module "../../../core/events" {
       employeeId: string;
       runId: string;
       status: "approved" | "rejected" | "cancelled";
+      /** The allowance lines the approval appended; 0 otherwise. */
+      linesAppended: number;
     };
     "timeOff.time_off_turned_on": TurnedOnTimeOff & {
       annualLeavePolicyKeys: StandardLeavePolicyKey[];

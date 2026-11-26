@@ -35,5 +35,7 @@ export const timeOff = pgTable(
   (table) => [
     index("time_off_employee_idx").on(table.employeeId),
     index("time_off_time_off_type_idx").on(table.timeOffTypeId),
+    // Deleting an employee clears the decisions they made without scanning all time off.
+    index("time_off_decided_by_idx").on(table.decidedByEmployeeId),
   ],
 );

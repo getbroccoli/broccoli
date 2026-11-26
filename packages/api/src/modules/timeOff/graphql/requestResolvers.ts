@@ -57,6 +57,7 @@ export function requestResolvers(
       decision: async ({ id }, _args, context) =>
         (await loaders(context).statuses.load(id))?.decision ?? null,
       // Colleagues see a person's approved time off but not its history: theirs is empty.
+      // shortcut: one history query per time off; batch it when a list selects history.
       history: async ({ id }, { first, after }, context) =>
         (await loaders(context).statuses.load(id))
           ? requests.readHistory(context.getActor(), id, { first: first ?? undefined, after })
