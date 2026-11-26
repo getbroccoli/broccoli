@@ -29,6 +29,7 @@ test("the owner previews, books, reads and cancels two working days", async ({ e
         bookTimeOff: {
           timeOff: {
             id: expect.any(String) as unknown,
+            bookedAt: expect.any(String) as unknown,
             cost: 2,
             days,
             history: { edges: [{ node: { operation: "CREATED" } }] },
@@ -80,6 +81,75 @@ test("returns a weekend-only booking refusal as an InvalidInputError payload", a
   });
 });
 
+test("a colleague sees booked days on Who's out with empty history", async ({ env }) => {
+  const { employeeId, booking } = await setUpBookingWithHistory(env);
+  const credentials = { email: "ben@example.com", password: TEST_OWNER.password };
+  const user = await env.seed.user(credentials);
+  await env.seed.employee({ userId: user.id });
+  const { browser } = await env.signIn(credentials);
+
+  const result = await browser.graphql(
+    `query Calendar($id: ID!) {
+    employee(id: $id) { whosOut(from: "2026-12-07", until: "2026-12-08") {
+      timeOff { id history { edges { node { operation } } pageInfo { hasNextPage endCursor } } }
+    } }
+  }`,
+    { id: employeeId },
+  );
+
+  expect(await result.json()).toEqual({
+    data: {
+      employee: {
+        whosOut: {
+          timeOff: [
+            {
+              id: booking.id,
+              history: {
+                edges: [],
+                pageInfo: { hasNextPage: false, endCursor: null },
+              },
+            },
+          ],
+        },
+      },
+    },
+  });
+});
+
+test("a time off history line returns the booking's note, cost and booking time to its reader", async ({
+  env,
+}) => {
+  const { browser, booking } = await setUpBookingWithHistory(env);
+
+  const result = await browser.graphql(
+    `query History($id: ID!) {
+    recordHistory(recordType: TIME_OFF, recordId: $id) { edges { node {
+      record { ... on TimeOff { id note cost bookedAt } }
+    } } }
+  }`,
+    { id: booking.id },
+  );
+
+  expect(await result.json()).toEqual({
+    data: {
+      recordHistory: {
+        edges: [
+          {
+            node: {
+              record: {
+                id: booking.id,
+                note: "Visiting family.",
+                cost: 1.5,
+                bookedAt: booking.bookedAt,
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+});
+
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-11-09T12:00:00Z"));
@@ -122,9 +192,32 @@ async function setUpBooking(env: TestEnv) {
   return { browser, employeeId: employee.id, timeOffTypeId: annual.timeOffType.id };
 }
 
+async function setUpBookingWithHistory(env: TestEnv) {
+  const { browser, employeeId, timeOffTypeId } = await setUpBooking(env);
+  const response = await browser.graphql(BOOK_TIME_OFF, {
+    input: {
+      employeeId,
+      timeOffTypeId,
+      startDate: "2026-12-07",
+      endDate: "2026-12-08",
+      halfDays: [{ date: "2026-12-08", dayPart: "MORNING" }],
+      note: "Visiting family.",
+    },
+  });
+  const body = (await response.json()) as {
+    data: { timeOff: { bookTimeOff: { timeOff: { id: string; bookedAt: string } } } };
+  };
+  const booking = body.data.timeOff.bookTimeOff.timeOff;
+  expect(booking).toMatchObject({
+    bookedAt: expect.any(String) as unknown,
+    history: { edges: [{ node: { operation: "CREATED" } }] },
+  });
+  return { browser, employeeId, booking };
+}
+
 const BOOK_TIME_OFF = `mutation Book($input: TimeOffBookInput!) {
   timeOff { bookTimeOff(input: $input) {
-    timeOff { id cost days { date dayPart } history { edges { node { operation } } } }
+    timeOff { id bookedAt cost days { date dayPart } history { edges { node { operation } } } }
     error { __typename }
   } }
 }`;

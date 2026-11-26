@@ -70,6 +70,7 @@ test("ends a request without a decision when nobody can approve", async ({ orm, 
 
   const request = await requests.requestTimeOff(requester, input);
 
+  expect(request.status).toBe("cancelled");
   expect(await orm.select().from(timeOff)).toMatchObject([
     {
       id: request.id,
@@ -90,6 +91,7 @@ test("keeps the task open when employment ends before the last requested day", a
 
   await expect(tasks.markDone(manager, task.id, { result: approved })).rejects.toMatchObject({
     code: "INVALID_INPUT",
+    message: "Amira isn't employed on Wed 9 Dec, so this can't be approved. Reject it instead.",
     fieldErrors: [{ field: "dates", code: "outside_employment" }],
   });
 
