@@ -15,6 +15,13 @@ type RecordAccess {
   editableFields: [String!]!
 }
 
+"Whether the signed-in user may do something: straight away, only with someone's approval, or not at all."
+enum Permit {
+  ALLOWED
+  ALLOWED_WITH_APPROVAL
+  NOT_ALLOWED
+}
+
 "One change to a record: who made it, when, why, and each field's old and new value."
 type RecordChange {
   id: ID!
@@ -91,8 +98,8 @@ type RecordChangeConnection {
   pageInfo: PageInfo!
 }
 
-# `RecordType` lists the record types that keep history: each module that keeps it declares
-# `enum RecordType` with its own value (`EMPLOYEE`); the server merges them.
+# `RecordType` lists the record types: each module declares `enum RecordType` with its own value
+# (`EMPLOYEE`); the server merges them.
 type Query {
   "A record's history, newest first; still readable after the record is deleted. Readable by whoever the record's type allows."
   recordHistory(

@@ -1,7 +1,8 @@
 import DataLoader from "dataloader";
 
 import { type GraphqlContext, perRequest } from "../../../core/graphql";
-import type { PermissionProfile } from "../../../core/security";
+import { type WriteMode, writeModes } from "../../../core/records";
+import type { PermissionObject, PermissionProfile, SecurityContext } from "../../../core/security";
 import type { CalendarDate } from "../../../utils";
 import type {
   EmployeeInviteService,
@@ -38,6 +39,8 @@ export interface EmployeeLoaders {
   employmentTerms: DataLoader<string, EmploymentTerms | null>;
   /** An employee by id, with the caller's access, or null; for the people a task names. */
   employee: DataLoader<string, Employee | null>;
+  /** How the caller may create a record of a type about an employee; one read per type. */
+  createMode: DataLoader<CreateKey, WriteMode, string>;
 }
 
 /** The `terms` loader's key for the default terms, which a location without terms starts people on. */
@@ -90,5 +93,30 @@ export function employeeLoaders(
       const read = await services.readEmploymentTerms(context.getActor(), { employeeIds });
       return employeeIds.map((id) => read.get(id) ?? null);
     }),
+    createMode: createModeLoader(context.getActor()),
   }));
+}
+
+type CreateKey = { recordType: string; employeeId: string };
+
+const keyOf = ({ recordType, employeeId }: CreateKey) => `${recordType}:${employeeId}`;
+
+/** `createMode`: one write-modes read per record type, however many people a list holds. */
+function createModeLoader(ctx: SecurityContext): DataLoader<CreateKey, WriteMode, string> {
+  return new DataLoader(
+    async (keys) => {
+      const modes = new Map<string, WriteMode>();
+      for (const recordType of new Set(keys.map((key) => key.recordType))) {
+        const employeeIds = keys.flatMap((key) =>
+          key.recordType === recordType ? [key.employeeId] : [],
+        );
+        // A record type's permission object has its name; one without has no grants, so is refused.
+        const object = recordType.toLowerCase() as PermissionObject;
+        const found = await writeModes(ctx, object, "create", employeeIds);
+        for (const [employeeId, mode] of found) modes.set(keyOf({ recordType, employeeId }), mode);
+      }
+      return keys.map((key) => modes.get(keyOf(key))!);
+    },
+    { cacheKeyFn: keyOf },
+  );
 }

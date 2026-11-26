@@ -23,6 +23,13 @@ import { employmentTermsResolvers } from "./employmentTermsResolvers";
 import { WEEK_FIELDS } from "./weekFields";
 import { DEFAULT_TERMS, employeeLoaders } from "./loaders";
 
+/** A write mode as the API names it. */
+const PERMITS = {
+  direct: "ALLOWED",
+  request: "ALLOWED_WITH_APPROVAL",
+  refused: "NOT_ALLOWED",
+} as const;
+
 export function createResolvers(
   services: EmployeeService &
     EmployeeReadService &
@@ -237,6 +244,8 @@ export function createResolvers(
         locationId ? loaders(context).location.load(locationId) : null,
       permissionProfiles: (employee, _args, context) =>
         loaders(context).permissionProfiles.load(employee.id),
+      canCreate: async (employee, { recordType }, context) =>
+        PERMITS[await loaders(context).createMode.load({ recordType, employeeId: employee.id })],
       signInStatus: async (employee, _args, context) => {
         if (!context.getActor().can("MANAGE_WORKSPACE")) {
           return null;

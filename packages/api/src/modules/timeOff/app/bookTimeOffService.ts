@@ -1,6 +1,7 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import type { Transact, Tx } from "../../../core/db";
 import type { Logger } from "../../../core/logger";
+import { requireDirect } from "../../../core/records";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseUuid, todayInLondon } from "../../../utils";
@@ -22,9 +23,9 @@ import type { WhosOutTimeOff } from "./whosOutService";
 
 /** Booking and cancelling a person's time off. */
 export interface BookTimeOffService {
-  /** What booking would cost and do, without writing anything. Admins only, for now. */
+  /** What booking or asking for it would cost and do, without writing anything; for whoever may create it. */
   previewBooking(ctx: SecurityContext, input: BookingInput): Promise<BookingPreview>;
-  /** Books approved time off for its working days and runs the allowance engine. Admins only, for now. */
+  /** Books approved time off for its working days and runs the allowance engine; refuses whoever may only ask for it. */
   bookTimeOff(ctx: SecurityContext, input: BookingInput): Promise<BookedTimeOff>;
   /** Cancels a whole booking, giving its days back. Admins only, for now. */
   cancelTimeOff(ctx: SecurityContext, input: { timeOffId: string }): Promise<void>;
@@ -144,6 +145,7 @@ async function bookTimeOff(
   input: BookingInput,
 ): Promise<BookedTimeOff> {
   const booking = parseBooking(input);
+  await requireDirect(ctx, "time_off", "create", booking.employeeId, NEEDS_REQUEST);
   const result = await dependencies.transact(async (tx) => {
     const person = await begin(dependencies, ctx, tx, booking);
     const { days, refusal } = await checkBooking(dependencies, tx, booking, person);
@@ -221,6 +223,9 @@ async function cancelTimeOff(
     "Cancelled time off",
   );
 }
+
+/** Why booking refuses a caller who may only ask for this person's time off, such as their own. */
+const NEEDS_REQUEST = "Your time off needs to be requested.";
 
 /** Thrown to roll a preview's writes back, carrying what it found. */
 class PreviewDone extends Error {

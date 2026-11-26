@@ -14,7 +14,7 @@ Who may do what in Broccoli. Use cases ask their security context; nothing else 
 
 ## Profiles
 
-- `EMPLOYEE`: employee read on `all`; employee update on `self` (first name, last name, photo); employee update on `all_reports` (first name, last name, photo, job title); working pattern read on `self` and `all_reports`. No operations.
+- `EMPLOYEE`: employee read on `all`; employee update on `self` (first name, last name, photo); employee update on `all_reports` (first name, last name, photo, job title); working pattern read on `self` and `all_reports`; time off read on `self` and `all_reports`, and create on `self`, which write modes turn into a request. No operations.
 - `ADMIN`: create, read, update and delete on `all` for every object, every field; `MANAGE_WORKSPACE`, which also covers working patterns and the working pattern of each set of terms.
 - `OWNER`: Admin's grants and operations, shared in code rather than linked, plus `RESET_WORKSPACE`. A release that changes Admin's definition changes both; an admin's stored edits to the Admin profile, once the profile editor exists, will not reach the owner.
 
@@ -44,6 +44,8 @@ Every read takes one of three shapes:
 
 A write checks its write grant, and its result shows the record only when the caller may also read it; otherwise the record is null and the write still happens.
 
+**Write modes** (`core/records`) say how a caller may write a record: `writeModes(ctx, object, action, subjects)` answers `direct`, `request` or `refused` per subject, in one reporting-line read. Out of the caller's scope → `refused`; someone else's record → `direct`; their own record → `direct` only when their grants for the action reach everyone, as an admin's do, else `request`; Broccoli itself → `direct`. A write that must not wait for approval calls `requireDirect`, which refuses the other two. `Employee.canCreate(recordType)` shows the create mode as `ALLOWED`, `ALLOWED_WITH_APPROVAL` or `NOT_ALLOWED`; a record type's permission object has its name.
+
 **Fixed rules**, applied in the same checks: the owner's profile never changes, and the owner's employee is never deleted. The second is about the `employee` object only: the owner's other records can be deleted.
 
 ## Recipes
@@ -51,5 +53,5 @@ A write checks its write grant, and its result shows the record only when the ca
 - **Add an operation**: add it to `OPERATIONS` in `permissions.ts` and to the `Operation` enum in `core/graphql/schema.graphql`, give it to the profiles that hold it, and add its refusal message to `OPERATION_REFUSALS`. Use cases call `ctx.require("…")`.
 - **Add an object**: add it to `PermissionObjects`, give `ADMIN` a grant over every action on `all`, give `EMPLOYEE` only what it needs, and register the record type with `permissions: { object, editableFields }` so `AnyRecord.access` works.
 - **Add an action**, such as `approve`: add it to `RecordAction` and list it in the grants that allow it. No grant gets a new action by itself.
-- **Add a record type**: register it with `subjectsOf(ids)` (each existing record's subject, or `"public"`), `loadRecords(ids)` and, when a change field holds another record's id, `references` (`{ manager: "employee" }`); core then decides its history, `RecordChange.record` and `AnyRecord.access`. Its list query adds `inRecordScope(await ctx.recordScope(object, "read"), subjectColumn)`; its write results go through the read scope. Creating a record with a subject checks `requireInScope(object, "create", subject)`.
+- **Add a record type**: register it with `subjectsOf(ids)` (each existing record's subject, or `"public"`), `loadRecords(ids)` and, when a change field holds another record's id, `references` (`{ manager: "employee" }`); core then decides its history, `RecordChange.record` and `AnyRecord.access`. Its list query adds `inRecordScope(await ctx.recordScope(object, "read"), subjectColumn)`; its write results go through the read scope. Creating a record with a subject checks `requireInScope(object, "create", subject)`, or `requireDirect` when one's own record is asked for with approval instead.
 - **Add a scope**: add it to `Scope` and resolve it in `PrincipalSecurityContext.reachedBy`, the one place lists and single checks share, through `EmployeeDirectory`: the employees module answers who is above and below whom.

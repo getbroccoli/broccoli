@@ -12,6 +12,13 @@ declare module "../../../core/events" {
   }
 }
 
+declare module "../../../core/records" {
+  interface RecordTypes {
+    /** A person's time off; the record id is the time off's. */
+    time_off: true;
+  }
+}
+
 declare module "../../../core/jobs" {
   interface Jobs {
     "timeOff.ensureAllowances": Record<never, never>;
