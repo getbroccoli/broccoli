@@ -71,6 +71,15 @@ export const settingsEn = {
   "settings.timeOff.showReasonUnnamed":
     "Colleagues see the type's name. When off, they only see “Away”.",
   "settings.timeOff.showReasonOff": "Colleagues only see “Away”.",
+  "settings.timeOff.approval": "Who approves",
+  "settings.timeOff.approvalHint":
+    "Applies to new time off. Requests already waiting keep their approver.",
+  "settings.timeOff.approvalManager": "Their manager",
+  "settings.timeOff.approvalManagerHint": "If they have no manager, the owner.",
+  "settings.timeOff.approvalOwner": "The owner",
+  "settings.timeOff.approvalOwnerHint": "The owner approves everyone's.",
+  "settings.timeOff.approvalNone": "No approval",
+  "settings.timeOff.approvalNoneHint": "They book it straight away.",
   "settings.timeOff.defaultRules": "Default rules",
   "settings.timeOff.defaultRulesHint":
     "A starting point for offering this type on terms. Changing them doesn't change anyone's time off; terms that already offer it keep their rules.",
@@ -79,7 +88,8 @@ export const settingsEn = {
     "Adds {name} for the whole company. Every set of terms shows it as not offered until you offer it.",
   "settings.timeOff.adds":
     "Adds the type for the whole company. Every set of terms shows it as not offered until you offer it.",
-  "settings.timeOff.sameEverywhere": "Name, look and privacy are the same in every terms.",
+  "settings.timeOff.sameEverywhere":
+    "Name, look, privacy and who approves are the same in every terms.",
   "settings.timeOff.cancel": "Cancel",
   "settings.timeOff.save": "Save",
   "settings.timeOff.added": "{name} added.",

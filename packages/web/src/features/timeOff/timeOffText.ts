@@ -11,6 +11,7 @@ export type RefusalReason =
   | "OUTSIDE_EMPLOYMENT"
   | "LONGER_THAN_A_YEAR";
 
+import type { TimeOffApproval } from "@/__generated__/graphql";
 import type { DialogMode, Permit, TimeOffStatus } from "@/features/employees";
 
 /** One line of the dialog's balance strip. */
@@ -186,12 +187,9 @@ export function bookedToast(cost: number, firstName: string, isSelf: boolean): s
   });
 }
 
-/** The types the dialog offers: all of them to book, those that need approval to ask for. */
-export function offeredTypes<Type extends { timeOffType: { needsApproval: boolean } }>(
-  types: readonly Type[],
-  mode: DialogMode,
-): Type[] {
-  return types.filter(({ timeOffType }) => mode === "book" || timeOffType.needsApproval);
+/** A request turns into a booking for a type nobody approves. */
+export function modeForType(mode: DialogMode, approval: TimeOffApproval | null): DialogMode {
+  return approval === "NO_APPROVAL" ? "book" : mode;
 }
 
 /** The page's button: Book when the viewer books anyone straight away, else Request when they may ask. */

@@ -82,7 +82,7 @@ query BookingPersonTypes($id: ID!) {
         name
         colour
         icon
-        needsApproval
+        approval
       }
       balance
       entitlement
@@ -187,7 +187,7 @@ query BookingCompanyTypes {
         name
         colour
         icon
-        needsApproval
+        approval
       }
     }
   }

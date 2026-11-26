@@ -11,15 +11,14 @@ import { t } from "@/i18n";
 
 import type { DialogMode } from "@/features/employees";
 
-import { offeredTypes } from "../timeOffText";
 import { TypeDot } from "./TypeDot";
 import type { BookingDraft } from "./useBookingDraft";
 
 type Props = { draft: BookingDraft; firstName: string; mode: DialogMode };
 
-/** The types offered to the person, each with what is left of it; a request offers those needing approval. */
+/** The types offered to the person, each with what is left of it. */
 export function TypeMenu({ draft, firstName, mode }: Props) {
-  const types = offeredTypes(draft.types ?? [], mode);
+  const types = draft.types ?? [];
   const chosen = types.find(({ timeOffType }) => timeOffType.id === draft.typeId);
   if (draft.types && types.length === 0) {
     return (

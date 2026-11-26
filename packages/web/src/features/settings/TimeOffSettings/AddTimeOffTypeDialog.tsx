@@ -37,6 +37,7 @@ const NEW_TYPE: TimeOffTypeValues = {
   icon: "SUN",
   colour: "YELLOW",
   private: false,
+  approval: "MANAGER_APPROVAL",
   defaultRules: { balance: "NO_BALANCE", days: "", onTop: true },
 };
 
