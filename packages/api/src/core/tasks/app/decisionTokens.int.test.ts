@@ -9,13 +9,18 @@ test("the holder can approve their time off task with its decision token", async
     orm,
     seed,
   );
-  const { token, expiresAt } = await tasks.issueDecisionToken(managerAgent, task.id);
+  const {
+    task: checkedTask,
+    token,
+    expiresAt,
+  } = await tasks.issueDecisionToken(managerAgent, task.id);
 
   const { task: done } = await tasks.markDone(managerAgent, task.id, {
     result: approved,
     decisionToken: token,
   });
 
+  expect(checkedTask).toEqual(task);
   expect(expiresAt).toEqual(new Date("2026-11-26T13:00:00Z"));
   expect(done).toMatchObject({ status: "done", result: approved });
   expect((await requests.readStatuses(requester, [request.id])).get(request.id)).toMatchObject({
@@ -93,6 +98,27 @@ test("a read-only agent cannot get a decision token", async ({ orm, seed }) => {
     code: "FORBIDDEN",
     message: "Allow your agent to change things in Broccoli first.",
   });
+});
+
+test("a read-only agent cannot use a token issued while its connection had write access", async ({
+  orm,
+  seed,
+}) => {
+  const { tasks, managerId, managerAgent, task } = await pendingRequest(orm, seed);
+  const { token } = await tasks.issueDecisionToken(managerAgent, task.id);
+  const readOnly = signedIn(orm, {
+    employeeId: managerId,
+    profiles: ["EMPLOYEE"],
+    agentConnection: { id: "rachel-agent", scopes: ["broccoli:read"] },
+  });
+
+  await expect(
+    tasks.markDone(readOnly, task.id, { result: approved, decisionToken: token }),
+  ).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    message: "Allow your agent to change things in Broccoli first.",
+  });
+  expect(await tasks.readTask(readOnly, task.id)).toMatchObject({ status: "to_do", result: null });
 });
 
 test("a browser cannot get a decision token", async ({ orm, seed }) => {
