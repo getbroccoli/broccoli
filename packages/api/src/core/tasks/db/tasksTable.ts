@@ -42,10 +42,10 @@ export const tasks = pgTable(
     index("tasks_asked_by_idx").on(table.askedByEmployeeId),
     index("tasks_record_idx").on(table.recordType, table.recordId),
     check("tasks_title_not_blank", sql`btrim(${table.title}) <> ''`),
-    // A manual to-do has the person who asked; a feature's task never has one, so no person deletes it.
+    // A manual to-do has the person who asked; a feature's task may name one, such as an approval's requester.
     check(
       "tasks_asked_by_someone",
-      sql`(${table.type} = 'manual_to_do') = (${table.askedByEmployeeId} is not null)`,
+      sql`${table.type} <> 'manual_to_do' or ${table.askedByEmployeeId} is not null`,
     ),
     check(
       "tasks_record_complete",

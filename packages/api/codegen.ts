@@ -8,6 +8,7 @@ import { codegenMappers as externalAgentMappers } from "./src/modules/externalAg
 import { codegenMappers as importMappers } from "./src/modules/imports/codegen";
 import { codegenMappers as mcpAgentMappers } from "./src/modules/mcpAgents/codegen";
 import { codegenMappers as systemMappers } from "./src/modules/system/codegen";
+import { codegenMappers as processMappers } from "./src/core/processes/codegen";
 import { codegenMappers as taskMappers } from "./src/core/tasks/codegen";
 import { codegenMappers as timeOffMappers } from "./src/modules/timeOff/codegen";
 
@@ -30,6 +31,7 @@ const config: CodegenConfig = {
           ...externalAgentMappers,
           ...importMappers,
           ...mcpAgentMappers,
+          ...processMappers,
           ...systemMappers,
           ...taskMappers,
           ...timeOffMappers,

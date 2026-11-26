@@ -1,13 +1,20 @@
-import { ApplicationError } from "../../applicationError";
-import type { Orm, Transact, Tx } from "../../db";
+import type { Transact, Tx } from "../../db";
 import type { PublishedEvent } from "../../events";
 import { PrincipalSecurityContext, type SecurityContext } from "../../security";
 import { type CalendarDate, laterOf } from "../../../utils";
-import type { TaskService } from "../../tasks";
+import { resultLabel, type Task, type TaskService } from "../../tasks";
 import { processRepository, runStepRepository } from "../db";
-import { PROCESS_CANCELLED, type ProcessRun, type StepStatus, SUBJECT_REMOVED } from "../domain";
+import {
+  type OutcomeRule,
+  outcomeOf,
+  PROCESS_CANCELLED,
+  type ProcessRun,
+  type StepStatus,
+  SUBJECT_REMOVED,
+} from "../domain";
 import type { StepProgress } from "./processViews";
-import type { RunStarter } from "./runStarter";
+import type { RunEndings } from "./runEndings";
+import type { DefinitionReader, RunStarter } from "./runStarter";
 import type { StepStarter } from "./stepStarter";
 
 /**
@@ -22,7 +29,10 @@ export interface RunLifecycleService {
    */
   completeStepsOfDoneTasks(tx: Tx, events: readonly PublishedEvent[]): Promise<void>;
   /** The run behind a task its assignee or asker reads, as counts. */
-  readStepProgress(ctx: SecurityContext, taskId: string): Promise<StepProgress>;
+  readStepProgress(
+    ctx: SecurityContext,
+    taskIds: readonly string[],
+  ): Promise<Map<string, StepProgress>>;
   /**
    * The locked run, cancelled and saved when its subject or a waiting step's assignee is gone;
    * else as it was. The run cancels itself, so Broccoli is the author. The caller holds the run's
@@ -32,30 +42,30 @@ export interface RunLifecycleService {
 }
 
 export function createRunLifecycleService({
-  orm,
   transact,
   tasks,
   starter,
   steps,
+  runEndings,
+  definitionOf,
   today,
 }: {
-  orm: Orm;
   transact: Transact;
   tasks: TaskService;
   starter: RunStarter;
   steps: StepStarter;
+  runEndings: RunEndings;
+  definitionOf: DefinitionReader;
   /** Today in London: the day a step that starts later resolves its assignee on. */
   today: () => CalendarDate;
 }): RunLifecycleService {
   return {
     async completeStepsOfDoneTasks(tx, events) {
-      const resultsByTaskId = new Map(
-        events.flatMap(({ type, payload }) =>
-          type === "tasks.task_status_changed" && payload.to === "done"
-            ? [[payload.taskId, payload.result] as const]
-            : [],
-        ),
+      const doneEvents = events.flatMap(({ type, payload }) =>
+        type === "tasks.task_status_changed" && payload.to === "done" ? [payload] : [],
       );
+      const resultsByTaskId = new Map(doneEvents.map(({ taskId, result }) => [taskId, result]));
+      const doneBy = new Map(doneEvents.map(({ taskId, byEmployeeId }) => [taskId, byEmployeeId]));
       if (resultsByTaskId.size === 0) return;
       const runs = processRepository(tx);
       const awaiting = (
@@ -71,6 +81,7 @@ export function createRunLifecycleService({
           ? await steps.startReadySteps(tx, completed, laterOf(today(), run.startDay))
           : completed;
         await runs.saveRun(changed);
+        if (run.status === "in_progress") await runEndings.publishEnded(tx, [changed], doneBy);
         tx.publish("processes.steps_completed", {
           runId,
           taskIds: run.openTaskIds().filter((taskId) => resultsByTaskId.has(taskId)),
@@ -81,25 +92,34 @@ export function createRunLifecycleService({
       }
     },
 
-    async readStepProgress(ctx, taskId) {
-      const task = await tasks.readTask(ctx, taskId);
-      const [step] = await runStepRepository(orm).findStepsByTaskIds([task.id]);
-      if (!step) throw new ApplicationError("CONFLICT", "This task does not belong to a process.");
+    async readStepProgress(ctx, taskIds) {
+      const employeeId = ctx.user?.employeeId;
+      if (!employeeId || taskIds.length === 0) return new Map();
       return transact(async (tx) => {
-        const runs = processRepository(tx);
-        // Locked, so a step change committing meanwhile cannot pair its steps with the old status.
-        const run = (await runs.lockRun(step.runId))!;
-        const [process] = await runs.findProcessesByIds([run.processId]);
-        const steps = run.steps.filter(
-          ({ status }) => status !== "step_skipped" && status !== "step_not_reached",
+        const readable = (await tasks.readTasksInTransaction(tx, taskIds)).filter((task) =>
+          task.isVisibleTo(employeeId),
         );
-        return {
-          processName: process!.name,
-          subjectEmployeeId: run.subjectEmployeeId,
-          status: run.status,
-          doneSteps: steps.filter(({ status }) => status === "step_completed").length,
-          totalSteps: steps.length,
-        };
+        const taskSteps = await runStepRepository(tx).findStepsByTaskIds(readable.map(byId));
+        const runs = processRepository(tx);
+        const runOf = new Map(
+          (await runs.readRunsWithSteps([...new Set(taskSteps.map(({ runId }) => runId))])).map(
+            (run) => [run.id, run],
+          ),
+        );
+        const processOf = new Map(
+          (await runs.findProcessesByIds([...new Set([...runOf.values()].map(processIdOf))])).map(
+            (process) => [process.id, process],
+          ),
+        );
+        const taskOf = new Map(readable.map((task) => [task.id, task]));
+        const progress = new Map<string, StepProgress>();
+        for (const step of taskSteps) {
+          const run = runOf.get(step.runId)!;
+          const { outcome } = definitionOf((await runs.findVersion(run.processVersionId))!);
+          const task = taskOf.get(step.taskId!)!;
+          progress.set(task.id, progressOf(run, processOf.get(run.processId)!.name, outcome, task));
+        }
+        return progress;
       });
     },
 
@@ -123,9 +143,49 @@ export function createRunLifecycleService({
         cause: { kind: "PROCESS_RUN", ref: run.id },
       });
       await processRepository(tx).saveRun(cancelled);
+      await runEndings.publishEnded(tx, [cancelled]);
       return cancelled;
     },
   };
+}
+
+/** How far the run is, and its outcome when the task is its outcome step's. */
+function progressOf(
+  run: ProcessRun,
+  processName: string,
+  rule: OutcomeRule | null,
+  task: Task,
+): StepProgress {
+  const counted = run.steps.filter(
+    ({ status }) => status !== "step_skipped" && status !== "step_not_reached",
+  );
+  const decides = run.steps.some(
+    ({ stepKey, taskId }) => taskId === task.id && stepKey === rule?.step,
+  );
+  const given = decides ? outcomeOf(rule, run.steps) : null;
+  return {
+    processName,
+    subjectEmployeeId: run.subjectEmployeeId,
+    status: run.status,
+    endedAt: run.finishedAt ?? run.cancelledAt,
+    doneSteps: counted.filter(({ status }) => status === "step_completed").length,
+    totalSteps: counted.length,
+    decidesOutcome: decides,
+    outcome: given && {
+      ...given.result,
+      label: rule!.labels[given.result.code] ?? resultLabel(task.resultForm!, given.result.code),
+      byEmployeeId: task.doneByEmployeeId,
+      at: given.finishedAt!,
+    },
+  };
+}
+
+function byId({ id }: { id: string }): string {
+  return id;
+}
+
+function processIdOf({ processId }: { processId: string }): string {
+  return processId;
 }
 
 /**

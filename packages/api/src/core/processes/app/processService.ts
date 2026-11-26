@@ -12,17 +12,15 @@ import { PrincipalSecurityContext, type SecurityContext } from "../../security";
 import { type CalendarDate, dateInLondon, laterOf } from "../../../utils";
 import type { TaskService } from "../../tasks";
 import { processRepository, type StoredProcess } from "../db";
-import { parseProcessDefinition, type TriggeringEvents } from "../domain";
-import { createDueRunService } from "./dueRunService";
-import { createEventRunService, type EventRunService } from "./eventRunService";
+import { FROM_EVENT, type TriggeringEvents } from "../domain";
+import type { EventRunService } from "./eventRunService";
 import { processRecordType } from "./processRecordType";
 import type { PeoplePort, WorkingCalendarsPort } from "../ports";
 import type { Process, ProcessRun, ProcessRunDetails, StepProgress } from "./processViews";
-import { createRunLifecycleService, type RunLifecycleService } from "./runLifecycleService";
-import { createRunReader, type RunReader } from "./runReader";
+import type { RunLifecycleService } from "./runLifecycleService";
+import type { RunReader } from "./runReader";
+import { createRunServices } from "./runServices";
 import type { RegisteredActions } from "./processActions";
-import { createRunStarter, type DefinitionReader, type ProcessRecordTypes } from "./runStarter";
-import { createStepStarter } from "./stepStarter";
 
 /**
  * Processes give people tasks when something happens to a record, and follow each run to its end.
@@ -49,8 +47,14 @@ export interface ProcessService {
   readRun(ctx: SecurityContext, runId: string): Promise<ProcessRunDetails>;
   /** The process's runs the caller may read, newest first. */
   listRuns(ctx: SecurityContext, processKey: string): Promise<ProcessRun[]>;
-  /** The run behind a task its assignee or asker reads, as counts. */
-  readStepProgress(ctx: SecurityContext, taskId: string): Promise<StepProgress>;
+  /**
+   * The run behind each of these tasks that the caller holds or asked for, by task id: counts, and
+   * the outcome on the outcome step's own task. Tasks no process created are left out.
+   */
+  readStepProgress(
+    ctx: SecurityContext,
+    taskIds: readonly string[],
+  ): Promise<Map<string, StepProgress>>;
   /**
    * Broccoli's daily pass: starts the runs whose record date has come and cancels runs in
    * progress that can no longer run. One run per transaction, so one failure stops no other.
@@ -101,52 +105,13 @@ export interface ProcessServiceDependencies extends Pick<
   now?: () => Date;
 }
 
-export function createProcessService({
-  orm,
-  transact,
-  jobs,
-  logger,
-  tasks,
-  people,
-  workingCalendars,
-  recordTypes: registeredRecordTypes,
-  triggeringEvents,
-  actions,
-  now = () => new Date(),
-}: ProcessServiceDependencies): ProcessService {
+export function createProcessService(dependencies: ProcessServiceDependencies): ProcessService {
+  const { orm, transact, logger, now = () => new Date() } = dependencies;
   const today = () => dateInLondon(now());
-  const recordTypes = processRecordTypesOf(registeredRecordTypes);
-  const definitionOf = definitionReader({ recordTypes, triggeringEvents, actions });
-  const steps = createStepStarter({
-    tasks,
-    people,
-    workingCalendars,
-    definitionOf,
-    actions,
-    logger,
-  });
-  const starter = createRunStarter({ people, recordTypes, steps });
-  const reader = createRunReader({ transact, tasks, stepStarter: steps });
-  const lifecycle = createRunLifecycleService({ orm, transact, tasks, starter, steps, today });
-  const dueRuns = createDueRunService({
-    orm,
-    transact,
-    logger,
-    tasks,
-    starter,
-    lifecycle,
-    recordTypes,
-    definitionOf,
-  });
-  const eventRuns = createEventRunService({
-    transact,
-    jobs,
-    logger,
-    starter,
+  const { definitionOf, starter, reader, lifecycle, dueRuns, eventRuns } = createRunServices(
+    dependencies,
     today,
-    triggeringEvents,
-    definitionOf,
-  });
+  );
   const historyReader = createRecordHistoryReaderService(orm, { process: processRecordType(orm) });
 
   return {
@@ -179,6 +144,9 @@ export function createProcessService({
       const process = await reader.requireProcess(orm, processKey);
       const definition = definitionOf(process.activeVersion);
       const { recordType } = definition.subject;
+      if (recordType === FROM_EVENT) {
+        throw new ApplicationError("CONFLICT", `${process.name} starts only from its event.`);
+      }
       const run = await transact(async (tx) => {
         await processRepository(tx).lockProcess(process.id);
         // Keyed by the record's own id, such as an employee's lowercase uuid.
@@ -226,7 +194,7 @@ export function createProcessService({
       return runs.map((run) => reader.view(run, process));
     },
 
-    readStepProgress: (ctx, taskId) => lifecycle.readStepProgress(ctx, taskId),
+    readStepProgress: (ctx, taskIds) => lifecycle.readStepProgress(ctx, taskIds),
 
     startDueRuns: (ctx, day) => dueRuns.startDueRuns(ctx, day),
 
@@ -298,36 +266,6 @@ function processView({
     turnedOnAt,
     activeVersion: { id: activeVersion.id, version: activeVersion.version },
   };
-}
-
-/** The process capabilities of the record types that registered them, by type. */
-function processRecordTypesOf(registry: RecordTypeRegistry): ProcessRecordTypes {
-  return Object.fromEntries(
-    Object.entries(registry).flatMap(([type, registration]) =>
-      registration?.processes ? [[type, registration.processes]] : [],
-    ),
-  );
-}
-
-/** Parses stored definitions against the record types, events and actions the modules registered. */
-function definitionReader({
-  recordTypes,
-  triggeringEvents,
-  actions,
-}: {
-  recordTypes: ProcessRecordTypes;
-  triggeringEvents: TriggeringEvents;
-  actions: RegisteredActions;
-}): DefinitionReader {
-  const catalog = {
-    recordTypes: Object.fromEntries(
-      Object.entries(recordTypes).map(([type, { dateFields = [] }]) => [type, { dateFields }]),
-    ),
-    triggeringEvents,
-    actions,
-  };
-  return ({ schemaVersion, definition }) =>
-    parseProcessDefinition(schemaVersion, definition, catalog);
 }
 
 function recordNotFound(): ApplicationError {

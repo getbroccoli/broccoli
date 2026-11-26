@@ -20,6 +20,7 @@
       "src/modules/externalAgents"
     ],
     "src/modules": [
+      "src/core/approvals",
       "src/core/env",
       "src/core/instance",
       "src/core/moduleManifest",
@@ -194,6 +195,15 @@
       "src/core/records",
       "src/core/security",
       "src/utils"
+    ],
+    "src/core/approvals": [
+      "src/core/applicationError",
+      "src/core/db",
+      "src/core/events",
+      "src/core/logger",
+      "src/core/moduleManifest",
+      "src/core/processes",
+      "src/core/security"
     ],
     "src/core/notifications": [
       "src/integrations/mail",

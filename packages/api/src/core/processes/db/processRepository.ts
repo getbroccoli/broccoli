@@ -56,6 +56,11 @@ export interface ProcessRepository {
   findRun(id: string): Promise<ProcessRunFields | null>;
   /** The run with its steps, locked until the transaction ends, so changes to it take turns. */
   lockRun(id: string): Promise<ProcessRun | null>;
+  /**
+   * The runs among these ids with their steps, share-locked until the transaction ends, so a step
+   * change committing meanwhile cannot pair its steps with the old status.
+   */
+  readRunsWithSteps(ids: readonly string[]): Promise<ProcessRun[]>;
   /** Writes the run and its steps' status. */
   saveRun(run: ProcessRun): Promise<void>;
   /** The process key and step key behind each of these tasks that a step created, by task id. */
@@ -201,6 +206,22 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
       if (!row) return null;
       const steps = await orm.select().from(runStepProgress).where(eq(runStepProgress.runId, id));
       return ProcessRun.restore(row, steps.map(toRunStep));
+    },
+
+    async readRunsWithSteps(ids) {
+      if (ids.length === 0) return [];
+      const rows = await orm
+        .select()
+        .from(processRuns)
+        .where(inArray(processRuns.id, [...ids]))
+        .for("share");
+      const steps = await orm
+        .select()
+        .from(runStepProgress)
+        .where(inArray(runStepProgress.runId, [...ids]));
+      return rows.map((row) =>
+        ProcessRun.restore(row, steps.filter(({ runId }) => runId === row.id).map(toRunStep)),
+      );
     },
 
     async saveRun({ steps, ...run }) {

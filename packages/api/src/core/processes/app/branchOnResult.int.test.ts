@@ -243,14 +243,14 @@ test("step progress excludes not-reached steps from the total", async ({ orm, se
   const tasks = taskService(orm, { transact });
   const started = await processes.startRun(ADMIN, { processKey: key, recordId: employee.id });
   const taskId = started.steps[0]!.task!.id;
-  expect(await processes.readStepProgress(ctx, taskId)).toMatchObject({
+  expect((await processes.readStepProgress(ctx, [taskId])).get(taskId)).toMatchObject({
     doneSteps: 0,
     totalSteps: 2,
   });
 
   await tasks.markDone(ctx, taskId, { result: { code: "yes", comment: null } });
 
-  expect(await processes.readStepProgress(ctx, taskId)).toMatchObject({
+  expect((await processes.readStepProgress(ctx, [taskId])).get(taskId)).toMatchObject({
     status: "finished",
     doneSteps: 1,
     totalSteps: 1,

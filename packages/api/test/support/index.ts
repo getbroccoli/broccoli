@@ -1,4 +1,5 @@
 export { expect } from "vitest";
+export { createApprovalService } from "../../src/core/approvals";
 export { createEmployeeSetupService, employeeDirectory } from "../../src/modules/employees";
 export {
   ADMIN,
@@ -79,7 +80,13 @@ export {
   passwordResetEmail,
 } from "./services";
 export type { EmployeeServices } from "./services";
-export { afterCommitProcesses, processService, transactWithProcesses } from "./processService";
+export { approvalRequest, approvalToday, approvalParticipants } from "./approvals";
+export {
+  afterCommitProcesses,
+  processService,
+  transactWithApprovals,
+  transactWithProcesses,
+} from "./processService";
 export {
   afterCommitProcess,
   eventProcess,

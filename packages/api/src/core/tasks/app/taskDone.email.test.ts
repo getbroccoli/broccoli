@@ -9,7 +9,12 @@ test("names the person who marked the task done in the subject", () => {
 });
 
 test("shows who marked the task done and on which London day", () => {
-  expect(TASK_DONE_TEMPLATE.render(values).blocks).toContainEqual({
+  const email = TASK_DONE_TEMPLATE.render(values);
+  expect(email.blocks).not.toContainEqual({
+    type: "paragraph",
+    text: expect.stringMatching(/^Result:/) as unknown,
+  });
+  expect(email.blocks).toContainEqual({
     type: "paragraph",
     text: "Done by Mia Chen on Thu 12 Nov",
   });
@@ -34,7 +39,20 @@ test("links to the task and tells the asker why they received it", () => {
   expect(email.footer).toBe("Sent to sam@example.com because you asked for this task.");
 });
 
+test("shows the result and comment when the task has a result", () => {
+  const email = TASK_DONE_TEMPLATE.render({
+    ...values,
+    result: "Reject — Clashes with the release week.",
+  });
+
+  expect(email.blocks).toContainEqual({
+    type: "paragraph",
+    text: "Result: Reject — Clashes with the release week.",
+  });
+});
+
 const values = {
+  result: null,
   recipientEmail: "sam@example.com",
   linkOrigin: "https://broccoli.example.com",
   companyName: "Acme Corp",

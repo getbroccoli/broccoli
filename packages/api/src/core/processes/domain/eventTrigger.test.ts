@@ -15,12 +15,12 @@ test("starts each added person in event, process and record order", () => {
   };
 
   expect(matchEventStarts(processes, [event], triggeringEvents)).toEqual([
-    { processId: "welcome", event, recordId: "sam" },
-    { processId: "welcome", event, recordId: "alex" },
-    { processId: "welcome", event, recordId: "jo" },
-    { processId: "induction", event, recordId: "sam" },
-    { processId: "induction", event, recordId: "alex" },
-    { processId: "induction", event, recordId: "jo" },
+    { processId: "welcome", event, recordType: "employee", recordId: "sam" },
+    { processId: "welcome", event, recordType: "employee", recordId: "alex" },
+    { processId: "welcome", event, recordType: "employee", recordId: "jo" },
+    { processId: "induction", event, recordType: "employee", recordId: "sam" },
+    { processId: "induction", event, recordType: "employee", recordId: "alex" },
+    { processId: "induction", event, recordType: "employee", recordId: "jo" },
   ]);
 });
 
@@ -35,7 +35,7 @@ test.each(["tasks.task_created", "tasks.task_status_changed"] as const)(
         [event],
         triggeringEvents,
       ),
-    ).toEqual([{ processId: "follow_up", event, recordId: "task-1" }]);
+    ).toEqual([{ processId: "follow_up", event, recordType: "task", recordId: "task-1" }]);
   },
 );
 
@@ -57,7 +57,9 @@ test.each([
 
   expect(
     matchEventStarts([{ processId: "follow_up", trigger }], [event], triggeringEvents),
-  ).toEqual(matches ? [{ processId: "follow_up", event, recordId: "task-1" }] : []);
+  ).toEqual(
+    matches ? [{ processId: "follow_up", event, recordType: "task", recordId: "task-1" }] : [],
+  );
 });
 
 test.each([
@@ -69,7 +71,7 @@ test.each([
   const trigger = onEvent("tasks.task_created", { field: "sourceKey", notIn: ["demo_fill"] });
 
   expect(matchEventStarts([{ processId: "notify", trigger }], [event], triggeringEvents)).toEqual(
-    matches ? [{ processId: "notify", event, recordId: "task-1" }] : [],
+    matches ? [{ processId: "notify", event, recordType: "task", recordId: "task-1" }] : [],
   );
 });
 
@@ -97,10 +99,10 @@ test("keeps two matching events for the same record as separate starts", () => {
   ];
 
   expect(matchEventStarts(processes, [first, second], triggeringEvents)).toEqual([
-    { processId: "welcome", event: first, recordId: "sam" },
-    { processId: "induction", event: first, recordId: "sam" },
-    { processId: "welcome", event: second, recordId: "sam" },
-    { processId: "induction", event: second, recordId: "sam" },
+    { processId: "welcome", event: first, recordType: "employee", recordId: "sam" },
+    { processId: "induction", event: first, recordType: "employee", recordId: "sam" },
+    { processId: "welcome", event: second, recordType: "employee", recordId: "sam" },
+    { processId: "induction", event: second, recordType: "employee", recordId: "sam" },
   ]);
 });
 

@@ -10,8 +10,11 @@ export {
 } from "./eventTrigger";
 export {
   type ActionStep,
+  type AskedByRule,
   type AssigneeRule,
   type DayOffset,
+  FROM_EVENT,
+  type OutcomeRule,
   parseProcessDefinition,
   type ProcessCatalog,
   PROCESS_DEFINITION_SCHEMA_VERSION,
@@ -47,3 +50,4 @@ export {
   STEP_STATUSES,
   type StepStatus,
 } from "./processRun";
+export { outcomeOf } from "./runOutcome";

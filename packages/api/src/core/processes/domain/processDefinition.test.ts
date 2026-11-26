@@ -70,32 +70,17 @@ test("refuses an unknown definition schema version", () => {
   );
 });
 
-test("refuses an unbuilt record-created trigger", () => {
-  const definition = welcomeDefinition();
-  definition.trigger.kind = "on_record_created";
+test.each(["on_record_created", "on_record_changed", "on_schedule"])(
+  "refuses the unbuilt %s trigger",
+  (kind) => {
+    const definition = welcomeDefinition();
+    definition.trigger.kind = kind;
 
-  expect(() => parseProcessDefinition(1, definition, catalog)).toThrow(
-    "Trigger kind on_record_created is not built.",
-  );
-});
-
-test("refuses an unbuilt record-changed trigger", () => {
-  const definition = welcomeDefinition();
-  definition.trigger.kind = "on_record_changed";
-
-  expect(() => parseProcessDefinition(1, definition, catalog)).toThrow(
-    "Trigger kind on_record_changed is not built.",
-  );
-});
-
-test("refuses a schedule trigger until it is supported", () => {
-  const definition = welcomeDefinition();
-  definition.trigger.kind = "on_schedule";
-
-  expect(() => parseProcessDefinition(1, definition, catalog)).toThrow(
-    "Trigger kind on_schedule is not built.",
-  );
-});
+    expect(() => parseProcessDefinition(1, definition, catalog)).toThrow(
+      `Trigger kind ${kind} is not built.`,
+    );
+  },
+);
 
 test("refuses duplicate step keys", () => {
   const definition = welcomeDefinition();
@@ -301,6 +286,20 @@ test("refuses a definition with an invalid result form", () => {
   expect(() => parseProcessDefinition(1, definition, catalog)).toThrow();
 });
 
+test("refuses an outcome step that asks for no result", () => {
+  const definition = { ...welcomeDefinition(), outcome: { step: "coffee_calls" } };
+
+  const parse = () => parseProcessDefinition(1, definition, catalog);
+  expect(parse).toThrow("Step coffee_calls gives the outcome but asks for no result.");
+});
+
+test("refuses an outcome naming a missing step", () => {
+  const definition = { ...welcomeDefinition(), outcome: { step: "decide" } };
+
+  const parse = () => parseProcessDefinition(1, definition, catalog);
+  expect(parse).toThrow("The outcome names decide, which is not a step.");
+});
+
 function eventDefinition(event: string, recordType = "employee") {
   return {
     ...welcomeDefinition(),
@@ -316,6 +315,7 @@ function eventDefinition(event: string, recordType = "employee") {
 
 function welcomeDefinition(resultForm: unknown = null) {
   return {
+    outcome: null,
     subject: { recordType: "employee" },
     trigger: {
       kind: "on_record_date",
@@ -331,6 +331,7 @@ function welcomeDefinition(resultForm: unknown = null) {
         after: [] as string[],
         join: "all",
         task: {
+          askedBy: null,
           assignee: { kind: "subjects_manager", otherwise: { kind: "workspace_owner" } },
           title: "Have a welcome 1:1 with {firstName}",
           description: "Welcome the new person.",
@@ -344,6 +345,7 @@ function welcomeDefinition(resultForm: unknown = null) {
         after: [] as string[],
         join: "all",
         task: {
+          askedBy: null,
           assignee: { kind: "subject" },
           title: "Have coffee calls with 3 colleagues",
           description: "Meet the team.",

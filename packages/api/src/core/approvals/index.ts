@@ -1,0 +1,28 @@
+import type { ModuleDependencies, ModuleManifest } from "../moduleManifest";
+import { createApprovalService } from "./app";
+
+// Public values.
+export { APPROVAL_TRIGGERING_EVENTS, createApprovalService } from "./app";
+export { MANAGER_APPROVAL } from "./domain";
+
+// Public types.
+export type { ApprovalRequest, ApprovalService } from "./app";
+
+/** Approvals: a feature asks, an approval process decides, and the feature hears how it ended. */
+export function approvalsModule({ logger }: Pick<ModuleDependencies, "logger">): ModuleManifest {
+  return {
+    name: "approvals",
+    eventsBeforeCommit: createApprovalService().followApprovals,
+    events: {
+      // Logged once the change commits, with identifiers only.
+      "approvals.approval_requested": ({ approvalProcessKey, recordType, recordId }) =>
+        Promise.resolve(
+          logger.info({ approvalProcessKey, recordType, recordId }, "Approval requested"),
+        ),
+      "approvals.approval_finished": ({ outcome, ...finished }) =>
+        Promise.resolve(
+          logger.info({ ...finished, outcomeCode: outcome?.code ?? null }, "Approval finished"),
+        ),
+    },
+  };
+}

@@ -5,6 +5,7 @@ import {
 } from "../core/instance";
 import type { Deployment } from "../core/env";
 import type { ModuleDependencies, Modules } from "../core/moduleManifest";
+import { APPROVAL_TRIGGERING_EVENTS, approvalsModule } from "../core/approvals";
 import { createNotifications, notificationsModule } from "../core/notifications";
 import { recordsManifest } from "../core/records";
 import { PrincipalSecurityContext } from "../core/security";
@@ -101,6 +102,7 @@ export function createModules(
     triggeringEvents: collectRegistrations<TriggeringEventRegistration>("triggering event", [
       EMPLOYEE_TRIGGERING_EVENTS,
       TASK_TRIGGERING_EVENTS,
+      APPROVAL_TRIGGERING_EVENTS,
     ]),
     // The actions process steps may run, registered by the modules that own them.
     actions: collectRegistrations<ProcessActionRegistration<unknown>>("process action", [
@@ -175,6 +177,7 @@ export function createModules(
     tasksModule({ orm: core.orm, tasks }),
     processesModule({ logger: core.logger, processes }),
     notificationsModule({ logger: core.logger, notifications }),
+    approvalsModule({ logger: core.logger }),
   ];
   return {
     manifests: [...manifests, recordsManifest(core, manifests)],

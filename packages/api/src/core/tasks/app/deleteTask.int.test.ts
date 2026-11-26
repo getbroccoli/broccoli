@@ -125,7 +125,25 @@ test("refuses deletion of a process step task by its assignee", async ({ orm, se
 
   await expect(tasks.deleteTask(ctx, task.id)).rejects.toMatchObject({
     code: "FORBIDDEN",
-    message: "Only the person who asked can delete this task.",
+    message: "A process's task cannot be deleted.",
+  });
+  expect(await tasks.readTask(ctx, task.id)).toEqual(task);
+});
+
+test("refuses deletion of a process step task by the person who asked", async ({ orm, seed }) => {
+  const asker = await seed.employee();
+  const assignee = await seed.employee();
+  const task = await seed.task({
+    type: "process_step_to_do",
+    assigneeEmployeeId: assignee.id,
+    askedByEmployeeId: asker.id,
+  });
+  const ctx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
+  const tasks = taskService(orm);
+
+  await expect(tasks.deleteTask(ctx, task.id)).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    message: "A process's task cannot be deleted.",
   });
   expect(await tasks.readTask(ctx, task.id)).toEqual(task);
 });

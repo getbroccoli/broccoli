@@ -64,6 +64,10 @@ export function createResolvers(
       doneBy: ({ doneByEmployeeId }, _args, context) =>
         doneByEmployeeId ? loaders(context).employee.load(doneByEmployeeId) : null,
     },
+    ProcessRunOutcome: {
+      decidedBy: ({ byEmployeeId }, _args, context) =>
+        byEmployeeId ? loaders(context).employee.load(byEmployeeId) : null,
+    },
     Location: {
       // Never null: deleting terms gives their locations none, which reads as the default terms.
       terms: async ({ termsId }, _args, context) =>

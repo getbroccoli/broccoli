@@ -21,6 +21,7 @@ import {
 } from "../domain";
 import type { PeoplePort, RunSubject, WorkingCalendarsPort } from "../ports";
 import type { RegisteredActions } from "./processActions";
+import { askerOf, filled } from "./stepTaskText";
 import type { DefinitionReader } from "./runStarter";
 
 /** A process's own task type: a step's to-do, whose done step processes follows. */
@@ -135,7 +136,9 @@ export function createStepStarter(dependencies: StepStarterDependencies): StepSt
         steps.map((step) => [
           step.key,
           // An action step has no title of its own yet; its action's name stands for it.
-          step.kind === "task" ? filled(step.task.title, subject) : step.action.name,
+          step.kind === "task"
+            ? filled(step.task.title, subject, run.triggerEvent)
+            : step.action.name,
         ]),
       );
     },
@@ -294,10 +297,13 @@ function newTasksOf(
           {
             type: PROCESS_STEP_TO_DO,
             sourceKey: processKey,
-            title: filled(step.task.title, subject),
+            title: filled(step.task.title, subject, run.triggerEvent),
             description:
-              step.task.description === null ? null : filled(step.task.description, subject),
+              step.task.description === null
+                ? null
+                : filled(step.task.description, subject, run.triggerEvent),
             assigneeEmployeeId: assignee.employeeId,
+            askedByEmployeeId: askerOf(step.task.askedBy, run.triggerEvent),
             subjectEmployeeId: subject?.id ?? null,
             record: { recordType: run.recordType, recordId: run.recordId },
             dueDate: addDayOffset(startDay, step.task.due, isWorkingDay),
@@ -341,8 +347,4 @@ function waitingRow(stepKey: string): RunStep {
     finishedAt: null,
     result: null,
   };
-}
-
-function filled(text: string, subject: Pick<RunSubject, "firstName"> | null): string {
-  return text.replaceAll("{firstName}", subject?.firstName ?? "them");
 }

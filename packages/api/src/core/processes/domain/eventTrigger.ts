@@ -1,4 +1,4 @@
-import type { EventTrigger, ProcessDefinition } from "./processDefinition";
+import { type EventTrigger, FROM_EVENT, type ProcessDefinition } from "./processDefinition";
 
 /**
  * What an event that may start a process means to processes, registered by the module that
@@ -6,7 +6,9 @@ import type { EventTrigger, ProcessDefinition } from "./processDefinition";
  * record), and the payload a run keeps for its own record.
  */
 export interface TriggeringEventRegistration {
+  /** The record type of its records, or `from_event` when `recordTypeOf` reads it from each payload. */
   recordType: string;
+  recordTypeOf?(payload: unknown): string;
   recordIds(payload: unknown): readonly string[];
   payloadFor(payload: unknown, recordId: string): unknown;
 }
@@ -25,6 +27,7 @@ export interface TriggerEvent {
 export interface EventStart<Event extends TriggerEvent = TriggerEvent> {
   processId: string;
   event: Event;
+  recordType: string;
   recordId: string;
 }
 
@@ -40,11 +43,7 @@ export function matchEventStarts<Event extends TriggerEvent>(
   return events.flatMap((event) =>
     processes.flatMap(({ processId, trigger }) =>
       trigger.kind === "on_event" && isTriggeredBy(trigger, event)
-        ? (triggeringEvents[event.type]?.recordIds(event.payload) ?? []).map((recordId) => ({
-            processId,
-            event,
-            recordId,
-          }))
+        ? startsOf(processId, event, triggeringEvents[event.type])
         : [],
     ),
   );
@@ -67,4 +66,19 @@ function isTriggeredBy(trigger: EventTrigger, { type, payload }: TriggerEvent): 
   return "in" in when
     ? when.in.includes(value as string | null)
     : !when.notIn.includes(value as string | null);
+}
+
+function startsOf<Event extends TriggerEvent>(
+  processId: string,
+  event: Event,
+  registration: TriggeringEventRegistration | undefined,
+): EventStart<Event>[] {
+  if (!registration) return [];
+  const recordType =
+    registration.recordType === FROM_EVENT
+      ? registration.recordTypeOf!(event.payload)
+      : registration.recordType;
+  return registration
+    .recordIds(event.payload)
+    .map((recordId) => ({ processId, event, recordType, recordId }));
 }

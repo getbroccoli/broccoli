@@ -43,12 +43,12 @@ test("completing both assignees' tasks finishes the welcome and its steps", asyn
     { status: "step_completed", task: { status: "done" } },
     { status: "step_completed", task: { status: "done" } },
   ]);
-  expect(await processes.readStepProgress(managerCtx, meetingId)).toMatchObject({
+  expect((await processes.readStepProgress(managerCtx, [meetingId])).get(meetingId)).toMatchObject({
     status: "finished",
     doneSteps: 2,
     totalSteps: 2,
   });
-  expect(await processes.readStepProgress(ctx, coffeeId)).toMatchObject({
+  expect((await processes.readStepProgress(ctx, [coffeeId])).get(coffeeId)).toMatchObject({
     status: "finished",
     doneSteps: 2,
     totalSteps: 2,
@@ -77,7 +77,7 @@ test("completing the first of two tasks leaves the welcome in progress", async (
     { status: "step_completed", task: { status: "done" } },
     { status: "step_awaiting_task_completion", task: { status: "to_do" } },
   ]);
-  expect(await processes.readStepProgress(ctx, taskId)).toMatchObject({
+  expect((await processes.readStepProgress(ctx, [taskId])).get(taskId)).toMatchObject({
     status: "in_progress",
     doneSteps: 1,
     totalSteps: 2,

@@ -673,6 +673,11 @@ enum RuleSource {
   THEIR_OWN
 }
 
+extend type ProcessRunOutcome {
+  "Who gave it; null once that person is removed."
+  decidedBy: Employee
+}
+
 extend type Task {
   "Who holds it: the one person who can do it."
   assignee: Employee!
