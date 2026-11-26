@@ -288,6 +288,18 @@ it("names a deleted user Someone", () => {
   );
 });
 
+it("names the reader's own change through their connected agent", () => {
+  expect(
+    authorName({ kind: "CONNECTED_AGENT", userId: "reader", email: "avery@example.com" }, "reader"),
+  ).toBe("You, through your agent");
+});
+
+it("names another person's change through their connected agent by their email", () => {
+  expect(
+    authorName({ kind: "CONNECTED_AGENT", userId: "avery", email: "avery@example.com" }, "reader"),
+  ).toBe("avery@example.com through their agent");
+});
+
 it("names Broccoli's own changes Broccoli", () => {
   expect(authorName({ kind: "BROCCOLI_ITSELF", userId: null, email: null }, "reader")).toBe(
     "Broccoli",
