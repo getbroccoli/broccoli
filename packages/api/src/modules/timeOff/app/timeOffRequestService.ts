@@ -36,6 +36,12 @@ import {
   checkBooking,
   saveTimeOff,
 } from "./bookingSteps";
+import {
+  type OwnTimeOffInput,
+  type OwnTimeOffMode,
+  ownTimeOffModes,
+  saveOwnTimeOff,
+} from "./ownTimeOff";
 import { type ParsedBooking, parseBooking } from "./parseBooking";
 import type { TimeOffService } from "./timeOffService";
 
@@ -47,6 +53,16 @@ export interface TimeOffRequestService {
    * book it straight away or may not ask for it, and a type booked straight away.
    */
   requestTimeOff: (ctx: SecurityContext, input: BookingInput) => Promise<BookedTimeOff>;
+  /** How the caller's own time off of each type would be saved; refused for a caller without an employee. */
+  ownTimeOffModes: (
+    ctx: SecurityContext,
+    timeOffTypeIds: readonly string[],
+  ) => Promise<Map<string, OwnTimeOffMode>>;
+  /**
+   * Saves the caller's own time off as `ownTimeOffModes` says: booked straight away or requested.
+   * Refuses a total cost other than `expectedDays`, and a connected agent not allowed to change things.
+   */
+  saveOwnTimeOff: (ctx: SecurityContext, input: OwnTimeOffInput) => Promise<BookedTimeOff>;
   /**
    * Before the commit of the change that decided an approval of time off: approves it (running the
    * allowance engine), rejects it, or cancels it when the approval ended without a decision.
@@ -93,9 +109,18 @@ export function createTimeOffRequestService({
   const services = { orm, transact, logger, timeOff, bankHolidays, approvals, today };
   const dependencies = bookingDependencies(services);
   const history = createRecordHistoryReaderService(orm, { time_off: timeOffRecordType(orm) });
-  const preview = createBookTimeOffService(services);
+  const bookings = createBookTimeOffService(services);
+  const request = (ctx: SecurityContext, input: BookingInput) =>
+    requestTimeOff(dependencies, bookings, ctx, input);
   return {
-    requestTimeOff: (ctx, input) => requestTimeOff(dependencies, preview, ctx, input),
+    requestTimeOff: request,
+    ownTimeOffModes: (ctx, timeOffTypeIds) => ownTimeOffModes(orm, ctx, timeOffTypeIds),
+    saveOwnTimeOff: (ctx, input) =>
+      saveOwnTimeOff(
+        { bookTimeOff: (...args) => bookings.bookTimeOff(...args), requestTimeOff: request },
+        ctx,
+        input,
+      ),
     readRequests: (ctx, employeeIds) => readRequests(dependencies, ctx, employeeIds),
     readCancellable: (ctx, timeOffIds) => readCancellable(dependencies, ctx, timeOffIds),
     readStatuses: (ctx, timeOffIds) => readStatuses(dependencies, ctx, timeOffIds),

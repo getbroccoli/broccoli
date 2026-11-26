@@ -1,37 +1,26 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
 
-import type {
-  AgentActivityOutcome,
-  AgentActivityService,
-  AgentScope,
-} from "../../../core/agentAccess";
+import type { AgentActivityOutcome, AgentActivityService } from "../../../core/agentAccess";
 import { ApplicationError } from "../../../core/applicationError";
 import type { Logger } from "../../../core/logger";
 import type { SecurityContext } from "../../../core/security";
 import type { McpAgentToolService } from "../app";
+import {
+  FIND_PEOPLE,
+  LIST_MY_TASKS,
+  MY_LEAVE_BALANCE,
+  PREVIEW_LEAVE,
+  REQUEST_LEAVE,
+  WHO_AM_I,
+} from "./mcpAgentToolDefinitions";
 
-/** Longer than any name or email a person searches for. */
-const MAX_SEARCH_LENGTH = 100;
+export { MCP_AGENT_TOOLS } from "./mcpAgentToolDefinitions";
 
-/** Each tool an agent may call, with the scope its token must hold; nothing else is offered. */
-export const MCP_AGENT_TOOLS: Record<string, { scope: AgentScope }> = {
-  who_am_i: { scope: "broccoli:read" },
-  find_people: { scope: "broccoli:read" },
-};
-
-const PERSON = z.object({
-  id: z.string(),
-  firstName: z.string(),
-  lastName: z.string(),
-  email: z.string(),
-  jobTitle: z.string().nullable(),
-});
-
-/** The person an agent's call acts for, and which agent it is. */
+/** The person an agent's call acts for, which agent it is, and where it reached Broccoli. */
 export interface AgentCaller {
   ctx: SecurityContext;
   clientId: string;
+  origin: string;
 }
 
 /** Adds the tools to `server`, each acting as the person behind `caller` and recording its call. */
@@ -43,41 +32,32 @@ export function registerMcpAgentTools(
   const { ctx } = caller;
   const { tools } = dependencies;
   const run = <T extends object>(call: ToolCall<T>) => resultOf(call, caller, dependencies);
-  server.registerTool(
-    "who_am_i",
-    {
-      title: "Who am I",
-      description:
-        "The person you act for in Broccoli: their email, permission profiles, employee record and manager.",
-      outputSchema: {
-        email: z.string(),
-        permissionProfiles: z.array(z.string()),
-        employee: PERSON.nullable(),
-        manager: PERSON.nullable(),
-      },
-      annotations: { readOnlyHint: true },
-    },
-    () => run({ tool: "who_am_i", answer: () => tools.whoAmI(ctx) }),
+  server.registerTool("who_am_i", WHO_AM_I, () =>
+    run({ tool: "who_am_i", answer: () => tools.whoAmI(ctx) }),
   );
-  server.registerTool(
-    "find_people",
-    {
-      title: "Find people",
-      description:
-        "People in the company the person may see, sorted by name, 25 at a time. Search by name or email; pass nextCursor as after for the next page.",
-      inputSchema: {
-        search: z.string().max(MAX_SEARCH_LENGTH).optional(),
-        after: z.string().optional(),
-      },
-      outputSchema: { people: z.array(PERSON), nextCursor: z.string().nullable() },
-      annotations: { readOnlyHint: true },
-    },
-    (input) =>
-      run({
-        tool: "find_people",
-        answer: () => tools.findPeople(ctx, input),
-        countOf: (found) => found.people.length,
-      }),
+  server.registerTool("find_people", FIND_PEOPLE, (input) =>
+    run({
+      tool: "find_people",
+      answer: () => tools.findPeople(ctx, input),
+      countOf: (found) => found.people.length,
+    }),
+  );
+  server.registerTool("my_leave_balance", MY_LEAVE_BALANCE, () =>
+    run({ tool: "my_leave_balance", answer: () => tools.myLeaveBalance(ctx) }),
+  );
+  server.registerTool("preview_leave", PREVIEW_LEAVE, (input) =>
+    run({ tool: "preview_leave", answer: () => tools.previewLeave(ctx, input) }),
+  );
+  server.registerTool("request_leave", REQUEST_LEAVE, (input) =>
+    run({ tool: "request_leave", answer: () => tools.requestLeave(ctx, input) }),
+  );
+  server.registerTool("list_my_tasks", LIST_MY_TASKS, () =>
+    run({
+      tool: "list_my_tasks",
+      answer: () => tools.listMyTasks(ctx, { origin: caller.origin }),
+      countOf: (found) =>
+        found.needsYou.length + found.waitingOnOthers.length + found.resolvedRecently.length,
+    }),
   );
 }
 
@@ -117,7 +97,15 @@ async function resultOf<T extends object>(
       await record("failed_in_broccoli");
     }
     const message =
-      error instanceof ApplicationError ? error.message : "Broccoli could not answer; try again.";
+      error instanceof ApplicationError
+        ? refusalText(error)
+        : "Broccoli could not answer; try again.";
     return { content: [{ type: "text" as const, text: message }], isError: true };
   }
+}
+
+/** A refusal's message with the fields and codes of invalid input, so the agent can explain it. */
+function refusalText({ message, fieldErrors }: ApplicationError): string {
+  const fields = fieldErrors.map(({ field, code }) => `${field}: ${code}`).join("; ");
+  return fields ? `${message} ${fields}` : message;
 }

@@ -69,12 +69,16 @@ export function agentSecurityResolver(
     if (!person) {
       return { refusal: "CONNECTION_ENDED" };
     }
-    const security = await resolveUserSecurity(orm, directory, person);
+    const scope = typeof claims.scope === "string" ? claims.scope : "";
+    const scopes = new Set(scope.split(" "));
+    const security = await resolveUserSecurity(orm, directory, {
+      ...person,
+      agentConnection: { id: person.connectionId, scopes },
+    });
     if (!security) {
       return { refusal: "DEMO_ENDED" };
     }
-    const scope = typeof claims.scope === "string" ? claims.scope : "";
-    return { security, clientId, scopes: new Set(scope.split(" ")) };
+    return { security, clientId, scopes };
   };
 }
 

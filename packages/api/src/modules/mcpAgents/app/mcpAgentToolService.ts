@@ -1,47 +1,84 @@
+import { ApplicationError } from "../../../core/applicationError";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
-import type { PermissionProfile, SecurityContext } from "../../../core/security";
-import { createEmployeeManagerService, createEmployeeReadService } from "../../employees";
+import type { SecurityContext } from "../../../core/security";
+import type { Task, TaskService } from "../../../core/tasks";
+import { type CalendarDate, todayInLondon } from "../../../utils";
+import type { BankHolidayService } from "../../bankHolidays";
+import {
+  createEmployeeManagerService,
+  createEmployeeReadService,
+  type EmployeeReadService,
+} from "../../employees";
+import {
+  createBookTimeOffService,
+  createTimeOffRequestService,
+  type TimeOffService,
+} from "../../timeOff";
+import {
+  type AgentTasks,
+  agentTaskOf,
+  bookingOf,
+  type LeaveBalance,
+  type LeaveInput,
+  type LeavePreview,
+  type LeaveRequestInput,
+  type LeaveRequestResult,
+  leaveTypeOf,
+  type PeoplePage,
+  type Person,
+  previewOf,
+  WHEN_YOU_ASK,
+  type WhoAmI,
+} from "./agentAnswers";
 
-/** What a person's own agent reads in Broccoli, as that person, through the MCP server. */
+/** What a person's own agent reads and does in Broccoli, as that person, through the MCP server. */
 export interface McpAgentToolService {
-  /** Who the caller is: their email, permission profiles, employee and manager today. */
+  /** Who the caller is: their email, permission profiles, employee and manager today, and today's date. */
   whoAmI: (ctx: SecurityContext) => Promise<WhoAmI>;
   /** The people the caller may read, sorted by name, a page at a time, optionally searched. */
   findPeople: (
     ctx: SecurityContext,
     input: { search?: string; after?: string },
   ) => Promise<PeoplePage>;
-}
-
-export interface WhoAmI {
-  email: string;
-  permissionProfiles: PermissionProfile[];
-  employee: Person | null;
-  manager: Person | null;
-}
-
-export interface Person {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  jobTitle: string | null;
-}
-
-export interface PeoplePage {
-  people: Person[];
-  /** Pass as `after` for the next page; null on the last one. */
-  nextCursor: string | null;
+  /** The caller's own time off types this leave year, with figures and how asking for each goes. */
+  myLeaveBalance: (ctx: SecurityContext) => Promise<LeaveBalance>;
+  /** What the caller's own time off would cost, day by day, and do to their balance. */
+  previewLeave: (ctx: SecurityContext, input: LeaveInput) => Promise<LeavePreview>;
+  /** Asks for, or books, the caller's own time off; refused unless it costs `expectedDays`. */
+  requestLeave: (ctx: SecurityContext, input: LeaveRequestInput) => Promise<LeaveRequestResult>;
+  /** The caller's tasks by where the ball is, each with its address in Broccoli at `origin`. */
+  listMyTasks: (ctx: SecurityContext, input: { origin: string }) => Promise<AgentTasks>;
 }
 
 /** A page an agent can show or reason over in one go. */
 const PEOPLE_PER_PAGE = 25;
 
-export function createMcpAgentToolService(
-  dependencies: Pick<ModuleDependencies, "orm" | "transact" | "logger">,
-): McpAgentToolService {
+const NO_EMPLOYEE = "You have no employee record in Broccoli.";
+
+export function createMcpAgentToolService({
+  timeOff,
+  bankHolidays,
+  tasks,
+  today = todayInLondon,
+  ...dependencies
+}: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
+  timeOff: TimeOffService;
+  bankHolidays: BankHolidayService;
+  tasks: Pick<TaskService, "listMyTasks">;
+  today?: () => CalendarDate;
+}): McpAgentToolService {
   const employees = createEmployeeReadService(dependencies);
   const managers = createEmployeeManagerService(dependencies);
+  const timeOffServices = { ...dependencies, timeOff, bankHolidays, today };
+  const bookings = createBookTimeOffService(timeOffServices);
+  const requests = createTimeOffRequestService(timeOffServices);
+  const whenYouAsk = async (ctx: SecurityContext, typeIds: readonly string[]) =>
+    new Map(
+      [...(await requests.ownTimeOffModes(ctx, typeIds))].map(([id, mode]) => [
+        id,
+        WHEN_YOU_ASK[mode],
+      ]),
+    );
   return {
     async whoAmI(ctx) {
       const user = ctx.user!;
@@ -54,6 +91,7 @@ export function createMcpAgentToolService(
         permissionProfiles: [...user.permissionProfiles],
         employee: employee && personOf(employee),
         manager: manager ? personOf(manager) : null,
+        today: today(),
       };
     },
     async findPeople(ctx, { search, after }) {
@@ -67,7 +105,86 @@ export function createMcpAgentToolService(
         nextCursor: page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null,
       };
     },
+    async myLeaveBalance(ctx) {
+      const employeeId = ctx.user?.employeeId;
+      if (!employeeId) {
+        return { today: today(), types: [], reason: NO_EMPLOYEE };
+      }
+      const types =
+        (await timeOff.readTimeOffTypes(ctx, { employeeIds: [employeeId] })).get(employeeId) ?? [];
+      const asking = await whenYouAsk(
+        ctx,
+        types.map(({ timeOffType }) => timeOffType.id),
+      );
+      return {
+        today: today(),
+        types: types.map((type) => leaveTypeOf(type, asking.get(type.timeOffType.id)!)),
+        reason: null,
+      };
+    },
+    async previewLeave(ctx, input) {
+      const employeeId = requireEmployee(ctx);
+      const preview = await bookings.previewBooking(ctx, { ...bookingOf(input), employeeId });
+      const asking = await whenYouAsk(ctx, [input.timeOffTypeId]);
+      return previewOf(preview, asking.get(input.timeOffTypeId)!);
+    },
+    async requestLeave(ctx, { note, expectedDays, ...input }) {
+      const saved = await requests.saveOwnTimeOff(ctx, {
+        ...bookingOf(input),
+        note: note ?? null,
+        expectedDays,
+      });
+      return {
+        outcome: saved.status === "approved" ? "BOOKED" : "WAITING_FOR_APPROVAL",
+        timeOffId: saved.id,
+        totalDays: saved.cost,
+      };
+    },
+    async listMyTasks(ctx, { origin }) {
+      if (!ctx.user?.employeeId) {
+        return { needsYou: [], waitingOnOthers: [], resolvedRecently: [], reason: NO_EMPLOYEE };
+      }
+      const mine = await tasks.listMyTasks(ctx);
+      const names = await namesOf(employees, ctx, [
+        ...mine.needsYou,
+        ...mine.waitingOnOthers,
+        ...mine.resolvedRecently,
+      ]);
+      const shown = (list: readonly Task[]) =>
+        list.map((task) => agentTaskOf(task, { names, origin }));
+      return {
+        needsYou: shown(mine.needsYou),
+        waitingOnOthers: shown(mine.waitingOnOthers),
+        resolvedRecently: shown(mine.resolvedRecently),
+        reason: null,
+      };
+    },
   };
+}
+
+function requireEmployee(ctx: SecurityContext): string {
+  const employeeId = ctx.user?.employeeId;
+  if (!employeeId) {
+    throw new ApplicationError("FORBIDDEN", NO_EMPLOYEE);
+  }
+  return employeeId;
+}
+
+/** Full names of everyone the tasks name whom the caller may read, by employee id. */
+async function namesOf(
+  employees: EmployeeReadService,
+  ctx: SecurityContext,
+  tasks: readonly Task[],
+): Promise<Map<string, string>> {
+  const ids = new Set(
+    tasks.flatMap(({ assigneeEmployeeId, askedByEmployeeId }) =>
+      askedByEmployeeId ? [assigneeEmployeeId, askedByEmployeeId] : [assigneeEmployeeId],
+    ),
+  );
+  const found = await employees.readEmployees(ctx, [...ids]);
+  return new Map(
+    [...found].map(([id, { firstName, lastName }]) => [id, `${firstName} ${lastName}`]),
+  );
 }
 
 function personOf({ id, firstName, lastName, email, jobTitle }: Person): Person {

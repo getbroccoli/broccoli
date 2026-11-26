@@ -22,7 +22,8 @@ export type CauseKind = keyof CauseKinds;
 export type RecordOperation = "CREATED" | "UPDATED" | "DELETED";
 
 /** Who made a change, as the security context names them. */
-export type AuthorKind = "SIGNED_IN_USER" | "BROCCOLI_ITSELF" | "SETUP_HOLDER" | "EXTERNAL_AGENT";
+export type AuthorKind =
+  "SIGNED_IN_USER" | "CONNECTED_AGENT" | "BROCCOLI_ITSELF" | "SETUP_HOLDER" | "EXTERNAL_AGENT";
 
 /** One field's value before and after a change, in its API form; null when empty. */
 export interface FieldChange {
@@ -37,7 +38,10 @@ export interface FieldChange {
 
 export interface HistoryAuthor {
   kind: AuthorKind;
-  /** The user's id, or the external agent's session id; null for Broccoli itself and the setup holder. */
+  /**
+   * The user's id, also when their connected agent made the change; the external agent's session id;
+   * null for Broccoli itself and the setup holder.
+   */
   id: string | null;
 }
 
@@ -75,7 +79,8 @@ export interface HistoryAppend {
 /** The author of a change made with `ctx`. */
 export function authorOf(ctx: SecurityContext): HistoryAuthor {
   if (ctx.user) {
-    return { kind: "SIGNED_IN_USER", id: ctx.user.userId };
+    const kind = ctx.agentConnection ? "CONNECTED_AGENT" : "SIGNED_IN_USER";
+    return { kind, id: ctx.user.userId };
   }
   if (ctx.isSetupHolder) {
     return { kind: "SETUP_HOLDER", id: null };

@@ -43,6 +43,8 @@ export interface BookingInput {
   endDate: string;
   halfDays?: readonly { date: string; dayPart: "morning" | "afternoon" }[] | null;
   note?: string | null;
+  /** The total cost the person was shown; saving refuses a different one. */
+  expectedDays?: number | null;
 }
 
 /** What a booking would cost and do. */
@@ -112,7 +114,8 @@ async function previewBooking(
   ctx: SecurityContext,
   input: BookingInput,
 ): Promise<BookingPreview> {
-  const booking = parseBooking(input);
+  // A preview shows the cost; only saving holds it to the one the person was shown.
+  const booking = parseBooking({ ...input, expectedDays: null });
   // Whoever may create the time off previews it, including someone who may only ask for it.
   await ctx.requireInScope("time_off", "create", booking.employeeId);
   try {

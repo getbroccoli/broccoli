@@ -7,6 +7,8 @@ type AgentConnection {
   connectedAt: DateTime!
   "When the agent last called Broccoli; when it was allowed, until its first call."
   lastUsedAt: DateTime!
+  "Whether the person allowed it to change things, such as asking for leave, not only to read."
+  canChangeThings: Boolean!
 }
 
 "An agent connection that has ended, and why."

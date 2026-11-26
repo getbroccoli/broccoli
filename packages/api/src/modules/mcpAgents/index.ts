@@ -5,6 +5,9 @@ import {
 } from "../../core/agentAccess";
 import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
+import type { TaskService } from "../../core/tasks";
+import type { BankHolidayService } from "../bankHolidays";
+import type { TimeOffService } from "../timeOff";
 import { createMcpAgentToolService } from "./app";
 import { createResolvers } from "./graphql";
 import { mcpAgentRouter } from "./mcp";
@@ -17,7 +20,11 @@ export { createMcpAgentToolService } from "./app";
  * acts as that person, with their permissions, through the tools offered here.
  */
 export function mcpAgentsModule(
-  dependencies: Pick<ModuleDependencies, "orm" | "transact" | "logger">,
+  dependencies: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
+    timeOff: TimeOffService;
+    bankHolidays: BankHolidayService;
+    tasks: Pick<TaskService, "listMyTasks">;
+  },
 ): ModuleManifest {
   const { logger } = dependencies;
   const tools = createMcpAgentToolService(dependencies);

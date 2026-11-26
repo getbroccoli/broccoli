@@ -12,7 +12,7 @@ import {
   user,
 } from "../../auth";
 import { type Orm, ormOf, type Tx } from "../../db";
-import type { AgentConnectionEnding } from "../domain";
+import type { AgentConnectionEnding, AgentScope } from "../domain";
 import { agentConnectionEndings } from "./agentConnectionEndingsTable";
 import { agentInvitationClosings } from "./agentInvitationClosingsTable";
 
@@ -20,6 +20,9 @@ import { agentInvitationClosings } from "./agentInvitationClosingsTable";
  * A person's agent connections, kept in the OAuth provider's tables: a consent per client, and
  * the tokens issued under it.
  */
+/** A connection holding it may change things. */
+const WRITE_SCOPE: AgentScope = "broccoli:write";
+
 export interface AgentConnectionRepository {
   /** The person's most recent connection, or null without one. */
   findConnection(userId: string): Promise<StoredAgentConnection | null>;
@@ -66,6 +69,8 @@ export interface StoredAgentConnection {
   clientName: string | null;
   connectedAt: Date;
   lastUsedAt: Date;
+  /** Whether the person allowed it to change things, not only to read. */
+  canChangeThings: boolean;
 }
 
 export interface Ending {
@@ -98,13 +103,18 @@ export function agentConnectionRepository(db: Orm | Tx): AgentConnectionReposito
           clientName: oauthClient.name,
           connectedAt: oauthConsent.createdAt,
           lastUsedAt: oauthConsent.updatedAt,
+          scopes: oauthConsent.scopes,
         })
         .from(oauthConsent)
         .innerJoin(oauthClient, eq(oauthClient.clientId, oauthConsent.clientId))
         .where(eq(oauthConsent.userId, userId))
         .orderBy(desc(oauthConsent.createdAt))
         .limit(1);
-      return row ?? null;
+      if (!row) {
+        return null;
+      }
+      const { scopes, ...connection } = row;
+      return { ...connection, canChangeThings: scopes.includes(WRITE_SCOPE) };
     },
     async findConnectionOf(userId, clientId) {
       const [row] = await orm()

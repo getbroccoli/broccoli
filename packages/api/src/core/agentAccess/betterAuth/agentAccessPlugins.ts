@@ -7,11 +7,8 @@ import type { BetterAuthPlugin } from "better-auth";
 
 import { PrincipalSecurityContext } from "../../security";
 import type { AgentConnectionService } from "../app";
-import { AGENT_SCOPES, agentResourceOf, type AgentScope } from "../domain";
+import { AGENT_SCOPES, agentResourceOf } from "../domain";
 import { AGENT_ALLOW_PATH, AGENT_SIGN_IN_PATH, agentPagesPlugin } from "./agentPagesPlugin";
-
-/** Allowed only once a tool changes something. */
-const WRITE_SCOPE: AgentScope = "broccoli:write";
 
 /** Long enough for an agent's sign-in and Allow; the OAuth default. */
 const ACCESS_TOKEN_SECONDS = 60 * 60;
@@ -90,8 +87,8 @@ function agentConnectionPolicy(connections: AgentConnectionService): BetterAuthP
 }
 
 /**
- * Before the provider acts: public clients only, no widening of a consent outside Allow, read
- * only for now, the resource at this address, and tokens detached from expired browser sessions.
+ * Before the provider acts: public clients only, no widening of a consent outside Allow, the
+ * resource at this address, and tokens detached from expired browser sessions.
  */
 function policyBeforeHooks(connections: AgentConnectionService) {
   const system = PrincipalSecurityContext.system();
@@ -110,12 +107,6 @@ function policyBeforeHooks(connections: AgentConnectionService) {
           message: "Allow the agent again to change its access",
         });
       }),
-    },
-    {
-      matcher: (ctx) => ctx.path === "/oauth2/consent",
-      handler: createAuthMiddleware((ctx) =>
-        Promise.resolve({ context: { body: readOnlyConsent(ctx.body) } }),
-      ),
     },
     {
       // The resource is the MCP server at the address the agent reached Broccoli at.
@@ -170,24 +161,6 @@ function isLoopback(uri: unknown): boolean {
   return (
     protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(hostname.toLowerCase())
   );
-}
-
-/**
- * The consent narrowed to reading: no tool changes anything yet, so a person is never asked to allow
- * that, and an agent asks again once one does.
- */
-function readOnlyConsent(body: unknown): Record<string, unknown> {
-  const consent = (body ?? {}) as ConsentBody & { scope?: unknown };
-  const query = typeof consent.oauth_query === "string" ? consent.oauth_query : "";
-  const requested =
-    typeof consent.scope === "string"
-      ? consent.scope
-      : (new URLSearchParams(query).get("scope") ?? "");
-  const scope = requested
-    .split(" ")
-    .filter((each) => each !== WRITE_SCOPE)
-    .join(" ");
-  return { ...consent, scope };
 }
 
 /** Whether consent ended in a code for the client, not a denial or an error. */
