@@ -121,7 +121,38 @@ async function requestTimeOff(
   await requireRequest(ctx, booking.employeeId);
   // What the dialog showed, for the approver: free now and after this, per leave year.
   const { balances } = await preview.previewBooking(ctx, input);
-  const saved = await dependencies
+  const saved = await saveRequest(dependencies, ctx, booking, balances);
+  const cost = totalCost(saved.booked);
+  dependencies.logger.info(
+    {
+      timeOffId: saved.id,
+      employeeId: booking.employeeId,
+      timeOffTypeId: booking.timeOffTypeId,
+      dayCount: saved.booked.length,
+      cost,
+    },
+    "Requested time off",
+  );
+  return {
+    id: saved.id,
+    employeeId: booking.employeeId,
+    timeOffTypeId: booking.timeOffTypeId,
+    days: saved.booked.map(({ date, dayPart }) => ({ date, dayPart })),
+    status: "requested",
+    cost,
+    note: booking.note,
+    bookedAt: saved.createdAt,
+  };
+}
+
+/** The request and its approval in one transaction; a refused approval is logged as a setup fault. */
+function saveRequest(
+  dependencies: BookingDependencies,
+  ctx: SecurityContext,
+  booking: ParsedBooking,
+  balances: readonly BalanceChange[],
+) {
+  return dependencies
     .transact(async (tx) => {
       const person = await begin(dependencies, tx, booking);
       await requireApprovalType(tx, booking.timeOffTypeId);
@@ -148,27 +179,6 @@ async function requestTimeOff(
       }
       throw error;
     });
-  const cost = totalCost(saved.booked);
-  dependencies.logger.info(
-    {
-      timeOffId: saved.id,
-      employeeId: booking.employeeId,
-      timeOffTypeId: booking.timeOffTypeId,
-      dayCount: saved.booked.length,
-      cost,
-    },
-    "Requested time off",
-  );
-  return {
-    id: saved.id,
-    employeeId: booking.employeeId,
-    timeOffTypeId: booking.timeOffTypeId,
-    days: saved.booked.map(({ date, dayPart }) => ({ date, dayPart })),
-    status: "requested",
-    cost,
-    note: booking.note,
-    bookedAt: saved.createdAt,
-  };
 }
 
 /** Only one's own time off is asked for: whoever books it straight away books it instead. */
