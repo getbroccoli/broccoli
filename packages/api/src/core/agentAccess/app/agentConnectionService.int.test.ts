@@ -1,3 +1,6 @@
+import { randomUUID } from "node:crypto";
+
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, vi } from "vitest";
 
 import {
@@ -9,6 +12,7 @@ import {
   SYSTEM,
   test,
 } from "#test/support";
+import { oauthConsent } from "../../auth";
 
 test("disconnect publishes one connection change for the caller", async ({ orm, seed }) => {
   const userId = OWNER.user!.userId;
@@ -235,6 +239,35 @@ test("using a connection unused for 31 days records why it ended", async ({ orm,
     id: connectionId,
     reason: "ended_after_30_days_unused",
   });
+});
+
+test("using a connection returns only scopes allowed by every consent for that client", async ({
+  orm,
+  seed,
+}) => {
+  const userId = OWNER.user!.userId;
+  const { clientId, connectionId } = await seed.agentConnection({ userId });
+  await orm
+    .update(oauthConsent)
+    .set({ scopes: ["broccoli:read", "broccoli:write", "offline_access"] })
+    .where(eq(oauthConsent.id, connectionId));
+  const earlier = new Date("2026-11-11T12:00:00Z");
+  await orm.insert(oauthConsent).values({
+    id: randomUUID(),
+    userId,
+    clientId,
+    scopes: ["broccoli:read", "offline_access"],
+    createdAt: earlier,
+    updatedAt: earlier,
+  });
+
+  const connection = await agentConnectionService(orm).useAgentConnection(SYSTEM, {
+    userId,
+    clientId,
+  });
+
+  expect(connection?.scopes).toContain("broccoli:read");
+  expect(connection?.scopes).not.toContain("broccoli:write");
 });
 
 test("the current connection includes when the agent last used it", async ({ orm, seed }) => {
