@@ -5,6 +5,7 @@ import type { EmployeePanel_EmployeeFragment } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
+import { formatDayCount } from "@/lib/formatDays";
 
 import { AdjustAllowanceDialog } from "./AdjustAllowanceDialog";
 import { AllowanceHistory } from "./AllowanceHistory";
@@ -20,8 +21,6 @@ type Props = {
   /** Set for who may adjust the balance: the person's first name and whether the reader is them. */
   adjustFor?: { firstName: string; isReader: boolean };
 };
-
-const dayCount = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
 
 /** One balance's figures, its history on demand and, for who may, an adjustment. */
 export function AllowanceCard({ employeeId, type, period, adjustFor }: Props) {
@@ -51,16 +50,16 @@ export function AllowanceCard({ employeeId, type, period, adjustFor }: Props) {
       <dl className="grid grid-cols-2 gap-x-2 gap-y-3 px-3 py-2.5 sm:grid-cols-4">
         <TimeOffFigure
           label={t("people.panel.timeOff.entitlement")}
-          value={dayCount.format(type.entitlement ?? 0)}
+          value={formatDayCount(type.entitlement ?? 0)}
         />
         <TimeOffFigure
           label={t("people.panel.timeOff.bankHolidays")}
-          value={dayCount.format(type.bankHolidays ?? 0)}
+          value={formatDayCount(type.bankHolidays ?? 0)}
         />
-        <TimeOffFigure label={t("people.panel.timeOff.used")} value={dayCount.format(type.used)} />
+        <TimeOffFigure label={t("people.panel.timeOff.used")} value={formatDayCount(type.used)} />
         <TimeOffFigure
           label={t("people.panel.timeOff.remaining")}
-          value={dayCount.format(type.remaining ?? 0)}
+          value={formatDayCount(type.remaining ?? 0)}
           emphasis
         />
       </dl>

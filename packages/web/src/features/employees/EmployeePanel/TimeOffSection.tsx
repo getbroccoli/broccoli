@@ -50,7 +50,8 @@ export function TimeOffSection({ person, timeOffTypes, onBook }: Props) {
       {allowances.map((type) =>
         type.balance === "BALANCE_FROM_ALLOWANCE" ? (
           <AllowanceCard
-            key={type.timeOffType.id}
+            // A new leave year is a new card: an open adjustment never moves to it.
+            key={type.allowanceId ?? type.timeOffType.id}
             employeeId={person.id}
             type={type}
             period={{ label: periodOf(type), shownOnCard: differsFrom(type, first) }}

@@ -54,9 +54,9 @@ export function timeOffService(orm: Orm, { today = "2026-06-01" }: { today?: str
 /** The allowance history and adjustment service with the same date as its figures. */
 export function allowanceService(orm: Orm, { today = "2026-11-26" }: { today?: string } = {}) {
   return createAllowanceService({
+    orm,
     transact: testTransactor(orm),
     logger: createLogger("silent"),
-    timeOff: timeOffService(orm, { today }),
     today: () => calendarDate(today),
   });
 }

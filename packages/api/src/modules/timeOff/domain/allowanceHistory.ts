@@ -80,8 +80,11 @@ function byTimeThenId(a: StoredLedgerLine, b: StoredLedgerLine): number {
   return a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id);
 }
 
-function changeKeyOf({ createdAt, causeKind, causeRef }: StoredLedgerLine): string {
-  return JSON.stringify([createdAt.getTime(), causeKind, causeRef]);
+/** One transaction's lines of one cause; each adjustment is a change of its own. */
+function changeKeyOf({ id, kind, createdAt, causeKind, causeRef }: StoredLedgerLine): string {
+  return kind === "manual_adjustment"
+    ? id
+    : JSON.stringify([createdAt.getTime(), causeKind, causeRef]);
 }
 
 function toChange(

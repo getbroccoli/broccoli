@@ -1,15 +1,15 @@
 import Big from "big.js";
 
 import { ApplicationError, type FieldError, invalidInput } from "../../../core/applicationError";
-import type { Transact } from "../../../core/db";
+import type { Transact, Tx } from "../../../core/db";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
-import { authorOf } from "../../../core/records";
+import { authorOf, type HistoryAuthor } from "../../../core/records";
 import { isInRecordScope, type SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseUuid, todayInLondon } from "../../../utils";
-import { type Allowance, allowanceRepository } from "../db";
+import { createEmployeeReadService } from "../../employees";
+import { type Allowance, allowanceRepository, timeOffPolicyRepository } from "../db";
 import { type AllowanceChange, allowanceHistory } from "../domain";
-import type { EmployeeTimeOffType } from "./readTimeOffTypes";
-import type { TimeOffService } from "./timeOffService";
+import { type EmployeeTimeOffType, readTimeOffTypesInTransaction } from "./readTimeOffTypes";
 
 /** A balance's history, and the adjustments admins make to it. */
 export interface AllowanceService {
@@ -33,17 +33,19 @@ export interface AdjustmentInput {
   /** Days to add (positive) or take (negative). */
   amount: number;
   comment: string;
+  /** Made once per adjustment the admin means, so sending it again appends nothing. */
+  requestId?: string | null;
 }
 
 export function createAllowanceService({
+  orm,
   transact,
   logger,
-  timeOff,
   today = todayInLondon,
-}: Pick<ModuleDependencies, "transact" | "logger"> & {
-  timeOff: Pick<TimeOffService, "readTimeOffTypes">;
+}: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   today?: () => CalendarDate;
 }): AllowanceService {
+  const reads: CardReads = { employeeReads: createEmployeeReadService({ orm }), today };
   return {
     async readAllowanceHistory(ctx, { allowanceIds }) {
       const ids = allowanceIds.flatMap((id) => parseUuid(id) ?? []);
@@ -62,22 +64,8 @@ export function createAllowanceService({
       const allowance = await findAllowance(transact, input.allowanceId);
       await ctx.requireInScope("time_off", "update", allowance.employeeId);
       const adjustment = parseAdjustment(input);
-      const date = today();
-      if (date > allowance.leaveYearEnd) {
-        throw new ApplicationError("CONFLICT", "This leave year has ended.");
-      }
-      if (!(await currentBalanceOf(timeOff, ctx, allowance))) {
-        throw invalidInput([{ field: "allowanceId", code: "invalid" }]);
-      }
-      const lineId = await transact((tx) =>
-        allowanceRepository(tx).insertAdjustment({
-          allowanceId: allowance.id,
-          amount: adjustment.amount,
-          // The adjustment counts for the card's leave year, which may start after today.
-          effectiveDate: date < allowance.leaveYearStart ? allowance.leaveYearStart : date,
-          reason: adjustment.comment,
-          author: authorOf(ctx),
-        }),
+      const { card, lineId } = await transact((tx) =>
+        appendAdjustment(reads, tx, { allowance, adjustment, author: authorOf(ctx) }),
       );
       logger.info(
         {
@@ -86,13 +74,18 @@ export function createAllowanceService({
           timeOffTypeId: allowance.timeOffTypeId,
           amount: adjustment.amount,
           lineId,
+          repeated: lineId === null,
         },
         "Adjusted allowance",
       );
-      return (await currentBalanceOf(timeOff, ctx, allowance))!;
+      return card;
     },
   };
 }
+
+type CardReads = Parameters<typeof readTimeOffTypesInTransaction>[0];
+
+type ParsedAdjustment = ReturnType<typeof parseAdjustment>;
 
 async function findAllowance(transact: Transact, id: string): Promise<Allowance> {
   const parsed = parseUuid(id);
@@ -105,21 +98,48 @@ async function findAllowance(transact: Transact, id: string): Promise<Allowance>
   return allowance;
 }
 
+/**
+ * Appends the adjustment to the person's current balance, with policies held so the card cannot
+ * change in between, and returns that card's figures; a repeated request appends nothing.
+ */
+async function appendAdjustment(
+  reads: CardReads,
+  tx: Tx,
+  input: { allowance: Allowance; adjustment: ParsedAdjustment; author: HistoryAuthor },
+): Promise<{ card: EmployeeTimeOffType; lineId: string | null }> {
+  const { allowance, adjustment, author } = input;
+  await timeOffPolicyRepository(tx).sharePolicies();
+  const date = reads.today();
+  if (date > allowance.leaveYearEnd) {
+    throw new ApplicationError("CONFLICT", "This leave year has ended.");
+  }
+  if (!(await currentCardOf(reads, tx, allowance))) {
+    throw invalidInput([{ field: "allowanceId", code: "invalid" }]);
+  }
+  const lineId = await allowanceRepository(tx).insertAdjustment({
+    allowanceId: allowance.id,
+    amount: adjustment.amount,
+    // The adjustment counts for the card's leave year, which may start after today.
+    effectiveDate: date < allowance.leaveYearStart ? allowance.leaveYearStart : date,
+    reason: adjustment.comment,
+    author,
+    requestId: adjustment.requestId,
+  });
+  return { card: (await currentCardOf(reads, tx, allowance))!, lineId };
+}
+
 /** The figures of the balance the person's card shows today, if it is this allowance. */
-async function currentBalanceOf(
-  timeOff: Pick<TimeOffService, "readTimeOffTypes">,
-  ctx: SecurityContext,
+async function currentCardOf(
+  reads: CardReads,
+  tx: Tx,
   allowance: Allowance,
 ): Promise<EmployeeTimeOffType | undefined> {
-  const types = await timeOff.readTimeOffTypes(ctx, { employeeIds: [allowance.employeeId] });
+  const types = await readTimeOffTypesInTransaction(reads, tx, [allowance.employeeId]);
   return types.get(allowance.employeeId)?.find(({ allowanceId }) => allowanceId === allowance.id);
 }
 
-/** The amount as decimal text and the trimmed comment; refuses either when it is invalid. */
-function parseAdjustment({ amount, comment }: AdjustmentInput): {
-  amount: string;
-  comment: string;
-} {
+/** The amount as decimal text, the trimmed comment and the request id; refuses any that is invalid. */
+function parseAdjustment({ amount, comment, requestId }: AdjustmentInput) {
   const errors: FieldError[] = [];
   const days = Number.isFinite(amount) ? Big(amount) : null;
   if (days === null || days.eq(0) || !days.round(2).eq(days)) {
@@ -133,10 +153,14 @@ function parseAdjustment({ amount, comment }: AdjustmentInput): {
   } else if (trimmed.length > MAX_COMMENT_LENGTH) {
     errors.push({ field: "comment", code: "too_long" });
   }
+  const parsedRequestId = requestId ? parseUuid(requestId) : crypto.randomUUID();
+  if (parsedRequestId === null) {
+    errors.push({ field: "requestId", code: "invalid" });
+  }
   if (errors.length > 0) {
     throw invalidInput(errors);
   }
-  return { amount: days!.toString(), comment: trimmed };
+  return { amount: days!.toString(), comment: trimmed, requestId: parsedRequestId! };
 }
 
 /** The most an adjustment changes a balance by: a leap year's days. */

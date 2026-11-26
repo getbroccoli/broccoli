@@ -26,10 +26,11 @@ export function toGraphqlType(type: TimeOffType) {
   };
 }
 
-/** A person's time off type and figures with its type and balance kind as GraphQL values. */
+/** A person's time off type and figures with its id, type and balance kind as GraphQL values. */
 export function toGraphqlTimeOffTypeRow(row: EmployeeTimeOffType) {
   return {
     ...row,
+    id: `${row.employeeId}:${row.timeOffType.id}:${row.periodStart}`,
     timeOffType: toGraphqlType(row.timeOffType),
     balance: BALANCE_KINDS[row.balance],
   };

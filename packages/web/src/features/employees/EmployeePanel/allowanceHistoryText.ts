@@ -5,7 +5,7 @@ import type {
 } from "@/__generated__/graphql";
 import { type MessageKey, t } from "@/i18n";
 import { bookingDates, dayMonthYear } from "@/lib/formatDate";
-import { formatDays } from "@/lib/formatDays";
+import { formatDayCount, formatDays } from "@/lib/formatDays";
 
 /** One change to a balance as the history query reads it. */
 export type AllowanceChange = NonNullable<
@@ -24,19 +24,22 @@ export function changeTitle(change: AllowanceChange, readerUserId: string): stri
       });
     case "TIME_OFF_BOOKED":
     case "TIME_OFF_CANCELLED":
-      return t(BOOKING_TITLES[change.cause], {
-        dates: bookingDates(change.firstBookedDay ?? "", change.lastBookedDay ?? ""),
-      });
+      // A booking can also start a balance, whose grant carries the booking as its cause.
+      return change.firstBookedDay && change.lastBookedDay
+        ? t(BOOKING_TITLES[change.cause], {
+            dates: bookingDates(change.firstBookedDay, change.lastBookedDay),
+          })
+        : t("people.panel.timeOff.history.dailyCheck");
     default:
-      return t(CAUSE_TITLES[change.cause], {
-        date: change.causeDate ? dayMonthYear(change.causeDate) : "",
-      });
+      return change.causeDate
+        ? t(CAUSE_TITLES[change.cause], { date: dayMonthYear(change.causeDate) })
+        : t(UNDATED_CAUSE_TITLES[change.cause]);
   }
 }
 
 /** What a change is made of, signed: "+28 granted, −8 bank holidays"; null where the title says it. */
 export function partsLine(change: Pick<AllowanceChange, "cause" | "parts">): string | null {
-  if (SELF_EXPLAINING_CAUSES.has(change.cause)) {
+  if (titleSaysItAll(change)) {
     return null;
   }
   return change.parts
@@ -46,7 +49,7 @@ export function partsLine(change: Pick<AllowanceChange, "cause" | "parts">): str
 
 /** Days with their sign: "+2", "−2.5". */
 export function signedDays(amount: number): string {
-  return `${amount < 0 ? "−" : "+"}${dayCount.format(Math.abs(amount))}`;
+  return `${amount < 0 ? "−" : "+"}${formatDayCount(Math.abs(amount))}`;
 }
 
 /** The days typed into the adjust dialog, or null unless a non-zero change of at most two decimals within a year. */
@@ -72,13 +75,15 @@ export function adjustLabel(amount: number): string {
 /** The API's limit on one adjustment: a leap year's days. */
 const MAX_ADJUSTMENT_DAYS = 366;
 
-const dayCount = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
+/** An adjustment, or a booking or cancellation that only moved booked days. */
+function titleSaysItAll({ cause, parts }: Pick<AllowanceChange, "cause" | "parts">): boolean {
+  return (
+    cause === "ALLOWANCE_ADJUSTED" ||
+    (BOOKING_CAUSES.has(cause) && parts.every(({ kind }) => kind === "TIME_OFF_BOOKED"))
+  );
+}
 
-const SELF_EXPLAINING_CAUSES = new Set<AllowanceChangeCause>([
-  "ALLOWANCE_ADJUSTED",
-  "TIME_OFF_BOOKED",
-  "TIME_OFF_CANCELLED",
-]);
+const BOOKING_CAUSES = new Set<AllowanceChangeCause>(["TIME_OFF_BOOKED", "TIME_OFF_CANCELLED"]);
 
 const BOOKING_TITLES = {
   TIME_OFF_BOOKED: "people.panel.timeOff.history.booked",
@@ -98,6 +103,14 @@ const CAUSE_TITLES = {
   Exclude<AllowanceChangeCause, keyof typeof BOOKING_TITLES | "ALLOWANCE_ADJUSTED">,
   MessageKey
 >;
+
+const UNDATED_CAUSE_TITLES = {
+  ...CAUSE_TITLES,
+  START_DATE_CHANGED: "people.panel.timeOff.history.startDateCleared",
+  WORKING_PATTERN_CHANGED: "people.panel.timeOff.history.workingPatternChangedUndated",
+  TERMS_CHANGED: "people.panel.timeOff.history.termsChangedUndated",
+  TIME_OFF_RULES_CHANGED: "people.panel.timeOff.history.timeOffRulesChangedUndated",
+} as const satisfies Record<keyof typeof CAUSE_TITLES, MessageKey>;
 
 const PART_WORDS = {
   ENTITLEMENT_GRANT: "people.panel.timeOff.history.part.granted",

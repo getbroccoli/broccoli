@@ -60,7 +60,7 @@ export function timeOffModule({
         ownRules: createOwnTimeOffRulesService({ ...dependencies, timeOff }),
         employees: createEmployeeReadService(dependencies),
       },
-      allowances: createAllowanceService({ ...dependencies, timeOff }),
+      allowances: createAllowanceService(dependencies),
     }),
     events: {
       ...allowanceEventHandlers({ timeOff, ...dependencies }),

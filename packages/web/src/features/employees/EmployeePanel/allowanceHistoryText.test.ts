@@ -22,6 +22,23 @@ it.each([
 });
 
 it.each([
+  ["START_DATE_CHANGED", "Start date cleared"],
+  ["WORKING_PATTERN_CHANGED", "Working week changed"],
+  ["TERMS_CHANGED", "Terms changed"],
+  ["TIME_OFF_RULES_CHANGED", "Time off rules changed"],
+] as const)("names %s when the cause has no date", (cause, expected) => {
+  expect(changeTitle({ ...grant, cause, causeDate: null }, "reader")).toBe(expected);
+});
+
+it.each(["TIME_OFF_BOOKED", "TIME_OFF_CANCELLED"] as const)(
+  "describes %s as a recalculation when the allowance has no booked days",
+  (cause) => {
+    const change = { ...grant, cause, firstBookedDay: null, lastBookedDay: null };
+    expect(changeTitle(change, "reader")).toBe("Recalculated");
+  },
+);
+
+it.each([
   ["TIME_OFF_BOOKED", "Booked 7–9 Dec 2026"],
   ["TIME_OFF_CANCELLED", "Booking for 7–9 Dec 2026 cancelled"],
 ] as const)("names the booked dates for %s", (cause, expected) => {
@@ -43,12 +60,28 @@ it.each([
   expect(changeTitle(change, reader)).toBe(expected);
 });
 
-it.each(["ALLOWANCE_ADJUSTED", "TIME_OFF_BOOKED", "TIME_OFF_CANCELLED"] as const)(
-  "omits the parts line for %s",
-  (cause) => {
-    expect(partsLine({ ...grant, cause })).toBeNull();
+it.each([
+  ["ALLOWANCE_ADJUSTED", "MANUAL_ADJUSTMENT", 2],
+  ["TIME_OFF_BOOKED", "TIME_OFF_BOOKED", -1],
+  ["TIME_OFF_CANCELLED", "TIME_OFF_BOOKED", 1],
+] as const)(
+  "omits the parts line for %s when the title explains the only part",
+  (cause, kind, amount) => {
+    expect(partsLine({ cause, parts: [{ kind, amount }] })).toBeNull();
   },
 );
+
+it("shows the grant and booked day when a booking also creates the allowance", () => {
+  expect(
+    partsLine({
+      cause: "TIME_OFF_BOOKED",
+      parts: [
+        { kind: "ENTITLEMENT_GRANT", amount: 20 },
+        { kind: "TIME_OFF_BOOKED", amount: -1 },
+      ],
+    }),
+  ).toBe("+20 granted, −1 booked");
+});
 
 it("joins signed grant and bank holiday parts in one line", () => {
   expect(partsLine(grant)).toBe("+28 granted, −8 bank holidays");

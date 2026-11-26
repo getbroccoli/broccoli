@@ -1,4 +1,4 @@
-import { and, asc, countDistinct, gte, ne, sql } from "drizzle-orm";
+import { and, countDistinct, gte, ne, sql } from "drizzle-orm";
 
 import { anyOf, ormOf, type Tx } from "../../../core/db";
 import type { HistoryAuthor } from "../../../core/records";
@@ -31,10 +31,10 @@ export interface AllowanceRepository {
   ): Promise<Map<string, { kind: LedgerLineKind; amount: number }[]>>;
   /** Appends the lines, skipping those whose idempotency key is taken; returns how many it added. */
   insertLines(lines: readonly NewLedgerLine[]): Promise<number>;
-  /** Each allowance's lines, oldest first, by allowance id. */
+  /** Each allowance's lines, by allowance id. */
   findLines(allowanceIds: readonly string[]): Promise<Map<string, StoredLedgerLine[]>>;
-  /** Appends one manual adjustment and returns its id. */
-  insertAdjustment(adjustment: NewAdjustment): Promise<string>;
+  /** Appends one manual adjustment and returns its id; null when its request was appended before. */
+  insertAdjustment(adjustment: NewAdjustment): Promise<string | null>;
 }
 
 /** Days someone added to or took from an allowance, with their comment. */
@@ -45,6 +45,8 @@ export interface NewAdjustment {
   effectiveDate: CalendarDate;
   reason: string;
   author: HistoryAuthor;
+  /** One per adjustment meant, so a repeated request appends nothing. */
+  requestId: string;
 }
 
 export function allowanceRepository(tx: Tx): AllowanceRepository {
@@ -149,13 +151,12 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
       const rows = await orm()
         .select()
         .from(allowanceLedgerLines)
-        .where(anyOf(allowanceLedgerLines.allowanceId, allowanceIds))
-        .orderBy(asc(allowanceLedgerLines.createdAt), asc(allowanceLedgerLines.id));
+        .where(anyOf(allowanceLedgerLines.allowanceId, allowanceIds));
       const lines = rows.map((row) => ({ allowanceId: row.allowanceId, ...toStoredLine(row) }));
       return Map.groupBy(lines, ({ allowanceId }) => allowanceId);
     },
 
-    async insertAdjustment({ allowanceId, amount, effectiveDate, reason, author }) {
+    async insertAdjustment({ allowanceId, amount, effectiveDate, reason, author, requestId }) {
       const [row] = await orm()
         .insert(allowanceLedgerLines)
         .values({
@@ -169,11 +170,11 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
           reason,
           authorKind: author.kind.toLowerCase(),
           authorId: author.id,
-          // Each adjustment is its own change, so it never collides with another.
-          idempotencyKey: `${allowanceId}:manual_adjustment:${crypto.randomUUID()}`,
+          idempotencyKey: `${allowanceId}:manual_adjustment:${requestId}`,
         })
+        .onConflictDoNothing({ target: allowanceLedgerLines.idempotencyKey })
         .returning({ id: allowanceLedgerLines.id });
-      return row!.id;
+      return row?.id ?? null;
     },
   };
 }

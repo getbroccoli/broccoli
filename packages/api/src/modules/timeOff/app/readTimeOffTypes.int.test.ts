@@ -159,6 +159,7 @@ test("returns used days and null figures for a person's unlimited policy", async
 
   expect(rows.get(employee.id)).toEqual([
     {
+      employeeId: employee.id,
       timeOffType: {
         id: policy.timeOffTypeId,
         name: "Wellbeing days",

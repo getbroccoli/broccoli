@@ -109,10 +109,10 @@ Add terms "Scotland" in Settings › Employment terms first, and a location "Gla
 - [ ] After Reset setup, a person added without turning time off on shows "Time off" with "No time off this year."
 - [ ] Invite a person (see [Invites](invites.md)) and sign in as them: their own panel shows the section; a colleague's panel who is not their report shows no Time off section; once they manage that colleague (Manager above), it shows.
 - [ ] History on the Annual leave card lists "Time off turned on" with "+28 granted, −8 bank holidays", "+20" and "20 days left"; after booking 7–9 Dec with a morning on the 9th, "Booked 7–9 Dec <year>", "−2.5", "17.5 days left" sits above it.
-- [ ] As the owner, Adjust opens "Adjust <first name>’s Annual leave · <year>"; typing 2 shows "20 days left now → 22 days left after this" and the button "Add 2 days"; it stays disabled until "Why" has text. Saving toasts "<first name>’s Annual leave adjusted.", the card reads Entitlement 30 and Remaining 22, and History's first row reads "Adjusted by you", the comment, "+2" and "22 days left".
-- [ ] Typing −1.5 reads "Take away 1.5 days"; 0, 1.234 and 367 keep the button disabled.
+- [ ] As the owner, Adjust opens "Adjust <first name>’s Annual leave · <year>"; typing 2 shows "17.5 days left now → 19.5 days left after this" and the button "Add 2 days"; it stays disabled until "Why" has text. Saving toasts "<first name>’s Annual leave adjusted.", the card reads Entitlement 30 and Remaining 19.5 (17.5 after the booking above, plus 2), and History's first row reads "Adjusted by you", the comment, "+2" and "19.5 days left".
+- [ ] Typing −1.5 reads "Take away 1.5 days"; 0, 1.234 and 367 keep the button disabled and say why under the field.
 - [ ] Signed in as that person, and as their manager: no Adjust; History shows the adjustment with the owner's email and the comment.
-- [ ] Adjusting your own balance says "You see this." under Why.
+- [ ] Adjusting your own balance says "You, your managers and admins see this." under Why.
 - [ ] At phone width the Adjust dialog fills the screen and History rows wrap without scrolling sideways.
 
 ## Remove

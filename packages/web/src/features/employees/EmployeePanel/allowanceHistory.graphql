@@ -2,6 +2,7 @@ query AllowanceHistory($employeeId: ID!) {
   employee(id: $employeeId) {
     id
     timeOffTypes {
+      id
       allowanceId
       history {
         recordedAt
@@ -30,7 +31,11 @@ mutation AdjustAllowance($input: AllowanceAdjustInput!) {
   timeOff {
     adjustAllowance(input: $input) {
       employeeTimeOffType {
+        id
         allowanceId
+        entitlement
+        bankHolidays
+        used
         remaining
       }
       error {

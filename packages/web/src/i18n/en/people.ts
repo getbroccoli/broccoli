@@ -220,8 +220,14 @@ export const peopleEn = {
   "people.panel.timeOff.adjust.daysHint": "Use a minus sign to take days away, such as −1.5.",
   "people.panel.timeOff.adjust.preview": "{before} left now → {after} left after this",
   "people.panel.timeOff.adjust.comment": "Why",
-  "people.panel.timeOff.adjust.commentHint": "{name} and their managers see this.",
-  "people.panel.timeOff.adjust.commentHintSelf": "You see this.",
+  "people.panel.timeOff.adjust.commentHint": "{name}, their managers and admins see this.",
+  "people.panel.timeOff.adjust.commentHintSelf": "You, your managers and admins see this.",
+  "people.panel.timeOff.adjust.daysInvalid":
+    "Use a number other than 0, with at most two decimals and up to 366.",
+  "people.panel.timeOff.adjust.yearEnded":
+    "This leave year has ended. Close the panel and open it again to see the current one.",
+  "people.panel.timeOff.adjust.refused":
+    "This adjustment can’t be saved. Check the days and the reason.",
   "people.panel.timeOff.adjust.add": "Add {days}",
   "people.panel.timeOff.adjust.takeAway": "Take away {days}",
   "people.panel.timeOff.adjust.save": "Adjust",
@@ -246,6 +252,10 @@ export const peopleEn = {
   "people.panel.timeOff.history.termsChanged": "Terms changed from {date}",
   "people.panel.timeOff.history.timeOffRulesChanged": "Time off rules changed from {date}",
   "people.panel.timeOff.history.dailyCheck": "Recalculated",
+  "people.panel.timeOff.history.startDateCleared": "Start date cleared",
+  "people.panel.timeOff.history.workingPatternChangedUndated": "Working week changed",
+  "people.panel.timeOff.history.termsChangedUndated": "Terms changed",
+  "people.panel.timeOff.history.timeOffRulesChangedUndated": "Time off rules changed",
   "people.panel.timeOff.history.part.granted": "granted",
   "people.panel.timeOff.history.part.bankHolidaysGranted": "bank holidays granted",
   "people.panel.timeOff.history.part.bankHolidays": "bank holidays",

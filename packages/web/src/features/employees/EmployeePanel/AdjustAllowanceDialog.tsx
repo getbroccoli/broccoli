@@ -1,12 +1,8 @@
 import { useId, useState } from "react";
 import { toast } from "sonner";
 
-import {
-  AdjustAllowanceDocument,
-  AllowanceHistoryDocument,
-  EmployeePanelDocument,
-} from "@/__generated__/graphql";
-import { usePayloadMutation } from "@/apollo";
+import { AdjustAllowanceDocument, AllowanceHistoryDocument } from "@/__generated__/graphql";
+import { PayloadFailure, usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -46,20 +42,26 @@ export function AdjustAllowanceDialog({
 }: Props) {
   const [daysText, setDaysText] = useState("");
   const [comment, setComment] = useState("");
+  // One per adjustment meant, so trying again after a lost answer adds nothing twice.
+  const [requestId] = useState(() => crypto.randomUUID());
   const daysId = useId();
   const commentId = useId();
-  const [adjust, { loading }] = usePayloadMutation(AdjustAllowanceDocument, {
-    refetch: [EmployeePanelDocument, AllowanceHistoryDocument],
+  // The payload updates the card's figures in the cache; only the history needs the server.
+  const [adjust, { loading, payloadError }] = usePayloadMutation(AdjustAllowanceDocument, {
+    refetch: [AllowanceHistoryDocument],
   });
   const days = parseAdjustment(daysText);
   const canSave = days !== null && comment.trim() !== "" && !loading;
 
   const save = async () => {
     const adjusted = await adjust({
-      variables: { input: { allowanceId, amount: days!, comment: comment.trim() } },
-    }).catch(() => null);
+      variables: { input: { allowanceId, amount: days!, comment: comment.trim(), requestId } },
+    }).catch((error: unknown) => {
+      // A refusal shows in the dialog; anything else may work on a second try.
+      if (!(error instanceof PayloadFailure)) toast.error(t("people.panel.timeOff.adjust.failed"));
+      return null;
+    });
     if (!adjusted) {
-      toast.error(t("people.panel.timeOff.adjust.failed"));
       return;
     }
     toast(t("people.panel.timeOff.adjust.done", { name: person.firstName, type: typeName }));
@@ -91,12 +93,14 @@ export function AdjustAllowanceDialog({
             onChange={(event) => setDaysText(event.target.value)}
           />
           <DialogDescription id={`${daysId}-hint`} className="text-xs">
-            {days === null
-              ? t("people.panel.timeOff.adjust.daysHint")
-              : t("people.panel.timeOff.adjust.preview", {
+            {days !== null
+              ? t("people.panel.timeOff.adjust.preview", {
                   before: formatDays(remaining),
                   after: formatDays(remaining + days),
-                })}
+                })
+              : daysText.trim() === ""
+                ? t("people.panel.timeOff.adjust.daysHint")
+                : t("people.panel.timeOff.adjust.daysInvalid")}
           </DialogDescription>
         </div>
         <div className="flex flex-col gap-2">
@@ -119,6 +123,13 @@ export function AdjustAllowanceDialog({
               : t("people.panel.timeOff.adjust.commentHint", { name: person.firstName })}
           </p>
         </div>
+        {payloadError && (
+          <p role="alert" className="text-sm text-destructive">
+            {payloadError.__typename === "ConflictError"
+              ? t("people.panel.timeOff.adjust.yearEnded")
+              : t("people.panel.timeOff.adjust.refused")}
+          </p>
+        )}
         <DialogFooter>
           <Button variant="ghost" disabled={loading} onClick={onClose}>
             {t("people.panel.timeOff.adjust.cancel")}

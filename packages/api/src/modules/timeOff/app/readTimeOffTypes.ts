@@ -14,6 +14,7 @@ import { type AllowanceEngineDependencies, type Person, readPeople } from "./all
 
 /** One time off type a person has in their current leave year, with its figures in days. */
 export interface EmployeeTimeOffType {
+  employeeId: string;
   timeOffType: TimeOffType;
   balance: PolicyVersion["balance"];
   /** The allowance the figures come from; set on `balance_from_allowance` only. */
@@ -62,17 +63,24 @@ export async function readTimeOffTypes(
   if (ids.length === 0) {
     return new Map();
   }
-  return transact(async (tx) => {
-    const { people, policies } = await readPeople(employeeReads, tx, ids);
-    const shown = people.map((person) => shownTypes(person, policies, today()));
-    const figures = await readFigures(tx, ids, shown.flat());
-    return new Map(
-      people.map(({ employeeId }, index) => [
-        employeeId,
-        shown[index]!.map((type) => toEmployeeTimeOffType(type, figures)),
-      ]),
-    );
-  });
+  return transact((tx) => readTimeOffTypesInTransaction({ employeeReads, today }, tx, ids));
+}
+
+/** Trusted: the employees' time off types as `readTimeOffTypes` reads them, in the caller's transaction. */
+export async function readTimeOffTypesInTransaction(
+  { employeeReads, today }: Omit<Dependencies, "transact">,
+  tx: Tx,
+  employeeIds: readonly string[],
+): Promise<Map<string, EmployeeTimeOffType[]>> {
+  const { people, policies } = await readPeople(employeeReads, tx, employeeIds);
+  const shown = people.map((person) => shownTypes(person, policies, today()));
+  const figures = await readFigures(tx, employeeIds, shown.flat());
+  return new Map(
+    people.map(({ employeeId }, index) => [
+      employeeId,
+      shown[index]!.map((type) => toEmployeeTimeOffType(type, figures)),
+    ]),
+  );
 }
 
 /** Annual leave, Sickness, Family leave, Other, then the company's own types by name. */
@@ -170,7 +178,13 @@ function toEmployeeTimeOffType(
   { sums, recorded }: Figures,
 ): EmployeeTimeOffType {
   const { timeOffType, balance } = policy;
-  const row = { timeOffType, balance, periodStart: period.start, periodEnd: period.end };
+  const row = {
+    employeeId,
+    timeOffType,
+    balance,
+    periodStart: period.start,
+    periodEnd: period.end,
+  };
   const noFigures = { allowanceId: null, entitlement: null, bankHolidays: null, remaining: null };
   if (!allowance) {
     const days = recorded.find(

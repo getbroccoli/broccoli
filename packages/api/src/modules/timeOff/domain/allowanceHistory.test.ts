@@ -74,6 +74,39 @@ it("omits a change whose amount and parts all cancel out", () => {
   expect(history).toEqual([]);
 });
 
+it("keeps both adjustments and their authors when opposite amounts are recorded at the same time", () => {
+  const adjustment = {
+    kind: "manual_adjustment",
+    causeKind: "allowance_adjusted",
+    causeRef: null,
+    createdAt: grantTime,
+  } as const;
+  const userA = { kind: "SIGNED_IN_USER", id: "user-a" } as const;
+  const userB = { kind: "SIGNED_IN_USER", id: "user-b" } as const;
+
+  const history = allowanceHistory([
+    line(1, { ...adjustment, amount: "2", reason: "Carry-over", author: userA }),
+    line(2, { ...adjustment, amount: "-2", reason: "Correction", author: userB }),
+  ]);
+
+  expect(history).toMatchObject([
+    {
+      cause: "allowance_adjusted",
+      amount: -2,
+      balanceAfter: 0,
+      comment: "Correction",
+      author: userB,
+    },
+    {
+      cause: "allowance_adjusted",
+      amount: 2,
+      balanceAfter: 2,
+      comment: "Carry-over",
+      author: userA,
+    },
+  ]);
+});
+
 it("takes the comment and author from the manual adjustment line", () => {
   const author = { kind: "SIGNED_IN_USER", id: "test-owner" } as const;
   const history = allowanceHistory([

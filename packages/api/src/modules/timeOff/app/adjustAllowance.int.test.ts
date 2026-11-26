@@ -51,6 +51,43 @@ test("adds an owner's carry-over to entitlement, remaining and history", async (
   ]);
 });
 
+test("applies an adjustment once when the same request is retried", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const { allowanceId } = await seedAnnualLeaveAllowance(orm, seed, transact);
+  const service = allowanceService(orm);
+  const input = {
+    allowanceId,
+    requestId: "00000000-0000-4000-8000-000000000001",
+    amount: 2,
+    comment: "Carry-over",
+  };
+  const first = await service.adjustAllowance(OWNER, input);
+
+  const retry = await service.adjustAllowance(OWNER, input);
+
+  expect(first.remaining).toBe(22);
+  expect(retry).toEqual(first);
+  const history = await service.readAllowanceHistory(OWNER, { allowanceIds: [allowanceId] });
+  expect(history.get(allowanceId)).toMatchObject([
+    { cause: "allowance_adjusted", amount: 2, balanceAfter: 22 },
+    { cause: "time_off_turned_on", balanceAfter: 20 },
+  ]);
+});
+
+test("refuses a malformed adjustment request id", async ({ orm, seed, transact }) => {
+  const { allowanceId } = await seedAnnualLeaveAllowance(orm, seed, transact);
+  const input = { allowanceId, requestId: "invalid-id", amount: 2, comment: "Carry-over" };
+
+  await expect(allowanceService(orm).adjustAllowance(OWNER, input)).rejects.toMatchObject({
+    name: "ApplicationError",
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "requestId", code: "invalid" }],
+  });
+});
+
 test("stores the trimmed adjustment comment", async ({ orm, seed, transact }) => {
   const { allowanceId } = await seedAnnualLeaveAllowance(orm, seed, transact);
   const service = allowanceService(orm);

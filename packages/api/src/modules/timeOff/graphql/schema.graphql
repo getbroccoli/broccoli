@@ -7,6 +7,8 @@ extend type Employee {
 
 "A time off type a person has in their current leave year, with its figures in days."
 type EmployeeTimeOffType {
+  "The person, type and period together, so a client can tell rows apart."
+  id: ID!
   timeOffType: TimeOffType!
   balance: TimeOffBalanceKind!
   "The allowance these figures come from; null unless BALANCE_FROM_ALLOWANCE."
@@ -37,11 +39,11 @@ type AllowanceChange {
   firstBookedDay: Date
   "The last day the change's booked days fall on in this leave year."
   lastBookedDay: Date
-  "Days the change added (positive) or took (negative)."
+  "Days the change added (positive) or took (negative): balanceAfter less the previous change's."
   amount: Float!
-  "Days remaining after the change."
+  "Days remaining after the change, worked out as remaining is, so the newest equals it."
   balanceAfter: Float!
-  "What the change is made of, by kind; kinds that add up to 0 are left out."
+  "What the change is made of, by kind, each rounded on its own so they may not add up to amount; kinds that add up to 0 are left out. A change whose amount and parts are all 0 is not listed."
   parts: [AllowanceChangePart!]!
   author: RecordChangeAuthor!
   "The adjustment's comment; null for other causes."
@@ -81,9 +83,12 @@ enum AllowanceChangeCause {
 
 input AllowanceAdjustInput {
   allowanceId: ID!
-  "Days to add (positive) or take (negative); at most two decimals."
+  "Days to add (positive) or take (negative): not 0, at most two decimals and 366 days either way."
   amount: Float!
+  "Why, 1 to 1,000 characters once trimmed; everyone who reads the balance sees it."
   comment: String!
+  "Made once for each adjustment meant, so sending the same one again appends nothing."
+  requestId: ID
 }
 
 "The adjusted balance's figures, or why the adjustment was refused."
