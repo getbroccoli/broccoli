@@ -215,6 +215,43 @@ test("allowing write access for the same client keeps its connection and lets th
   });
 });
 
+test("allowing only read access again removes write access from the first token", async ({
+  env,
+}) => {
+  const { browser } = await env.signInAsOwner();
+  const clientId = await registerAgentClient(env, "Leave client");
+  const first = await connectAgent(env, browser, {
+    clientId,
+    scope: "broccoli:read broccoli:write offline_access",
+  });
+  const location = await authorize(
+    env,
+    browser,
+    new URLSearchParams({
+      response_type: "code",
+      client_id: clientId,
+      redirect_uri: "http://127.0.0.1:33418/callback",
+      scope: "broccoli:read offline_access",
+      prompt: "consent",
+      state: "narrow-consent",
+      code_challenge: createHash("sha256").update("v".repeat(43)).digest("base64url"),
+      code_challenge_method: "S256",
+      resource: `${env.url}/api/mcp`,
+    }),
+  );
+  expect(location.pathname).toBe("/api/auth/agent/allow");
+  const consent = await browser.post("/api/auth/oauth2/consent", {
+    accept: true,
+    oauth_query: location.search.slice(1),
+  });
+  expect(consent.status).toBe(200);
+
+  const response = await callMcpTool(env, first.accessToken, "request_leave");
+
+  expect(response.status).toBe(403);
+  expect(response.headers.get("www-authenticate")).toContain('error="insufficient_scope"');
+});
+
 test("a signed-in person cannot widen consent through the provider's endpoint", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
   const clientId = await registerAgentClient(env, "Read client");

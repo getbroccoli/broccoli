@@ -125,6 +125,24 @@ test("an employee's agent books Annual leave straight away after it is switched 
   expect((await tasks.listMyTasks(manager)).needsYou).toEqual([]);
 });
 
+test("an upper-case Annual leave type id keeps the employee's request in approval", async ({
+  orm,
+  seed,
+}) => {
+  const { requests, requesterAgent, ownInput } = await leaveRequestSetup(orm, seed);
+  const timeOffTypeId = ownInput.timeOffTypeId.toUpperCase();
+
+  const modes = await requests.ownTimeOffModes(requesterAgent, [timeOffTypeId]);
+  expect(modes.get(timeOffTypeId)).toBe("requested_with_approval");
+
+  const saved = await requests.saveOwnTimeOff(requesterAgent, {
+    ...ownInput,
+    timeOffTypeId,
+    expectedDays: 2.5,
+  });
+  expect(saved).toMatchObject({ timeOffTypeId: ownInput.timeOffTypeId, status: "requested" });
+});
+
 test("a caller without an employee cannot save their own leave", async ({ orm, seed }) => {
   const { requests, ownInput } = await leaveRequestSetup(orm, seed);
 

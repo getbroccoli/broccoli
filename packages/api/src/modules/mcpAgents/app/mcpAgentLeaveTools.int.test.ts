@@ -100,6 +100,22 @@ test("requestLeave sends the manager a task with the requester's name and a link
   });
 });
 
+test("requestLeave reports that the request ended without a decision when nobody can approve", async ({
+  orm,
+  seed,
+}) => {
+  const { agentTools, requesterAgent, input } = await leaveRequestSetup(orm, seed);
+  await seed.owner();
+  await seed.manager(input.employeeId, null);
+
+  const request = await agentTools.requestLeave(requesterAgent, {
+    ...decemberLeave(input.timeOffTypeId),
+    expectedDays: 2.5,
+  });
+
+  expect(request.outcome).toBe("ENDED_WITH_NO_DECISION");
+});
+
 test("listMyTasks shows the requester their manager's approval under resolved tasks", async ({
   orm,
   seed,
