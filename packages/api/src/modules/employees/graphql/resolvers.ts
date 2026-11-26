@@ -23,13 +23,6 @@ import { employmentTermsResolvers } from "./employmentTermsResolvers";
 import { WEEK_FIELDS } from "./weekFields";
 import { DEFAULT_TERMS, employeeLoaders } from "./loaders";
 
-/** A write mode as the API names it. */
-const PERMITS = {
-  direct: "ALLOWED",
-  request: "ALLOWED_WITH_APPROVAL",
-  refused: "NOT_ALLOWED",
-} as const;
-
 export function createResolvers(
   services: EmployeeService &
     EmployeeReadService &
@@ -274,4 +267,11 @@ const SIGN_IN_STATES = {
   not_invited: "NOT_INVITED",
   pending: "PENDING",
   joined: "JOINED",
+} as const;
+
+/** A write mode as the API names it. */
+const PERMITS = {
+  direct: "ALLOWED",
+  request: "ALLOWED_WITH_APPROVAL",
+  refused: "NOT_ALLOWED",
 } as const;

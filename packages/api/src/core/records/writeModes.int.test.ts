@@ -1,6 +1,8 @@
 import { expect, signedIn, SYSTEM, test } from "#test/support";
 
-import { writeModes } from ".";
+import { createWriteModeService } from ".";
+
+const { writeModes } = createWriteModeService();
 
 test("employees can request their own time off and are refused for a colleague", async ({
   orm,

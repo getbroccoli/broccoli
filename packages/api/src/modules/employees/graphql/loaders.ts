@@ -1,7 +1,7 @@
 import DataLoader from "dataloader";
 
 import { type GraphqlContext, perRequest } from "../../../core/graphql";
-import { type WriteMode, writeModes } from "../../../core/records";
+import { createWriteModeService, type WriteMode } from "../../../core/records";
 import type { PermissionObject, PermissionProfile, SecurityContext } from "../../../core/security";
 import type { CalendarDate } from "../../../utils";
 import type {
@@ -42,6 +42,8 @@ export interface EmployeeLoaders {
   /** How the caller may create a record of a type about an employee; one read per type. */
   createMode: DataLoader<CreateKey, WriteMode, string>;
 }
+
+const writeModes = createWriteModeService();
 
 /** The `terms` loader's key for the default terms, which a location without terms starts people on. */
 export const DEFAULT_TERMS = "default";
@@ -97,10 +99,6 @@ export function employeeLoaders(
   }));
 }
 
-type CreateKey = { recordType: string; employeeId: string };
-
-const keyOf = ({ recordType, employeeId }: CreateKey) => `${recordType}:${employeeId}`;
-
 /** `createMode`: one write-modes read per record type, however many people a list holds. */
 function createModeLoader(ctx: SecurityContext): DataLoader<CreateKey, WriteMode, string> {
   return new DataLoader(
@@ -112,7 +110,7 @@ function createModeLoader(ctx: SecurityContext): DataLoader<CreateKey, WriteMode
         );
         // A record type's permission object has its name; one without has no grants, so is refused.
         const object = recordType.toLowerCase() as PermissionObject;
-        const found = await writeModes(ctx, object, "create", employeeIds);
+        const found = await writeModes.writeModes(ctx, object, "create", employeeIds);
         for (const [employeeId, mode] of found) modes.set(keyOf({ recordType, employeeId }), mode);
       }
       return keys.map((key) => modes.get(keyOf(key))!);
@@ -120,3 +118,8 @@ function createModeLoader(ctx: SecurityContext): DataLoader<CreateKey, WriteMode
     { cacheKeyFn: keyOf },
   );
 }
+
+/** A person and a record type to create about them. */
+type CreateKey = { recordType: string; employeeId: string };
+
+const keyOf = ({ recordType, employeeId }: CreateKey) => `${recordType}:${employeeId}`;

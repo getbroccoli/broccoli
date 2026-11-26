@@ -10,4 +10,4 @@ export {
 } from "./recordHistoryReaderService";
 export { createRecordHistoryService, type RecordChanged } from "./recordHistoryService";
 export { createRecordCloneService, type RecordCloneService } from "./recordCloneService";
-export { requireDirect, writeModes, type WriteMode } from "./writeModes";
+export { createWriteModeService, type WriteMode, type WriteModeService } from "./writeModes";
