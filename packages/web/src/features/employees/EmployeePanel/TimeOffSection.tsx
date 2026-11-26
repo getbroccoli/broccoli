@@ -1,12 +1,15 @@
-import { useRouteContext } from "@tanstack/react-router";
+import { useNavigate, useRouteContext } from "@tanstack/react-router";
 
 import type { EmployeePanel_EmployeeFragment } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
+import { companyToday } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 import { formatCalendarDate } from "@/lib/formatDate";
 import { formatDays } from "@/lib/formatDays";
 
 import { AllowanceCard } from "./AllowanceCard";
+import { modeOf, type Permit, recordedLine, waitingLine } from "./timeOffRequestText";
+import { TimeOffRequests } from "./TimeOffRequests";
 
 type TimeOffType = NonNullable<EmployeePanel_EmployeeFragment["timeOffTypes"]>[number];
 
@@ -14,13 +17,17 @@ type Props = {
   person: { id: string; firstName: string };
   /** The person's time off types, Annual leave first; the caller may read them. */
   timeOffTypes: readonly TimeOffType[];
-  /** Set for who may book: opens Book time off for this person. */
-  onBook?: () => void;
+  /** Whether the viewer books this person's time off straight away, asks for it, or neither. */
+  permit: Permit;
+  /** The person's requests this leave year; null for who may not read them. */
+  requests: EmployeePanel_EmployeeFragment["timeOffRequests"];
 };
 
 /** A person's time off in their current leave year: allowances first, then what is only recorded. */
-export function TimeOffSection({ person, timeOffTypes, onBook }: Props) {
+export function TimeOffSection({ person, timeOffTypes, permit, requests }: Props) {
   const { me } = useRouteContext({ from: "/_authenticated" });
+  const navigate = useNavigate();
+  const mode = modeOf(permit);
   // shortcut: adjusting follows the admin grant until profiles grant it by scope.
   const adjustFor = me.operations.includes("MANAGE_WORKSPACE")
     ? { firstName: person.firstName, isReader: me.employee?.id === person.id }
@@ -40,9 +47,19 @@ export function TimeOffSection({ person, timeOffTypes, onBook }: Props) {
             ? t("people.panel.timeOff.title", { period: periodOf(first) })
             : t("people.panel.timeOff.titleWithoutPeriod")}
         </h2>
-        {onBook && (
-          <Button variant="ghost" size="sm" onClick={onBook}>
-            {t("people.panel.timeOff.book")}
+        {mode && (
+          <Button
+            variant="ghost"
+            size="sm"
+            // The Time off page opens the dialog for this person, and Back closes it again.
+            onClick={() =>
+              void navigate({
+                to: "/time-off",
+                search: { book: person.id, month: companyToday().slice(0, 7) },
+              })
+            }
+          >
+            {mode === "book" ? t("people.panel.timeOff.book") : t("timeOff.request")}
           </Button>
         )}
       </div>
@@ -72,6 +89,9 @@ export function TimeOffSection({ person, timeOffTypes, onBook }: Props) {
             <p className="px-3 py-2.5 text-sm">
               {t("people.panel.timeOff.unlimited", { days: formatDays(type.used) })}
             </p>
+            {waitingLine(type.waiting) && (
+              <p className="px-3 pb-2.5 text-[13px] text-amber-900">{waitingLine(type.waiting)}</p>
+            )}
           </section>
         ),
       )}
@@ -88,13 +108,12 @@ export function TimeOffSection({ person, timeOffTypes, onBook }: Props) {
                   <span className="ml-2 text-muted-foreground">{periodOf(type)}</span>
                 )}
               </dt>
-              <dd className="text-muted-foreground">
-                {t("people.panel.timeOff.recorded", { days: formatDays(type.used) })}
-              </dd>
+              <dd className="text-muted-foreground">{recordedLine(type.used, type.waiting)}</dd>
             </div>
           ))}
         </dl>
       )}
+      {requests && <TimeOffRequests requests={requests} />}
     </section>
   );
 }

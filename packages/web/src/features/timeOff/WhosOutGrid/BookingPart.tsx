@@ -12,17 +12,25 @@ type Props = {
   onOpen: () => void;
 };
 
-/** One day's part of a booking's bar, which opens the booking. */
+/** One day's part of a booking's bar, hatched while it waits for approval, which opens the booking. */
 export function BookingPart({ timeOff, dayPart, first, last, onOpen }: Props) {
   const label = bookingTooltip({
     typeName: timeOff.timeOffType?.name ?? null,
     startDate: timeOff.startDate,
     endDate: timeOff.endDate,
     cost: timeOff.cost ?? null,
+    status: timeOff.status ?? null,
   });
-  const style = timeOff.timeOffType
-    ? { background: tileStyle(timeOff.timeOffType.colour).background }
-    : undefined;
+  const colour = timeOff.timeOffType && tileStyle(timeOff.timeOffType.colour).background;
+  // A request waiting for approval is hatched in its type's colour; only who may read it sees it.
+  const style = !colour
+    ? undefined
+    : timeOff.status === "REQUESTED"
+      ? {
+          background: `repeating-linear-gradient(45deg, ${colour} 0 3px, transparent 3px 6px)`,
+          boxShadow: `inset 0 0 0 1.5px ${colour}`,
+        }
+      : { background: colour };
   return (
     <button
       type="button"

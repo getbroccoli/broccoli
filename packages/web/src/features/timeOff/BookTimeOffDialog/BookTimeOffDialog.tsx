@@ -1,34 +1,27 @@
 import { useQuery } from "@apollo/client/react";
 import { CaretDown } from "@phosphor-icons/react";
-import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { useEffect, useState } from "react";
 
-import {
-  BookingPeopleDocument,
-  BookTimeOffDocument,
-  EmployeePanelDocument,
-  TimeOffBookingPreviewDocument,
-  WhosOutDocument,
-} from "@/__generated__/graphql";
-import { PayloadFailure, usePayloadMutation } from "@/apollo";
+import { BookingPeopleDocument } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
+import { modeOf } from "@/features/employees";
 import { companyToday } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
-import { formatDays } from "@/lib/formatDays";
 
-import { evictWhosOut } from "../cache";
 import { BookingSummary } from "./BookingSummary";
 import { DatesPane } from "./DatesPane";
 import { DayByDayPane } from "./DayByDayPane";
 import { Field } from "./Field";
+import { PersonLine } from "./PersonLine";
 import { TypeMenu } from "./TypeMenu";
 import { WhoPicker } from "./WhoPicker";
 import { dateRange } from "@/lib/formatDate";
 
-import { bookedToast } from "../timeOffText";
+import { dialogWords, headerMode, offeredTypes } from "../timeOffText";
 import { useBookingDraft } from "./useBookingDraft";
+import { useSaveTimeOff } from "./useSaveTimeOff";
 
 type Props = {
   /** The person and day a day click or the panel opens it with. */
@@ -42,7 +35,10 @@ type Props = {
 
 type Pane = "dates" | "days" | null;
 
-/** Books time off for someone: who, type, dates and half days, its cost and the balance after. */
+/**
+ * Books time off for someone, or asks for one's own with approval, as the viewer may for the person
+ * picked: who, type, dates and half days, its cost and the balance after.
+ */
 export function BookTimeOffDialog({
   employeeId,
   date,
@@ -52,50 +48,31 @@ export function BookTimeOffDialog({
 }: Props) {
   const draft = useBookingDraft({ employeeId, date });
   const [pane, setPane] = useState<Pane>(employeeId && !date ? "dates" : date ? "days" : null);
-  const people =
-    useQuery(BookingPeopleDocument).data?.employees.edges.map(({ node }) => node) ?? [];
+  const people = (
+    useQuery(BookingPeopleDocument).data?.employees.edges.map(({ node }) => node) ?? []
+  ).filter(({ canCreate }) => canCreate !== "NOT_ALLOWED");
   const person = people.find(({ id }) => id === draft.employeeId);
-  const type = draft.types?.find(({ timeOffType }) => timeOffType.id === draft.typeId);
-  const [book, booking] = usePayloadMutation(BookTimeOffDocument, {
-    update: (cache) => evictWhosOut(cache, draft.employeeId),
-    refetch: [WhosOutDocument, EmployeePanelDocument, TimeOffBookingPreviewDocument],
-  });
+  const mode =
+    (person ? modeOf(person.canCreate) : headerMode(people.map(({ canCreate }) => canCreate))) ??
+    "book";
+  const type = offeredTypes(draft.types ?? [], mode).find(
+    ({ timeOffType }) => timeOffType.id === draft.typeId,
+  );
+  const firstOffered = offeredTypes(draft.types ?? [], mode)[0]?.timeOffType.id;
+  // A request offers only types that need approval: start on the first of them, not on Sickness.
+  useEffect(() => {
+    if (!type && firstOffered) draft.setTypeId(firstOffered);
+  }, [type, firstOffered, draft]);
+  const { save, saving } = useSaveTimeOff({ draft, mode, person, viewerEmployeeId, onClose });
   const preview = draft.preview;
   const window = bookingWindow();
   const current = draft.currentPreview;
-  const canBook = Boolean(
-    draft.input && current && !current.refusal && current.cost > 0 && !booking.loading,
+  const canSave = Boolean(
+    person && draft.input && type && current && !current.refusal && current.cost > 0 && !saving,
   );
-  const mounted = useRef(false);
-
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-
-  const save = async () => {
-    const booked = await book({ variables: { input: draft.input! } }).catch((error: unknown) => {
-      if (error instanceof PayloadFailure) {
-        // Refused since the preview, such as a clash booked meanwhile: the fresh preview says why.
-        toast.error(t("timeOff.dialog.refused"));
-        draft.refreshPreview();
-      } else {
-        toast.error(t("timeOff.dialog.failed"));
-      }
-      return null;
-    });
-    if (!booked?.timeOff || !person) {
-      return;
-    }
-    toast(bookedToast(booked.timeOff.cost ?? 0, person.firstName, person.id === viewerEmployeeId));
-    // Browser Back may have closed this dialog and opened another while booking.
-    if (mounted.current) onClose();
-  };
-
+  const words = dialogWords(mode, canSave ? current!.cost : null);
   return (
-    <Dialog open onOpenChange={(open) => !open && !booking.loading && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && !saving && onClose()}>
       <DialogContent
         closeLabel={t("timeOff.details.close")}
         className={cn(
@@ -103,22 +80,27 @@ export function BookTimeOffDialog({
           pane ? "sm:max-w-5xl" : "sm:max-w-xl",
         )}
       >
-        <DialogTitle className="text-lg">{t("timeOff.book")}</DialogTitle>
+        <DialogTitle className="text-lg">{words.title}</DialogTitle>
         <div className={cn("grid gap-6", pane && "md:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]")}>
           <div className="flex flex-col gap-5">
             <Field label={t("timeOff.dialog.who")}>
-              <WhoPicker
-                people={people}
-                person={person}
-                onPick={(id) => {
-                  draft.pickPerson(id);
-                  if (!draft.range) setPane("dates");
-                }}
-              />
+              {people.length === 1 && person ? (
+                // Someone who may only ask for their own time off has nobody else to pick.
+                <PersonLine person={person} />
+              ) : (
+                <WhoPicker
+                  people={people}
+                  person={person}
+                  onPick={(id) => {
+                    draft.pickPerson(id);
+                    if (!draft.range) setPane("dates");
+                  }}
+                />
+              )}
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label={t("timeOff.dialog.type")}>
-                <TypeMenu draft={draft} firstName={person?.firstName ?? ""} />
+                <TypeMenu draft={draft} firstName={person?.firstName ?? ""} mode={mode} />
               </Field>
               <Field label={t("timeOff.dialog.dates")}>
                 <Button
@@ -143,10 +125,11 @@ export function BookTimeOffDialog({
                 {t("timeOff.dialog.previewFailed")}
               </p>
             )}
-            {person && preview && draft.input && !draft.previewFailed && (
+            {person && type && preview && draft.input && !draft.previewFailed && (
               <BookingSummary
                 draft={draft}
                 firstName={person.firstName}
+                mode={mode}
                 typeName={type?.timeOffType.name ?? null}
                 window={window}
                 onToggleDays={() => setPane(pane === "days" ? null : "days")}
@@ -155,10 +138,16 @@ export function BookTimeOffDialog({
             )}
             {person && (
               <Field
-                label={t("timeOff.dialog.note", { name: person.firstName })}
+                htmlFor="time-off-note"
+                label={
+                  mode === "book"
+                    ? t("timeOff.dialog.note", { name: person.firstName })
+                    : t("timeOff.dialog.noteForApprover")
+                }
                 hint={t("timeOff.dialog.optional")}
               >
                 <textarea
+                  id="time-off-note"
                   value={draft.note}
                   maxLength={1000}
                   onChange={(event) => draft.setNote(event.target.value)}
@@ -191,16 +180,14 @@ export function BookTimeOffDialog({
         </div>
         <DialogFooter className="items-center max-sm:mt-auto max-sm:shrink-0 max-sm:rounded-none sm:justify-between">
           <p className="text-sm text-muted-foreground">
-            {person ? t("timeOff.dialog.bookedStraightAway") : t("timeOff.dialog.pickWho")}
+            {person ? words.footer : t("timeOff.dialog.pickWho")}
           </p>
           <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={onClose} disabled={booking.loading}>
+            <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
               {t("timeOff.dialog.cancel")}
             </Button>
-            <Button type="button" disabled={!canBook} onClick={() => void save()}>
-              {canBook
-                ? t("timeOff.dialog.bookDays", { days: formatDays(current!.cost) })
-                : t("timeOff.book")}
+            <Button type="button" disabled={!canSave} onClick={() => void save()}>
+              {words.button}
             </Button>
           </div>
         </DialogFooter>

@@ -10,6 +10,7 @@ import { formatDayCount } from "@/lib/formatDays";
 import { AdjustAllowanceDialog } from "./AdjustAllowanceDialog";
 import { AllowanceHistory } from "./AllowanceHistory";
 import { TimeOffFigure } from "./TimeOffFigure";
+import { waitingLine } from "./timeOffRequestText";
 
 type TimeOffType = NonNullable<EmployeePanel_EmployeeFragment["timeOffTypes"]>[number];
 
@@ -63,6 +64,9 @@ export function AllowanceCard({ employeeId, type, period, adjustFor }: Props) {
           emphasis
         />
       </dl>
+      {waitingLine(type.waiting) && (
+        <p className="px-3 pb-2.5 text-[13px] text-amber-900">{waitingLine(type.waiting)}</p>
+      )}
       {allowanceId && (
         <>
           <div className="px-1.5 pb-1.5">

@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import type { DialogMode } from "@/features/employees";
 import { t } from "@/i18n";
 
 import { costSentence, refusalMessage } from "../timeOffText";
@@ -8,6 +9,7 @@ import type { BookingDraft } from "./useBookingDraft";
 type Props = {
   draft: BookingDraft;
   firstName: string;
+  mode: DialogMode;
   typeName: string | null;
   window: { from: string; until: string };
   onToggleDays: () => void;
@@ -18,6 +20,7 @@ type Props = {
 export function BookingSummary({
   draft,
   firstName,
+  mode,
   typeName,
   window,
   onToggleDays,
@@ -55,7 +58,7 @@ export function BookingSummary({
           )}
         </div>
       ) : preview.balances.length > 0 ? (
-        <BalanceStrip draft={draft} firstName={firstName} />
+        <BalanceStrip draft={draft} firstName={firstName} mode={mode} />
       ) : (
         <p className="text-sm text-muted-foreground">
           {t("timeOff.dialog.noBalance", { type: typeName ?? "" })}

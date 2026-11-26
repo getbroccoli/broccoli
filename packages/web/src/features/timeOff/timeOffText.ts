@@ -11,6 +11,8 @@ export type RefusalReason =
   | "OUTSIDE_EMPLOYMENT"
   | "LONGER_THAN_A_YEAR";
 
+import type { DialogMode, Permit, TimeOffStatus } from "@/features/employees";
+
 /** One line of the dialog's balance strip. */
 export interface BalanceLine {
   label: string | null;
@@ -75,6 +77,7 @@ export function balanceLines(
     usedAfter: number;
   }[],
   firstName: string,
+  mode: DialogMode = "book",
 ): BalanceLine[] {
   return balances.map((change) => {
     const label = balances.length > 1 ? `${change.periodStart.slice(0, 4)}:` : null;
@@ -89,7 +92,9 @@ export function balanceLines(
     }
     const over =
       change.remainingAfter < 0
-        ? t("timeOff.text.over", { days: formatDays(-change.remainingAfter), name: firstName })
+        ? mode === "book"
+          ? t("timeOff.text.over", { days: formatDays(-change.remainingAfter), name: firstName })
+          : t("timeOff.text.overRequest", { days: formatDays(-change.remainingAfter) })
         : null;
     return {
       label,
@@ -130,27 +135,42 @@ export function refusalMessage(
   }
 }
 
-/** A bar's tooltip: "Annual leave · 7–9 Dec · 2.5 days", or "Off · 3 Nov" when private. */
+/**
+ * A bar's tooltip: "Annual leave · 7–9 Dec · 2.5 days", "Off · 3 Nov" when private, and
+ * "· Waiting for approval" after a request.
+ */
 export function bookingTooltip(timeOff: {
   typeName: string | null;
   startDate: string;
   endDate: string;
   cost: number | null;
+  status: TimeOffStatus | null;
 }): string {
   const type = timeOff.typeName ?? t("timeOff.off");
   const dates = dateRange(timeOff.startDate, timeOff.endDate);
-  return timeOff.cost === null
-    ? t("timeOff.tooltipShort", { type, dates })
-    : t("timeOff.tooltip", { type, dates, cost: formatDays(timeOff.cost) });
+  const tooltip =
+    timeOff.cost === null
+      ? t("timeOff.tooltipShort", { type, dates })
+      : t("timeOff.tooltip", { type, dates, cost: formatDays(timeOff.cost) });
+  return timeOff.status === "REQUESTED" ? t("timeOff.tooltipWaiting", { tooltip }) : tooltip;
 }
 
-/** How many people are off on each date; a person counts once a date, a half day too. */
+/**
+ * How many people are off on each date, approved time off only; a person counts once a date, a
+ * half day too. A null status is a colleague's time off, which is always approved.
+ */
 export function offCounts(
-  people: readonly { timeOff: readonly { days: readonly { date: string }[] }[] }[],
+  people: readonly {
+    timeOff: readonly { status: TimeOffStatus | null; days: readonly { date: string }[] }[];
+  }[],
 ): Map<string, number> {
   const counts = new Map<string, number>();
   for (const person of people) {
-    const dates = new Set(person.timeOff.flatMap(({ days }) => days.map(({ date }) => date)));
+    const dates = new Set(
+      person.timeOff
+        .filter(({ status }) => status === null || status === "APPROVED")
+        .flatMap(({ days }) => days.map(({ date }) => date)),
+    );
     for (const date of dates) {
       counts.set(date, (counts.get(date) ?? 0) + 1);
     }
@@ -164,6 +184,45 @@ export function bookedToast(cost: number, firstName: string, isSelf: boolean): s
     days: formatDays(cost),
     name: isSelf ? t("timeOff.text.you") : firstName,
   });
+}
+
+/** The types the dialog offers: all of them to book, those that need approval to ask for. */
+export function offeredTypes<Type extends { timeOffType: { needsApproval: boolean } }>(
+  types: readonly Type[],
+  mode: DialogMode,
+): Type[] {
+  return types.filter(({ timeOffType }) => mode === "book" || timeOffType.needsApproval);
+}
+
+/** The page's button: Book when the viewer books anyone straight away, else Request when they may ask. */
+export function headerMode(permits: readonly Permit[]): DialogMode | null {
+  if (permits.includes("ALLOWED")) return "book";
+  return permits.includes("ALLOWED_WITH_APPROVAL") ? "request" : null;
+}
+
+/** The dialog's title, footer and button for its mode; the button names the cost once known. */
+export function dialogWords(
+  mode: DialogMode,
+  cost: number | null,
+): { title: string; footer: string; button: string } {
+  const title = mode === "book" ? t("timeOff.book") : t("timeOff.request");
+  const days = cost === null ? null : formatDays(cost);
+  return mode === "book"
+    ? {
+        title,
+        footer: t("timeOff.dialog.bookedStraightAway"),
+        button: days ? t("timeOff.dialog.bookDays", { days }) : title,
+      }
+    : {
+        title,
+        footer: t("timeOff.dialog.sentForApproval"),
+        button: days ? t("timeOff.dialog.requestDays", { days }) : title,
+      };
+}
+
+/** "2.5 days requested." */
+export function requestedToast(cost: number): string {
+  return t("timeOff.text.requested", { days: formatDays(cost) });
 }
 
 function monthParts(month: string): [number, number] {

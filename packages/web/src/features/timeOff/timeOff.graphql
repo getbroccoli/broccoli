@@ -15,6 +15,19 @@ fragment WhosOutTimeOff on TimeOff {
   cost
   note
   bookedAt
+  status
+  decision {
+    decidedBy {
+      id
+      firstName
+      lastName
+    }
+    decidedAt
+    comment
+  }
+  access {
+    canDelete
+  }
 }
 
 # Everyone the viewer may read, by name, with their month of who's out.
@@ -26,6 +39,7 @@ query WhosOut($from: Date!, $until: Date!) {
         firstName
         lastName
         avatarUrl
+        canCreate(recordType: TIME_OFF)
         whosOut(from: $from, until: $until) {
           days {
             date
@@ -41,7 +55,7 @@ query WhosOut($from: Date!, $until: Date!) {
   }
 }
 
-# Who an admin can book for, by name.
+# Who the viewer can book for or ask for, by name, with how.
 query BookingPeople {
   employees(first: 10000) {
     edges {
@@ -51,6 +65,7 @@ query BookingPeople {
         lastName
         jobTitle
         avatarUrl
+        canCreate(recordType: TIME_OFF)
       }
     }
   }
@@ -67,11 +82,13 @@ query BookingPersonTypes($id: ID!) {
         name
         colour
         icon
+        needsApproval
       }
       balance
       entitlement
       remaining
       used
+      waiting
     }
   }
 }
@@ -125,6 +142,28 @@ mutation BookTimeOff($input: TimeOffBookInput!) {
   }
 }
 
+mutation RequestTimeOff($input: TimeOffBookInput!) {
+  timeOff {
+    requestTimeOff(input: $input) {
+      timeOff {
+        ...WhosOutTimeOff @unmask
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
+        }
+      }
+    }
+  }
+}
+
 mutation CancelTimeOff($input: TimeOffCancelInput!) {
   timeOff {
     cancelTimeOff(input: $input) {
@@ -148,6 +187,7 @@ query BookingCompanyTypes {
         name
         colour
         icon
+        needsApproval
       }
     }
   }

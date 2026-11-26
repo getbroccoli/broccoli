@@ -1,4 +1,5 @@
 import { useQuery } from "@apollo/client/react";
+import { useRouteContext } from "@tanstack/react-router";
 import { useState } from "react";
 
 import {
@@ -111,15 +112,21 @@ export function useBookingDraft(initial: { employeeId?: string; date?: string })
 
 /** The person's types with their figures, then every other company type. */
 function useBookingTypes(employeeId: string): BookingType[] | undefined {
+  const { me } = useRouteContext({ from: "/_authenticated" });
+  // Only admins read every company type; whoever else asks for time off gets their own types.
+  const admin = me.operations.includes("MANAGE_WORKSPACE");
   const own = useQuery(BookingPersonTypesDocument, {
     variables: { id: employeeId },
     skip: !employeeId,
+    // A decision in Tasks changes the figures without a write here.
+    fetchPolicy: "cache-and-network",
   }).data?.employee?.timeOffTypes;
-  const company = useQuery(BookingCompanyTypesDocument).data?.timeOffSettings.timeOffTypes;
-  if (!own || !company) {
+  const company = useQuery(BookingCompanyTypesDocument, { skip: !admin }).data?.timeOffSettings
+    .timeOffTypes;
+  if (!own || (admin && !company)) {
     return undefined;
   }
-  const others = company.filter(
+  const others = (company ?? []).filter(
     ({ timeOffType }) => !own.some((type) => type.timeOffType.id === timeOffType.id),
   );
   return [...own, ...others];

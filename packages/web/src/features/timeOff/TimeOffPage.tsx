@@ -11,7 +11,7 @@ import { t } from "@/i18n";
 
 import { BookingDetailsDialog } from "./BookingDetailsDialog";
 import { BookTimeOffDialog } from "./BookTimeOffDialog";
-import { monthRange, shiftMonth } from "./timeOffText";
+import { headerMode, monthRange, shiftMonth } from "./timeOffText";
 import { WhosOutGrid } from "./WhosOutGrid";
 
 const MONTH_TITLE = new Intl.DateTimeFormat("en-GB", {
@@ -20,15 +20,18 @@ const MONTH_TITLE = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-/** Everyone's time off, a month at a time; admins book from here. */
+/** Everyone's time off, a month at a time; whoever may book or ask for time off starts it here. */
 export function TimeOffPage() {
   const { month, book } = useSearch({ from: "/_authenticated/time-off" });
   const navigate = useNavigate({ from: "/time-off" });
   const { me } = useRouteContext({ from: "/_authenticated" });
-  // shortcut: booking follows the admin grant until profiles grant `time_off.create` by scope.
-  const canBook = me.operations.includes("MANAGE_WORKSPACE");
   const range = monthRange(month);
-  const { data, error, refetch } = useQuery(WhosOutDocument, { variables: range });
+  // A decision in Tasks changes the month without a write here, so revisits read it again.
+  const { data, error, refetch } = useQuery(WhosOutDocument, {
+    variables: range,
+    fetchPolicy: "cache-and-network",
+  });
+  const mode = headerMode(data?.employees.edges.map(({ node }) => node.canCreate) ?? []);
   const company = useQuery(WorkspaceMenuDocument, { fetchPolicy: "cache-first" }).data?.company;
   const [filter, setFilter] = useState("");
   const query = useDeferredValue(filter.trim().toLowerCase());
@@ -70,10 +73,13 @@ export function TimeOffPage() {
               : t("timeOff.subtitleNoCompany")}
           </p>
         </div>
-        {canBook && (
-          <Button onClick={() => setBooking({})}>
+        {mode && (
+          <Button
+            // Someone who may only ask for time off asks for their own.
+            onClick={() => setBooking(mode === "book" ? {} : { employeeId: me.employee?.id })}
+          >
             <CalendarPlus aria-hidden />
-            {t("timeOff.book")}
+            {mode === "book" ? t("timeOff.book") : t("timeOff.request")}
           </Button>
         )}
       </header>
@@ -127,7 +133,7 @@ export function TimeOffPage() {
             range={range}
             today={companyToday()}
             onOpen={(timeOff) => setOpenedId(timeOff.id)}
-            onBook={canBook ? (employeeId, date) => setBooking({ employeeId, date }) : undefined}
+            onBook={(employeeId, date) => setBooking({ employeeId, date })}
           />
         )
       )}
@@ -151,7 +157,7 @@ export function TimeOffPage() {
           employeeId={opened.person.id}
           timeOff={opened.timeOff}
           person={opened.person}
-          canCancel={canBook}
+          canCancel={opened.timeOff.access.canDelete && opened.timeOff.status === "APPROVED"}
           onClose={() => setOpenedId(null)}
         />
       )}

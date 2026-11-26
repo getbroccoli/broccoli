@@ -1,11 +1,17 @@
 export { Avatar } from "./Avatar";
 export { EmployeeDirectory } from "./EmployeeDirectory";
 export {
+  decisionLine,
   DEFAULT_EMPLOYEE_PANEL_SEARCH,
+  type DialogMode,
   DiscardChangesDialog,
   EmployeePanel,
   employeePanelSearch,
   listSearchOf,
+  modeOf,
+  type Permit,
+  type TimeOffStatus,
+  TimeOffStatusChip,
 } from "./EmployeePanel";
 export {
   DEFAULT_EMPLOYEE_LIST_SEARCH,
