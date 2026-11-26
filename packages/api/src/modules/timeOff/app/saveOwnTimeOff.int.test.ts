@@ -97,20 +97,32 @@ test("a read-only agent cannot save leave for its employee", async ({ orm, seed 
   });
 });
 
-test("an employee cannot ask for Sickness even when it is offered", async ({
-  orm,
-  seed,
-  transact,
-}) => {
-  const { requests, requester, ownInput } = await leaveRequestSetup(orm, seed);
+test("an employee's agent books their Sickness straight away", async ({ orm, seed, transact }) => {
+  const { requests, requesterAgent, ownInput, tasks, manager } = await leaveRequestSetup(orm, seed);
   const timeOffTypeId = await offerSickness(orm, seed, transact);
 
-  await expect(
-    requests.saveOwnTimeOff(requester, { ...ownInput, timeOffTypeId, expectedDays: 2.5 }),
-  ).rejects.toMatchObject({
-    code: "INVALID_INPUT",
-    fieldErrors: [{ field: "timeOffTypeId", code: "needs_no_approval" }],
+  const saved = await requests.saveOwnTimeOff(requesterAgent, {
+    ...ownInput,
+    timeOffTypeId,
+    expectedDays: 2.5,
   });
+
+  expect(saved).toMatchObject({ timeOffTypeId, status: "approved" });
+  expect((await tasks.listMyTasks(manager)).needsYou).toEqual([]);
+});
+
+test("an employee's agent books Annual leave straight away after it is switched to No approval", async ({
+  orm,
+  seed,
+}) => {
+  const { requests, requesterAgent, ownInput, tasks, manager, changeAnnualLeaveApproval } =
+    await leaveRequestSetup(orm, seed);
+  await changeAnnualLeaveApproval(null);
+
+  const saved = await requests.saveOwnTimeOff(requesterAgent, { ...ownInput, expectedDays: 2.5 });
+
+  expect(saved).toMatchObject({ timeOffTypeId: ownInput.timeOffTypeId, status: "approved" });
+  expect((await tasks.listMyTasks(manager)).needsYou).toEqual([]);
 });
 
 test("a caller without an employee cannot save their own leave", async ({ orm, seed }) => {
@@ -125,7 +137,7 @@ test("a caller without an employee cannot save their own leave", async ({ orm, s
 });
 
 test.for([
-  ["EMPLOYEE", "requested_with_approval", "refused"],
+  ["EMPLOYEE", "requested_with_approval", "booked_straight_away"],
   ["ADMIN", "booked_straight_away", "booked_straight_away"],
 ] as const)(
   "%s sees how they can save each type of time off",
