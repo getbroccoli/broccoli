@@ -1,0 +1,44 @@
+query AllowanceHistory($employeeId: ID!) {
+  employee(id: $employeeId) {
+    id
+    timeOffTypes {
+      allowanceId
+      history {
+        recordedAt
+        cause
+        causeDate
+        firstBookedDay
+        lastBookedDay
+        amount
+        balanceAfter
+        parts {
+          kind
+          amount
+        }
+        author {
+          kind
+          userId
+          email
+        }
+        comment
+      }
+    }
+  }
+}
+
+mutation AdjustAllowance($input: AllowanceAdjustInput!) {
+  timeOff {
+    adjustAllowance(input: $input) {
+      employeeTimeOffType {
+        allowanceId
+        remaining
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+      }
+    }
+  }
+}

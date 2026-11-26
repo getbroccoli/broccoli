@@ -110,6 +110,7 @@ fragment EmployeePanel_employee on Employee {
       name
     }
     balance
+    allowanceId
     periodStart
     periodEnd
     entitlement

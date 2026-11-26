@@ -1,24 +1,30 @@
+import { useRouteContext } from "@tanstack/react-router";
+
 import type { EmployeePanel_EmployeeFragment } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { formatCalendarDate } from "@/lib/formatDate";
 import { formatDays } from "@/lib/formatDays";
 
-import { TimeOffFigure } from "./TimeOffFigure";
+import { AllowanceCard } from "./AllowanceCard";
 
 type TimeOffType = NonNullable<EmployeePanel_EmployeeFragment["timeOffTypes"]>[number];
 
 type Props = {
+  person: { id: string; firstName: string };
   /** The person's time off types, Annual leave first; the caller may read them. */
   timeOffTypes: readonly TimeOffType[];
   /** Set for who may book: opens Book time off for this person. */
   onBook?: () => void;
 };
 
-const dayCount = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
-
 /** A person's time off in their current leave year: allowances first, then what is only recorded. */
-export function TimeOffSection({ timeOffTypes, onBook }: Props) {
+export function TimeOffSection({ person, timeOffTypes, onBook }: Props) {
+  const { me } = useRouteContext({ from: "/_authenticated" });
+  // shortcut: adjusting follows the admin grant until profiles grant it by scope.
+  const adjustFor = me.operations.includes("MANAGE_WORKSPACE")
+    ? { firstName: person.firstName, isReader: me.employee?.id === person.id }
+    : undefined;
   const first = timeOffTypes[0];
   const allowances = timeOffTypes.filter(({ balance }) => balance !== "NO_BALANCE");
   const recorded = timeOffTypes.filter(({ balance }) => balance === "NO_BALANCE");
@@ -41,45 +47,33 @@ export function TimeOffSection({ timeOffTypes, onBook }: Props) {
         )}
       </div>
       {!first && <p className="text-sm text-muted-foreground">{t("people.panel.timeOff.empty")}</p>}
-      {allowances.map((type) => (
-        <section
-          key={type.timeOffType.id}
-          aria-label={type.timeOffType.name}
-          className="overflow-hidden rounded-xl border border-border"
-        >
-          <h3 className="flex justify-between gap-2 border-b border-border/60 bg-sidebar px-3 py-2 text-[13px] font-medium">
-            {type.timeOffType.name}
-            {differsFrom(type, first) && (
-              <span className="font-normal text-muted-foreground">{periodOf(type)}</span>
-            )}
-          </h3>
-          {type.balance === "BALANCE_FROM_ALLOWANCE" ? (
-            <dl className="grid grid-cols-2 gap-x-2 gap-y-3 px-3 py-2.5 sm:grid-cols-4">
-              <TimeOffFigure
-                label={t("people.panel.timeOff.entitlement")}
-                value={dayCount.format(type.entitlement ?? 0)}
-              />
-              <TimeOffFigure
-                label={t("people.panel.timeOff.bankHolidays")}
-                value={dayCount.format(type.bankHolidays ?? 0)}
-              />
-              <TimeOffFigure
-                label={t("people.panel.timeOff.used")}
-                value={dayCount.format(type.used)}
-              />
-              <TimeOffFigure
-                label={t("people.panel.timeOff.remaining")}
-                value={dayCount.format(type.remaining ?? 0)}
-                emphasis
-              />
-            </dl>
-          ) : (
+      {allowances.map((type) =>
+        type.balance === "BALANCE_FROM_ALLOWANCE" ? (
+          <AllowanceCard
+            key={type.timeOffType.id}
+            employeeId={person.id}
+            type={type}
+            period={{ label: periodOf(type), shownOnCard: differsFrom(type, first) }}
+            adjustFor={adjustFor}
+          />
+        ) : (
+          <section
+            key={type.timeOffType.id}
+            aria-label={type.timeOffType.name}
+            className="overflow-hidden rounded-xl border border-border"
+          >
+            <h3 className="flex justify-between gap-2 border-b border-border/60 bg-sidebar px-3 py-2 text-[13px] font-medium">
+              {type.timeOffType.name}
+              {differsFrom(type, first) && (
+                <span className="font-normal text-muted-foreground">{periodOf(type)}</span>
+              )}
+            </h3>
             <p className="px-3 py-2.5 text-sm">
               {t("people.panel.timeOff.unlimited", { days: formatDays(type.used) })}
             </p>
-          )}
-        </section>
-      ))}
+          </section>
+        ),
+      )}
       {recorded.length > 0 && (
         <dl className="overflow-hidden rounded-xl border border-border text-sm">
           {recorded.map((type) => (
