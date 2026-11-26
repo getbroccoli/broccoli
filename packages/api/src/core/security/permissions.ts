@@ -150,6 +150,8 @@ export const PERMISSION_PROFILES: Record<PermissionProfile, ProfileDefinition> =
         scope: "all_reports",
       },
       { key: "time_off.read.self", object: "time_off", actions: ["read"], scope: "self" },
+      // Their own time off is asked for: write modes turn this grant into a request.
+      { key: "time_off.create.self", object: "time_off", actions: ["create"], scope: "self" },
       {
         key: "time_off.read.reports",
         object: "time_off",

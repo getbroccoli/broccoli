@@ -407,7 +407,7 @@ type Query {
   Without an answer a location is England and Wales, unsure. Admins, and the browser holding setup.
   """
   locationCalendarSuggestions(locationNames: [String!]!): [LocationCalendarSuggestion!]!
-  "What booking would cost and do, without writing anything. Admins only, for now."
+  "What booking or asking for it would cost and do, without writing anything; for whoever may create the person's time off."
   timeOffBookingPreview(input: TimeOffBookInput!): TimeOffBookingPreview!
 }
 
@@ -487,7 +487,7 @@ type TimeOffBookingPreview {
   cost: Float!
   "One per leave year the booking touches, oldest first; empty for a type without a balance, or when refused."
   balances: [TimeOffBalanceChange!]!
-  "The first reason it cannot be booked; null when it can."
+  "The first booking rule it breaks; null when it breaks none. Whether the caller books it or asks for it is `Employee.canCreate`."
   refusal: TimeOffBookingRefusal
 }
 
@@ -579,7 +579,7 @@ type TimeOffMutations {
   saveTimeOffStop(input: TimeOffStopSaveInput!): TimeOffPolicySavePayload!
   "Removes a rules change that has not started; the rules before it run on, and a planned offer leaves the type not offered. Refused with a ConflictError once it has started. Admins only."
   cancelPolicyChange(input: TimeOffPolicyCancelChangeInput!): TimeOffPolicyCancelChangePayload!
-  "Books approved time off for a person's working days from start to end; refused with an InvalidInputError whose field `dates` carries a TimeOffBookingRefusalReason in lower case. Booking over the balance is allowed. Admins only, for now."
+  "Books approved time off for a person's working days from start to end; refused with an InvalidInputError whose field `dates` carries a TimeOffBookingRefusalReason in lower case. Booking over the balance is allowed. Only for people the caller may book for straight away (`Employee.canCreate` ALLOWED); otherwise FORBIDDEN, and for one's own time off (`ALLOWED_WITH_APPROVAL`) the message says it needs to be requested."
   bookTimeOff(input: TimeOffBookInput!): TimeOffBookPayload!
   "Cancels a whole booking, giving its days back. Admins only, for now."
   cancelTimeOff(input: TimeOffCancelInput!): TimeOffCancelPayload!
@@ -715,4 +715,9 @@ type PersonTimeOffRules {
   "The last day; null: open-ended."
   endDate: Date
   rules: TimeOffPolicyVersion!
+}
+
+# Time off is a record type.
+enum RecordType {
+  TIME_OFF
 }

@@ -190,6 +190,45 @@ test("returns each listed employee's writable fields for the signed-in employee"
   });
 });
 
+test.for([
+  { profile: "EMPLOYEE", own: "ALLOWED_WITH_APPROVAL", other: "NOT_ALLOWED" },
+  { profile: "ADMIN", own: "ALLOWED", other: "ALLOWED" },
+] as const)(
+  "returns each listed employee's create permits to the $profile caller",
+  async ({ profile, own, other }, { env }) => {
+    await env.seed.owner();
+    const credentials = { email: "anna@example.com", password: TEST_OWNER.password };
+    const user = await env.seed.user({
+      ...credentials,
+      permissionProfiles: profile === "ADMIN" ? ["ADMIN"] : [],
+    });
+    const employee = await env.seed.employee({ firstName: "Anna", userId: user.id });
+    const colleague = await env.seed.employee({ firstName: "Ben" });
+    const { browser } = await env.signIn(credentials);
+
+    const response = await browser.graphql(`
+    query Employees {
+      employees { edges { node {
+        id
+        timeOff: canCreate(recordType: TIME_OFF)
+        task: canCreate(recordType: TASK)
+      } } }
+    }
+  `);
+
+    expect(await response.json()).toEqual({
+      data: {
+        employees: {
+          edges: [
+            { node: { id: employee.id, timeOff: own, task: "NOT_ALLOWED" } },
+            { node: { id: colleague.id, timeOff: other, task: "NOT_ALLOWED" } },
+          ],
+        },
+      },
+    });
+  },
+);
+
 test("refuses an employee updating a coworker's job title through GraphQL", async ({ env }) => {
   await env.seed.owner();
   const credentials = { email: "anna@example.com", password: TEST_OWNER.password };

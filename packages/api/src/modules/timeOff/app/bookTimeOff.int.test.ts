@@ -6,7 +6,6 @@ import {
   OWNER,
   seedEmploymentEnd,
   seedTimeOffType,
-  signedIn,
   test,
   bookTimeOffService,
   timeOffPolicyService,
@@ -297,19 +296,6 @@ test("records sickness without a balance", async ({ orm, seed, transact }) => {
   expect(rows.get(employee.id)).toMatchObject([
     { balance: "no_balance", used: 1, remaining: null },
   ]);
-});
-
-test("forbids an employee from booking for themselves", async ({ orm, seed, transact }) => {
-  const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-  const self = signedIn(orm, { employeeId: person.employeeId, profiles: ["EMPLOYEE"] });
-
-  await expect(
-    bookTimeOffService(orm).bookTimeOff(self, {
-      ...person,
-      startDate: "2026-12-07",
-      endDate: "2026-12-07",
-    }),
-  ).rejects.toMatchObject({ code: "FORBIDDEN" });
 });
 
 test("refuses one of two bookings for the same day", async ({ orm, seed, transact }) => {

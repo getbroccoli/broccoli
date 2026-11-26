@@ -21,6 +21,8 @@ type Employee implements AnyRecord {
   history("Page size, 1 to 10000." first: Int = 50, after: String): RecordChangeConnection!
   "What the signed-in user may do to this employee."
   access: RecordAccess!
+  "Whether the signed-in user may create a record of this type about this person: straight away, only with approval, or not at all."
+  canCreate(recordType: RecordType!): Permit!
   "The permission profiles of the user who signs in as this person, EMPLOYEE first; null when nobody does."
   permissionProfiles: [PermissionProfile!]
   "Whether this person can sign in, and their invite; null for callers who may not manage invites."

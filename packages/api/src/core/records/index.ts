@@ -14,6 +14,7 @@ export {
   createRecordCloneService,
   createRecordHistoryReaderService,
   createRecordHistoryService,
+  createWriteModeService,
 } from "./app";
 export { changeReasonSchema, parseChangeReason } from "./domain";
 
@@ -24,6 +25,7 @@ export type {
   RecordProcessCapabilities,
   RecordTypeRegistration,
   RecordTypeRegistry,
+  WriteMode,
 } from "./app";
 export type {
   CauseKinds,

@@ -1,6 +1,7 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import type { Transact, Tx } from "../../../core/db";
 import type { Logger } from "../../../core/logger";
+import { createWriteModeService } from "../../../core/records";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseUuid, todayInLondon } from "../../../utils";
@@ -22,9 +23,9 @@ import type { WhosOutTimeOff } from "./whosOutService";
 
 /** Booking and cancelling a person's time off. */
 export interface BookTimeOffService {
-  /** What booking would cost and do, without writing anything. Admins only, for now. */
+  /** What booking or asking for it would cost and do, without writing anything; for whoever may create it. */
   previewBooking(ctx: SecurityContext, input: BookingInput): Promise<BookingPreview>;
-  /** Books approved time off for its working days and runs the allowance engine. Admins only, for now. */
+  /** Books approved time off for its working days and runs the allowance engine; refuses whoever may only ask for it. */
   bookTimeOff(ctx: SecurityContext, input: BookingInput): Promise<BookedTimeOff>;
   /** Cancels a whole booking, giving its days back. Admins only, for now. */
   cancelTimeOff(ctx: SecurityContext, input: { timeOffId: string }): Promise<void>;
@@ -68,6 +69,8 @@ export interface BookedTimeOff extends WhosOutTimeOff {
   timeOffTypeId: string;
   cost: number;
 }
+
+const writeModes = createWriteModeService();
 
 export function createBookTimeOffService({
   orm,
@@ -117,9 +120,11 @@ async function previewBooking(
   input: BookingInput,
 ): Promise<BookingPreview> {
   const booking = parseBooking(input);
+  // Whoever may create the time off previews it, including someone who may only ask for it.
+  await ctx.requireInScope("time_off", "create", booking.employeeId);
   try {
     return await dependencies.transact(async (tx) => {
-      const person = await begin(dependencies, ctx, tx, booking);
+      const person = await begin(dependencies, tx, booking);
       const { days, refusal } = await checkBooking(dependencies, tx, booking, person);
       const cost = totalCost(days);
       if (refusal) {
@@ -144,8 +149,9 @@ async function bookTimeOff(
   input: BookingInput,
 ): Promise<BookedTimeOff> {
   const booking = parseBooking(input);
+  await writeModes.requireDirectCreate(ctx, "time_off", booking.employeeId, NEEDS_REQUEST);
   const result = await dependencies.transact(async (tx) => {
-    const person = await begin(dependencies, ctx, tx, booking);
+    const person = await begin(dependencies, tx, booking);
     const { days, refusal } = await checkBooking(dependencies, tx, booking, person);
     if (refusal) {
       throw invalidInput([{ field: "dates", code: refusal.reason }]);
@@ -222,6 +228,9 @@ async function cancelTimeOff(
   );
 }
 
+/** Why booking refuses a caller who may only ask for this person's time off, such as their own. */
+const NEEDS_REQUEST = "Your time off needs to be requested.";
+
 /** Thrown to roll a preview's writes back, carrying what it found. */
 class PreviewDone extends Error {
   constructor(readonly preview: BookingPreview) {
@@ -232,11 +241,9 @@ class PreviewDone extends Error {
 /** Locks the person and checks the type exists; refuses an unknown person or type. */
 async function begin(
   dependencies: BookingDependencies,
-  ctx: SecurityContext,
   tx: Tx,
   booking: ParsedBooking,
 ): Promise<Person> {
-  await ctx.requireInScope("time_off", "create", booking.employeeId);
   if (!(await lockPerson(dependencies, tx, booking.employeeId))) {
     throw new ApplicationError("NOT_FOUND", "No employee has this id.");
   }

@@ -12,6 +12,7 @@ export type {
   PermissionObjects,
   PermissionProfile,
   ProfileDefinition,
+  RecordAction,
   RecordScope,
   Subject,
 } from "./permissions";
