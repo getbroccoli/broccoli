@@ -35,19 +35,19 @@ export function AllowanceCard({ employeeId, type, period, adjustFor }: Props) {
       aria-label={type.timeOffType.name}
       className="overflow-hidden rounded-xl border border-border"
     >
-      <h3 className="flex items-center justify-between gap-2 border-b border-border/60 bg-sidebar px-3 py-2 text-[13px] font-medium">
-        <span>
+      <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-sidebar px-3 py-2">
+        <h3 className="text-[13px] font-medium">
           {type.timeOffType.name}
           {period.shownOnCard && (
             <span className="ml-2 font-normal text-muted-foreground">{period.label}</span>
           )}
-        </span>
+        </h3>
         {adjustFor && allowanceId && (
           <Button variant="ghost" size="sm" onClick={() => setAdjusting(true)}>
             {t("people.panel.timeOff.adjust.open")}
           </Button>
         )}
-      </h3>
+      </div>
       <dl className="grid grid-cols-2 gap-x-2 gap-y-3 px-3 py-2.5 sm:grid-cols-4">
         <TimeOffFigure
           label={t("people.panel.timeOff.entitlement")}

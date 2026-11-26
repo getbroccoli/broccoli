@@ -69,7 +69,7 @@ export function AdjustAllowanceDialog({
   return (
     <Dialog open onOpenChange={(open) => !open && !loading && onClose()}>
       <DialogContent
-        closeLabel={t("people.panel.timeOff.adjust.cancel")}
+        closeLabel={t("people.panel.close")}
         className="max-sm:h-dvh max-sm:max-h-dvh max-sm:max-w-full max-sm:rounded-none sm:max-w-md"
       >
         <DialogTitle className="text-lg">
