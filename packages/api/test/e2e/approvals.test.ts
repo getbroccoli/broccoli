@@ -1,21 +1,21 @@
 import { onTestFinished } from "vitest";
 
 import {
-  createApprovalService,
   approvalRequest,
+  approvalService,
   approvalToday,
   approveReviewedImport,
-  createBrowser,
-  expect,
-  MANAGED_ASSIGNMENT,
-  signInAsManagedOwner,
-  signedIn,
-  startManagedEnv,
   taskService,
+  createBrowser,
+  MANAGED_ASSIGNMENT,
+  transactWithApprovals,
+  signedIn,
+  signInAsManagedOwner,
   test,
+  startManagedEnv,
   TEST_OWNER,
   type TestEnv,
-  transactWithApprovals,
+  expect,
 } from "#test/support";
 
 import { connectDatabase } from "../../src/core/db";
@@ -35,7 +35,7 @@ test("the manager and requester both see who rejected the task and why", async (
   const requester = signedIn(db.orm, { employeeId: sam.id, profiles: ["EMPLOYEE"] });
   const transact = transactWithApprovals(db.orm, { today: approvalToday });
   await transact((tx) =>
-    createApprovalService().requestApproval(requester, tx, approvalRequest(sam.id)),
+    approvalService(db.orm).requestApproval(requester, tx, approvalRequest(sam.id)),
   );
   const {
     waitingOnOthers: [task],

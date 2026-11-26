@@ -3,22 +3,19 @@ import type { Tx } from "../../../core/db";
 import { createWriteModeService } from "../../../core/records";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
-import { type CalendarDate, parseUuid, todayInLondon } from "../../../utils";
+import { type CalendarDate, todayInLondon } from "../../../utils";
 import type { BankHolidayService } from "../../bankHolidays";
-import { timeOffRepository, timeOffRequestRepository, type TimeOffStatus } from "../db";
+import { timeOffRequestRepository } from "../db";
 import { type BookingRefusal, type CostedDay, totalCost } from "../domain";
-import { readPeople } from "./allowanceEngine";
 import {
-  appendStatusChange,
   begin,
   type BookingDependencies,
   approvalProcessOf,
   bookingDependencies,
   checkBooking,
-  lockPerson,
   saveTimeOff,
-  windowOf,
 } from "./bookingSteps";
+import { cancelTimeOff } from "./cancelTimeOff";
 import { balancesAfter } from "./previewBalances";
 import { parseBooking } from "./parseBooking";
 import type { TimeOffService } from "./timeOffService";
@@ -30,7 +27,11 @@ export interface BookTimeOffService {
   previewBooking(ctx: SecurityContext, input: BookingInput): Promise<BookingPreview>;
   /** Books approved time off for its working days and runs the allowance engine; refuses whoever may only ask for it. */
   bookTimeOff(ctx: SecurityContext, input: BookingInput): Promise<BookedTimeOff>;
-  /** Cancels a whole booking, giving its days back. Admins only, for now. */
+  /**
+   * Cancels time off: a waiting request, ending its approval, or approved time off, giving its days
+   * back. The person withdraws their own request, and cancels approved time off they asked for or
+   * booked before its first day; admins cancel anyone's.
+   */
   cancelTimeOff(ctx: SecurityContext, input: { timeOffId: string }): Promise<void>;
 }
 
@@ -81,13 +82,23 @@ export function createBookTimeOffService({
   logger,
   timeOff,
   bankHolidays,
+  approvals,
   today = todayInLondon,
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   timeOff: Pick<TimeOffService, "ensureAllowances">;
   bankHolidays: BankHolidayService;
+  approvals: BookingDependencies["approvals"];
   today?: () => CalendarDate;
 }): BookTimeOffService {
-  const dependencies = bookingDependencies({ orm, transact, logger, timeOff, bankHolidays, today });
+  const dependencies = bookingDependencies({
+    orm,
+    transact,
+    logger,
+    timeOff,
+    bankHolidays,
+    approvals,
+    today,
+  });
   return {
     previewBooking: (ctx, input) => previewBooking(dependencies, ctx, input),
     bookTimeOff: (ctx, input) => bookTimeOff(dependencies, ctx, input),
@@ -177,59 +188,6 @@ async function bookTimeOff(
   };
 }
 
-/** Cancels a whole booking and runs the engine, giving its days back. */
-async function cancelTimeOff(
-  dependencies: BookingDependencies,
-  ctx: SecurityContext,
-  input: { timeOffId: string },
-): Promise<void> {
-  const { transact, timeOff, logger, employeeReads, today } = dependencies;
-  const timeOffId = parseUuid(input.timeOffId);
-  const result = await transact(async (tx) => {
-    const repository = timeOffRepository(tx);
-    const owner = timeOffId ? await repository.findEmployeeId(timeOffId) : null;
-    if (!owner) {
-      throw new ApplicationError("NOT_FOUND", "No time off has this id.");
-    }
-    await ctx.requireInScope("time_off", "delete", owner);
-    // The person before their booking, as deleting the person takes them with its cascade.
-    const locked = await lockPerson(dependencies, tx, owner);
-    const found = locked ? await repository.lockTimeOff(timeOffId!) : null;
-    if (!found) {
-      throw new ApplicationError("NOT_FOUND", "No time off has this id.");
-    }
-    if (found.status !== "approved") {
-      throw new ApplicationError("CONFLICT", NOT_CANCELLABLE[found.status]);
-    }
-    // A closed leave year is never recalculated, so its days could not go back.
-    const { people } = await readPeople(employeeReads, tx, [found.employeeId]);
-    if (found.firstDate < windowOf(people[0]!, found.timeOffTypeId, today()).start) {
-      throw new ApplicationError("CONFLICT", "This booking is in a leave year that has closed.");
-    }
-    await repository.cancel(timeOffId!);
-    await appendStatusChange(ctx, tx, {
-      id: timeOffId!,
-      from: "approved",
-      to: "cancelled",
-      cause: { kind: "EDITED_DIRECTLY" },
-    });
-    const ensured = await timeOff.ensureAllowances(ctx, tx, {
-      employeeIds: [found.employeeId],
-      cause: { kind: "TIME_OFF_CANCELLED", ref: timeOffId },
-    });
-    return { ...found, ensured };
-  });
-  logger.info(
-    {
-      timeOffId,
-      employeeId: result.employeeId,
-      timeOffTypeId: result.timeOffTypeId,
-      ...result.ensured,
-    },
-    "Cancelled time off",
-  );
-}
-
 /** Runs the engine for the person after booking, the booking's id its cause. */
 function ensureBooked(
   { timeOff }: BookingDependencies,
@@ -242,13 +200,6 @@ function ensureBooked(
     cause: { kind: "TIME_OFF_BOOKED", ref: id },
   });
 }
-
-/** Why only approved time off is cancelled, by its status: anything else would undo nothing or skip its approval. */
-const NOT_CANCELLABLE: Record<Exclude<TimeOffStatus, "approved">, string> = {
-  requested: "This time off is waiting for approval.",
-  rejected: "This time off was rejected.",
-  cancelled: "This booking is already cancelled.",
-};
 
 /** Why booking refuses a caller who may only ask for this person's time off, such as their own. */
 const NEEDS_REQUEST = "Your time off needs to be requested.";

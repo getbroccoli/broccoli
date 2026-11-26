@@ -79,6 +79,7 @@ export interface ProcessService {
   startRunsAfterCommit: EventRunService["startRunsAfterCommit"];
   /** Trusted, before the commit: completes the steps of the tasks its events marked done. */
   completeStepsOfDoneTasks: RunLifecycleService["completeStepsOfDoneTasks"];
+  cancelRunOfRecord: RunLifecycleService["cancelRunOfRecord"];
 }
 
 /** What processes reads and writes through, and what the modules registered for them. */
@@ -201,6 +202,7 @@ export function createProcessService(dependencies: ProcessServiceDependencies): 
     startRunsAfterCommit: (ctx, job) => eventRuns.startRunsAfterCommit(ctx, job),
 
     completeStepsOfDoneTasks: (tx, events) => lifecycle.completeStepsOfDoneTasks(tx, events),
+    cancelRunOfRecord: (tx, withdrawal) => lifecycle.cancelRunOfRecord(tx, withdrawal),
 
     async resetProcesses(ctx, tx) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");

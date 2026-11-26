@@ -113,7 +113,7 @@ export function TimeOffSection({ person, timeOffTypes, permit, requests }: Props
           ))}
         </dl>
       )}
-      {requests && <TimeOffRequests requests={requests} />}
+      {requests && <TimeOffRequests employeeId={person.id} requests={requests} />}
     </section>
   );
 }

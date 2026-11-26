@@ -26,6 +26,7 @@ export type StartCause = (typeof START_CAUSES)[number];
 export const CANCEL_CAUSES = [
   "cancelled_because_step_assignee_was_removed",
   "cancelled_because_subject_was_removed",
+  "cancelled_because_record_was_withdrawn",
 ] as const;
 export type CancelCause = (typeof CANCEL_CAUSES)[number];
 

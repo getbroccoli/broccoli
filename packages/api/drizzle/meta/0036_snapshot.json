@@ -3337,6 +3337,18 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_by_employee_id": {
+          "name": "cancelled_by_employee_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -3375,6 +3387,21 @@
           "columns": [
             {
               "expression": "decided_by_employee_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "time_off_cancelled_by_idx": {
+          "name": "time_off_cancelled_by_idx",
+          "columns": [
+            {
+              "expression": "cancelled_by_employee_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

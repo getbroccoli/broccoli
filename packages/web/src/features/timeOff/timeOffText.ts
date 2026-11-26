@@ -1,4 +1,4 @@
-import { t } from "@/i18n";
+import { type MessageKey, t } from "@/i18n";
 import { dateRange, dayMonthYear, weekdayDay } from "@/lib/formatDate";
 import { formatDays } from "@/lib/formatDays";
 
@@ -223,7 +223,64 @@ export function requestedToast(cost: number): string {
   return t("timeOff.text.requested", { days: formatDays(cost) });
 }
 
+/**
+ * The words for cancelling this time off: the person withdraws their own request, others cancel
+ * it, and approved time off is cancelled; `confirm` is also the button that opens the confirmation.
+ */
+export function cancelDialogWords(
+  status: "REQUESTED" | "APPROVED",
+  byThePerson: boolean,
+  values: { name: string; type: string; dates: string },
+) {
+  const words = CANCEL_WORDS[cancelActionOf(status, byThePerson)];
+  return {
+    title: t(words.title),
+    body: t(words.body, values),
+    keep: t(words.keep),
+    confirm: t(words.button),
+    done: t(words.done),
+  };
+}
+
 function monthParts(month: string): [number, number] {
   const [year, monthNumber] = month.split("-").map(Number);
   return [year!, monthNumber! - 1];
 }
+
+type CancelAction = "withdrawRequest" | "cancelRequest" | "cancelOwnTimeOff" | "cancelTimeOff";
+
+function cancelActionOf(status: "REQUESTED" | "APPROVED", byThePerson: boolean): CancelAction {
+  if (status === "REQUESTED") return byThePerson ? "withdrawRequest" : "cancelRequest";
+  return byThePerson ? "cancelOwnTimeOff" : "cancelTimeOff";
+}
+
+const CANCEL_WORDS = {
+  withdrawRequest: {
+    button: "timeOff.cancel.withdrawButton",
+    title: "timeOff.cancel.withdrawTitle",
+    body: "timeOff.cancel.withdrawBody",
+    keep: "timeOff.cancel.keepRequest",
+    done: "timeOff.cancel.withdrawDone",
+  },
+  cancelRequest: {
+    button: "timeOff.cancel.requestButton",
+    title: "timeOff.cancel.requestTitle",
+    body: "timeOff.cancel.requestBody",
+    keep: "timeOff.cancel.keepRequest",
+    done: "timeOff.cancel.requestDone",
+  },
+  cancelOwnTimeOff: {
+    button: "timeOff.cancel.timeOffButton",
+    title: "timeOff.cancel.timeOffTitle",
+    body: "timeOff.cancel.ownTimeOffBody",
+    keep: "timeOff.cancel.keepTimeOff",
+    done: "timeOff.cancel.timeOffDone",
+  },
+  cancelTimeOff: {
+    button: "timeOff.cancel.timeOffButton",
+    title: "timeOff.cancel.timeOffTitle",
+    body: "timeOff.cancel.timeOffBody",
+    keep: "timeOff.cancel.keepTimeOff",
+    done: "timeOff.cancel.timeOffDone",
+  },
+} as const satisfies Record<CancelAction, Record<string, MessageKey>>;

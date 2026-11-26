@@ -1,11 +1,11 @@
 import { cn } from "@/lib/class-names";
 
-import { statusLabel, type TimeOffStatus } from "./timeOffRequestText";
+import { type RequestEnding, statusLabel, type TimeOffStatus } from "./timeOffRequestText";
 
-type Props = { status: TimeOffStatus; hasDecision: boolean };
+type Props = { status: TimeOffStatus; ending: RequestEnding };
 
 /** Where time off stands: amber while it waits, green once approved, grey otherwise. */
-export function TimeOffStatusChip({ status, hasDecision }: Props) {
+export function TimeOffStatusChip({ status, ending }: Props) {
   return (
     <span
       className={cn(
@@ -15,7 +15,7 @@ export function TimeOffStatusChip({ status, hasDecision }: Props) {
         (status === "REJECTED" || status === "CANCELLED") && "bg-muted text-muted-foreground",
       )}
     >
-      {statusLabel(status, hasDecision)}
+      {statusLabel(status, ending)}
     </span>
   );
 }

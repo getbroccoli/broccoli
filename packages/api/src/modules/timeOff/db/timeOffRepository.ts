@@ -69,8 +69,6 @@ export interface TimeOffRepository {
     createdByUserId: string | null;
     days: readonly { date: CalendarDate; dayPart: DayPart }[];
   }): Promise<{ id: string; createdAt: Date }>;
-  /** Whose time off this is, without locking it; null when there is none. */
-  findEmployeeId(id: string): Promise<string | null>;
   /** The time off's person, status and first day, locked until the transaction ends; null when there is none. */
   lockTimeOff(id: string): Promise<{
     employeeId: string;
@@ -78,8 +76,8 @@ export interface TimeOffRepository {
     status: TimeOffStatus;
     firstDate: CalendarDate;
   } | null>;
-  /** Marks the time off cancelled; its days stay. */
-  cancel(id: string): Promise<void>;
+  /** Marks the time off cancelled by this employee (null for Broccoli); its days stay. */
+  cancel(id: string, cancelledByEmployeeId: string | null): Promise<void>;
   /**
    * Days of approved time off from `from` to `until`, per employee, type and calendar year: a
    * full day counts 1, a morning or an afternoon 0.5. Rejected and cancelled days count nothing.
@@ -159,13 +157,6 @@ export function timeOffRepository(tx: Orm | Tx): TimeOffRepository {
         .values(days.map((day) => ({ ...day, timeOffId: saved!.id })));
       return saved!;
     },
-    async findEmployeeId(id) {
-      const [row] = await ormOf(tx)
-        .select({ employeeId: timeOff.employeeId })
-        .from(timeOff)
-        .where(eq(timeOff.id, id));
-      return row?.employeeId ?? null;
-    },
     async lockTimeOff(id) {
       const [row] = await ormOf(tx)
         .select({
@@ -185,8 +176,11 @@ export function timeOffRepository(tx: Orm | Tx): TimeOffRepository {
         .where(eq(timeOffDays.timeOffId, id));
       return { ...row, firstDate: first!.date };
     },
-    async cancel(id) {
-      await ormOf(tx).update(timeOff).set({ status: "cancelled" }).where(eq(timeOff.id, id));
+    async cancel(id, cancelledByEmployeeId) {
+      await ormOf(tx)
+        .update(timeOff)
+        .set({ status: "cancelled", cancelledAt: sql`now()`, cancelledByEmployeeId })
+        .where(eq(timeOff.id, id));
     },
     async sumRecordedDays({ employeeIds, from, until }) {
       const rows = await ormOf(tx)

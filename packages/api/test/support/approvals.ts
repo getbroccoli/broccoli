@@ -1,5 +1,8 @@
 import { MANAGER_APPROVAL, type ApprovalRequest } from "../../src/core/approvals";
 import type { Orm } from "../../src/core/db";
+import type { DomainEvents } from "../../src/core/events";
+import { approvalService, processService, transactWithApprovals } from "./processService";
+import { taskService } from "./services";
 import { calendarDate } from "./calendarDate";
 import { signedIn } from "./signedIn";
 import type { TestSeed } from "./testSeed";
@@ -26,4 +29,18 @@ export async function approvalParticipants(orm: Orm, seed: TestSeed) {
     requester: signedIn(orm, { employeeId: sam.id, profiles: ["EMPLOYEE"] }),
     manager: signedIn(orm, { employeeId: mia.id, profiles: ["EMPLOYEE"] }),
   };
+}
+
+/** Captures the approval outcomes delivered to a feature before commit. */
+export function observeApprovals(orm: Orm) {
+  const finished: DomainEvents["approvals.approval_finished"][] = [];
+  const transact = transactWithApprovals(orm, { today: approvalToday }, (_tx, events) => {
+    for (const event of events) {
+      if (event.type === "approvals.approval_finished") finished.push(event.payload);
+    }
+    return Promise.resolve();
+  });
+  const processes = processService(orm, { today: approvalToday, transact });
+  const approvals = approvalService(orm, { today: approvalToday, transact });
+  return { approvals, processes, tasks: taskService(orm, { transact }), transact, finished };
 }

@@ -6,14 +6,13 @@ import {
   employeeServices,
   expect,
   leaveRequestSetup,
+  pendingRequest,
   readAllowances,
   seedEmploymentEnd,
   test,
   timeOffService,
-  type TestSeed,
 } from "#test/support";
 
-import type { Orm } from "../../../core/db";
 import { timeOff } from "../db";
 
 test("approval charges the held days and records who decided", async ({ orm, seed }) => {
@@ -75,6 +74,7 @@ test("ends a request without a decision when nobody can approve", async ({ orm, 
     {
       id: request.id,
       status: "cancelled",
+      cancelledAt: null,
       decidedAt: null,
       decidedByEmployeeId: null,
       decisionComment: null,
@@ -185,10 +185,3 @@ test("cancels the approval run after its requester and time off were deleted", a
 
 const approved = { code: "approved", comment: null };
 const rejected = { code: "rejected", comment: "Clashes with the release week." };
-
-async function pendingRequest(orm: Orm, seed: TestSeed) {
-  const setup = await leaveRequestSetup(orm, seed);
-  const request = await setup.requests.requestTimeOff(setup.requester, setup.input);
-  const [task] = (await setup.tasks.listMyTasks(setup.manager)).needsYou;
-  return { ...setup, task: task!, request };
-}

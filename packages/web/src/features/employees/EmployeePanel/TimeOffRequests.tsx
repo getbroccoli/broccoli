@@ -3,15 +3,15 @@ import { t } from "@/i18n";
 import { formatCalendarDate } from "@/lib/formatDate";
 import { formatDays } from "@/lib/formatDays";
 
-import { decisionLine } from "./timeOffRequestText";
+import { cancellationLine, decisionLine, isWithdrawn, requestEnding } from "./timeOffRequestText";
 import { TimeOffStatusChip } from "./TimeOffStatusChip";
 
 type Request = NonNullable<EmployeePanel_EmployeeFragment["timeOffRequests"]>[number];
 
-type Props = { requests: readonly Request[] };
+type Props = { employeeId: string; requests: readonly Request[] };
 
 /** A person's requests this leave year, newest first, each with its status and decision; none, nothing shown. */
-export function TimeOffRequests({ requests }: Props) {
+export function TimeOffRequests({ employeeId, requests }: Props) {
   if (requests.length === 0) return null;
   return (
     <section aria-labelledby="time-off-requests" className="flex flex-col gap-2">
@@ -40,11 +40,11 @@ export function TimeOffRequests({ requests }: Props) {
               {request.status && (
                 <TimeOffStatusChip
                   status={request.status}
-                  hasDecision={Boolean(request.decision)}
+                  ending={requestEnding(request, employeeId)}
                 />
               )}
             </div>
-            {/* The chip says enough for a waiting or cancelled request; a decision says who and why. */}
+            {/* The chip says enough for a waiting request; a decision or a cancel says who and when. */}
             {request.bookedAt &&
               (request.status === "APPROVED" || request.status === "REJECTED") && (
                 <span className="text-xs break-words text-muted-foreground">
@@ -61,11 +61,29 @@ export function TimeOffRequests({ requests }: Props) {
                   {request.decision?.comment && ` “${request.decision.comment}”`}
                 </span>
               )}
+            {request.cancellation && (
+              <span className="text-xs text-muted-foreground">
+                {cancelledLine(request, request.cancellation, employeeId)}
+              </span>
+            )}
           </li>
         ))}
       </ul>
     </section>
   );
+}
+
+/** Who cancelled the request and when; the person cancelling it while it waited withdrew it. */
+function cancelledLine(
+  request: Request,
+  { cancelledAt, cancelledBy }: NonNullable<Request["cancellation"]>,
+  employeeId: string,
+): string {
+  return cancellationLine({
+    cancelledAt,
+    cancelledByName: cancelledBy && `${cancelledBy.firstName} ${cancelledBy.lastName}`,
+    withdrawn: isWithdrawn(requestEnding(request, employeeId)),
+  });
 }
 
 /** The days asked for: a full day 1, a morning or an afternoon 0.5. */

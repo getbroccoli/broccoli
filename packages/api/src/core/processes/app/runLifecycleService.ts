@@ -1,3 +1,4 @@
+import { ApplicationError } from "../../applicationError";
 import type { Transact, Tx } from "../../db";
 import type { PublishedEvent } from "../../events";
 import { PrincipalSecurityContext, type SecurityContext } from "../../security";
@@ -5,6 +6,8 @@ import { type CalendarDate, laterOf } from "../../../utils";
 import { resultLabel, type Task, type TaskService } from "../../tasks";
 import { processRepository, runStepRepository } from "../db";
 import {
+  type CancelCause,
+  openTaskIdsOf,
   type OutcomeRule,
   outcomeOf,
   PROCESS_CANCELLED,
@@ -19,7 +22,7 @@ import type { StepStarter } from "./stepStarter";
 
 /**
  * A run while it runs: it follows its steps' tasks as their assignees mark them done, and cancels
- * itself once its subject or a waiting step's assignee is gone.
+ * itself once its subject or a waiting step's assignee is gone, or its record is withdrawn.
  */
 export interface RunLifecycleService {
   /**
@@ -39,6 +42,23 @@ export interface RunLifecycleService {
    * open tasks before the run.
    */
   cancelIfCannotRun(tx: Tx, run: ProcessRun): Promise<ProcessRun>;
+  /**
+   * Trusted, for the feature that owns a record it no longer wants decided: cancels the record's
+   * run in progress of one of these processes, and its open tasks with the reason. Takes the open
+   * tasks before the run, as a task's change does; null when none is in progress any more.
+   */
+  cancelRunOfRecord(tx: Tx, withdrawal: RecordWithdrawal): Promise<ProcessRun | null>;
+}
+
+/** A record withdrawn from its processes: which runs, why, and by whom. */
+export interface RecordWithdrawal {
+  processKeys: readonly string[];
+  recordType: string;
+  recordId: string;
+  /** What the assignees of its open tasks read. */
+  reason: string;
+  /** Null when Broccoli withdrew it. */
+  byEmployeeId: string | null;
 }
 
 export function createRunLifecycleService({
@@ -138,22 +158,90 @@ export function createRunLifecycleService({
           ? SUBJECT_REMOVED
           : // The task goes with its assignee, or with the person who asked for it.
             `The task '${(await steps.stepTitles(tx, run)).get(removal.stepKey!)}' was removed with the person it was given to or who asked for it.`;
-      const cancelled = run.cancel({
+      return cancelRun({ tasks, runEndings }, tx, run, {
         cause: removal.cause,
         reason,
+        taskReason: PROCESS_CANCELLED,
         byEmployeeId: null,
-        now: new Date(),
       });
-      await tasks.cancelInTransaction(PrincipalSecurityContext.system(), tx, {
-        taskIds: run.openTaskIds(),
-        reason: PROCESS_CANCELLED,
-        cause: { kind: "PROCESS_RUN", ref: run.id },
+    },
+
+    async cancelRunOfRecord(tx, { processKeys, recordType, recordId, reason, byEmployeeId }) {
+      const found = await findRunInProgress(tx, processKeys, recordType, recordId);
+      if (!found) return null;
+      const { run, tasksChanged } = await lockRunWithOpenTasks(tasks, tx, found.id);
+      // A decision that committed meanwhile ended the run, or a reset removed it: nothing is left.
+      if (run?.status !== "in_progress") return null;
+      if (tasksChanged) throw new ApplicationError("CONFLICT", RUN_CHANGED);
+      return cancelRun({ tasks, runEndings }, tx, run, {
+        cause: "cancelled_because_record_was_withdrawn",
+        reason,
+        taskReason: reason,
+        byEmployeeId,
       });
-      await processRepository(tx).saveRun(cancelled);
-      await runEndings.publishEnded(tx, [cancelled]);
-      return cancelled;
     },
   };
+}
+
+/**
+ * Locks the run's open tasks, then the run, as a task's change does, and says whether its open
+ * tasks changed between the read and the locks; null run when it is gone.
+ */
+export async function lockRunWithOpenTasks(
+  tasks: Pick<TaskService, "lockInTransaction">,
+  tx: Tx,
+  runId: string,
+): Promise<{ run: ProcessRun | null; tasksChanged: boolean }> {
+  const locked = openTaskIdsOf(await runStepRepository(tx).findSteps(runId));
+  await tasks.lockInTransaction(tx, locked);
+  const run = await processRepository(tx).lockRun(runId);
+  // Neither read orders the steps, so the ids are compared as sets.
+  const open = run?.openTaskIds() ?? [];
+  const tasksChanged = open.length !== locked.length || open.some((id) => !locked.includes(id));
+  return { run, tasksChanged };
+}
+
+/** Why a withdrawal stops when a step finished between reading the run and locking it. */
+const RUN_CHANGED = "This was decided meanwhile. Look again.";
+
+/** Cancels the locked run in progress and its open tasks, saves it and tells who follows it. */
+async function cancelRun(
+  { tasks, runEndings }: { tasks: TaskService; runEndings: RunEndings },
+  tx: Tx,
+  run: ProcessRun,
+  cancellation: {
+    cause: CancelCause;
+    reason: string;
+    taskReason: string;
+    byEmployeeId: string | null;
+  },
+): Promise<ProcessRun> {
+  const { taskReason, ...rest } = cancellation;
+  const cancelled = run.cancel({ ...rest, now: new Date() });
+  await tasks.cancelInTransaction(PrincipalSecurityContext.system(), tx, {
+    taskIds: run.openTaskIds(),
+    reason: taskReason,
+    cause: { kind: "PROCESS_RUN", ref: run.id },
+  });
+  await processRepository(tx).saveRun(cancelled);
+  await runEndings.publishEnded(tx, [cancelled]);
+  return cancelled;
+}
+
+/** The record's run in progress of one of these processes, unlocked; null without one. */
+async function findRunInProgress(
+  tx: Tx,
+  processKeys: readonly string[],
+  recordType: string,
+  recordId: string,
+) {
+  const runs = processRepository(tx);
+  for (const key of processKeys) {
+    const process = await runs.findProcessByKey(key);
+    const run = process && (await runs.findRunInProgress(process.id, recordType, recordId));
+    if (run) return run;
+  }
+  return null;
 }
 
 /** How far the run is, and its outcome when the task is its outcome step's. */

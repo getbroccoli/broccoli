@@ -145,6 +145,14 @@ fragment EmployeePanel_employee on Employee {
       decidedAt
       comment
     }
+    cancellation {
+      cancelledBy {
+        id
+        firstName
+        lastName
+      }
+      cancelledAt
+    }
   }
   employmentTerms {
     periods {

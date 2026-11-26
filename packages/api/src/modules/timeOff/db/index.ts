@@ -10,6 +10,7 @@ export {
 export {
   type RequestDecision,
   type StoredTimeOff,
+  type TimeOffCancellation,
   type TimeOffRequest,
   timeOffRequestRepository,
 } from "./timeOffRequestRepository";

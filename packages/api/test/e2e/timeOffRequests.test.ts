@@ -8,24 +8,19 @@ import {
   test,
   setUpRequests,
   signInEmployee,
+  submitRequest,
   testTransactor,
-  type Browser,
+  REQUEST_TIME_OFF,
 } from "#test/support";
 
 test("requestTimeOff returns the request and its waiting figure", async ({ env }) => {
   const { amira, input } = await setUpRequests(env);
 
-  const result = await amira.browser.graphql(REQUEST, { input });
+  const result = await amira.browser.graphql(REQUEST_TIME_OFF, { input });
 
+  const timeOff = { id: expect.any(String) as unknown, status: "REQUESTED", cost: 2.5 };
   expect(await result.json()).toEqual({
-    data: {
-      timeOff: {
-        requestTimeOff: {
-          timeOff: { id: expect.any(String) as unknown, status: "REQUESTED", cost: 2.5 },
-          error: null,
-        },
-      },
-    },
+    data: { timeOff: { requestTimeOff: { timeOff, error: null } } },
   });
   const figures = await amira.browser.graphql(
     "query Figures($id: ID!) { employee(id: $id) { timeOffTypes { waiting remaining } } }",
@@ -211,7 +206,7 @@ test("lists waiting and decided requests in the open leave years, newest request
   expect(await peer.json()).toEqual({ data: { employee: { timeOffRequests: null } } });
 });
 
-test("only admins have delete access to the request and nobody can edit it", async ({ env }) => {
+test("only the requester and admin have delete access and nobody can edit", async ({ env }) => {
   const { amira, rachel, input } = await setUpRequests(env);
   const hannah = await signInEmployee(env, "Hannah", ["ADMIN"]);
   await submitRequest(amira.browser, input);
@@ -220,17 +215,14 @@ test("only admins have delete access to the request and nobody can edit it", asy
   } }`;
 
   for (const [reader, canDelete] of [
-    [amira, false],
+    [amira, true],
     [rachel, false],
     [hannah, true],
   ] as const) {
     const response = await reader.browser.graphql(query, { id: amira.id });
+    const access = { canDelete, canUpdate: false, editableFields: [] };
     expect(await response.json()).toEqual({
-      data: {
-        employee: {
-          timeOffRequests: [{ access: { canDelete, canUpdate: false, editableFields: [] } }],
-        },
-      },
+      data: { employee: { timeOffRequests: [{ access }] } },
     });
   }
 });
@@ -302,21 +294,3 @@ beforeEach(() => {
 });
 
 afterEach(() => vi.useRealTimers());
-
-const REQUEST = `mutation Request($input: TimeOffBookInput!) {
-  timeOff { requestTimeOff(input: $input) { timeOff { id status cost } error { __typename } } }
-}`;
-
-async function submitRequest(
-  browser: Browser,
-  input: Awaited<ReturnType<typeof setUpRequests>>["input"],
-) {
-  const result = await browser.graphql(REQUEST, { input });
-  const body = (await result.json()) as {
-    data: { timeOff: { requestTimeOff: { timeOff: { id: string } } } };
-  };
-  expect(body).toMatchObject({
-    data: { timeOff: { requestTimeOff: { error: null, timeOff: { status: "REQUESTED" } } } },
-  });
-  return body.data.timeOff.requestTimeOff.timeOff.id;
-}

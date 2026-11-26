@@ -1,5 +1,5 @@
 import { ApplicationError } from "../../../core/applicationError";
-import type { ApprovalProcessKey } from "../../../core/approvals";
+import type { ApprovalProcessKey, ApprovalService } from "../../../core/approvals";
 import type { Orm, Transact, Tx } from "../../../core/db";
 import type { Logger } from "../../../core/logger";
 import { createRecordHistoryService, type FieldChange } from "../../../core/records";
@@ -34,6 +34,8 @@ export interface BookingDependencies {
   >;
   workingWeeks: Pick<EmployeeWorkingPatternService, "readWorkingWeeksInTransaction">;
   bankHolidays: BankHolidayService;
+  /** Asks for approval of a request, and withdraws it when the request is cancelled. */
+  approvals: Pick<ApprovalService, "requestApproval" | "cancelApproval">;
   today: () => CalendarDate;
 }
 
@@ -151,9 +153,11 @@ export async function appendStatusChange(
     to: TimeOffStatus;
     cause: { kind: "EDITED_DIRECTLY" } | { kind: "PROCESS_RUN"; ref: string };
     decision?: { decidedByEmployeeId: string | null; comment: string | null };
+    /** Who cancelled it, when it is cancelled by someone. */
+    cancelledByEmployeeId?: string | null;
   },
 ): Promise<void> {
-  const { decision } = input;
+  const { decision, cancelledByEmployeeId } = input;
   await recordHistory.append(ctx, tx, {
     recordType: "time_off",
     operation: "UPDATED",
@@ -168,6 +172,9 @@ export async function appendStatusChange(
                 change("decidedByEmployeeId", null, decision.decidedByEmployeeId),
                 change("decisionComment", null, decision.comment),
               ]
+            : []),
+          ...(cancelledByEmployeeId
+            ? [change("cancelledByEmployeeId", null, cancelledByEmployeeId)]
             : []),
         ],
       },
@@ -190,6 +197,8 @@ export async function lockPerson(
   { employeeReads, workingWeeks, today }: BookingDependencies,
   tx: Tx,
   employeeId: string,
+  /** Other people to lock with them, in one id-ordered lock, such as who cancels their time off. */
+  others: readonly string[] = [],
 ): Promise<boolean> {
   // Deleting a person takes it before their row, and their row before the working patterns.
   await employeeReads.holdEmployeeWrites(tx);
@@ -200,6 +209,6 @@ export async function lockPerson(
     from: today(),
     until: today(),
   });
-  const [locked] = await employeeReads.lockEmployees(tx, [employeeId]);
-  return locked !== undefined;
+  const locked = await employeeReads.lockEmployees(tx, [employeeId, ...others]);
+  return locked.includes(employeeId);
 }

@@ -4044,7 +4044,7 @@
         },
         "process_runs_cancel_cause_known": {
           "name": "process_runs_cancel_cause_known",
-          "value": "\"process_runs\".\"cancel_cause\" in ('cancelled_because_step_assignee_was_removed', 'cancelled_because_subject_was_removed')"
+          "value": "\"process_runs\".\"cancel_cause\" in ('cancelled_because_step_assignee_was_removed', 'cancelled_because_subject_was_removed', 'cancelled_because_record_was_withdrawn')"
         },
         "process_runs_columns_follow_status": {
           "name": "process_runs_columns_follow_status",
@@ -5216,6 +5216,18 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_by_employee_id": {
+          "name": "cancelled_by_employee_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -5254,6 +5266,21 @@
           "columns": [
             {
               "expression": "decided_by_employee_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "time_off_cancelled_by_idx": {
+          "name": "time_off_cancelled_by_idx",
+          "columns": [
+            {
+              "expression": "cancelled_by_employee_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

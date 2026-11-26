@@ -157,7 +157,7 @@ export function TimeOffPage() {
           employeeId={opened.person.id}
           timeOff={opened.timeOff}
           person={opened.person}
-          canCancel={opened.timeOff.access.canDelete && opened.timeOff.status === "APPROVED"}
+          viewerEmployeeId={me.employee?.id ?? null}
           onClose={() => setOpenedId(null)}
         />
       )}

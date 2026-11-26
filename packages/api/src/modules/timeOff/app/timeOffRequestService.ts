@@ -1,5 +1,4 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
-import { createApprovalService } from "../../../core/approvals";
 import type { BeforeCommitHandler, Orm, Transact, Tx } from "../../../core/db";
 import type { Logger } from "../../../core/logger";
 import {
@@ -19,6 +18,7 @@ import {
   timeOffRequestRepository,
 } from "../db";
 import { finishApproval } from "./finishTimeOffApproval";
+import { readCancellable } from "./cancelTimeOff";
 import { readRequests, readStatuses } from "./readTimeOffRequests";
 import { dateRangeLabel, dayLabel, totalCost } from "../domain";
 import {
@@ -58,7 +58,9 @@ export interface TimeOffRequestService {
     ctx: SecurityContext,
     employeeIds: readonly string[],
   ) => Promise<Map<string, TimeOffRequest[]>>;
-  /** Where each readable time off stands and how it was decided, by id. */
+  /** The ids among these the caller may cancel now. */
+  readCancellable: (ctx: SecurityContext, timeOffIds: readonly string[]) => Promise<Set<string>>;
+  /** Where each readable time off stands, how it was decided and who cancelled it, by id. */
   readStatuses: (
     ctx: SecurityContext,
     timeOffIds: readonly string[],
@@ -77,6 +79,7 @@ export function createTimeOffRequestService({
   logger,
   timeOff,
   bankHolidays,
+  approvals,
   today = todayInLondon,
 }: {
   orm: Orm;
@@ -84,14 +87,17 @@ export function createTimeOffRequestService({
   logger: Logger;
   timeOff: Pick<TimeOffService, "ensureAllowances">;
   bankHolidays: BankHolidayService;
+  approvals: BookingDependencies["approvals"];
   today?: () => CalendarDate;
 }): TimeOffRequestService {
-  const dependencies = bookingDependencies({ orm, transact, logger, timeOff, bankHolidays, today });
+  const services = { orm, transact, logger, timeOff, bankHolidays, approvals, today };
+  const dependencies = bookingDependencies(services);
   const history = createRecordHistoryReaderService(orm, { time_off: timeOffRecordType(orm) });
-  const preview = createBookTimeOffService({ orm, transact, logger, timeOff, bankHolidays, today });
+  const preview = createBookTimeOffService(services);
   return {
     requestTimeOff: (ctx, input) => requestTimeOff(dependencies, preview, ctx, input),
     readRequests: (ctx, employeeIds) => readRequests(dependencies, ctx, employeeIds),
+    readCancellable: (ctx, timeOffIds) => readCancellable(dependencies, ctx, timeOffIds),
     readStatuses: (ctx, timeOffIds) => readStatuses(dependencies, ctx, timeOffIds),
     readHistory: (ctx, timeOffId, args) => history.readHistory(ctx, "time_off", timeOffId, args),
     finishApprovals: async (tx, events) => {
@@ -108,7 +114,6 @@ export function createTimeOffRequestService({
 }
 
 const writeModes = createWriteModeService();
-const approvals = createApprovalService();
 
 async function requestTimeOff(
   dependencies: BookingDependencies,
@@ -173,7 +178,7 @@ function saveRequest(
         throw invalidInput([{ field: "dates", code: refusal.reason }]);
       }
       const result = await saveTimeOff(ctx, tx, booking, { days, status: "requested" });
-      await approvals.requestApproval(ctx, tx, {
+      await dependencies.approvals.requestApproval(ctx, tx, {
         approvalProcessKey,
         record: { recordType: "time_off", recordId: result.id },
         requesterEmployeeId: booking.employeeId,
