@@ -162,7 +162,7 @@ test("allowing two clients at once leaves exactly one agent connected", async ({
   expect(connected.filter(Boolean)).toHaveLength(1);
 });
 
-test("allowing a client grants read and offline access without write access", async ({ env }) => {
+test("allowing a client grants the requested read, write and offline access", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
   const clientId = await registerAgentClient(env, "Read and write client");
 
@@ -171,9 +171,48 @@ test("allowing a client grants read and offline access without write access", as
     scope: "broccoli:read broccoli:write offline_access",
   });
 
-  expect(scope.split(" ")).toContain("broccoli:read");
-  expect(scope.split(" ")).toContain("offline_access");
-  expect(scope.split(" ")).not.toContain("broccoli:write");
+  expect(scope.split(" ").sort()).toEqual(["broccoli:read", "broccoli:write", "offline_access"]);
+});
+
+test("allowing write access for the same client keeps its connection and lets the new token ask for leave", async ({
+  env,
+}) => {
+  const { browser } = await env.signInAsOwner();
+  const clientId = await registerAgentClient(env, "Leave client");
+  await connectAgent(env, browser, { clientId });
+  const query =
+    "query { myAgentConnection { id canChangeThings } myLastEndedAgentConnection { id } }";
+  const before = (await (await browser.graphql(query)).json()) as {
+    data: { myAgentConnection: { id: string; canChangeThings: boolean } };
+  };
+  expect(before).toMatchObject({
+    data: { myAgentConnection: { id: expect.any(String) as unknown, canChangeThings: false } },
+  });
+
+  const { accessToken } = await connectAgent(env, browser, {
+    clientId,
+    scope: "broccoli:read broccoli:write offline_access",
+  });
+
+  expect(await (await browser.graphql(query)).json()).toEqual({
+    data: {
+      myAgentConnection: { id: before.data.myAgentConnection.id, canChangeThings: true },
+      myLastEndedAgentConnection: null,
+    },
+  });
+  const response = await callMcpTool(env, accessToken, "request_leave", {
+    timeOffTypeId: "00000000-0000-4000-8000-000000000001",
+    startDate: "2026-12-07",
+    endDate: "2026-12-07",
+    expectedDays: 1,
+  });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({
+    result: {
+      isError: true,
+      content: [{ type: "text", text: "You have no employee record in Broccoli." }],
+    },
+  });
 });
 
 test("a signed-in person cannot widen consent through the provider's endpoint", async ({ env }) => {

@@ -19,6 +19,7 @@ test("whoAmI returns the caller's email, profiles, employee and current manager"
   const result = await mcpAgentToolService(orm).whoAmI(ctx);
 
   expect(result).toEqual({
+    today: "2026-11-26",
     email: "user@example.com",
     permissionProfiles: ["EMPLOYEE"],
     employee: {
@@ -47,6 +48,7 @@ test("whoAmI returns no employee or manager for a user without an employee", asy
   const result = await mcpAgentToolService(orm).whoAmI(OWNER);
 
   expect(result).toEqual({
+    today: "2026-11-26",
     email: "owner@example.com",
     permissionProfiles: ["EMPLOYEE", "OWNER"],
     employee: null,
