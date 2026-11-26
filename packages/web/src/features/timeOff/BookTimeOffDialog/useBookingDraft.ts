@@ -55,9 +55,12 @@ export function useBookingDraft(initial: { employeeId?: string; date?: string })
   const [halfDays, setHalfDays] = useState<Map<string, TimeOffDayPart>>(new Map());
   const [note, setNote] = useState("");
   const { types, refetchTypes } = useBookingTypes(employeeId);
-  // The person's types come first, Annual leave before the rest, so it is the default.
-  const typeId = types?.some(({ timeOffType }) => timeOffType.id === chosenTypeId)
-    ? chosenTypeId
+  // The person's types come first, Annual leave before the rest, so it is the default. A chosen
+  // type that disappears on a refresh is unchosen, never swapped for another the person didn't pick.
+  const typeId = chosenTypeId
+    ? types && !types.some(({ timeOffType }) => timeOffType.id === chosenTypeId)
+      ? ""
+      : chosenTypeId
     : (types?.[0]?.timeOffType.id ?? "");
   const shownHalfDays = [...halfDays].filter(
     ([date]) => range && range.from <= date && date <= range.until,
