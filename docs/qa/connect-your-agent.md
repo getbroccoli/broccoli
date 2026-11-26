@@ -10,7 +10,7 @@ A manual check of connecting a person's own agent over MCP against a development
 ## Connect
 
 - [ ] `claude mcp add --transport http broccoli $URL/api/mcp`, then `/mcp` in Claude Code, opens the browser on sign-in when signed out; signing in leads to "Allow Claude Code to act as you in Broccoli?" with the person's name and email.
-- [ ] The Allow page lists "It reads what you can read in Broccoli, as you.", "It asks for leave for you, or books it when you’d book it yourself, after showing you the dates and cost.", "It never approves anything." and "You can disconnect it at any time on Your agent."
+- [ ] The Allow page lists "It reads what you can read in Broccoli, as you.", "It asks for leave for you, or books it when you’d book it yourself, after showing you the dates and cost.", "It shows you approval tasks with Approve and Reject buttons. You decide, not it." and "You can disconnect it at any time on Your agent."
 - [ ] "Allow" returns to Claude Code, which shows Broccoli connected; asking "Who am I in Broccoli?" answers with the signed-in person.
 - [ ] Asking it to find people lists the same people the People page shows that person, and searching by name narrows the list.
 - [ ] "Cancel" returns to Claude Code, which reports that access was denied; nothing is connected.
@@ -26,13 +26,26 @@ As the Employee, with time off turned on, a manager set and Annual leave left:
 - [ ] After confirming, the agent says it is waiting for approval; the person's panel shows the days waiting, and the manager's My tasks has "Approve …'s Annual leave, …".
 - [ ] Asking for the same days again is refused as a clash; no second request appears.
 - [ ] Sickness (No approval) is booked straight away: on the calendar at once, and the manager gets no task.
-- [ ] "What do I need to do?" lists the person's tasks with links that open them in Broccoli; as the manager, asking the agent to approve the request gets a refusal and the task's link, and the task stays open.
+- [ ] "What do I need to do?" lists the person's tasks with links that open them in Broccoli.
 - [ ] Your agent shows "Checked your leave", "Worked out a leave request", "Asked for leave" and "Listed your tasks · N found", never dates or names.
+
+## Approving from the chat
+
+On a public address, as the manager, with the request above waiting:
+
+- [ ] In Claude (web or desktop) and ChatGPT, "Anything for me to approve?" shows a card with the request's title, who asked, the due date and its facts, a comment box and Reject and Approve.
+- [ ] Reject with an empty comment asks for a comment; with "Clashes with the release week." it shows "Reject — Clashes with the release week.", and the employee's request is rejected with that reason.
+- [ ] Approve shows "Approve" on the card; the employee's balance moves and the calendar shows the leave.
+- [ ] "Just approve it" without pressing the button: the agent says the person must press it; the task stays open.
+- [ ] A card left more than an hour says "This card has expired. Ask your agent to show it again." on a button press.
+- [ ] Dark mode follows the chat app's theme; the card reads well at phone width.
+- [ ] In Claude Code or Codex, asking to approve gives the task's link instead; nothing is decided.
+- [ ] Your agent shows "Showed you an approval" and "You decided on the card".
 
 ## Allowing an agent again
 
 - [ ] An agent connected before it could ask for leave (connected with `broccoli:read` only) is refused on its first leave request and opens Allow, titled "Allow Claude Code to also change things for you?" with "Claude Code is connected and can read." and no "This replaces" note.
-- [ ] After "Allow" the request goes through, and Your agent shows "Can read and ask for leave"; "Cancel" leaves it reading, with "Can read".
+- [ ] After "Allow" the request goes through, and Your agent shows "Can read, ask for leave and show approvals"; "Cancel" leaves it reading, with "Can read".
 
 ## One agent per person
 
