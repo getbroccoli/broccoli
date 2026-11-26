@@ -191,6 +191,7 @@ function saveRequest(
   booking: ParsedBooking,
   balances: readonly BalanceChange[],
 ) {
+  let approvalAsked = false;
   return dependencies
     .transact(async (tx) => {
       const person = await begin(dependencies, tx, booking);
@@ -204,6 +205,7 @@ function saveRequest(
         throw invalidInput([{ field: "dates", code: refusal.reason }]);
       }
       const result = await saveTimeOff(ctx, tx, booking, { days, status: "requested" });
+      approvalAsked = true;
       await dependencies.approvals.requestApproval(ctx, tx, {
         approvalProcessKey,
         record: { recordType: "time_off", recordId: result.id },
@@ -213,8 +215,9 @@ function saveRequest(
       return { ...result, approvalProcessKey };
     })
     .catch((error: unknown) => {
-      // Only the approval refuses with a conflict here: its process is off, a setup fault to look at.
-      if (error instanceof ApplicationError && error.code === "CONFLICT") {
+      // Once asked, the approval refuses with a conflict, here or before the commit, when its
+      // process is off: a setup fault to look at. A changed cost refuses before that.
+      if (approvalAsked && error instanceof ApplicationError && error.code === "CONFLICT") {
         dependencies.logger.warn(
           { employeeId: booking.employeeId, timeOffTypeId: booking.timeOffTypeId },
           "Requested time off could not start its approval",
