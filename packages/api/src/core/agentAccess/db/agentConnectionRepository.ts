@@ -87,6 +87,8 @@ export interface ConnectionInUse {
   id: string;
   email: string;
   lastUsedAt: Date;
+  /** What the person allows the agent now; a token issued earlier may name more. */
+  scopes: string[];
 }
 
 export function agentConnectionRepository(db: Orm | Tx): AgentConnectionRepository {
@@ -115,7 +117,12 @@ export function agentConnectionRepository(db: Orm | Tx): AgentConnectionReposito
     },
     async findConnectionOf(userId, clientId) {
       const [row] = await orm()
-        .select({ id: oauthConsent.id, email: user.email, lastUsedAt: oauthConsent.updatedAt })
+        .select({
+          id: oauthConsent.id,
+          email: user.email,
+          lastUsedAt: oauthConsent.updatedAt,
+          scopes: oauthConsent.scopes,
+        })
         .from(oauthConsent)
         .innerJoin(user, eq(user.id, oauthConsent.userId))
         .where(and(eq(oauthConsent.userId, userId), eq(oauthConsent.clientId, clientId)));

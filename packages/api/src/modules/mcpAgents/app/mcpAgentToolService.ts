@@ -27,6 +27,7 @@ import {
   type PeoplePage,
   type Person,
   previewOf,
+  requestOutcomeOf,
   WHEN_YOU_ASK,
   type WhoAmI,
 } from "./agentAnswers";
@@ -135,7 +136,7 @@ export function createMcpAgentToolService({
         expectedDays,
       });
       return {
-        outcome: saved.status === "approved" ? "BOOKED" : "WAITING_FOR_APPROVAL",
+        outcome: requestOutcomeOf(saved.status),
         timeOffId: saved.id,
         totalDays: saved.cost,
       };

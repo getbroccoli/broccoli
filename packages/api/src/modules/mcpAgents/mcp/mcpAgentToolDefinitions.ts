@@ -140,11 +140,15 @@ export const REQUEST_LEAVE = {
     "Asks for the person's own time off, or books it when they may book it straight away. Only after the person confirmed the preview: pass its totalDays as expectedDays; a different cost is refused.",
   inputSchema: {
     ...LEAVE_INPUT,
-    note: z.string().max(MAX_NOTE_LENGTH).optional().describe("For the approver."),
+    note: z
+      .string()
+      .max(MAX_NOTE_LENGTH)
+      .optional()
+      .describe("Saved with the time off; whoever may read the person's time off sees it."),
     expectedDays: z.number().describe("The preview's totalDays the person agreed to."),
   },
   outputSchema: {
-    outcome: z.enum(["WAITING_FOR_APPROVAL", "BOOKED"]),
+    outcome: z.enum(["WAITING_FOR_APPROVAL", "BOOKED", "ENDED_WITH_NO_DECISION"]),
     timeOffId: z.string(),
     totalDays: z.number(),
   },

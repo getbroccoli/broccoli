@@ -1,7 +1,6 @@
 import type { MessageKey } from "@/i18n";
 
-/** Granted when the agent asks to change things, such as asking for leave. */
-const WRITE_SCOPE = "broccoli:write";
+import { WRITE_SCOPE } from "./consentKind";
 
 /** What the Allow page promises about an agent asking for these scopes. */
 export function allowPromises(scopes: ReadonlySet<string>): MessageKey[] {

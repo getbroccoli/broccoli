@@ -11,6 +11,7 @@ query AllowAgent {
   myAgentConnection {
     id
     clientId
+    canChangeThings
     clientName
     connectedAt
   }

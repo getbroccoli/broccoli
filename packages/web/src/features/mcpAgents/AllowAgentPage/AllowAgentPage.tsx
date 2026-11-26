@@ -10,6 +10,7 @@ import { AuthCard } from "@/shell";
 
 import { answerAgent, readAgentClientName } from "./allowAgentApi";
 import { allowPromises } from "./allowPromises";
+import { consentKind } from "./consentKind";
 
 type Props = {
   /** The agent's request, as Broccoli's OAuth server signed it. */
@@ -29,10 +30,10 @@ export function AllowAgentPage({ signedRequest }: Props) {
   const [answering, setAnswering] = useState(false);
   const [outcome, setOutcome] = useState<"expired" | "failed" | null>(null);
   const client = clientName ?? t("mcpAgents.allow.unnamedClient");
-  const current = data?.myAgentConnection;
-  // The same agent asking for more keeps its connection; another one replaces it.
-  const widening = current?.clientId === clientId;
-  const replaced = widening ? null : current;
+  const current = data?.myAgentConnection ?? null;
+  const kind = consentKind({ clientId, scopes, current });
+  const widening = kind === "SAME_AGENT_WIDENING";
+  const replaced = kind === "REPLACING_ANOTHER_AGENT" ? current : null;
   const me = data?.me;
   const employee = me?.employee;
 

@@ -3,6 +3,7 @@ import { ApplicationError } from "../../../core/applicationError";
 import type { Orm } from "../../../core/db";
 import { createWriteModeService } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
+import { parseUuid } from "../../../utils";
 import { timeOffPolicyRepository } from "../db";
 import type { BookedTimeOff, BookingInput, BookTimeOffService } from "./bookTimeOffService";
 
@@ -32,7 +33,9 @@ export async function ownTimeOffModes(
   return new Map(
     timeOffTypeIds.map((id) => [
       id,
-      mode === "request" && !approved.has(id) ? "booked_straight_away" : OWN_MODES[mode],
+      mode === "request" && !approved.has(parseUuid(id) ?? id)
+        ? "booked_straight_away"
+        : OWN_MODES[mode],
     ]),
   );
 }

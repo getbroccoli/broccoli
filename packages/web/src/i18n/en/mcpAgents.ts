@@ -65,7 +65,7 @@ export const mcpAgentsEn = {
   "mcpAgents.welcome.dismiss": "Dismiss",
   "mcpAgents.prompts.title": "Try asking:",
   "mcpAgents.prompts.balance": "How much annual leave do I have left in Broccoli?",
-  "mcpAgents.prompts.askForLeave": "Ask for Friday 18 December off in Broccoli.",
+  "mcpAgents.prompts.askForLeave": "Ask for next Friday off in Broccoli.",
   "mcpAgents.prompts.tasks": "What do I need to do in Broccoli today?",
   "mcpAgents.prompts.copy": "Copy prompt: {prompt}",
   "mcpAgents.connected.label": "Your connected agent",

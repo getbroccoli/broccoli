@@ -2,7 +2,7 @@ import { t, type MessageKey } from "@/i18n";
 
 import { PromptIdea } from "./PromptIdea";
 
-// Only what the agent's tools answer today: the person, their manager, and people by name or email.
+// Only what the agent's tools answer today: leave, asking for it, and tasks.
 const PROMPTS: readonly MessageKey[] = [
   "mcpAgents.prompts.balance",
   "mcpAgents.prompts.askForLeave",
