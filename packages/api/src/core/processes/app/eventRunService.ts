@@ -217,7 +217,8 @@ async function startRunsOfType(
     starts.map(({ recordId }) => recordId),
   );
   const runs = processRepository(tx);
-  for (const wave of wavesOf(starts)) {
+  // In record order, so changes starting runs on the same records concurrently lock them alike.
+  for (const wave of wavesOf(starts).map((records) => records.toSorted(byRecordId))) {
     const inProgress = await runs.findRecordsWithRunInProgress(
       process.id,
       recordType,
@@ -309,4 +310,8 @@ function logSkip(
     { processKey: process.key, eventId: event.id, eventType: event.type, recordId, reason },
     "Process run not started for an event",
   );
+}
+
+function byRecordId(left: Start, right: Start): number {
+  return left.recordId < right.recordId ? -1 : left.recordId > right.recordId ? 1 : 0;
 }

@@ -58,6 +58,6 @@ Approvals let a feature ask for approval of one of its records and hear how it e
 ## Rules
 
 - A feature names an approval process by key; only the processes approvals seeds are approval processes (`manager_approval` today). An unknown key is refused when asked.
-- Every request ends with exactly one `approvals.approval_finished`: with an outcome, or `endedWithoutOutcome` `no_approver` (its decision step had nobody: no manager and no owner employee) or `run_cancelled` (the daily check cancelled it, such as when the approver was removed).
+- A request that started its run ends with exactly one `approvals.approval_finished`, and one that started none fails its change and publishes nothing. It comes with an outcome, or `endedWithoutOutcome` `no_approver` (its decision step had nobody: no manager and no owner employee) or `run_cancelled` (the daily check cancelled it, such as when the approver was removed).
 - A request starts its run in the requesting transaction. Approvals checks it in the next before-commit round, where processes' `processes.runs_started_on_event` arrives, whatever order the handlers run in.
 - Only the assignee decides; asking gives the requester no right to finish or delete the task.

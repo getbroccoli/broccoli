@@ -72,6 +72,7 @@ export function createRunLifecycleService({
         await runStepRepository(tx).findStepsByTaskIds([...resultsByTaskId.keys()])
       ).filter(({ status }) => status === "step_awaiting_task_completion");
       const now = new Date();
+      const ended: ProcessRun[] = [];
       for (const runId of [...new Set(awaiting.map((step) => step.runId))].sort()) {
         const run = (await runs.lockRun(runId))!;
         // A run that can no longer run stays in progress for the daily check, which cancels it.
@@ -81,7 +82,7 @@ export function createRunLifecycleService({
           ? await steps.startReadySteps(tx, completed, laterOf(today(), run.startDay))
           : completed;
         await runs.saveRun(changed);
-        if (run.status === "in_progress") await runEndings.publishEnded(tx, [changed]);
+        if (run.status === "in_progress") ended.push(changed);
         tx.publish("processes.steps_completed", {
           runId,
           taskIds: run.openTaskIds().filter((taskId) => resultsByTaskId.has(taskId)),
@@ -90,6 +91,7 @@ export function createRunLifecycleService({
           runStatus: changed.status,
         });
       }
+      await runEndings.publishEnded(tx, ended);
     },
 
     async readStepProgress(ctx, taskIds) {
@@ -117,7 +119,11 @@ export function createRunLifecycleService({
           if (!task) continue;
           const run = runOf.get(step.runId)!;
           const rule = ruleOf.get(run.processVersionId)!;
-          progress.set(task.id, progressOf(run, processOf.get(run.processId)!.name, rule, task));
+          const processName = processOf.get(run.processId)!.name;
+          progress.set(
+            task.id,
+            progressOf(run, processName, rule, { task, stepKey: step.stepKey }),
+          );
         }
         return progress;
       });
@@ -155,14 +161,12 @@ function progressOf(
   run: ProcessRun,
   processName: string,
   rule: OutcomeRule | null,
-  task: Task,
+  { task, stepKey }: { task: Task; stepKey: string },
 ): StepProgress {
   const counted = run.steps.filter(
     ({ status }) => status !== "step_skipped" && status !== "step_not_reached",
   );
-  const decides = run.steps.some(
-    ({ stepKey, taskId }) => taskId === task.id && stepKey === rule?.step,
-  );
+  const decides = stepKey === rule?.step;
   const given = decides ? outcomeOf(rule, run) : null;
   return {
     processName,

@@ -16,14 +16,7 @@ import { t } from "@/i18n";
 
 import { TASK_DESCRIPTION } from "../taskDescription";
 import { TaskStatus } from "../TaskStatus";
-import {
-  formatTaskDay,
-  isOpen,
-  personName,
-  resultText,
-  taskSource,
-  type TaskRow,
-} from "../taskText";
+import { formatTaskDay, isOpen, personName, resultText, type TaskRow } from "../taskText";
 import { useTaskActions } from "../useTaskActions";
 import { DeleteTaskDialog } from "./DeleteTaskDialog";
 import { PanelCloseButton } from "./PanelCloseButton";
@@ -163,7 +156,7 @@ export function TaskDetails({ task, onDeleted }: Props) {
           {hasOrigin(task) && (
             <section className="flex flex-col gap-1.5 text-muted-foreground">
               <h3 className={SECTION_LABEL}>{t("tasks.panel.from")}</h3>
-              {(task.askedBy || !task.processRun) && <p>{originLine(task, asked, viewerId)}</p>}
+              {task.askedBy && <p>{originLine(task, asked)}</p>}
               {task.status === "DONE" && (
                 <p>
                   {task.doneBy?.id === viewerId
@@ -209,14 +202,14 @@ function ifDoneText(task: TaskRow, asked: boolean, decides: boolean): string {
   return t(decides ? "tasks.panel.ifDecideAsker" : "tasks.panel.ifDoneAsker", { name });
 }
 
-/** A process's own task shows no origin line, as its Process section names the process. */
+/** Who asked, or how it ended; a process's task names its process in its own section instead. */
 function hasOrigin(task: TaskRow): boolean {
-  return Boolean(task.askedBy) || !task.processRun || task.status !== "TO_DO";
+  return Boolean(task.askedBy) || task.status !== "TO_DO";
 }
 
-function originLine(task: TaskRow, asked: boolean, viewerId: string | null): string {
+/** Who asked for the task, which has someone who asked. */
+function originLine(task: TaskRow, asked: boolean): string {
   const date = formatTaskDay(task.createdAt);
   if (asked) return t("tasks.panel.youAsked", { name: task.assignee.firstName, date });
-  if (task.askedBy) return t("tasks.panel.askedBy", { name: personName(task.askedBy), date });
-  return taskSource(task, viewerId);
+  return t("tasks.panel.askedBy", { name: personName(task.askedBy), date });
 }

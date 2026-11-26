@@ -5,7 +5,6 @@ import type { AfterEntry, AssigneeRule } from "./processDefinition";
 
 /** How many of the steps a step waits for must let it start: every one, or any one. */
 export const STEP_JOINS = ["all", "any"] as const;
-export type StepJoin = (typeof STEP_JOINS)[number];
 
 const offsetSchema = z.object({
   amount: z.number().int(),
