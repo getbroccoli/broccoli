@@ -26,6 +26,8 @@ export function TaskPanel({ taskId, onClose }: Props) {
   }, []);
   const { data, error, loading, refetch } = useQuery(TaskPanelDocument, {
     variables: { id: taskId },
+    // A run moves on as its other tasks are done, which this task's cached copy never sees.
+    fetchPolicy: "cache-and-network",
   });
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>

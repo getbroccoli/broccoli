@@ -49,6 +49,8 @@ export const tasksEn = {
   "tasks.panel.ifDone": "If you mark it done",
   "tasks.panel.ifDoneAsker": "{name} sees it as done in Tasks.",
   "tasks.panel.ifDoneNobody": "It moves to Resolved recently.",
+  "tasks.panel.ifDecide": "If you decide",
+  "tasks.panel.ifDecideAsker": "{name} sees your decision and comment in Tasks.",
   "tasks.panel.from": "Where it came from",
   "tasks.panel.askedBy": "Asked by {name} on {date}",
   "tasks.panel.youAsked": "You asked {name} on {date}",

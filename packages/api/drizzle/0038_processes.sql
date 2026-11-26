@@ -213,7 +213,7 @@ INSERT INTO "process_versions" ("process_id", "version", "status", "definition_s
 INSERT INTO "processes" ("key", "name", "description", "built_in", "turned_on_at") VALUES (
 	'manager_approval',
 	'Manager approval',
-	'Asks the requester''s manager, or the owner when they have none, to approve or reject a request.',
+	'Asks the manager of the person a request is about, or the owner when they have none, to approve or reject it.',
 	true,
 	now()
 );--> statement-breakpoint

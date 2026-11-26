@@ -159,7 +159,8 @@ async function startRunsOfJob(
     );
     return;
   }
-  const process = { ...current, activeVersion: (await runs.findVersion(versionId))! };
+  const [version] = await runs.findVersions([versionId]);
+  const process = { ...current, activeVersion: version! };
   const definition = dependencies.definitionOf(process.activeVersion);
   const starts = matchEventStarts(
     [{ processId, trigger: definition.trigger }],

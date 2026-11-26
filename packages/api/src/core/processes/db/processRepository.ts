@@ -1,10 +1,17 @@
 import { and, desc, eq, inArray, isNotNull, type SQL, sql } from "drizzle-orm";
 
-import { ormOf, type Orm, type OrmTransaction, type Tx } from "../../db";
+import { isUniqueViolation, ormOf, type Orm, type OrmTransaction, type Tx } from "../../db";
+import { ApplicationError } from "../../applicationError";
 import { inRecordScope, type RecordScope } from "../../security";
 import { PROCESS_DEFINITION_SCHEMA_VERSION, ProcessRun, type ProcessRunFields } from "../domain";
 import { processes, processVersions } from "./processesTable";
-import { processRuns, resultColumnsOf, runStepProgress, toRunStep } from "./processRunsTable";
+import {
+  processRuns,
+  resultColumnsOf,
+  RUN_IN_PROGRESS_PER_RECORD,
+  runStepProgress,
+  toRunStep,
+} from "./processRunsTable";
 
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
 export const INSERT_BATCH_SIZE = 1_000;
@@ -36,8 +43,8 @@ export interface ProcessRepository {
   listProcesses(): Promise<StoredProcess[]>;
   findProcessByKey(key: string): Promise<StoredProcess | null>;
   findProcessesByIds(ids: readonly string[]): Promise<StoredProcess[]>;
-  /** A version's stored definition, not yet parsed; null when no version has the id. */
-  findVersion(id: string): Promise<StoredProcess["activeVersion"] | null>;
+  /** The versions among these ids, not yet parsed. */
+  findVersions(ids: readonly string[]): Promise<StoredProcess["activeVersion"][]>;
   /**
    * The process, locked until the transaction ends, so the daily job, an admin's start, step
    * commands and resets take turns. The lock leaves new runs' foreign keys free, so a change that
@@ -51,7 +58,10 @@ export interface ProcessRepository {
   /** A new process with its first version, published and active; for tests and seeds. */
   insertProcess(process: NewProcessRow): Promise<{ id: string; key: string }>;
   setTurnedOnAt(id: string, turnedOnAt: Date | null): Promise<void>;
-  /** Inserts the runs in batches; returns them in the same order. */
+  /**
+   * Inserts the runs in batches; returns them in the same order. CONFLICT when a concurrent change
+   * started a run of the same process on one of their records first.
+   */
   insertRuns(runs: readonly NewRunRow[]): Promise<ProcessRunFields[]>;
   findRun(id: string): Promise<ProcessRunFields | null>;
   /** The run with its steps, locked until the transaction ends, so changes to it take turns. */
@@ -116,12 +126,12 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
       return (await selectProcesses().where(inArray(processes.id, [...ids]))).map(toStoredProcess);
     },
 
-    async findVersion(id) {
-      const [row] = await orm
+    async findVersions(ids) {
+      if (ids.length === 0) return [];
+      return orm
         .select(VERSION_COLUMNS)
         .from(processVersions)
-        .where(eq(processVersions.id, id));
-      return row ?? null;
+        .where(inArray(processVersions.id, [...ids]));
     },
 
     async lockProcess(id) {
@@ -183,7 +193,11 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
       const inserted: ProcessRunFields[] = [];
       for (let start = 0; start < runs.length; start += INSERT_BATCH_SIZE) {
         const batch = runs.slice(start, start + INSERT_BATCH_SIZE);
-        inserted.push(...(await orm.insert(processRuns).values(batch).returning()));
+        try {
+          inserted.push(...(await orm.insert(processRuns).values(batch).returning()));
+        } catch (error) {
+          throw isUniqueViolation(error, RUN_IN_PROGRESS_PER_RECORD) ? runInProgress() : error;
+        }
       }
       return inserted;
     },
@@ -215,9 +229,8 @@ export function processRepository(db: Orm | Tx): ProcessRepository {
         .select()
         .from(runStepProgress)
         .where(inArray(runStepProgress.runId, [...ids]));
-      return rows.map((row) =>
-        ProcessRun.restore(row, steps.filter(({ runId }) => runId === row.id).map(toRunStep)),
-      );
+      const stepsOf = Map.groupBy(steps, ({ runId }) => runId);
+      return rows.map((row) => ProcessRun.restore(row, (stepsOf.get(row.id) ?? []).map(toRunStep)));
     },
 
     async saveRun({ steps, ...run }) {
@@ -343,4 +356,11 @@ type ProcessWithVersionRow = {
 function toStoredProcess({ process, version }: ProcessWithVersionRow): StoredProcess {
   const { id, key, name, description, turnedOnAt } = process;
   return { id, key, name, description, turnedOnAt, activeVersion: version };
+}
+
+function runInProgress(): ApplicationError {
+  return new ApplicationError(
+    "CONFLICT",
+    "This record already has a run of this process in progress.",
+  );
 }

@@ -54,7 +54,7 @@ export function taskSource(task: TaskRow, viewerId: string | null): string {
   if (task.askedBy) {
     return task.askedBy.id === viewerId ? t("tasks.you") : personName(task.askedBy);
   }
-  return task.processRun!.processName;
+  return task.processRun?.processName ?? "";
 }
 
 /** The line under a task's process run status: who decided, who holds the decision, or how far it is. */

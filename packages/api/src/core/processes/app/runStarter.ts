@@ -84,6 +84,9 @@ export function createRunStarter({
 
   return {
     async readRecordSubjects(tx, recordType, recordIds) {
+      if (!Object.hasOwn(recordTypes, recordType)) {
+        throw new Error(`Record type ${recordType} cannot be the subject of a process.`);
+      }
       const subjectIds = await recordTypes[recordType]!.readSubjects(tx, [...new Set(recordIds)]);
       const found = await readPeople(
         tx,

@@ -34,6 +34,8 @@ export function TaskProcessRun({ task, viewerId }: Props) {
         />
         {run.outcome ? (
           <>
+            {/* A decision taken before the run's other steps are done says so. */}
+            {run.status !== "FINISHED" && `${t(`tasks.processRun.${run.status}`)} · `}
             <b className="font-semibold">{run.outcome.label}</b>
             {run.outcome.comment && ` — ${run.outcome.comment}`}
           </>

@@ -18,6 +18,8 @@ import {
   test,
 } from "#test/support";
 
+import type { Orm } from "../../db";
+import type { DomainEvents } from "../../events";
 import { WELCOME_NEW_STARTER } from "../domain";
 
 test("lists an admin's runs newest first", async ({ orm, seed }) => {
@@ -149,30 +151,7 @@ test("shows the outcome step's decision to its assignee and its asker", async ({
 test("shows no outcome on another task of a run that has an outcome", async ({ orm, seed }) => {
   const employee = await seed.employee();
   const ctx = signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] });
-  const definition = eventProcess("employees.added");
-  const followUp = definition.steps[0]!;
-  const decide = {
-    ...followUp,
-    key: "decide",
-    task: {
-      ...followUp.task,
-      resultForm: {
-        kind: "choice" as const,
-        options: [
-          { code: "yes", label: "Yes" },
-          { code: "no", label: "No" },
-        ],
-      },
-    },
-  };
-  const { key } = await seedProcess(orm, {
-    key: "review",
-    definition: {
-      ...definition,
-      steps: [decide, followUp],
-      outcome: { step: "decide" },
-    },
-  });
+  const { key } = await seedReview(orm, "subject");
   const transact = transactWithProcesses(orm, { today: approvalToday });
   const processes = processService(orm, { today: approvalToday, transact });
   const tasks = taskService(orm, { transact });
@@ -193,6 +172,33 @@ test("shows no outcome on another task of a run that has an outcome", async ({ o
     decidesOutcome: false,
     outcome: null,
   });
+});
+
+test("ending a run on a later step reports the employee who made the earlier decision", async ({
+  orm,
+  seed,
+}) => {
+  const { sam, requester, manager } = await approvalParticipants(orm, seed);
+  const { key } = await seedReview(orm, "subjects_manager");
+  const ended: DomainEvents["processes.run_ended"][] = [];
+  const transact = transactWithProcesses(orm, { today: approvalToday }, (_tx, events) => {
+    for (const event of events) {
+      if (event.type === "processes.run_ended") ended.push(event.payload);
+    }
+    return Promise.resolve();
+  });
+  const processes = processService(orm, { today: approvalToday, transact });
+  const tasks = taskService(orm, { transact });
+  const run = await processes.startRun(ADMIN, { processKey: key, recordId: sam.id });
+  const result = { code: "no", comment: "Still under review" };
+  await tasks.markDone(requester, run.steps[0]!.task!.id, { result });
+  expect(ended).toEqual([]);
+
+  await tasks.markDone(manager, run.steps[1]!.task!.id);
+
+  expect(ended).toMatchObject([
+    { runId: run.run.id, status: "finished", outcome: { ...result, byEmployeeId: sam.id } },
+  ]);
 });
 
 test("reports an unknown run", async ({ orm }) => {
@@ -233,3 +239,33 @@ test("reset removes runs, turns built-in processes on and other processes off", 
   );
   expect(reset.find(({ key }) => key === WELCOME_NEW_STARTER)).toMatchObject({ turnedOnAt: null });
 });
+
+function seedReview(orm: Orm, followUpAssignee: "subject" | "subjects_manager") {
+  const definition = eventProcess("employees.added");
+  const followUp = definition.steps[0]!;
+  const decide = {
+    ...followUp,
+    key: "decide",
+    task: {
+      ...followUp.task,
+      resultForm: {
+        kind: "choice" as const,
+        options: [
+          { code: "yes", label: "Yes" },
+          { code: "no", label: "No" },
+        ],
+      },
+    },
+  };
+  return seedProcess(orm, {
+    key: "review",
+    definition: {
+      ...definition,
+      steps: [
+        decide,
+        { ...followUp, task: { ...followUp.task, assignee: { kind: followUpAssignee } } },
+      ],
+      outcome: { step: "decide" },
+    },
+  });
+}

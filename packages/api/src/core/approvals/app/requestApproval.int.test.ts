@@ -1,15 +1,19 @@
+import { sql } from "drizzle-orm";
+
 import {
   ADMIN,
   approvalParticipants,
   approvalRequest,
   approvalToday,
   expect,
+  expectBlockedBy,
   processService,
   taskService,
   test,
   transactWithApprovals,
 } from "#test/support";
 
+import { ormOf } from "../../db";
 import { MANAGER_APPROVAL } from "../domain";
 import { createApprovalService } from "./approvalService";
 
@@ -100,6 +104,66 @@ test("refuses a second request for a record whose approval is in progress", asyn
     transact((tx) => approvals.requestApproval(requester, tx, request)),
   ).rejects.toMatchObject(couldNotStart);
   expect(await processes.listRuns(ADMIN, MANAGER_APPROVAL)).toEqual(runs);
+});
+
+test("refuses an unregistered subject record type and rolls back the caller's work", async ({
+  orm,
+  seed,
+}) => {
+  const { sam, requester } = await approvalParticipants(orm, seed);
+  const request = { ...approvalRequest(sam.id), record: { recordType: "nope", recordId: sam.id } };
+  const tasks = taskService(orm);
+  const transact = transactWithApprovals(orm, { today: approvalToday });
+
+  await expect(
+    transact(async (tx) => {
+      await tasks.createTask(requester, tx, preparationTask(sam.id));
+      await createApprovalService().requestApproval(requester, tx, request);
+    }),
+  ).rejects.toThrow("Record type nope cannot be the subject of a process.");
+
+  expect((await tasks.listMyTasks(requester)).needsYou).toEqual([]);
+  expect(await processService(orm).listRuns(ADMIN, MANAGER_APPROVAL)).toEqual([]);
+});
+
+test("a concurrent request for the same record gets a conflict and rolls back", async ({
+  orm,
+  seed,
+}) => {
+  const { sam, requester } = await approvalParticipants(orm, seed);
+  const request = approvalRequest(sam.id);
+  const approvals = createApprovalService();
+  const tasks = taskService(orm);
+  const locked = Promise.withResolvers<number>();
+  const release = Promise.withResolvers<void>();
+  const holdFirst = transactWithApprovals(orm, { today: approvalToday }, async (tx, events) => {
+    if (!events.some(({ type }) => type === "processes.runs_started_on_event")) return;
+    const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+    locked.resolve(rows[0]!.pid);
+    await release.promise;
+  });
+  const first = holdFirst((tx) => approvals.requestApproval(requester, tx, request));
+  await Promise.race([locked.promise, first]);
+
+  const transact = transactWithApprovals(orm, { today: approvalToday });
+  const second = transact(async (tx) => {
+    await tasks.createTask(requester, tx, preparationTask(sam.id));
+    await approvals.requestApproval(requester, tx, request);
+  });
+  const results = Promise.allSettled([first, second]);
+  try {
+    await expectBlockedBy(orm, await locked.promise);
+  } finally {
+    release.resolve();
+    await results;
+  }
+
+  expect(await results).toMatchObject([
+    { status: "fulfilled" },
+    { status: "rejected", reason: { code: "CONFLICT" } },
+  ]);
+  expect((await tasks.listMyTasks(requester)).needsYou).toEqual([]);
+  expect(await processService(orm).listRuns(ADMIN, MANAGER_APPROVAL)).toHaveLength(1);
 });
 
 function preparationTask(employeeId: string) {

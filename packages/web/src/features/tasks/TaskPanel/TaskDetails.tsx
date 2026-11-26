@@ -47,8 +47,9 @@ export function TaskDetails({ task, onDeleted }: Props) {
   const [chosenCode, setChosenCode] = useState<string | null>(null);
   const holds = task.assignee.id === viewerId;
   const asked = task.askedBy?.id === viewerId;
-  const canDelete = asked && isOpen(task);
+  const canDelete = asked && isOpen(task) && task.type === "MANUAL_TO_DO";
   const canFinish = holds && task.status === "TO_DO";
+  const decides = task.processRun?.decidesOutcome ?? false;
   const form = task.resultForm;
 
   return (
@@ -153,12 +154,10 @@ export function TaskDetails({ task, onDeleted }: Props) {
         <aside className="flex flex-col gap-6 self-start rounded-xl bg-muted/50 p-4 text-sm">
           {holds && isOpen(task) && (
             <section className="flex flex-col gap-1.5">
-              <h3 className={SECTION_LABEL}>{t("tasks.panel.ifDone")}</h3>
-              <p>
-                {task.askedBy && !asked
-                  ? t("tasks.panel.ifDoneAsker", { name: task.askedBy.firstName })
-                  : t("tasks.panel.ifDoneNobody")}
-              </p>
+              <h3 className={SECTION_LABEL}>
+                {t(decides ? "tasks.panel.ifDecide" : "tasks.panel.ifDone")}
+              </h3>
+              <p>{ifDoneText(task, asked, decides)}</p>
             </section>
           )}
           {hasOrigin(task) && (
@@ -201,6 +200,13 @@ export function TaskDetails({ task, onDeleted }: Props) {
       />
     </div>
   );
+}
+
+/** Who learns of it once done: the asker, who sees a decision with its comment, or nobody. */
+function ifDoneText(task: TaskRow, asked: boolean, decides: boolean): string {
+  if (!task.askedBy || asked) return t("tasks.panel.ifDoneNobody");
+  const name = task.askedBy.firstName;
+  return t(decides ? "tasks.panel.ifDecideAsker" : "tasks.panel.ifDoneAsker", { name });
 }
 
 /** A process's own task shows no origin line, as its Process section names the process. */

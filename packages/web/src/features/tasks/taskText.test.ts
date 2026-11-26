@@ -125,6 +125,12 @@ it("says you when you asked for a task", () => {
   expect(taskSource(taskWith(), asker.id)).toBe("You");
 });
 
+it("shows no source for a task with neither an asker nor a process", () => {
+  const task = taskWith({ askedBy: null, processRun: null });
+
+  expect(taskSource(task, assignee.id)).toBe("");
+});
+
 it("names the process when no person asked for a task", () => {
   const task = taskWith({
     askedBy: null,

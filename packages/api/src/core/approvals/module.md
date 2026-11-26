@@ -4,23 +4,21 @@ Approvals let a feature ask for approval of one of its records and hear how it e
 
 ## Example
 
-1. Sam asks for leave. In the transaction that saves the request, the time off feature calls `requestApproval`, which publishes:
+1. Sam asks for leave. In the transaction that saves the request, the time off feature asks for approval of it; its record type must have registered process capabilities (who it is about):
 
-   ```json
-   {
-     "type": "approvals.approval_requested",
-     "payload": {
-       "approvalProcessKey": "manager_approval",
-       "recordType": "time_off_request",
-       "recordId": "r1",
-       "requesterEmployeeId": "sam",
-       "title": "Approve Sam's leave, 2–4 Dec",
-       "description": "Annual leave, 2.5 days."
-     }
-   }
+   ```ts
+   await approvals.requestApproval(ctx, tx, {
+     approvalProcessKey: "manager_approval",
+     record: { recordType: "time_off_request", recordId: "r1" },
+     requesterEmployeeId: "sam",
+     title: "Approve Sam's leave, 2–4 Dec",
+     description: "Annual leave, 2.5 days.",
+   });
    ```
 
-2. Before the commit, the built-in Manager approval starts one run on the request. Sam's manager Mia gets the task, asked by Sam:
+   It publishes `approvals.approval_requested` with the same values, its record flattened into `recordType` and `recordId`.
+
+2. Before the commit, the built-in Manager approval starts one run on the request. Mia, the manager of Sam, whom the request is about, gets the task, asked by Sam:
 
    ```json
    // process_runs

@@ -129,8 +129,8 @@ export function createStepStarter(dependencies: StepStarterDependencies): StepSt
     },
 
     async stepTitles(tx, run) {
-      const version = (await processRepository(tx).findVersion(run.processVersionId))!;
-      const { steps } = definitionOf(version);
+      const [version] = await processRepository(tx).findVersions([run.processVersionId]);
+      const { steps } = definitionOf(version!);
       const subject = await readSubject(people, tx, run);
       return new Map(
         steps.map((step) => [
@@ -158,7 +158,8 @@ async function startReadyStepsOf(
   const { tasks, people, workingCalendars, definitionOf } = dependencies;
   if (!run.steps.some(({ status }) => status === "step_waiting_to_start")) return run;
   const processes = processRepository(tx);
-  const definition = definitionOf((await processes.findVersion(run.processVersionId))!);
+  const [version] = await processes.findVersions([run.processVersionId]);
+  const definition = definitionOf(version!);
   const { ready, notReached } = decideWaitingSteps(definition.steps, run.steps);
   if (ready.length + notReached.length === 0) return run;
   const subject = await readSubject(people, tx, run);

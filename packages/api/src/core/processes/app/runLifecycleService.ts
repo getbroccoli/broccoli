@@ -14,7 +14,7 @@ import {
 } from "../domain";
 import type { StepProgress } from "./processViews";
 import type { RunEndings } from "./runEndings";
-import type { DefinitionReader, RunStarter } from "./runStarter";
+import type { RunStarter } from "./runStarter";
 import type { StepStarter } from "./stepStarter";
 
 /**
@@ -47,7 +47,6 @@ export function createRunLifecycleService({
   starter,
   steps,
   runEndings,
-  definitionOf,
   today,
 }: {
   transact: Transact;
@@ -55,17 +54,18 @@ export function createRunLifecycleService({
   starter: RunStarter;
   steps: StepStarter;
   runEndings: RunEndings;
-  definitionOf: DefinitionReader;
   /** Today in London: the day a step that starts later resolves its assignee on. */
   today: () => CalendarDate;
 }): RunLifecycleService {
   return {
     async completeStepsOfDoneTasks(tx, events) {
-      const doneEvents = events.flatMap(({ type, payload }) =>
-        type === "tasks.task_status_changed" && payload.to === "done" ? [payload] : [],
+      const resultsByTaskId = new Map(
+        events.flatMap(({ type, payload }) =>
+          type === "tasks.task_status_changed" && payload.to === "done"
+            ? [[payload.taskId, payload.result] as const]
+            : [],
+        ),
       );
-      const resultsByTaskId = new Map(doneEvents.map(({ taskId, result }) => [taskId, result]));
-      const doneBy = new Map(doneEvents.map(({ taskId, byEmployeeId }) => [taskId, byEmployeeId]));
       if (resultsByTaskId.size === 0) return;
       const runs = processRepository(tx);
       const awaiting = (
@@ -81,7 +81,7 @@ export function createRunLifecycleService({
           ? await steps.startReadySteps(tx, completed, laterOf(today(), run.startDay))
           : completed;
         await runs.saveRun(changed);
-        if (run.status === "in_progress") await runEndings.publishEnded(tx, [changed], doneBy);
+        if (run.status === "in_progress") await runEndings.publishEnded(tx, [changed]);
         tx.publish("processes.steps_completed", {
           runId,
           taskIds: run.openTaskIds().filter((taskId) => resultsByTaskId.has(taskId)),
@@ -96,32 +96,28 @@ export function createRunLifecycleService({
       const employeeId = ctx.user?.employeeId;
       if (!employeeId || taskIds.length === 0) return new Map();
       return transact(async (tx) => {
-        const readable = (await tasks.readTasksInTransaction(tx, taskIds)).filter((task) =>
-          task.isVisibleTo(employeeId),
-        );
-        const taskSteps = await runStepRepository(tx).findStepsByTaskIds(readable.map(byId));
+        const taskSteps = await runStepRepository(tx).findStepsByTaskIds(taskIds);
         const runs = processRepository(tx);
-        const runOf = new Map(
-          (await runs.readRunsWithSteps([...new Set(taskSteps.map(({ runId }) => runId))])).map(
-            (run) => [run.id, run],
+        // The runs first: their share lock waits for a decision in flight, so the tasks read after
+        // it agree with them.
+        const runOf = byIds(await runs.readRunsWithSteps([...new Set(taskSteps.map(runIdOf))]));
+        const taskOf = byIds(
+          (await tasks.readTasksInTransaction(tx, taskSteps.map(taskIdOf))).filter((task) =>
+            task.isVisibleTo(employeeId),
           ),
         );
-        const processOf = new Map(
-          (await runs.findProcessesByIds([...new Set([...runOf.values()].map(processIdOf))])).map(
-            (process) => [process.id, process],
-          ),
+        const runList = [...runOf.values()];
+        const processOf = byIds(
+          await runs.findProcessesByIds([...new Set(runList.map(processIdOf))]),
         );
-        const taskOf = new Map(readable.map((task) => [task.id, task]));
-        const ruleOf = new Map<string, OutcomeRule | null>();
-        for (const versionId of new Set([...runOf.values()].map(versionIdOf))) {
-          ruleOf.set(versionId, definitionOf((await runs.findVersion(versionId))!).outcome);
-        }
+        const ruleOf = await runEndings.readOutcomeRules(tx, runList.map(versionIdOf));
         const progress = new Map<string, StepProgress>();
         for (const step of taskSteps) {
+          const task = taskOf.get(taskIdOf(step));
+          if (!task) continue;
           const run = runOf.get(step.runId)!;
-          const outcome = ruleOf.get(run.processVersionId)!;
-          const task = taskOf.get(step.taskId!)!;
-          progress.set(task.id, progressOf(run, processOf.get(run.processId)!.name, outcome, task));
+          const rule = ruleOf.get(run.processVersionId)!;
+          progress.set(task.id, progressOf(run, processOf.get(run.processId)!.name, rule, task));
         }
         return progress;
       });
@@ -134,7 +130,8 @@ export function createRunLifecycleService({
       const reason =
         removal.cause === "cancelled_because_subject_was_removed"
           ? SUBJECT_REMOVED
-          : `The assignee of '${(await steps.stepTitles(tx, run)).get(removal.stepKey!)}' was removed from Broccoli.`;
+          : // The task goes with its assignee, or with the person who asked for it.
+            `The task '${(await steps.stepTitles(tx, run)).get(removal.stepKey!)}' was removed with the person it was given to or who asked for it.`;
       const cancelled = run.cancel({
         cause: removal.cause,
         reason,
@@ -166,7 +163,7 @@ function progressOf(
   const decides = run.steps.some(
     ({ stepKey, taskId }) => taskId === task.id && stepKey === rule?.step,
   );
-  const given = decides ? outcomeOf(rule, run.steps) : null;
+  const given = decides ? outcomeOf(rule, run) : null;
   return {
     processName,
     subjectEmployeeId: run.subjectEmployeeId,
@@ -177,15 +174,25 @@ function progressOf(
     decidesOutcome: decides,
     outcome: given && {
       ...given.result,
-      label: rule!.labels[given.result.code] ?? resultLabel(task.resultForm!, given.result.code),
+      label: Object.hasOwn(rule!.labels, given.result.code)
+        ? rule!.labels[given.result.code]!
+        : resultLabel(task.resultForm!, given.result.code),
       byEmployeeId: task.doneByEmployeeId,
       at: given.finishedAt!,
     },
   };
 }
 
-function byId({ id }: { id: string }): string {
-  return id;
+function byIds<Item extends { id: string }>(items: readonly Item[]): Map<string, Item> {
+  return new Map(items.map((item) => [item.id, item]));
+}
+
+function taskIdOf({ taskId }: { taskId: string | null }): string {
+  return taskId!;
+}
+
+function runIdOf({ runId }: { runId: string }): string {
+  return runId;
 }
 
 function processIdOf({ processId }: { processId: string }): string {
