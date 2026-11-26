@@ -26,7 +26,6 @@ export type {
   RecordTypeRegistration,
   RecordTypeRegistry,
   WriteMode,
-  WriteModeService,
 } from "./app";
 export type {
   CauseKinds,

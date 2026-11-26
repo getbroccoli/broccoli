@@ -39,3 +39,23 @@ test("lets an employee preview their own time off", async ({ orm, seed, transact
 
   expect(preview).toMatchObject({ cost: 1, refusal: null });
 });
+
+test("forbids a manager from previewing time off they may read for a report", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const manager = await seed.employee();
+  const report = await seedAnnualLeaveEmployee(orm, seed, transact);
+  await seed.manager(report.employeeId, manager.id);
+  const ctx = signedIn(orm, { employeeId: manager.id, profiles: ["EMPLOYEE"] });
+  await ctx.requireInScope("time_off", "read", report.employeeId);
+
+  await expect(
+    bookTimeOffService(orm).previewBooking(ctx, {
+      ...report,
+      startDate: "2026-12-07",
+      endDate: "2026-12-07",
+    }),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" });
+});

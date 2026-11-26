@@ -7,7 +7,8 @@ export interface WriteModeService {
    * The write mode of each subject's record, by subject; one reporting-line read for them all. A
    * record out of the caller's scope for the action is refused. In scope, someone else's record is
    * written straight away; your own one is asked for, unless your grants for the action reach
-   * everyone, as an admin's do.
+   * everyone, as an admin's do. It reads grant scopes only: a write's own fixed rules, such as
+   * never deleting the owner's employee, stay with its use case.
    */
   writeModes: (
     ctx: SecurityContext,

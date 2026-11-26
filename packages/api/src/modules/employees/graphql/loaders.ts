@@ -104,10 +104,8 @@ function createModeLoader(ctx: SecurityContext): DataLoader<CreateKey, WriteMode
   return new DataLoader(
     async (keys) => {
       const modes = new Map<string, WriteMode>();
-      for (const recordType of new Set(keys.map((key) => key.recordType))) {
-        const employeeIds = keys.flatMap((key) =>
-          key.recordType === recordType ? [key.employeeId] : [],
-        );
+      for (const [recordType, group] of Map.groupBy(keys, (key) => key.recordType)) {
+        const employeeIds = group.map((key) => key.employeeId);
         // A record type's permission object has its name; one without has no grants, so is refused.
         const object = recordType.toLowerCase() as PermissionObject;
         const found = await writeModes.writeModes(ctx, object, "create", employeeIds);
