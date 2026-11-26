@@ -7,6 +7,7 @@ query TimeOffSettings {
         icon
         colour
         private
+        approval
         typeKey
         defaultRules {
           balance
@@ -27,6 +28,7 @@ mutation CreateTimeOffType($input: TimeOffTypeCreateInput!) {
         icon
         colour
         private
+        approval
         typeKey
         defaultRules {
           balance
@@ -59,6 +61,7 @@ mutation ChangeTimeOffType($input: TimeOffTypeChangeInput!) {
         icon
         colour
         private
+        approval
         typeKey
         defaultRules {
           balance

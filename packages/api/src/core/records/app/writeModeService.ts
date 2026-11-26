@@ -17,15 +17,15 @@ export interface WriteModeService {
     subjects: readonly Subject[],
   ) => Promise<Map<Subject, WriteMode>>;
   /**
-   * Refuses with FORBIDDEN creating a record of the subject unless it is direct, saying
-   * `whenRequest` when it could be asked for. Only the create check: other writes keep their own.
+   * Refuses with FORBIDDEN creating a record of the subject when it is refused, else says whether
+   * it is created straight away or asked for; the feature decides what a request may still book.
+   * Only the create check: other writes keep their own.
    */
-  requireDirectCreate: (
+  requireCreate: (
     ctx: SecurityContext,
     object: PermissionObject,
     subject: Subject,
-    whenRequest: string,
-  ) => Promise<void>;
+  ) => Promise<Exclude<WriteMode, "refused">>;
 }
 
 /** How the caller may write a record: straight away, only by asking for approval, or not at all. */
@@ -45,13 +45,13 @@ export function createWriteModeService(): WriteModeService {
         }),
       );
     },
-    requireDirectCreate: async (ctx, object, subject, whenRequest) => {
+    requireCreate: async (ctx, object, subject) => {
       const modes = await service.writeModes(ctx, object, "create", [subject]);
-      const mode = modes.get(subject);
+      const mode = modes.get(subject)!;
       if (mode === "refused") {
         throw new ApplicationError("FORBIDDEN", "You are not allowed to do this.");
       }
-      if (mode === "request") throw new ApplicationError("FORBIDDEN", whenRequest);
+      return mode;
     },
   };
   return service;

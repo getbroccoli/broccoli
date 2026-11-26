@@ -10,7 +10,7 @@ export function toTimeOffType({
   icon,
   colour,
   private: isPrivate,
-  needsApproval,
+  approvalProcessKey,
   defaultBalance,
   defaultEntitlementDays,
   defaultBankHolidays,
@@ -18,7 +18,7 @@ export function toTimeOffType({
   return {
     id,
     name,
-    needsApproval,
+    approvalProcessKey,
     typeKey,
     unit,
     icon,

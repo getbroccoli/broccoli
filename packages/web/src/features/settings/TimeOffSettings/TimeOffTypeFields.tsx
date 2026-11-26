@@ -1,6 +1,11 @@
 import { CaretRight } from "@phosphor-icons/react";
 
-import type { TimeOffTypeColour, TimeOffTypeIcon as IconName } from "@/__generated__/graphql";
+import type {
+  TimeOffApproval,
+  TimeOffTypeColour,
+  TimeOffTypeIcon as IconName,
+} from "@/__generated__/graphql";
+import { OptionCard } from "@/components/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -21,6 +26,7 @@ export type TimeOffTypeValues = {
   icon: IconName;
   colour: TimeOffTypeColour;
   private: boolean;
+  approval: TimeOffApproval;
   defaultRules: RulesValues;
 };
 
@@ -34,7 +40,7 @@ type Props = {
 };
 
 /**
- * A type's name, icon, colour, privacy and default rules, as the Add dialog and the type's panel
+ * A type's name, icon, colour, privacy, approval and default rules, as the Add dialog and the type's panel
  * edit them.
  */
 export function TimeOffTypeFields({ values, onChange, sickness, nameError }: Props) {
@@ -137,6 +143,21 @@ export function TimeOffTypeFields({ values, onChange, sickness, nameError }: Pro
           </p>
         </div>
       </div>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-sm font-semibold">{t("settings.timeOff.approval")}</legend>
+        <p className="mb-1 text-sm text-muted-foreground">{t("settings.timeOff.approvalHint")}</p>
+        {APPROVALS.map(({ approval, title, hint }) => (
+          <OptionCard
+            key={approval}
+            name="approval"
+            value={approval}
+            selected={values.approval}
+            onSelect={(value) => change({ approval: value })}
+            title={t(title)}
+            hint={t(hint)}
+          />
+        ))}
+      </fieldset>
       {/* Collapsed: the defaults only fill in an offer, so most edits never need them. */}
       <details
         className="group rounded-lg border"
@@ -215,3 +236,21 @@ const COLOUR_LABELS = {
   PINK: "settings.timeOff.colourPink",
   RED: "settings.timeOff.colourRed",
 } as const satisfies Record<TimeOffTypeColour, MessageKey>;
+
+const APPROVALS: { approval: TimeOffApproval; title: MessageKey; hint: MessageKey }[] = [
+  {
+    approval: "MANAGER_APPROVAL",
+    title: "settings.timeOff.approvalManager",
+    hint: "settings.timeOff.approvalManagerHint",
+  },
+  {
+    approval: "OWNER_APPROVAL",
+    title: "settings.timeOff.approvalOwner",
+    hint: "settings.timeOff.approvalOwnerHint",
+  },
+  {
+    approval: "NO_APPROVAL",
+    title: "settings.timeOff.approvalNone",
+    hint: "settings.timeOff.approvalNoneHint",
+  },
+];

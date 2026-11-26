@@ -12,6 +12,7 @@ import {
   appendStatusChange,
   begin,
   type BookingDependencies,
+  approvalProcessOf,
   bookingDependencies,
   checkBooking,
   lockPerson,
@@ -133,9 +134,13 @@ async function bookTimeOff(
   input: BookingInput,
 ): Promise<BookedTimeOff> {
   const booking = parseBooking(input);
-  await writeModes.requireDirectCreate(ctx, "time_off", booking.employeeId, NEEDS_REQUEST);
+  const mode = await writeModes.requireCreate(ctx, "time_off", booking.employeeId);
   const result = await dependencies.transact(async (tx) => {
     const person = await begin(dependencies, tx, booking);
+    // One's own time off is booked only for a type nobody approves; an unknown type fails the rules.
+    if (mode === "request" && (await approvalProcessOf(tx, booking.timeOffTypeId))) {
+      throw new ApplicationError("FORBIDDEN", NEEDS_REQUEST);
+    }
     const { days, refusal } = await checkBooking(dependencies, tx, booking, person);
     if (refusal) {
       throw invalidInput([{ field: "dates", code: refusal.reason }]);
@@ -155,6 +160,7 @@ async function bookTimeOff(
       timeOffTypeId: booking.timeOffTypeId,
       dayCount: result.booked.length,
       cost,
+      ownTimeOffWithoutApproval: mode === "request",
       ...result.ensured,
     },
     "Booked time off",

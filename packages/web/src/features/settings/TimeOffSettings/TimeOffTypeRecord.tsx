@@ -37,6 +37,7 @@ export function TimeOffTypeRecord({ type, onDeleted }: Props) {
     icon: type.icon,
     colour: type.colour,
     private: type.private,
+    approval: type.approval,
     defaultRules: rulesValuesOf(type.defaultRules),
   };
   const [values, setValues] = useState(saved);

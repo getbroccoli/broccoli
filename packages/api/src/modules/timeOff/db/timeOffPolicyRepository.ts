@@ -103,10 +103,9 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
 
     async insertType(identity) {
       try {
-        // A company type asks for approval, as Annual leave does, until approvals are configurable.
         const [type] = await orm()
           .insert(timeOffTypes)
-          .values({ ...timeOffTypeColumns(identity), needsApproval: true })
+          .values(timeOffTypeColumns(identity))
           .returning();
         return toTimeOffType(type!);
       } catch (error) {
@@ -249,7 +248,7 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
         .set({ name: sql`${timeOffTypes.id}::text` })
         .where(isNotNull(timeOffTypes.typeKey));
       for (const [typeKey, standard] of Object.entries(STANDARD_TIME_OFF_TYPES)) {
-        const columns = { ...timeOffTypeColumns(standard), needsApproval: standard.needsApproval };
+        const columns = timeOffTypeColumns(standard);
         await orm()
           .insert(timeOffTypes)
           .values({ ...columns, typeKey: typeKey as TimeOffTypeKey })

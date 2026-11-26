@@ -2684,11 +2684,11 @@
           "primaryKey": false,
           "notNull": true
         },
-        "needs_approval": {
-          "name": "needs_approval",
-          "type": "boolean",
+        "approval_process_key": {
+          "name": "approval_process_key",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "private": {
           "name": "private",
@@ -2780,6 +2780,10 @@
         "time_off_types_default_allowance_in_range": {
           "name": "time_off_types_default_allowance_in_range",
           "value": "\"time_off_types\".\"default_entitlement_days\" between 0 and 366"
+        },
+        "time_off_types_approval_process_known": {
+          "name": "time_off_types_approval_process_known",
+          "value": "\"time_off_types\".\"approval_process_key\" in ('manager_approval', 'owner_approval')"
         }
       },
       "isRLSEnabled": false

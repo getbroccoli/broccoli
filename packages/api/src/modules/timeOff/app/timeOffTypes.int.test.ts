@@ -174,12 +174,15 @@ test("allows a type its own name in another case", async ({ orm }) => {
   ).toEqual(changed);
 });
 
-test("changes a type's name, icon, colour and privacy without changing other types", async ({
-  orm,
-}) => {
+test("changes a type's settings without changing other types", async ({ orm }) => {
   const service = timeOffService(orm);
-  const type = await service.createType(ADMIN, studyLeave);
+  const ownerApproved = { ...studyLeave, approvalProcessKey: "owner_approval" } as const;
+  const type = await service.createType(ADMIN, ownerApproved);
   const before = await service.listTimeOffTypes(ADMIN);
+  expect(
+    before.timeOffTypes.find(({ timeOffType }) => timeOffType.id === type.id)?.timeOffType
+      .approvalProcessKey,
+  ).toBe("owner_approval");
 
   const changed = await service.changeType(ADMIN, {
     ...studyLeave,
@@ -188,6 +191,7 @@ test("changes a type's name, icon, colour and privacy without changing other typ
     icon: "book_open",
     colour: "purple",
     private: true,
+    approvalProcessKey: null,
   });
 
   expect(changed).toEqual({
@@ -198,6 +202,7 @@ test("changes a type's name, icon, colour and privacy without changing other typ
     icon: "book_open",
     colour: "purple",
     private: true,
+    approvalProcessKey: null,
   });
   const after = await service.listTimeOffTypes(ADMIN);
   expect(
@@ -231,6 +236,7 @@ test("changing Annual leave defaults keeps its key and every terms' policy versi
 
   const changed = await service.changeType(ADMIN, {
     id: annualLeave.timeOffType.id,
+    approvalProcessKey: annualLeave.timeOffType.approvalProcessKey,
     name: "Paid leave",
     icon: "sun",
     colour: "green",
@@ -266,6 +272,7 @@ test("refuses making Sickness not private", async ({ orm }) => {
   await expect(
     service.changeType(ADMIN, {
       id: sickness.id,
+      approvalProcessKey: sickness.approvalProcessKey,
       name: sickness.name,
       icon: "thermometer",
       colour: "coral",
@@ -319,6 +326,7 @@ test("refuses an employee changing a type", async ({ orm }) => {
 
 const studyLeave = {
   name: "Study leave",
+  approvalProcessKey: "manager_approval",
   icon: "graduation_cap",
   colour: "blue",
   private: false,
@@ -328,4 +336,4 @@ const studyLeave = {
     bankHolidays: "bank_holidays_on_top_of_allowance",
   },
 } as const;
-const ownType = { typeKey: null, unit: "day", needsApproval: true } as const;
+const ownType = { typeKey: null, unit: "day", approvalProcessKey: "manager_approval" } as const;

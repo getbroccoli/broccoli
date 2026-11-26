@@ -3,10 +3,11 @@ import { createApprovalService } from "./app";
 
 // Public values.
 export { APPROVAL_TRIGGERING_EVENTS, createApprovalService } from "./app";
-export { MANAGER_APPROVAL } from "./domain";
+export { MANAGER_APPROVAL, OWNER_APPROVAL } from "./domain";
 
 // Public types.
 export type { ApprovalRequest, ApprovalService } from "./app";
+export type { ApprovalProcessKey } from "./domain";
 
 /** Approvals: a feature asks, an approval process decides, and the feature hears how it ended. */
 export function approvalsModule({ logger }: Pick<ModuleDependencies, "logger">): ModuleManifest {

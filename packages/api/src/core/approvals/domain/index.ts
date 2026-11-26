@@ -1,1 +1,6 @@
-export { APPROVAL_PROCESS_KEYS, MANAGER_APPROVAL } from "./approvalProcesses";
+export {
+  APPROVAL_PROCESS_KEYS,
+  type ApprovalProcessKey,
+  MANAGER_APPROVAL,
+  OWNER_APPROVAL,
+} from "./approvalProcesses";

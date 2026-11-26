@@ -65,6 +65,79 @@ test("sends the request details to the requester's manager", async ({ orm, seed 
   expect(description).toMatch(/\b17\.5\b/);
 });
 
+test("sends an owner approval to the owner's employee, asked by the requester", async ({
+  orm,
+  seed,
+}) => {
+  const { requests, requester, input, tasks, processes, changeAnnualLeaveApproval } =
+    await leaveRequestSetup(orm, seed);
+  const owner = await seed.owner();
+  const employee = await seed.employee({ userId: owner.user!.userId });
+  await changeAnnualLeaveApproval("owner_approval");
+
+  const request = await requests.requestTimeOff(requester, input);
+
+  const record = { recordType: "time_off", recordId: request.id };
+  expect(request.status).toBe("requested");
+  expect((await tasks.listMyTasks(requester)).waitingOnOthers).toMatchObject([
+    { record, assigneeEmployeeId: employee.id, askedByEmployeeId: input.employeeId },
+  ]);
+  expect(await processes.listRuns(ADMIN, "owner_approval")).toMatchObject([{ record }]);
+  expect(await processes.listRuns(ADMIN, "manager_approval")).toEqual([]);
+});
+
+test("keeps the manager's waiting task and sends the next request to the owner", async ({
+  orm,
+  seed,
+}) => {
+  const { requests, requester, manager, input, tasks, processes, changeAnnualLeaveApproval } =
+    await leaveRequestSetup(orm, seed);
+  const owner = await seed.owner();
+  const employee = await seed.employee({ userId: owner.user!.userId });
+  const first = await requests.requestTimeOff(requester, input);
+  const managerTasks = (await tasks.listMyTasks(manager)).needsYou;
+  const managerRuns = await processes.listRuns(ADMIN, "manager_approval");
+  expect(managerTasks).toMatchObject([{ record: { recordId: first.id }, status: "to_do" }]);
+  expect(managerRuns).toMatchObject([{ record: { recordId: first.id }, status: "in_progress" }]);
+
+  await changeAnnualLeaveApproval("owner_approval");
+  const second = await requests.requestTimeOff(requester, {
+    ...input,
+    startDate: "2026-12-14",
+    endDate: "2026-12-14",
+    halfDays: [],
+  });
+
+  expect((await tasks.listMyTasks(manager)).needsYou).toEqual(managerTasks);
+  expect(await processes.listRuns(ADMIN, "manager_approval")).toEqual(managerRuns);
+  const ownerTasks = await tasks.listMyTasks(
+    signedIn(orm, { employeeId: employee.id, profiles: ["OWNER"] }),
+  );
+  expect(ownerTasks.needsYou).toMatchObject([{ record: { recordId: second.id }, status: "to_do" }]);
+});
+
+test("cancels an owner approval without a task when the owner has no employee", async ({
+  orm,
+  seed,
+}) => {
+  const { requests, requester, input, processes, changeAnnualLeaveApproval } =
+    await leaveRequestSetup(orm, seed);
+  await seed.owner();
+  await changeAnnualLeaveApproval("owner_approval");
+
+  const request = await requests.requestTimeOff(requester, input);
+
+  expect(request.status).toBe("cancelled");
+  expect((await requests.readStatuses(requester, [request.id])).get(request.id)).toMatchObject({
+    status: "cancelled",
+    decision: null,
+  });
+  const [run] = await processes.listRuns(ADMIN, "owner_approval");
+  expect((await processes.readRun(ADMIN, run!.id)).steps).toMatchObject([
+    { skipReason: "no_assignee_for_step", task: null },
+  ]);
+});
+
 test.for(["request", "book"] as const)(
   "refuses a %s for a day already held by a request",
   async (operation, { orm, seed }) => {

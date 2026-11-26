@@ -68,14 +68,17 @@ export function useSaveTimeOff({
   return { save, saving: booking.loading || requesting.loading };
 }
 
-/** Says why saving failed: a rule broken since the preview, which the fresh preview explains, or anything else. */
+/**
+ * Says why saving failed: a rule broken since the preview, which the fresh preview explains, or
+ * anything else. Types are read again too, so a type's changed approval turns Book and Request.
+ */
 function refused(error: unknown, mode: DialogMode, draft: BookingDraft) {
+  draft.refresh();
   const conflict =
     error instanceof PayloadFailure &&
     (error.payloadError as { __typename: string }).__typename === "ConflictError";
   if (error instanceof PayloadFailure && !conflict) {
     toast.error(mode === "book" ? t("timeOff.dialog.refused") : t("timeOff.dialog.requestRefused"));
-    draft.refreshPreview();
     return;
   }
   // A conflict is an approval that could not start, a setup fault the viewer can retry.

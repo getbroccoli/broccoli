@@ -93,7 +93,7 @@ Full-timer in England and Wales employed all of 2026 on the statutory minimum: g
 
 ## Booking time off
 
-`BookTimeOffService` books time off, approved straight away, for whoever the caller may book for directly (write mode `direct`: admins, through `time_off.manage.all`), and cancels it (the `time_off` delete scope, admins only). Anyone with the `time_off` create scope previews it, so employees preview their own (`time_off.create.self`), whose write mode is `request`: booking refuses them with "Your time off needs to be requested."
+`BookTimeOffService` books time off, approved straight away, for whoever the caller may book for directly (write mode `direct`: admins, through `time_off.manage.all`), and cancels it (the `time_off` delete scope, admins only). Anyone with the `time_off` create scope previews it, so employees preview their own (`time_off.create.self`), whose write mode is `request`: they book their own time off only of a type nobody approves (see Who approves); for any other type booking refuses them with "Your time off needs to be requested."
 
 - A day costs 1, a morning or afternoon 0.5, and 0 on a weekday the person's working week has no minutes for or on a bank holiday of that week's calendar (`domain/bookedDay.ts`). Only days that cost something are stored as `time_off_days`.
 - `bookTimeOff` refuses, as invalid input on `dates`: a clash with approved or requested time off of any type (a morning and an afternoon can share a day), no working days, a type with no policy for the person on some date, a date outside employment, a date before the start of the leave year holding today or after the end of the next one, and more than 366 days. Over the balance is never refused.
@@ -102,9 +102,19 @@ Full-timer in England and Wales employed all of 2026 on the statutory minimum: g
 - Both run the engine for the person in the same transaction, causes `time_off_booked` and `time_off_cancelled` (ref: the time off id).
 - `WhosOutService.readWhosOut` gives everyone signed in each readable person's dates (working, not a working day, bank holiday, not employed) and approved bookings over at most 62 days. A private type's id, and every booking's cost, note and booked time, are left out for anyone outside the person's `time_off` read scope.
 
+## Who approves
+
+Each type says who approves a person's own time off of it (`time_off_types.approval_process_key`): `manager_approval` (their manager, else the owner), `owner_approval`, or null, when they book it straight away. Sickness is seeded null; the other seeded types and new ones start on `manager_approval`. Only one's own time off asks it: a caller whose write mode is `request` gets a request for a type with a process, and a booking (`bookTimeOff`) for one without. Direct callers always book. The choice is read in the transaction that saves the time off; a waiting request's run keeps the process and approver it started with, so changing the choice reaches new time off only.
+
+```json
+// time_off_types
+{ "name": "Annual leave", "approval_process_key": "manager_approval" }
+{ "name": "Sickness", "approval_process_key": null }
+```
+
 ## Requesting time off
 
-`TimeOffRequestService.requestTimeOff` saves the caller's own time off as `requested` when their write mode for it is `request` (employees, for themselves; whoever books it straight away is refused, as is anyone else). Its type must need approval (`needs_approval`, false for Sickness), and the booking rules apply as for `bookTimeOff`. It writes no ledger lines: its days are held, so they clash with any other time off, the preview's "remaining before" takes them off, and `Employee.timeOffTypes` shows them as `waiting`. In the same transaction it asks `manager_approval` (approvals) for the record type `time_off`; the approver's task reads the type, the dates and part days, the cost, the balance free now and after, and the note.
+`TimeOffRequestService.requestTimeOff` saves the caller's own time off as `requested` when their write mode for it is `request` (employees, for themselves; whoever books it straight away is refused, as is anyone else). Its type must name an approval process (`approval_process_key`), and the booking rules apply as for `bookTimeOff`. It writes no ledger lines: its days are held, so they clash with any other time off, the preview's "remaining before" takes them off, and `Employee.timeOffTypes` shows them as `waiting`. In the same transaction it asks the type's approval process (approvals) for the record type `time_off`; the approver's task reads the type, the dates and part days, the cost, the balance free now and after, and the note.
 
 `finishApprovals` handles `approvals.approval_finished` for `time_off` before the commit, in the decision's transaction: approved re-checks the window, employment and the type's offer for every day (refusing the decision, so the task stays to do, when one no longer fits), sets `approved` and the decision, and runs the engine (cause `time_off_approved`); rejected stores the comment; an approval that ended without a decision cancels it. Time off no longer `requested` is left alone. Each change appends a `time_off` history line, the decision's caused by its process run; the outcome is logged after commit from `timeOff.request_decided`.
 

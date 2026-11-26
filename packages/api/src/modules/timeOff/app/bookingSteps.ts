@@ -1,4 +1,5 @@
 import { ApplicationError } from "../../../core/applicationError";
+import type { ApprovalProcessKey } from "../../../core/approvals";
 import type { Orm, Transact, Tx } from "../../../core/db";
 import type { Logger } from "../../../core/logger";
 import { createRecordHistoryService, type FieldChange } from "../../../core/records";
@@ -89,6 +90,19 @@ export function windowOf(person: Person, timeOffTypeId: string, today: CalendarD
     serviceStart: person.serviceStart,
     today,
   });
+}
+
+/**
+ * Who approves one's own time off of the type, read in the saving transaction so a later change
+ * never reaches it: an approval process, null when it is booked straight away, undefined when no
+ * type has this id.
+ */
+export async function approvalProcessOf(
+  tx: Tx,
+  timeOffTypeId: string,
+): Promise<ApprovalProcessKey | null | undefined> {
+  const types = await timeOffPolicyRepository(tx).findAllTypes();
+  return types.find(({ id }) => id === timeOffTypeId)?.approvalProcessKey;
 }
 
 /** Saves time off with the days that cost something, and its history line; returns them. */

@@ -1,5 +1,5 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
-import { createApprovalService, MANAGER_APPROVAL } from "../../../core/approvals";
+import { createApprovalService } from "../../../core/approvals";
 import type { BeforeCommitHandler, Orm, Transact, Tx } from "../../../core/db";
 import type { Logger } from "../../../core/logger";
 import {
@@ -29,6 +29,7 @@ import {
   createBookTimeOffService,
 } from "./bookTimeOffService";
 import {
+  approvalProcessOf,
   begin,
   type BookingDependencies,
   bookingDependencies,
@@ -42,8 +43,8 @@ import type { TimeOffService } from "./timeOffService";
 export interface TimeOffRequestService {
   /**
    * Saves the caller's own time off as requested, holding its days without touching the balance,
-   * and asks the manager approval for it in the same transaction. Refuses anyone who may book it
-   * straight away or may not ask for it, and a type that needs no approval.
+   * and asks the type's approval process for it in the same transaction. Refuses anyone who may
+   * book it straight away or may not ask for it, and a type booked straight away.
    */
   requestTimeOff: (ctx: SecurityContext, input: BookingInput) => Promise<BookedTimeOff>;
   /**
@@ -134,6 +135,7 @@ async function requestTimeOff(
       timeOffId: saved.id,
       employeeId: booking.employeeId,
       timeOffTypeId: booking.timeOffTypeId,
+      approvalProcessKey: saved.approvalProcessKey,
       dayCount: saved.booked.length,
       cost,
     },
@@ -161,19 +163,23 @@ function saveRequest(
   return dependencies
     .transact(async (tx) => {
       const person = await begin(dependencies, tx, booking);
-      await requireApprovalType(tx, booking.timeOffTypeId);
+      const approvalProcessKey = await approvalProcessOf(tx, booking.timeOffTypeId);
+      // A type booked straight away, such as Sickness, is never asked for.
+      if (!approvalProcessKey) {
+        throw invalidInput([{ field: "timeOffTypeId", code: "needs_no_approval" }]);
+      }
       const { days, refusal } = await checkBooking(dependencies, tx, booking, person);
       if (refusal) {
         throw invalidInput([{ field: "dates", code: refusal.reason }]);
       }
       const result = await saveTimeOff(ctx, tx, booking, { days, status: "requested" });
       await approvals.requestApproval(ctx, tx, {
-        approvalProcessKey: MANAGER_APPROVAL,
+        approvalProcessKey,
         record: { recordType: "time_off", recordId: result.id },
         requesterEmployeeId: booking.employeeId,
         ...(await approvalWords(dependencies, tx, { booking, booked: result.booked, balances })),
       });
-      return result;
+      return { ...result, approvalProcessKey };
     })
     .catch((error: unknown) => {
       // Only the approval refuses with a conflict here: its process is off, a setup fault to look at.
@@ -197,14 +203,6 @@ async function requireRequest(ctx: SecurityContext, employeeId: string): Promise
   }
   if (mode === "direct") {
     throw new ApplicationError("FORBIDDEN", "You can book this time off straight away.");
-  }
-}
-
-/** Refuses a type that is recorded without approval, such as Sickness. */
-async function requireApprovalType(tx: Tx, timeOffTypeId: string): Promise<void> {
-  const types = await timeOffPolicyRepository(tx).findAllTypes();
-  if (!types.find(({ id }) => id === timeOffTypeId)?.needsApproval) {
-    throw invalidInput([{ field: "timeOffTypeId", code: "needs_no_approval" }]);
   }
 }
 

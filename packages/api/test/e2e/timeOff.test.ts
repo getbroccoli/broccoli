@@ -167,7 +167,7 @@ test("creates and changes a time off type and returns duplicate names as payload
 
   const created = await browser.graphql(`mutation {
     timeOff { createType(input: {
-      name: "Study leave", icon: GRADUATION_CAP, colour: BLUE, private: false
+      name: "Study leave", icon: GRADUATION_CAP, colour: BLUE, private: false, approval: MANAGER_APPROVAL
       defaultRules: { balance: NO_BALANCE }
     }) {
       timeOffType { id name icon colour private typeKey defaultRules { balance entitlementDays bankHolidays } }
@@ -211,6 +211,7 @@ test("creates and changes a time off type and returns duplicate names as payload
         icon: "BOOK_OPEN",
         colour: "PURPLE",
         private: true,
+        approval: "MANAGER_APPROVAL",
         defaultRules: { balance: "NO_BALANCE" },
       },
     },
@@ -235,7 +236,7 @@ test("creates and changes a time off type and returns duplicate names as payload
 
   const duplicate = await browser.graphql(`mutation {
     timeOff { createType(input: {
-      name: "Training", icon: GRADUATION_CAP, colour: BLUE, private: false
+      name: "Training", icon: GRADUATION_CAP, colour: BLUE, private: false, approval: MANAGER_APPROVAL
       defaultRules: { balance: NO_BALANCE }
     }) {
       timeOffType { id }
@@ -258,7 +259,7 @@ test("deletes an added time off type and returns not found when deleted again", 
   const { browser } = await env.signInAsOwner();
   const created = await browser.graphql(`mutation {
     timeOff { createType(input: {
-      name: "Study leave", icon: GRADUATION_CAP, colour: BLUE, private: false
+      name: "Study leave", icon: GRADUATION_CAP, colour: BLUE, private: false, approval: MANAGER_APPROVAL
       defaultRules: { balance: NO_BALANCE }
     }) {
       timeOffType { id }

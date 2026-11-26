@@ -59,6 +59,7 @@ export async function storedTextProbe(
     const identity = {
       name: value,
       private: false,
+      approvalProcessKey: "manager_approval" as const,
       icon: "sun" as const,
       colour: "green" as const,
       defaultRules: { balance: "no_balance" },

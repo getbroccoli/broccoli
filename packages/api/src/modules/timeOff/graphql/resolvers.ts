@@ -1,5 +1,6 @@
 import DataLoader from "dataloader";
 
+import type { ApprovalProcessKey } from "../../../core/approvals";
 import {
   mutationPayload,
   perRequest,
@@ -267,6 +268,10 @@ function toIdentity(
     icon: input.icon.toLowerCase() as TimeOffTypeIcon,
     colour: input.colour.toLowerCase() as TimeOffTypeColour,
     private: input.private,
+    approvalProcessKey:
+      input.approval === "NO_APPROVAL"
+        ? null
+        : (input.approval.toLowerCase() as ApprovalProcessKey),
     defaultRules: toStoredRules(input.defaultRules),
   };
 }

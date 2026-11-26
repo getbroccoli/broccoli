@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { bookedToast, dialogWords, headerMode, requestedToast } from "./timeOffText";
+import { bookedToast, dialogWords, headerMode, modeForType, requestedToast } from "./timeOffText";
 
 it.each([
   [["ALLOWED_WITH_APPROVAL", "ALLOWED"], "book"],
@@ -9,6 +9,19 @@ it.each([
   [[], null],
 ] as const)("chooses the header action for %j", (permits, expected) => {
   expect(headerMode(permits)).toBe(expected);
+});
+
+it.each([
+  ["book", "MANAGER_APPROVAL", "book"],
+  ["book", "OWNER_APPROVAL", "book"],
+  ["book", "NO_APPROVAL", "book"],
+  ["book", null, "book"],
+  ["request", "MANAGER_APPROVAL", "request"],
+  ["request", "OWNER_APPROVAL", "request"],
+  ["request", "NO_APPROVAL", "book"],
+  ["request", null, "request"],
+] as const)("opens the %s dialog for approval %s in %s mode", (mode, approval, expected) => {
+  expect(modeForType(mode, approval)).toBe(expected);
 });
 
 it.each([

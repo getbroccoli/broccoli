@@ -1,4 +1,5 @@
 import { invalidInput } from "../../../core/applicationError";
+import { type ApprovalProcessKey, MANAGER_APPROVAL } from "../../../core/approvals";
 import {
   parseRules,
   rulesOfVersion,
@@ -17,6 +18,8 @@ export interface TimeOffTypeIdentity {
   icon: TimeOffTypeIcon;
   colour: TimeOffTypeColour;
   private: boolean;
+  /** The approval a person's own time off of it asks; null when they book it straight away. */
+  approvalProcessKey: ApprovalProcessKey | null;
   /** The rules offering the type on terms starts from. */
   defaultRules: TimeOffRules;
 }
@@ -30,17 +33,14 @@ export type TimeOffTypeIdentityInput = Omit<TimeOffTypeIdentity, "defaultRules">
 const RECORD_ONLY_RULES = rulesOfVersion(RECORD_ONLY_POLICY);
 
 /** The four seeded types as the migration inserts them, which starting over restores. */
-export const STANDARD_TIME_OFF_TYPES: Record<
-  TimeOffTypeKey,
-  TimeOffTypeIdentity & { needsApproval: boolean }
-> = {
+export const STANDARD_TIME_OFF_TYPES: Record<TimeOffTypeKey, TimeOffTypeIdentity> = {
   annual_leave: {
     name: "Annual leave",
     icon: "sun",
     colour: "green",
     private: false,
     defaultRules: RECORD_ONLY_RULES,
-    needsApproval: true,
+    approvalProcessKey: MANAGER_APPROVAL,
   },
   sickness: {
     name: "Sickness",
@@ -48,7 +48,7 @@ export const STANDARD_TIME_OFF_TYPES: Record<
     colour: "coral",
     private: true,
     defaultRules: RECORD_ONLY_RULES,
-    needsApproval: false,
+    approvalProcessKey: null,
   },
   family_leave: {
     name: "Family leave",
@@ -56,7 +56,7 @@ export const STANDARD_TIME_OFF_TYPES: Record<
     colour: "pink",
     private: true,
     defaultRules: RECORD_ONLY_RULES,
-    needsApproval: true,
+    approvalProcessKey: MANAGER_APPROVAL,
   },
   other: {
     name: "Other",
@@ -64,7 +64,7 @@ export const STANDARD_TIME_OFF_TYPES: Record<
     colour: "yellow",
     private: false,
     defaultRules: RECORD_ONLY_RULES,
-    needsApproval: true,
+    approvalProcessKey: MANAGER_APPROVAL,
   },
 };
 

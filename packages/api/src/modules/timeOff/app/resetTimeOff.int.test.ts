@@ -25,6 +25,17 @@ test("starting over removes added types and restores standard types with default
     noBalance,
     noBalance,
   ]);
+  expect(
+    before.timeOffTypes.map(({ timeOffType }) => [
+      timeOffType.typeKey,
+      timeOffType.approvalProcessKey,
+    ]),
+  ).toEqual([
+    ["annual_leave", "manager_approval"],
+    ["sickness", null],
+    ["family_leave", "manager_approval"],
+    ["other", "manager_approval"],
+  ]);
   await service.createType(ADMIN, studyLeave);
   await service.changeType(ADMIN, {
     ...studyLeave,
@@ -59,6 +70,7 @@ test("starting over restores standard names that other standard types took", asy
     colour: "green",
     private: false,
     defaultRules: annualLeave.defaultRules,
+    approvalProcessKey: annualLeave.approvalProcessKey,
   });
   await service.changeType(ADMIN, {
     id: other.id,
@@ -67,6 +79,7 @@ test("starting over restores standard names that other standard types took", asy
     colour: "yellow",
     private: false,
     defaultRules: other.defaultRules,
+    approvalProcessKey: other.approvalProcessKey,
   });
 
   await transact((tx) => deleteAllEmployees(orm)(OWNER, tx));
@@ -89,6 +102,7 @@ test("starting over purges time off record history", async ({ orm, seed, transac
 });
 
 const studyLeave = {
+  approvalProcessKey: "owner_approval",
   name: "Study leave",
   icon: "graduation_cap",
   colour: "blue",

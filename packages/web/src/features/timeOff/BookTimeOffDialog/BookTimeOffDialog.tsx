@@ -1,6 +1,6 @@
 import { useQuery } from "@apollo/client/react";
 import { CaretDown } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { BookingPeopleDocument } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import { TypeMenu } from "./TypeMenu";
 import { WhoPicker } from "./WhoPicker";
 import { dateRange } from "@/lib/formatDate";
 
-import { dialogWords, headerMode, offeredTypes } from "../timeOffText";
+import { dialogWords, headerMode, modeForType } from "../timeOffText";
 import { useBookingDraft } from "./useBookingDraft";
 import { useSaveTimeOff } from "./useSaveTimeOff";
 
@@ -52,17 +52,11 @@ export function BookTimeOffDialog({
     useQuery(BookingPeopleDocument).data?.employees.edges.map(({ node }) => node) ?? []
   ).filter(({ canCreate }) => canCreate !== "NOT_ALLOWED");
   const person = people.find(({ id }) => id === draft.employeeId);
-  const mode =
+  const personMode =
     (person ? modeOf(person.canCreate) : headerMode(people.map(({ canCreate }) => canCreate))) ??
     "book";
-  const type = offeredTypes(draft.types ?? [], mode).find(
-    ({ timeOffType }) => timeOffType.id === draft.typeId,
-  );
-  const firstOffered = offeredTypes(draft.types ?? [], mode)[0]?.timeOffType.id;
-  // A request offers only types that need approval: start on the first of them, not on Sickness.
-  useEffect(() => {
-    if (!type && firstOffered) draft.setTypeId(firstOffered);
-  }, [type, firstOffered, draft]);
+  const type = draft.types?.find(({ timeOffType }) => timeOffType.id === draft.typeId);
+  const mode = modeForType(personMode, type?.timeOffType.approval ?? null);
   const { save, saving } = useSaveTimeOff({ draft, mode, person, viewerEmployeeId, onClose });
   const preview = draft.preview;
   const window = bookingWindow();
@@ -100,7 +94,7 @@ export function BookTimeOffDialog({
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label={t("timeOff.dialog.type")}>
-                <TypeMenu draft={draft} firstName={person?.firstName ?? ""} mode={mode} />
+                <TypeMenu draft={draft} firstName={person?.firstName ?? ""} mode={personMode} />
               </Field>
               <Field label={t("timeOff.dialog.dates")}>
                 <Button

@@ -1,13 +1,16 @@
 import { onTestFinished, vi } from "vitest";
 
+import type { ApprovalProcessKey } from "../../src/core/approvals";
 import type { Orm, Transact } from "../../src/core/db";
 import { createLogger } from "../../src/core/logger";
 import { createTimeOffRequestService, timeOffRecordType } from "../../src/modules/timeOff";
+import { STANDARD_TIME_OFF_TYPES } from "../../src/modules/timeOff/domain";
 import { bankHolidayService } from "./bankHolidayService";
 import { calendarDate } from "./calendarDate";
 import { processService, transactWithApprovals } from "./processService";
 import { taskService } from "./services";
 import { signedIn } from "./signedIn";
+import { ADMIN } from "./testSecurityContext";
 import type { TestSeed } from "./testSeed";
 import {
   bookTimeOffService,
@@ -50,6 +53,12 @@ export async function leaveRequestSetup(orm: Orm, seed: TestSeed) {
       halfDays: [{ date: "2026-12-09", dayPart: "morning" as const }],
       note: "Visiting my family.",
     },
+    changeAnnualLeaveApproval: (approvalProcessKey: ApprovalProcessKey | null) =>
+      timeOffService(orm).changeType(ADMIN, {
+        ...STANDARD_TIME_OFF_TYPES.annual_leave,
+        id: annual!.timeOffTypeId,
+        approvalProcessKey,
+      }),
     managerId: rachel.id,
     requester: signedIn(orm, { employeeId: amira.id, profiles: ["EMPLOYEE"] }),
     manager: signedIn(orm, { employeeId: rachel.id, profiles: ["EMPLOYEE"] }),

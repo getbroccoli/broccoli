@@ -1,3 +1,4 @@
+import type { ApprovalProcessKey } from "../../../core/approvals";
 import { addDays, addYears, type CalendarDate } from "../../../utils";
 import type { AllowanceRule, DatedPolicy } from "./allowanceCalculator";
 import type { VersionStatus } from "../../employees";
@@ -21,8 +22,8 @@ export interface TimeOffType {
   colour: TimeOffTypeColour | null;
   /** Colleagues see that the person is off, not why. Always true for Sickness. */
   private: boolean;
-  /** Whether asking for it starts an approval; false for Sickness, which is recorded. */
-  needsApproval: boolean;
+  /** The approval a person's own time off of it asks; null when they book it straight away, as Sickness. */
+  approvalProcessKey: ApprovalProcessKey | null;
   /** The rules offering the type on terms starts from; the terms' policy holds the ones people get. */
   defaultRules: TimeOffRules;
 }

@@ -38,7 +38,7 @@ A manual check of the Time off page, booking time off for someone, asking for on
 Add two people with `example.com` addresses (demo people can't be invited), make one the other's manager, invite both (see [Invites](invites.md)), and sign in as the employee. Keep a third person outside their reporting line for the colleague check.
 
 - [ ] The page's button reads "Request time off"; it opens the dialog with "Request time off" as its title and the employee as Who, with no picker. A day click on their own row opens it too; colleagues' rows have no day buttons.
-- [ ] Type lists only types that need approval (no Sickness); the note field reads "Note for your approver". Enter "Family visit". Mon 7 – Wed 9 Dec with a morning: "20 free now → 17.5 free after this"; the footer reads "Sent for approval." and the button "Request 2.5 days".
+- [ ] Type lists every type offered to them, Sickness included; the note field reads "Note for your approver". Enter "Family visit". Mon 7 – Wed 9 Dec with a morning: "20 free now → 17.5 free after this"; the footer reads "Sent for approval." and the button "Request 2.5 days".
 - [ ] Request: the toast reads "2.5 days requested."; the bar is hatched; its tooltip ends "Waiting for approval"; the Off each day counts don't change.
 - [ ] Their panel: Annual leave Remaining 20 with "2.5 days waiting for approval", and a Requests row with "Waiting for approval".
 - [ ] A second request on Tue 8 Dec is refused as a clash.
@@ -48,6 +48,14 @@ Add two people with `example.com` addresses (demo people can't be invited), make
 - [ ] Approve: the bar turns solid, the counts go up, the employee's panel shows Used 2.5, Remaining 17.5 and the row "Approved", and booking details "Approved by <manager> on …".
 - [ ] Another request, then Reject with a comment: the bar disappears; the row reads "Rejected" with the comment.
 - [ ] As the owner, the employee's approved leave shows Cancel booking; a waiting one does not.
+
+## Who approves
+
+Same people as above. The owner needs an employee record for Owner approval.
+
+- [ ] As the employee, pick Sickness: the title reads "Book time off", the footer "Booked straight away." and the button "Book 1 day"; booking it shows a solid bar at once and no task for anyone.
+- [ ] As an admin, set Family leave to "The owner" (Settings › Time off). As the employee, request Family leave: "Sent for approval."; the owner has the task in Needs you, the manager doesn't. The owner approves it.
+- [ ] With a request for Annual leave waiting on the manager, set Annual leave to "No approval". As the employee, Annual leave now reads "Book"; booking another day lands at once with no task. The waiting request is still in the manager's Needs you, and approving it works.
 
 ## Who sees what
 
