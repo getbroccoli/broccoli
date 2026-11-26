@@ -35,11 +35,6 @@ export interface AdjustmentInput {
   comment: string;
 }
 
-/** The most an adjustment changes a balance by: a leap year's days. */
-const MAX_ADJUSTMENT_DAYS = 366;
-/** The booking note's limit, for the same kind of free text. */
-const MAX_COMMENT_LENGTH = 1_000;
-
 export function createAllowanceService({
   transact,
   logger,
@@ -143,3 +138,8 @@ function parseAdjustment({ amount, comment }: AdjustmentInput): {
   }
   return { amount: days!.toString(), comment: trimmed };
 }
+
+/** The most an adjustment changes a balance by: a leap year's days. */
+const MAX_ADJUSTMENT_DAYS = 366;
+/** The booking note's limit, for the same kind of free text. */
+const MAX_COMMENT_LENGTH = 1_000;
