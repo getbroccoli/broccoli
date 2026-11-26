@@ -7,4 +7,5 @@ export const codegenMappers = {
   TimeOffWithPolicies: "../../modules/timeOff/app#TimeOffWithPolicies as TimeOffWithPoliciesModel",
   PersonTimeOff: "../../modules/timeOff/app#PersonTimeOff as PersonTimeOffModel",
   TimeOff: "../../modules/timeOff/app#WhosOutTimeOff as TimeOffModel",
+  AllowanceChange: "../../modules/timeOff/domain#AllowanceChange as AllowanceChangeModel",
 };

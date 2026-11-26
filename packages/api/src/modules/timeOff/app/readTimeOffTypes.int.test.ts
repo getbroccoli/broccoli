@@ -35,6 +35,7 @@ test("returns statutory figures followed by the three recorded-only types", asyn
     {
       timeOffType: { name: "Annual leave", typeKey: "annual_leave" },
       balance: "balance_from_allowance",
+      allowanceId: expect.any(String) as unknown,
       periodStart: "2026-01-01",
       periodEnd: "2026-12-31",
       entitlement: 28,
@@ -45,6 +46,7 @@ test("returns statutory figures followed by the three recorded-only types", asyn
     ...["Sickness", "Family leave", "Other"].map((name) => ({
       timeOffType: { name },
       balance: "no_balance",
+      allowanceId: null,
       periodStart: "2026-01-01",
       periodEnd: "2026-12-31",
       entitlement: null,
@@ -168,6 +170,7 @@ test("returns used days and null figures for a person's unlimited policy", async
         defaultRules: { balance: "no_balance", entitlementDays: null, bankHolidays: null },
       },
       balance: "unlimited_balance",
+      allowanceId: null,
       periodStart: "2026-01-01",
       periodEnd: "2026-12-31",
       entitlement: null,

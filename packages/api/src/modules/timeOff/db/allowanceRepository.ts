@@ -1,8 +1,9 @@
-import { and, countDistinct, gte, ne, sql } from "drizzle-orm";
+import { and, asc, countDistinct, gte, ne, sql } from "drizzle-orm";
 
 import { anyOf, ormOf, type Tx } from "../../../core/db";
+import type { HistoryAuthor } from "../../../core/records";
 import type { CalendarDate } from "../../../utils";
-import type { LedgerLineKind, LedgerSum, NewLedgerLine } from "../domain";
+import type { LedgerLineKind, LedgerSum, NewLedgerLine, StoredLedgerLine } from "../domain";
 import { allowanceLedgerLines } from "./allowanceLedgerLinesTable";
 import { allowances } from "./allowancesTable";
 
@@ -18,6 +19,7 @@ export interface Allowance {
 /** Allowances and their ledger lines, inside a transaction. */
 export interface AllowanceRepository {
   findByEmployees(employeeIds: readonly string[]): Promise<Allowance[]>;
+  findByIds(ids: readonly string[]): Promise<Allowance[]>;
   /** How many people have an allowance whose leave year ends on `date` or later. */
   countEmployeesWithAllowanceUntil(date: CalendarDate): Promise<number>;
   insert(newAllowances: readonly Omit<Allowance, "id">[]): Promise<Allowance[]>;
@@ -29,6 +31,20 @@ export interface AllowanceRepository {
   ): Promise<Map<string, { kind: LedgerLineKind; amount: number }[]>>;
   /** Appends the lines, skipping those whose idempotency key is taken; returns how many it added. */
   insertLines(lines: readonly NewLedgerLine[]): Promise<number>;
+  /** Each allowance's lines, oldest first, by allowance id. */
+  findLines(allowanceIds: readonly string[]): Promise<Map<string, StoredLedgerLine[]>>;
+  /** Appends one manual adjustment and returns its id. */
+  insertAdjustment(adjustment: NewAdjustment): Promise<string>;
+}
+
+/** Days someone added to or took from an allowance, with their comment. */
+export interface NewAdjustment {
+  allowanceId: string;
+  /** Days with at most two decimal places. */
+  amount: string;
+  effectiveDate: CalendarDate;
+  reason: string;
+  author: HistoryAuthor;
 }
 
 export function allowanceRepository(tx: Tx): AllowanceRepository {
@@ -40,6 +56,10 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
         .from(allowances)
         .where(anyOf(allowances.employeeId, employeeIds))
         .orderBy(allowances.leaveYearStart);
+    },
+
+    findByIds(ids) {
+      return orm().select().from(allowances).where(anyOf(allowances.id, ids));
     },
 
     async countEmployeesWithAllowanceUntil(date) {
@@ -124,6 +144,54 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
       }
       return added;
     },
+
+    async findLines(allowanceIds) {
+      const rows = await orm()
+        .select()
+        .from(allowanceLedgerLines)
+        .where(anyOf(allowanceLedgerLines.allowanceId, allowanceIds))
+        .orderBy(asc(allowanceLedgerLines.createdAt), asc(allowanceLedgerLines.id));
+      const lines = rows.map((row) => ({ allowanceId: row.allowanceId, ...toStoredLine(row) }));
+      return Map.groupBy(lines, ({ allowanceId }) => allowanceId);
+    },
+
+    async insertAdjustment({ allowanceId, amount, effectiveDate, reason, author }) {
+      const [row] = await orm()
+        .insert(allowanceLedgerLines)
+        .values({
+          allowanceId,
+          effectiveDate,
+          unit: "days",
+          amount,
+          kind: "manual_adjustment",
+          causeKind: "allowance_adjusted" satisfies StoredLedgerLine["causeKind"],
+          causeRef: null,
+          reason,
+          authorKind: author.kind.toLowerCase(),
+          authorId: author.id,
+          // Each adjustment is its own change, so it never collides with another.
+          idempotencyKey: `${allowanceId}:manual_adjustment:${crypto.randomUUID()}`,
+        })
+        .returning({ id: allowanceLedgerLines.id });
+      return row!.id;
+    },
+  };
+}
+
+function toStoredLine(row: typeof allowanceLedgerLines.$inferSelect): StoredLedgerLine {
+  return {
+    id: row.id,
+    kind: row.kind,
+    amount: row.amount,
+    effectiveDate: row.effectiveDate,
+    causeKind: row.causeKind as StoredLedgerLine["causeKind"],
+    causeRef: row.causeRef,
+    reason: row.reason,
+    author: {
+      kind: row.authorKind.toUpperCase() as HistoryAuthor["kind"],
+      id: row.authorId,
+    },
+    createdAt: row.createdAt,
   };
 }
 

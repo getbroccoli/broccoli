@@ -1,10 +1,9 @@
 import {
   expect,
-  giveTermsPolicies,
+  seedCurrentAnnualLeaveCard,
   seedTimeOffPolicy,
   test,
   TEST_OWNER,
-  testTransactor,
 } from "#test/support";
 
 import { connectDatabase } from "../../src/core/db";
@@ -12,19 +11,9 @@ import { createLogger } from "../../src/core/logger";
 
 test("returns an owner's employee time off figures through GraphQL", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
-  const employee = await env.seed.employee({ startDate: "2025-01-01" });
-  const database = connectDatabase(env.db.url, createLogger("silent"));
-  try {
-    await giveTermsPolicies(database.orm, testTransactor(database.orm), {
-      termsId: await env.seed.defaultTermsId(),
-      policies: [{ key: "uk_statutory_minimum" }],
-      today: new Date().toISOString().slice(0, 10),
-    });
-  } finally {
-    await database.close();
-  }
+  const { employeeId } = await seedCurrentAnnualLeaveCard(env);
 
-  const response = await browser.graphql(timeOffQuery, { id: employee.id });
+  const response = await browser.graphql(timeOffQuery, { id: employeeId });
 
   expect(await response.json()).toEqual({
     data: {
@@ -41,6 +30,65 @@ test("returns an owner's employee time off figures through GraphQL", async ({ en
         ],
       },
     },
+  });
+});
+
+test("returns the owner's adjustment in the mutation and the employee's balance history", async ({
+  env,
+}) => {
+  const { browser, user } = await env.signInAsOwner();
+  const { employeeId, allowanceId, remaining } = await seedCurrentAnnualLeaveCard(env);
+  const comment = "Carried over from last year";
+
+  const adjusted = await browser.graphql(adjustAllowanceMutation, {
+    input: { allowanceId, amount: 2, comment },
+  });
+
+  expect(await adjusted.json()).toHaveProperty("data.timeOff.adjustAllowance", {
+    employeeTimeOffType: { allowanceId, remaining: remaining + 2 },
+    error: null,
+  });
+  const response = await browser.graphql(
+    `query($id: ID!) {
+    employee(id: $id) { timeOffTypes { allowanceId remaining history { cause amount balanceAfter comment author { userId } } } }
+  }`,
+    { id: employeeId },
+  );
+  expect(await response.json()).toHaveProperty("data.employee.timeOffTypes", [
+    {
+      allowanceId,
+      remaining: remaining + 2,
+      history: [
+        {
+          cause: "ALLOWANCE_ADJUSTED",
+          amount: 2,
+          balanceAfter: remaining + 2,
+          comment,
+          author: { userId: user.id },
+        },
+        {
+          cause: "TIME_OFF_TURNED_ON",
+          amount: remaining,
+          balanceAfter: remaining,
+          comment: null,
+          author: { userId: null },
+        },
+      ],
+    },
+  ]);
+});
+
+test("returns an invalid adjustment as a field error in the mutation payload", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const { allowanceId } = await seedCurrentAnnualLeaveCard(env);
+
+  const response = await browser.graphql(adjustAllowanceMutation, {
+    input: { allowanceId, amount: 0, comment: "Carry-over" },
+  });
+
+  expect(await response.json()).toHaveProperty("data.timeOff.adjustAllowance", {
+    employeeTimeOffType: null,
+    error: { __typename: "InvalidInputError", fields: [{ field: "amount", code: "invalid" }] },
   });
 });
 
@@ -262,4 +310,11 @@ const timeOffQuery = `query EmployeeTimeOff($id: ID!) {
   employee(id: $id) {
     timeOffTypes { timeOffType { name } balance entitlement bankHolidays used remaining }
   }
+}`;
+
+const adjustAllowanceMutation = `mutation($input: AllowanceAdjustInput!) {
+  timeOff { adjustAllowance(input: $input) {
+    employeeTimeOffType { allowanceId remaining }
+    error { __typename ... on InvalidInputError { fields { field code } } }
+  } }
 }`;

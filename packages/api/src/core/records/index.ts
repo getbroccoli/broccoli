@@ -15,7 +15,7 @@ export {
   createRecordHistoryReaderService,
   createRecordHistoryService,
 } from "./app";
-export { changeReasonSchema, parseChangeReason } from "./domain";
+export { authorOf, changeReasonSchema, parseChangeReason } from "./domain";
 
 // Public types.
 export type {

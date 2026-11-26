@@ -16,6 +16,8 @@ import { type AllowanceEngineDependencies, type Person, readPeople } from "./all
 export interface EmployeeTimeOffType {
   timeOffType: TimeOffType;
   balance: PolicyVersion["balance"];
+  /** The allowance the figures come from; set on `balance_from_allowance` only. */
+  allowanceId: string | null;
   /** The leave year, or the calendar year for a type with no balance. */
   periodStart: CalendarDate;
   periodEnd: CalendarDate;
@@ -169,7 +171,7 @@ function toEmployeeTimeOffType(
 ): EmployeeTimeOffType {
   const { timeOffType, balance } = policy;
   const row = { timeOffType, balance, periodStart: period.start, periodEnd: period.end };
-  const noFigures = { entitlement: null, bankHolidays: null, remaining: null };
+  const noFigures = { allowanceId: null, entitlement: null, bankHolidays: null, remaining: null };
   if (!allowance) {
     const days = recorded.find(
       (line) =>
@@ -181,7 +183,7 @@ function toEmployeeTimeOffType(
   }
   const figures = timeOffFigures(sums.get(allowance.id) ?? []);
   return balance === "balance_from_allowance"
-    ? { ...row, ...figures }
+    ? { ...row, allowanceId: allowance.id, ...figures }
     : { ...row, ...noFigures, used: figures.used };
 }
 
