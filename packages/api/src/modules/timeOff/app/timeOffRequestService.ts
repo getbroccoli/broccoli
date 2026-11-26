@@ -117,6 +117,7 @@ export function createTimeOffRequestService({
     ownTimeOffModes: (ctx, timeOffTypeIds) => ownTimeOffModes(orm, ctx, timeOffTypeIds),
     saveOwnTimeOff: (ctx, input) =>
       saveOwnTimeOff(
+        orm,
         { bookTimeOff: (...args) => bookings.bookTimeOff(...args), requestTimeOff: request },
         ctx,
         input,

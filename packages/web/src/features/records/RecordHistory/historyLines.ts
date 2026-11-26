@@ -105,6 +105,11 @@ export function authorName(author: HistoryLine["author"], readerId: string): str
     case "SIGNED_IN_USER":
       if (author.userId === readerId) return t("records.history.author.you");
       return author.email ?? t("records.history.author.someone");
+    case "CONNECTED_AGENT":
+      if (author.userId === readerId) return t("records.history.author.youViaAgent");
+      return t("records.history.author.viaAgent", {
+        name: author.email ?? t("records.history.author.someone"),
+      });
     case "BROCCOLI_ITSELF":
       return t("records.history.author.broccoli");
     case "SETUP_HOLDER":

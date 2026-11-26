@@ -4,9 +4,9 @@ import { PromptIdea } from "./PromptIdea";
 
 // Only what the agent's tools answer today: the person, their manager, and people by name or email.
 const PROMPTS: readonly MessageKey[] = [
-  "mcpAgents.prompts.manager",
-  "mcpAgents.prompts.email",
-  "mcpAgents.prompts.jobTitles",
+  "mcpAgents.prompts.balance",
+  "mcpAgents.prompts.askForLeave",
+  "mcpAgents.prompts.tasks",
 ];
 
 /** Prompts to paste into a connected agent, so the person sees it work. */

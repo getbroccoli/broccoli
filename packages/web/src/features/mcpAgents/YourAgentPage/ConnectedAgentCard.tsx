@@ -55,6 +55,12 @@ export function ConnectedAgentCard({ connection, openedAt, personName }: Props) 
                 date: dateAndTime(connection.connectedAt),
                 lastActive: timeAgo(connection.lastUsedAt),
               })}
+              {" · "}
+              {t(
+                connection.canChangeThings
+                  ? "mcpAgents.connected.canChangeThings"
+                  : "mcpAgents.connected.canRead",
+              )}
             </span>
           </div>
           <Button

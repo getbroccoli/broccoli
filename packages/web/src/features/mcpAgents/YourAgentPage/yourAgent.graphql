@@ -16,6 +16,7 @@ query YourAgent {
     id
     clientName
     connectedAt
+    canChangeThings
     lastUsedAt
   }
   myLastEndedAgentConnection {

@@ -19,7 +19,10 @@ const WRITE_SCOPE: AgentScope = "broccoli:write";
 
 const writeModes = createWriteModeService();
 
-/** How the caller's own time off of each type would be saved, by type id. */
+/**
+ * How the caller's own time off of each type would be saved, by type id: someone who may only ask
+ * books a type nobody approves straight away.
+ */
 export async function ownTimeOffModes(
   orm: Orm,
   ctx: SecurityContext,
@@ -28,20 +31,21 @@ export async function ownTimeOffModes(
   const employeeId = ctx.user?.employeeId;
   const mode = employeeId ? await writeModeOf(ctx, employeeId) : "refused";
   const types = await timeOffPolicyRepository(orm).findAllTypes();
-  const needsApproval = new Set(types.filter((type) => type.needsApproval).map(({ id }) => id));
+  const approved = new Set(types.filter((type) => type.approvalProcessKey).map(({ id }) => id));
   return new Map(
     timeOffTypeIds.map((id) => [
       id,
-      mode === "request" && !needsApproval.has(id) ? "refused" : OWN_MODES[mode],
+      mode === "request" && !approved.has(id) ? "booked_straight_away" : OWN_MODES[mode],
     ]),
   );
 }
 
 /**
- * Saves the caller's own time off: booked when they may book it straight away, otherwise requested,
- * which refuses whoever may not ask for it and a type that needs no approval.
+ * Saves the caller's own time off as its mode says: booked straight away, or requested, which
+ * refuses whoever may not ask for it.
  */
 export async function saveOwnTimeOff(
+  orm: Orm,
   services: {
     bookTimeOff: BookTimeOffService["bookTimeOff"];
     requestTimeOff: (ctx: SecurityContext, input: BookingInput) => Promise<BookedTimeOff>;
@@ -57,7 +61,8 @@ export async function saveOwnTimeOff(
     throw new ApplicationError("FORBIDDEN", "Allow your agent to change things in Broccoli first.");
   }
   const booking = { ...input, employeeId };
-  return (await writeModeOf(ctx, employeeId)) === "direct"
+  const modes = await ownTimeOffModes(orm, ctx, [input.timeOffTypeId]);
+  return modes.get(input.timeOffTypeId) === "booked_straight_away"
     ? services.bookTimeOff(ctx, booking)
     : services.requestTimeOff(ctx, booking);
 }

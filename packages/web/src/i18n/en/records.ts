@@ -15,6 +15,8 @@ export const recordsEn = {
   "records.history.today": "Today",
   "records.history.yesterday": "Yesterday",
   "records.history.author.you": "You",
+  "records.history.author.youViaAgent": "You, through your agent",
+  "records.history.author.viaAgent": "{name} through their agent",
   "records.history.author.someone": "Someone",
   "records.history.author.broccoli": "Broccoli",
   "records.history.author.setup": "Setup",

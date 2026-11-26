@@ -5,16 +5,11 @@ import { useEffect, useState } from "react";
 import { AllowAgentDocument } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/features/auth";
-import { t, type MessageKey } from "@/i18n";
+import { t } from "@/i18n";
 import { AuthCard } from "@/shell";
 
 import { answerAgent, readAgentClientName } from "./allowAgentApi";
-
-const PROMISES: readonly MessageKey[] = [
-  "mcpAgents.allow.reads",
-  "mcpAgents.allow.neverApproves",
-  "mcpAgents.allow.disconnect",
-];
+import { allowPromises } from "./allowPromises";
 
 type Props = {
   /** The agent's request, as Broccoli's OAuth server signed it. */
@@ -26,13 +21,18 @@ type Props = {
  * agent's request signed in the query. Either answer sends the browser back to the agent.
  */
 export function AllowAgentPage({ signedRequest }: Props) {
-  const clientId = new URLSearchParams(signedRequest).get("client_id") ?? "";
+  const request = new URLSearchParams(signedRequest);
+  const clientId = request.get("client_id") ?? "";
+  const scopes = new Set((request.get("scope") ?? "").split(" "));
   const clientName = useAgentClientName(clientId);
   const { data, error } = useQuery(AllowAgentDocument);
   const [answering, setAnswering] = useState(false);
   const [outcome, setOutcome] = useState<"expired" | "failed" | null>(null);
   const client = clientName ?? t("mcpAgents.allow.unnamedClient");
-  const replaced = data?.myAgentConnection;
+  const current = data?.myAgentConnection;
+  // The same agent asking for more keeps its connection; another one replaces it.
+  const widening = current?.clientId === clientId;
+  const replaced = widening ? null : current;
   const me = data?.me;
   const employee = me?.employee;
 
@@ -58,7 +58,9 @@ export function AllowAgentPage({ signedRequest }: Props) {
     );
   }
   return (
-    <AuthCard title={t("mcpAgents.allow.title", { client })}>
+    <AuthCard
+      title={t(widening ? "mcpAgents.allow.widenTitle" : "mcpAgents.allow.title", { client })}
+    >
       <div className="flex flex-col gap-5">
         {clientName && (
           <p className="text-xs text-muted-foreground">
@@ -87,8 +89,13 @@ export function AllowAgentPage({ signedRequest }: Props) {
             {t("mcpAgents.allow.notYou")}
           </button>
         </div>
+        {widening && (
+          <p role="note" className="rounded-lg border px-3 py-2.5 text-sm">
+            {t("mcpAgents.allow.widenConnected", { client })}
+          </p>
+        )}
         <ul className="flex flex-col gap-2.5 text-sm">
-          {PROMISES.map((promise) => (
+          {allowPromises(scopes).map((promise) => (
             <li key={promise} className="flex gap-2.5">
               <Check size={16} weight="bold" className="mt-0.5 shrink-0 text-brand" aria-hidden />
               {t(promise)}
