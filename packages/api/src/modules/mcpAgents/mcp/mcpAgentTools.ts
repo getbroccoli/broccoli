@@ -39,10 +39,7 @@ export function registerMcpAgentTools(
 ): void {
   const { ctx } = caller;
   const { tools } = dependencies;
-  const run: Run = Object.assign(
-    <T extends object>(call: ToolCall<T>) => resultOf(call, caller, dependencies),
-    { tools },
-  );
+  const run: Run = (call) => resultOf(call, caller, dependencies);
   server.registerTool("who_am_i", WHO_AM_I, () =>
     run({ tool: "who_am_i", answer: () => tools.whoAmI(ctx) }),
   );
@@ -70,16 +67,18 @@ export function registerMcpAgentTools(
         found.needsYou.length + found.waitingOnOthers.length + found.resolvedRecently.length,
     }),
   );
-  registerApprovalTools(server, caller, run);
+  registerApprovalTools(server, { caller, tools, run });
 }
 
 /**
  * The approval card and its two tools: the model shows the card, and only the card decides, with
  * the one-time token Broccoli hands it beside the model's view.
  */
-function registerApprovalTools(server: McpServer, caller: AgentCaller, run: Run): void {
+function registerApprovalTools(
+  server: McpServer,
+  { caller, tools, run }: { caller: AgentCaller; tools: McpAgentToolService; run: Run },
+): void {
   const { ctx, origin } = caller;
-  const { tools } = run;
   server.registerResource(
     "approval-card",
     APPROVAL_CARD_URI,
@@ -112,10 +111,8 @@ interface ToolCall<T> {
   split?: (value: T) => { shown: object; meta: Record<string, unknown> };
 }
 
-/** Runs one tool call as the caller, with the tools it answers from. */
-type Run = (<T extends object>(call: ToolCall<T>) => ReturnType<typeof resultOf<T>>) & {
-  tools: McpAgentToolService;
-};
+/** Runs one tool call as the caller. */
+type Run = <T extends object>(call: ToolCall<T>) => ReturnType<typeof resultOf<T>>;
 
 /**
  * The tool's answer; a refusal the person may read, or a failure that hides its cause. Records how

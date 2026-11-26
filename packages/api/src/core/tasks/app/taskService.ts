@@ -164,7 +164,12 @@ export function createTaskService({
         return { task: saved, historyLine: await appendStatusChange(ctx, tx, task, saved) };
       });
       logger.info(
-        { taskId: done.task.id, type: done.task.type, resultCode: done.task.result?.code ?? null },
+        {
+          taskId: done.task.id,
+          type: done.task.type,
+          resultCode: done.task.result?.code ?? null,
+          agentConnectionId: ctx.agentConnection?.id ?? null,
+        },
         "Task marked done",
       );
       return done;
