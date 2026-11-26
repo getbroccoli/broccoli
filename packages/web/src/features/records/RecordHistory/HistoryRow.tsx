@@ -35,13 +35,10 @@ export function HistoryRow({ line, description, tag = null }: Props) {
           aria-hidden
           className={cn(
             "flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
-            byPerson ? "avatar-tint text-white"
-              : "bg-brand-soft text-brand-deep",
+            byPerson ? "avatar-tint text-white" : "bg-brand-soft text-brand-deep",
           )}
         >
-          {byPerson
-            ? (line.author.email ?? author).slice(0, 2).toUpperCase()
-            : author.charAt(0)}
+          {byPerson ? (line.author.email ?? author).slice(0, 2).toUpperCase() : author.charAt(0)}
         </span>
         <p className="min-w-48 flex-1 break-words">
           <span className="font-medium">{author}</span> <SummaryText summary={summary} />

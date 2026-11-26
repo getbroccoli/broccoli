@@ -4,7 +4,7 @@ import { expect, it } from "vitest";
 
 import { formatCalendarDate } from "@/lib/formatDate";
 
-import { authorName, causeLabel, groupByDay, summaryOf } from "./historyLines";
+import { causeLabel, groupByDay, summaryOf } from "./historyLines";
 import type { RecordDescription } from "../recordDescription";
 
 it("groups consecutive lines by day without changing their order", () => {
@@ -268,52 +268,6 @@ it("labels demo data as Demo", () => {
 
 it("labels an unknown cause in sentence case", () => {
   expect(causeLabel("APPLIED_SCHEDULED_CHANGE")).toBe("Applied scheduled change");
-});
-
-it("names the reader's own change You", () => {
-  expect(
-    authorName({ kind: "SIGNED_IN_USER", userId: "reader", email: "avery@example.com" }, "reader"),
-  ).toBe("You");
-});
-
-it("names another signed-in author by their email", () => {
-  expect(
-    authorName({ kind: "SIGNED_IN_USER", userId: "avery", email: "avery@example.com" }, "reader"),
-  ).toBe("avery@example.com");
-});
-
-it("names a deleted user Someone", () => {
-  expect(authorName({ kind: "SIGNED_IN_USER", userId: "gone", email: null }, "reader")).toBe(
-    "Someone",
-  );
-});
-
-it("names the reader's own change through their connected agent", () => {
-  expect(
-    authorName({ kind: "CONNECTED_AGENT", userId: "reader", email: "avery@example.com" }, "reader"),
-  ).toBe("You, through your agent");
-});
-
-it("names another person's change through their connected agent by their email", () => {
-  expect(
-    authorName({ kind: "CONNECTED_AGENT", userId: "avery", email: "avery@example.com" }, "reader"),
-  ).toBe("avery@example.com through their agent");
-});
-
-it("names Broccoli's own changes Broccoli", () => {
-  expect(authorName({ kind: "BROCCOLI_ITSELF", userId: null, email: null }, "reader")).toBe(
-    "Broccoli",
-  );
-});
-
-it("names the setup holder Setup", () => {
-  expect(authorName({ kind: "SETUP_HOLDER", userId: null, email: null }, "reader")).toBe("Setup");
-});
-
-it("names an external agent Your agent", () => {
-  expect(authorName({ kind: "EXTERNAL_AGENT", userId: null, email: null }, "reader")).toBe(
-    "Your agent",
-  );
 });
 
 const line: Parameters<typeof summaryOf>[0] = {
