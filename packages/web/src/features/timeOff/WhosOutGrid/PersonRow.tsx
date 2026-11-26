@@ -5,7 +5,7 @@ import { Avatar } from "@/features/employees";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
-import { weekdayDay } from "../timeOffText";
+import { weekdayDay } from "@/lib/formatDate";
 import { BookingPart } from "./BookingPart";
 import type { WhosOutPerson, WhosOutTimeOff } from "./WhosOutGrid";
 

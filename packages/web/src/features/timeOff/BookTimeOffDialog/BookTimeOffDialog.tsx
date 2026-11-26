@@ -25,7 +25,9 @@ import { DayByDayPane } from "./DayByDayPane";
 import { Field } from "./Field";
 import { TypeMenu } from "./TypeMenu";
 import { WhoPicker } from "./WhoPicker";
-import { bookedToast, dateRange } from "../timeOffText";
+import { dateRange } from "@/lib/formatDate";
+
+import { bookedToast } from "../timeOffText";
 import { useBookingDraft } from "./useBookingDraft";
 
 type Props = {
