@@ -93,7 +93,6 @@ function toChange(
   previousBalance: number,
 ): AllowanceChange {
   const first = group[0]!;
-  const adjustment = group.find(({ kind }) => kind === "manual_adjustment");
   return {
     recordedAt: first.createdAt,
     cause: first.causeKind,
@@ -102,8 +101,9 @@ function toChange(
     amount: Big(balanceAfter).minus(previousBalance).toNumber() + 0,
     balanceAfter,
     parts: partsOf(group),
-    author: (adjustment ?? first).author,
-    comment: adjustment?.reason ?? null,
+    author: first.author,
+    // An adjustment is a change of its own, so its line is the first.
+    comment: first.kind === "manual_adjustment" ? first.reason : null,
   };
 }
 

@@ -1,7 +1,11 @@
 import { useId, useState } from "react";
 import { toast } from "sonner";
 
-import { AdjustAllowanceDocument, AllowanceHistoryDocument } from "@/__generated__/graphql";
+import {
+  AdjustAllowanceDocument,
+  type AdjustAllowanceMutation,
+  AllowanceHistoryDocument,
+} from "@/__generated__/graphql";
 import { PayloadFailure, usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,7 +47,7 @@ export function AdjustAllowanceDialog({
   const [daysText, setDaysText] = useState("");
   const [comment, setComment] = useState("");
   // One per adjustment meant, so trying again after a lost answer adds nothing twice.
-  const [requestId] = useState(() => crypto.randomUUID());
+  const [requestId] = useState(newRequestId);
   const daysId = useId();
   const commentId = useId();
   // The payload updates the card's figures in the cache; only the history needs the server.
@@ -125,9 +129,7 @@ export function AdjustAllowanceDialog({
         </div>
         {payloadError && (
           <p role="alert" className="text-sm text-destructive">
-            {payloadError.__typename === "ConflictError"
-              ? t("people.panel.timeOff.adjust.yearEnded")
-              : t("people.panel.timeOff.adjust.refused")}
+            {refusalMessage(payloadError)}
           </p>
         )}
         <DialogFooter>
@@ -141,4 +143,30 @@ export function AdjustAllowanceDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+type AdjustRefusal = NonNullable<AdjustAllowanceMutation["timeOff"]["adjustAllowance"]["error"]>;
+
+/** Why the server refused, worded for the one thing the admin can do about it. */
+function refusalMessage(error: AdjustRefusal): string {
+  const fields =
+    error.__typename === "InvalidInputError" ? error.fields.map(({ field }) => field) : [];
+  if (fields.includes("requestId")) {
+    return t("people.panel.timeOff.adjust.alreadySaved");
+  }
+  return fields.includes("amount") || fields.includes("comment")
+    ? t("people.panel.timeOff.adjust.refused")
+    : t("people.panel.timeOff.adjust.balanceChanged");
+}
+
+/** A uuid for this adjustment; `crypto.randomUUID` only exists on secure origins, plain HTTP lacks it. */
+function newRequestId(): string {
+  if (typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6]! & 0x0f) | 0x40;
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
+  const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }

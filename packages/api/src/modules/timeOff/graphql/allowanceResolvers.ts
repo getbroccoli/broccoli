@@ -32,10 +32,9 @@ export function allowanceResolvers(allowances: AllowanceService) {
         ),
     },
     EmployeeTimeOffType: {
-      history: ({ allowanceId, balance }, _args, context) =>
-        allowanceId && balance === "BALANCE_FROM_ALLOWANCE"
-          ? loaders(context).history.load(allowanceId)
-          : null,
+      // Only a balance from an allowance has an allowance id on its card.
+      history: ({ allowanceId }, _args, context) =>
+        allowanceId ? loaders(context).history.load(allowanceId) : null,
     },
     AllowanceChange: {
       cause: ({ cause }) => toEnum(cause),

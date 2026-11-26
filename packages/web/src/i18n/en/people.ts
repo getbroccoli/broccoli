@@ -224,8 +224,10 @@ export const peopleEn = {
   "people.panel.timeOff.adjust.commentHintSelf": "You, your managers and admins see this.",
   "people.panel.timeOff.adjust.daysInvalid":
     "Use a number other than 0, with at most two decimals and up to 366.",
-  "people.panel.timeOff.adjust.yearEnded":
-    "This leave year has ended. Close the panel and open it again to see the current one.",
+  "people.panel.timeOff.adjust.balanceChanged":
+    "This balance has changed since you opened it. Close the panel and open it again.",
+  "people.panel.timeOff.adjust.alreadySaved":
+    "This adjustment was already saved with other values. Close this and check History before adjusting again.",
   "people.panel.timeOff.adjust.refused":
     "This adjustment can’t be saved. Check the days and the reason.",
   "people.panel.timeOff.adjust.add": "Add {days}",

@@ -58,12 +58,7 @@ test("applies an adjustment once when the same request is retried", async ({
 }) => {
   const { allowanceId } = await seedAnnualLeaveAllowance(orm, seed, transact);
   const service = allowanceService(orm);
-  const input = {
-    allowanceId,
-    requestId: "00000000-0000-4000-8000-000000000001",
-    amount: 2,
-    comment: "Carry-over",
-  };
+  const input = { allowanceId, requestId: carryOverRequestId, amount: 2, comment: "Carry-over" };
   const first = await service.adjustAllowance(OWNER, input);
 
   const retry = await service.adjustAllowance(OWNER, input);
@@ -77,16 +72,44 @@ test("applies an adjustment once when the same request is retried", async ({
   ]);
 });
 
-test("refuses a malformed adjustment request id", async ({ orm, seed, transact }) => {
-  const { allowanceId } = await seedAnnualLeaveAllowance(orm, seed, transact);
-  const input = { allowanceId, requestId: "invalid-id", amount: 2, comment: "Carry-over" };
+test.for([
+  { changed: "amount", amount: 3, comment: "Carry-over" },
+  { changed: "comment", amount: 2, comment: "Correction" },
+])(
+  "refuses a reused request id with a different $changed",
+  async ({ amount, comment }, { orm, seed, transact }) => {
+    const { allowanceId } = await seedAnnualLeaveAllowance(orm, seed, transact);
+    const service = allowanceService(orm);
+    const input = { allowanceId, requestId: carryOverRequestId, amount: 2, comment: "Carry-over" };
+    await service.adjustAllowance(OWNER, input);
 
-  await expect(allowanceService(orm).adjustAllowance(OWNER, input)).rejects.toMatchObject({
-    name: "ApplicationError",
-    code: "INVALID_INPUT",
-    fieldErrors: [{ field: "requestId", code: "invalid" }],
-  });
-});
+    await expect(
+      service.adjustAllowance(OWNER, { ...input, amount, comment }),
+    ).rejects.toMatchObject({
+      code: "INVALID_INPUT",
+      fieldErrors: [{ field: "requestId", code: "taken" }],
+    });
+    const history = await service.readAllowanceHistory(OWNER, { allowanceIds: [allowanceId] });
+    expect(history.get(allowanceId)).toMatchObject([
+      { cause: "allowance_adjusted", amount: 2, comment: "Carry-over", balanceAfter: 22 },
+      { cause: "time_off_turned_on", balanceAfter: 20 },
+    ]);
+  },
+);
+
+test.for(["invalid-id", ""])(
+  "refuses a malformed adjustment request id %j",
+  async (requestId, { orm, seed, transact }) => {
+    const { allowanceId } = await seedAnnualLeaveAllowance(orm, seed, transact);
+    const input = { allowanceId, requestId, amount: 2, comment: "Carry-over" };
+
+    await expect(allowanceService(orm).adjustAllowance(OWNER, input)).rejects.toMatchObject({
+      name: "ApplicationError",
+      code: "INVALID_INPUT",
+      fieldErrors: [{ field: "requestId", code: "invalid" }],
+    });
+  },
+);
 
 test("stores the trimmed adjustment comment", async ({ orm, seed, transact }) => {
   const { allowanceId } = await seedAnnualLeaveAllowance(orm, seed, transact);
@@ -310,3 +333,5 @@ test("refuses next year's allowance while the card still shows this year", async
     fieldErrors: [{ field: "allowanceId", code: "invalid" }],
   });
 });
+
+const carryOverRequestId = "00000000-0000-4000-8000-000000000001";

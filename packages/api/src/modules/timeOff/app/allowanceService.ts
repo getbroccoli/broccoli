@@ -6,7 +6,7 @@ import type { ModuleDependencies } from "../../../core/moduleManifest";
 import { authorOf, type HistoryAuthor } from "../../../core/records";
 import { isInRecordScope, type SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseUuid, todayInLondon } from "../../../utils";
-import { createEmployeeReadService } from "../../employees";
+import { createEmployeeReadService, type EmployeeReadService } from "../../employees";
 import { type Allowance, allowanceRepository, timeOffPolicyRepository } from "../db";
 import { type AllowanceChange, allowanceHistory } from "../domain";
 import { type EmployeeTimeOffType, readTimeOffTypesInTransaction } from "./readTimeOffTypes";
@@ -83,7 +83,10 @@ export function createAllowanceService({
   };
 }
 
-type CardReads = Parameters<typeof readTimeOffTypesInTransaction>[0];
+/** What reading the person's cards needs, with the employee locks taken before them. */
+type CardReads = Parameters<typeof readTimeOffTypesInTransaction>[0] & {
+  employeeReads: Pick<EmployeeReadService, "holdEmployeeWrites" | "lockEmployees">;
+};
 
 type ParsedAdjustment = ReturnType<typeof parseAdjustment>;
 
@@ -99,8 +102,9 @@ async function findAllowance(transact: Transact, id: string): Promise<Allowance>
 }
 
 /**
- * Appends the adjustment to the person's current balance, with policies held so the card cannot
- * change in between, and returns that card's figures; a repeated request appends nothing.
+ * Appends the adjustment to the person's current balance and returns that card's figures. Locks
+ * as bookings do, so no start date, terms or policy change moves the card in between; a repeated
+ * request appends nothing, and one reused for other values is refused.
  */
 async function appendAdjustment(
   reads: CardReads,
@@ -108,15 +112,17 @@ async function appendAdjustment(
   input: { allowance: Allowance; adjustment: ParsedAdjustment; author: HistoryAuthor },
 ): Promise<{ card: EmployeeTimeOffType; lineId: string | null }> {
   const { allowance, adjustment, author } = input;
-  await timeOffPolicyRepository(tx).sharePolicies();
+  await lockCardInputs(reads, tx, allowance.employeeId);
   const date = reads.today();
+  const onDate = { ...reads, today: () => date };
   if (date > allowance.leaveYearEnd) {
     throw new ApplicationError("CONFLICT", "This leave year has ended.");
   }
-  if (!(await currentCardOf(reads, tx, allowance))) {
+  if (!(await currentCardOf(onDate, tx, allowance))) {
     throw invalidInput([{ field: "allowanceId", code: "invalid" }]);
   }
-  const lineId = await allowanceRepository(tx).insertAdjustment({
+  const repository = allowanceRepository(tx);
+  const newLine = {
     allowanceId: allowance.id,
     amount: adjustment.amount,
     // The adjustment counts for the card's leave year, which may start after today.
@@ -124,8 +130,36 @@ async function appendAdjustment(
     reason: adjustment.comment,
     author,
     requestId: adjustment.requestId,
-  });
-  return { card: (await currentCardOf(reads, tx, allowance))!, lineId };
+  };
+  const lineId = await repository.insertAdjustment(newLine);
+  if (lineId === null && !isSameAdjustment(await repository.findAdjustment(newLine), newLine)) {
+    throw invalidInput([{ field: "requestId", code: "taken" }]);
+  }
+  const card = await currentCardOf(onDate, tx, allowance);
+  if (!card) {
+    // Rolls the line back: the locks above keep the card, so this is a bug, not a race.
+    throw new Error("The adjusted allowance is no longer the person's current balance.");
+  }
+  return { card, lineId };
+}
+
+/** Employee writes, then policies, then the person: the order every time off writer takes them. */
+async function lockCardInputs(reads: CardReads, tx: Tx, employeeId: string): Promise<void> {
+  await reads.employeeReads.holdEmployeeWrites(tx);
+  await timeOffPolicyRepository(tx).sharePolicies();
+  const [locked] = await reads.employeeReads.lockEmployees(tx, [employeeId]);
+  if (!locked) {
+    throw new ApplicationError("NOT_FOUND", "No allowance has this id.");
+  }
+}
+
+function isSameAdjustment(
+  saved: { amount: string; reason: string | null } | null,
+  submitted: { amount: string; reason: string },
+): boolean {
+  return (
+    saved !== null && Big(saved.amount).eq(submitted.amount) && saved.reason === submitted.reason
+  );
 }
 
 /** The figures of the balance the person's card shows today, if it is this allowance. */
@@ -153,7 +187,7 @@ function parseAdjustment({ amount, comment, requestId }: AdjustmentInput) {
   } else if (trimmed.length > MAX_COMMENT_LENGTH) {
     errors.push({ field: "comment", code: "too_long" });
   }
-  const parsedRequestId = requestId ? parseUuid(requestId) : crypto.randomUUID();
+  const parsedRequestId = requestId == null ? crypto.randomUUID() : parseUuid(requestId);
   if (parsedRequestId === null) {
     errors.push({ field: "requestId", code: "invalid" });
   }

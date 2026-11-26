@@ -1,4 +1,4 @@
-import { and, countDistinct, gte, ne, sql } from "drizzle-orm";
+import { and, countDistinct, eq, gte, ne, sql } from "drizzle-orm";
 
 import { anyOf, ormOf, type Tx } from "../../../core/db";
 import type { HistoryAuthor } from "../../../core/records";
@@ -35,6 +35,10 @@ export interface AllowanceRepository {
   findLines(allowanceIds: readonly string[]): Promise<Map<string, StoredLedgerLine[]>>;
   /** Appends one manual adjustment and returns its id; null when its request was appended before. */
   insertAdjustment(adjustment: NewAdjustment): Promise<string | null>;
+  /** The adjustment appended for this request, if any. */
+  findAdjustment(
+    request: Pick<NewAdjustment, "allowanceId" | "requestId">,
+  ): Promise<{ amount: string; reason: string | null } | null>;
 }
 
 /** Days someone added to or took from an allowance, with their comment. */
@@ -170,13 +174,25 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
           reason,
           authorKind: author.kind.toLowerCase(),
           authorId: author.id,
-          idempotencyKey: `${allowanceId}:manual_adjustment:${requestId}`,
+          idempotencyKey: adjustmentKey(allowanceId, requestId),
         })
         .onConflictDoNothing({ target: allowanceLedgerLines.idempotencyKey })
         .returning({ id: allowanceLedgerLines.id });
       return row?.id ?? null;
     },
+
+    async findAdjustment({ allowanceId, requestId }) {
+      const [row] = await orm()
+        .select({ amount: allowanceLedgerLines.amount, reason: allowanceLedgerLines.reason })
+        .from(allowanceLedgerLines)
+        .where(eq(allowanceLedgerLines.idempotencyKey, adjustmentKey(allowanceId, requestId)));
+      return row ?? null;
+    },
   };
+}
+
+function adjustmentKey(allowanceId: string, requestId: string): string {
+  return `${allowanceId}:manual_adjustment:${requestId}`;
 }
 
 function toStoredLine(row: typeof allowanceLedgerLines.$inferSelect): StoredLedgerLine {

@@ -23,8 +23,10 @@ const recordedDayWithYear = new Intl.DateTimeFormat("en-GB", {
 /** A balance's changes, newest first, each with what it did and the days left after it. */
 export function AllowanceHistory({ employeeId, allowanceId }: Props) {
   const { me } = useRouteContext({ from: "/_authenticated" });
+  // Bookings and adjustments made while it was closed change it, so each open asks again.
   const { data, error, loading, refetch } = useQuery(AllowanceHistoryDocument, {
     variables: { employeeId },
+    fetchPolicy: "cache-and-network",
   });
   const changes =
     data?.employee?.timeOffTypes?.find((type) => type.allowanceId === allowanceId)?.history ?? [];

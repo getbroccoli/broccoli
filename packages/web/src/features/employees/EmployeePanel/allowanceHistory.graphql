@@ -43,6 +43,12 @@ mutation AdjustAllowance($input: AllowanceAdjustInput!) {
         ... on Error {
           message
         }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
+        }
       }
     }
   }
