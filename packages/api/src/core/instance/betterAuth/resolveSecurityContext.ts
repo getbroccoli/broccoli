@@ -5,6 +5,7 @@ import type { AuthSource } from "../../auth";
 import type { Orm } from "../../db";
 import { isCrossOrigin } from "../helpers";
 import {
+  type AgentConnectionOfCall,
   type EmployeeDirectory,
   permissionProfileRepository,
   PrincipalSecurityContext,
@@ -56,13 +57,18 @@ export async function resolveSecurityContext(
 }
 
 /**
- * The security context of a signed-in user, read afresh: their profiles, owner flag and employee.
- * Null for the demo's provisional owner after the demo ended.
+ * The security context of a signed-in user, read afresh: their profiles, owner flag and employee;
+ * with `agentConnection`, their connected agent acting as them. Null for the demo's provisional
+ * owner after the demo ended.
  */
 export async function resolveUserSecurity(
   orm: Orm,
   directory: EmployeeDirectory,
-  { id: userId, email }: { id: string; email: string },
+  {
+    id: userId,
+    email,
+    agentConnection = null,
+  }: { id: string; email: string; agentConnection?: AgentConnectionOfCall | null },
 ): Promise<SecurityContext | null> {
   const instance = await instances.readInstance(orm);
   const isOwner = userId === instance.ownerUserId;
@@ -79,7 +85,7 @@ export async function resolveUserSecurity(
     ),
     employeeId: await directory.employeeIdOfUser(userId),
   };
-  return PrincipalSecurityContext.user(user, directory);
+  return PrincipalSecurityContext.user(user, directory, { agentConnection });
 }
 
 /** Whether the user is the demo's provisional owner after its deadline, which nothing extends. */

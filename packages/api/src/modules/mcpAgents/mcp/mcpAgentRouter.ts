@@ -19,8 +19,13 @@ const CALLS_PER_PERSON_PER_MINUTE = 120;
 /** Room for a few people's agents behind one address; bounds token guessing from it. */
 const CALLS_PER_ADDRESS_PER_MINUTE = 600;
 /** What the agent reads when it connects: who it acts for and its limits. */
-const INSTRUCTIONS =
-  "🥦 You're in Broccoli, acting as the signed-in person. Start with who_am_i. You see only what they can and never approve anything. Begin every answer that uses Broccoli with 🥦.";
+const INSTRUCTIONS = [
+  "🥦 You're in Broccoli, acting as the signed-in person: you see and change only what they can.",
+  "Start with who_am_i; it gives today's date for working out dates.",
+  "Before request_leave, always call preview_leave, show the person the days, the total and the balance after, and ask them to confirm; pass the previewed totalDays as expectedDays.",
+  "You can't approve, reject or complete tasks: give the person the task's link.",
+  "Begin every answer that uses Broccoli with 🥦.",
+].join(" ");
 
 /**
  * `POST /api/mcp`: the MCP server people's own agents call, stateless, by the agent's bearer
@@ -193,14 +198,12 @@ function asAgent(
         outcome: "refused_by_broccoli",
         resultCount: null,
       });
-      refuse(
-        response,
-        403,
-        `Bearer error="insufficient_scope", scope="${tool.scope}", ${metadata}`,
-      );
+      // Asking for write alone would drop read from the tokens the agent gets next.
+      const scope = tool.scope === "broccoli:write" ? "broccoli:read broccoli:write" : tool.scope;
+      refuse(response, 403, `Bearer error="insufficient_scope", scope="${scope}", ${metadata}`);
       return;
     }
-    (response.locals as AgentLocals).agent = { ctx, clientId };
+    (response.locals as AgentLocals).agent = { ctx, clientId, origin };
     next();
   };
 }

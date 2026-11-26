@@ -16,6 +16,7 @@ import {
   type Subject,
 } from "./permissions";
 import { isInRecordScope } from "./recordScope";
+import type { AgentConnectionOfCall } from "./agentConnectionOfCall";
 
 /**
  * Who is calling application code, and what they may do. Every business function
@@ -37,6 +38,9 @@ export interface SecurityContext {
 
   /** The session of the owner's own coding agent that calls, during setup; null for anyone else. */
   readonly externalAgentSessionId: string | null;
+
+  /** The person's connected agent this call comes through, with its token's scopes; null otherwise. */
+  readonly agentConnection: Readonly<AgentConnectionOfCall> | null;
 
   /** Whether the caller holds the operation; system always does. */
   can(operation: Operation): boolean;
@@ -123,6 +127,8 @@ export interface SignedInUser {
   employeeId: string | null;
 }
 
+type ProfileDefinitions = Record<PermissionProfile, ProfileDefinition>;
+
 const OPERATION_REFUSALS: Record<Operation, string> = {
   MANAGE_WORKSPACE: "Only admins can do this.",
   RESET_WORKSPACE: "Only the owner can do this.",
@@ -138,6 +144,7 @@ export class PrincipalSecurityContext implements SecurityContext {
     readonly externalAgentSessionId: string | null = null,
     private readonly directory: EmployeeDirectory | null = null,
     private readonly profiles: Record<PermissionProfile, ProfileDefinition> = PERMISSION_PROFILES,
+    readonly agentConnection: Readonly<AgentConnectionOfCall> | null = null,
   ) {}
 
   private ownersEmployeeId: Promise<string | null> | undefined;
@@ -146,13 +153,24 @@ export class PrincipalSecurityContext implements SecurityContext {
   private reports: Promise<{ id: string; depth: number }[]> | undefined;
   private managers: Promise<Map<string, string[]>> | undefined;
 
-  /** A signed-in user; built by `resolveSecurityContext`, and by tests with other profiles. */
+  /**
+   * A signed-in user, or their connected agent acting as them; built by `resolveSecurityContext`
+   * and the agent's token check, and by tests with other profiles.
+   */
   static user(
     user: SignedInUser,
     directory: EmployeeDirectory,
-    profiles?: Record<PermissionProfile, ProfileDefinition>,
+    options: { profiles?: ProfileDefinitions; agentConnection?: AgentConnectionOfCall | null } = {},
   ): SecurityContext {
-    return new PrincipalSecurityContext({ ...user }, false, null, directory, profiles);
+    const { profiles, agentConnection = null } = options;
+    return new PrincipalSecurityContext(
+      { ...user },
+      false,
+      null,
+      directory,
+      profiles,
+      agentConnection,
+    );
   }
 
   /** The newly created owner, before setup adds or links any employees. */

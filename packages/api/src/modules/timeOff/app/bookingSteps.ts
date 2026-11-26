@@ -13,7 +13,7 @@ import {
   type EmployeeWorkingPatternService,
 } from "../../employees";
 import { timeOffPolicyRepository, timeOffRepository, type TimeOffStatus } from "../db";
-import { bookingWindow, type CostedDay } from "../domain";
+import { bookingWindow, type CostedDay, totalCost } from "../domain";
 import { type Person, readPeople } from "./allowanceEngine";
 import { checkDays } from "./checkDays";
 import type { ParsedBooking } from "./parseBooking";
@@ -74,15 +74,26 @@ export async function begin(
   return people[0]!;
 }
 
-/** The booking's days and the first refusal, in its window. */
-export function checkBooking(
+/**
+ * The booking's days and the first refusal, in its window; refuses a cost other than the one the
+ * person was shown, as their days were costed again since.
+ */
+export async function checkBooking(
   dependencies: BookingDependencies,
   tx: Tx,
   booking: ParsedBooking,
   person: Person,
 ) {
   const window = windowOf(person, booking.timeOffTypeId, dependencies.today());
-  return checkDays(dependencies, tx, { booking, person, window });
+  const checked = await checkDays(dependencies, tx, { booking, person, window });
+  const cost = totalCost(checked.days);
+  if (!checked.refusal && booking.expectedDays !== null && cost !== booking.expectedDays) {
+    throw new ApplicationError(
+      "CONFLICT",
+      `This is ${cost} days now, not ${booking.expectedDays}. Show the person the new preview first.`,
+    );
+  }
+  return checked;
 }
 
 /** The days a person may book or ask for of a type, from today's leave year on. */

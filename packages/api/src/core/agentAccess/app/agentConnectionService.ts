@@ -21,13 +21,14 @@ export interface AgentConnectionService {
     input: { userId: string; clientId: string },
   ) => Promise<void>;
   /**
-   * The person an agent's call acts for, through their connection of this client, noting the use;
-   * null when the connection has ended, or ending it now when it went unused for 30 days.
+   * The person an agent's call acts for, their connection of this client and the scopes they allow
+   * it now, noting the use; null when the connection has ended, or ending it now when it went
+   * unused for 30 days.
    */
   useAgentConnection: (
     ctx: SecurityContext,
     input: { userId: string; clientId: string },
-  ) => Promise<{ id: string; email: string } | null>;
+  ) => Promise<{ id: string; email: string; connectionId: string; scopes: string[] } | null>;
   /** Ends every connection of the person, for `reason`. */
   endConnections: (
     ctx: SecurityContext,
@@ -100,7 +101,12 @@ export function createAgentConnectionService({
         return null;
       }
       await connections.touchConnection(connection.id, now);
-      return { id: userId, email: connection.email };
+      return {
+        id: userId,
+        email: connection.email,
+        connectionId: connection.id,
+        scopes: connection.scopes,
+      };
     },
     async endConnections(ctx, { userId, reason }) {
       ctx.requireSystem();

@@ -162,7 +162,7 @@ test("allowing two clients at once leaves exactly one agent connected", async ({
   expect(connected.filter(Boolean)).toHaveLength(1);
 });
 
-test("allowing a client grants read and offline access without write access", async ({ env }) => {
+test("allowing a client grants the requested read, write and offline access", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
   const clientId = await registerAgentClient(env, "Read and write client");
 
@@ -171,9 +171,85 @@ test("allowing a client grants read and offline access without write access", as
     scope: "broccoli:read broccoli:write offline_access",
   });
 
-  expect(scope.split(" ")).toContain("broccoli:read");
-  expect(scope.split(" ")).toContain("offline_access");
-  expect(scope.split(" ")).not.toContain("broccoli:write");
+  expect(scope.split(" ").sort()).toEqual(["broccoli:read", "broccoli:write", "offline_access"]);
+});
+
+test("allowing write access for the same client keeps its connection and lets the new token ask for leave", async ({
+  env,
+}) => {
+  const { browser } = await env.signInAsOwner();
+  const clientId = await registerAgentClient(env, "Leave client");
+  await connectAgent(env, browser, { clientId });
+  const query =
+    "query { myAgentConnection { id canChangeThings } myLastEndedAgentConnection { id } }";
+  const before = (await (await browser.graphql(query)).json()) as {
+    data: { myAgentConnection: { id: string; canChangeThings: boolean } };
+  };
+  expect(before).toMatchObject({
+    data: { myAgentConnection: { id: expect.any(String) as unknown, canChangeThings: false } },
+  });
+
+  const { accessToken } = await connectAgent(env, browser, {
+    clientId,
+    scope: "broccoli:read broccoli:write offline_access",
+  });
+
+  expect(await (await browser.graphql(query)).json()).toEqual({
+    data: {
+      myAgentConnection: { id: before.data.myAgentConnection.id, canChangeThings: true },
+      myLastEndedAgentConnection: null,
+    },
+  });
+  const response = await callMcpTool(env, accessToken, "request_leave", {
+    timeOffTypeId: "00000000-0000-4000-8000-000000000001",
+    startDate: "2026-12-07",
+    endDate: "2026-12-07",
+    expectedDays: 1,
+  });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({
+    result: {
+      isError: true,
+      content: [{ type: "text", text: "You have no employee record in Broccoli." }],
+    },
+  });
+});
+
+test("allowing only read access again removes write access from the first token", async ({
+  env,
+}) => {
+  const { browser } = await env.signInAsOwner();
+  const clientId = await registerAgentClient(env, "Leave client");
+  const first = await connectAgent(env, browser, {
+    clientId,
+    scope: "broccoli:read broccoli:write offline_access",
+  });
+  const location = await authorize(
+    env,
+    browser,
+    new URLSearchParams({
+      response_type: "code",
+      client_id: clientId,
+      redirect_uri: "http://127.0.0.1:33418/callback",
+      scope: "broccoli:read offline_access",
+      prompt: "consent",
+      state: "narrow-consent",
+      code_challenge: createHash("sha256").update("v".repeat(43)).digest("base64url"),
+      code_challenge_method: "S256",
+      resource: `${env.url}/api/mcp`,
+    }),
+  );
+  expect(location.pathname).toBe("/api/auth/agent/allow");
+  const consent = await browser.post("/api/auth/oauth2/consent", {
+    accept: true,
+    oauth_query: location.search.slice(1),
+  });
+  expect(consent.status).toBe(200);
+
+  const response = await callMcpTool(env, first.accessToken, "request_leave");
+
+  expect(response.status).toBe(403);
+  expect(response.headers.get("www-authenticate")).toContain('error="insufficient_scope"');
 });
 
 test("a signed-in person cannot widen consent through the provider's endpoint", async ({ env }) => {

@@ -69,12 +69,18 @@ export function agentSecurityResolver(
     if (!person) {
       return { refusal: "CONNECTION_ENDED" };
     }
-    const security = await resolveUserSecurity(orm, directory, person);
+    const scope = typeof claims.scope === "string" ? claims.scope : "";
+    // A token outlives a narrower Allow of its client, so it counts only what is still allowed.
+    const scopes = new Set(scope.split(" ").filter((each) => person.scopes.includes(each)));
+    const security = await resolveUserSecurity(orm, directory, {
+      id: person.id,
+      email: person.email,
+      agentConnection: { id: person.connectionId, scopes },
+    });
     if (!security) {
       return { refusal: "DEMO_ENDED" };
     }
-    const scope = typeof claims.scope === "string" ? claims.scope : "";
-    return { security, clientId, scopes: new Set(scope.split(" ")) };
+    return { security, clientId, scopes };
   };
 }
 

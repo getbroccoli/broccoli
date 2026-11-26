@@ -45,7 +45,7 @@ enum RecordOperation {
 "Who made a change."
 type RecordChangeAuthor {
   kind: RecordChangeAuthorKind!
-  "The signed-in user who made it; null for anyone else."
+  "The signed-in user who made it, also through their connected agent; null for anyone else."
   userId: ID
   "That user's current email; null when they no longer exist or for anyone else."
   email: String
@@ -53,6 +53,8 @@ type RecordChangeAuthor {
 
 enum RecordChangeAuthorKind {
   SIGNED_IN_USER
+  "A signed-in user's connected agent, acting as them; the user is the author."
+  CONNECTED_AGENT
   BROCCOLI_ITSELF
   "The browser holding setup before the owner exists."
   SETUP_HOLDER

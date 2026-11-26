@@ -12,7 +12,7 @@ import {
   user,
 } from "../../auth";
 import { type Orm, ormOf, type Tx } from "../../db";
-import type { AgentConnectionEnding } from "../domain";
+import { type AgentConnectionEnding, AGENT_WRITE_SCOPE } from "../domain";
 import { agentConnectionEndings } from "./agentConnectionEndingsTable";
 import { agentInvitationClosings } from "./agentInvitationClosingsTable";
 
@@ -66,6 +66,8 @@ export interface StoredAgentConnection {
   clientName: string | null;
   connectedAt: Date;
   lastUsedAt: Date;
+  /** Whether the person allowed it to change things, not only to read. */
+  canChangeThings: boolean;
 }
 
 export interface Ending {
@@ -85,6 +87,8 @@ export interface ConnectionInUse {
   id: string;
   email: string;
   lastUsedAt: Date;
+  /** What the person allows the agent now; a token issued earlier may name more. */
+  scopes: string[];
 }
 
 export function agentConnectionRepository(db: Orm | Tx): AgentConnectionRepository {
@@ -98,21 +102,40 @@ export function agentConnectionRepository(db: Orm | Tx): AgentConnectionReposito
           clientName: oauthClient.name,
           connectedAt: oauthConsent.createdAt,
           lastUsedAt: oauthConsent.updatedAt,
+          scopes: oauthConsent.scopes,
         })
         .from(oauthConsent)
         .innerJoin(oauthClient, eq(oauthClient.clientId, oauthConsent.clientId))
         .where(eq(oauthConsent.userId, userId))
         .orderBy(desc(oauthConsent.createdAt))
         .limit(1);
-      return row ?? null;
+      if (!row) {
+        return null;
+      }
+      const { scopes, ...connection } = row;
+      return { ...connection, canChangeThings: scopes.includes(AGENT_WRITE_SCOPE) };
     },
     async findConnectionOf(userId, clientId) {
-      const [row] = await orm()
-        .select({ id: oauthConsent.id, email: user.email, lastUsedAt: oauthConsent.updatedAt })
+      const rows = await orm()
+        .select({
+          id: oauthConsent.id,
+          email: user.email,
+          lastUsedAt: oauthConsent.updatedAt,
+          scopes: oauthConsent.scopes,
+        })
         .from(oauthConsent)
         .innerJoin(user, eq(user.id, oauthConsent.userId))
-        .where(and(eq(oauthConsent.userId, userId), eq(oauthConsent.clientId, clientId)));
-      return row ?? null;
+        .where(and(eq(oauthConsent.userId, userId), eq(oauthConsent.clientId, clientId)))
+        .orderBy(desc(oauthConsent.createdAt));
+      const [newest] = rows;
+      if (!newest) {
+        return null;
+      }
+      // Concurrent first Allows can leave two consents; only what every one allows counts.
+      const scopes = newest.scopes.filter((scope) =>
+        rows.every((row) => row.scopes.includes(scope)),
+      );
+      return { ...newest, scopes };
     },
     async lockPerson(userId) {
       await orm().select({ id: user.id }).from(user).where(eq(user.id, userId)).for("update");

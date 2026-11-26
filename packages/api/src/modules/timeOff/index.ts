@@ -33,9 +33,14 @@ export {
 
 // Public types.
 export type {
+  BookingPreview,
+  BookTimeOffService,
   EmployeeTimeOffType,
   EnsuredAllowances,
+  OwnTimeOffInput,
+  OwnTimeOffMode,
   TimeOffPolicyService,
+  TimeOffRequestService,
   TimeOffService,
   TurnedOnTimeOff,
 } from "./app";

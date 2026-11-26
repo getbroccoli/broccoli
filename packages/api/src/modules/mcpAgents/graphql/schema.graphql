@@ -1,12 +1,16 @@
 "A person's own agent, such as Claude or Codex, connected to Broccoli to act as them."
 type AgentConnection {
   id: ID!
+  "The id the agent's app registered with, the same each time it connects."
+  clientId: String!
   "The name the agent gave itself; null when it gave none."
   clientName: String
   "When the person last allowed it."
   connectedAt: DateTime!
   "When the agent last called Broccoli; when it was allowed, until its first call."
   lastUsedAt: DateTime!
+  "Whether the person allowed it to change things, such as asking for leave, not only to read."
+  canChangeThings: Boolean!
 }
 
 "An agent connection that has ended, and why."

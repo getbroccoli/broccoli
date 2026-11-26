@@ -14,6 +14,8 @@ export interface ParsedBooking {
   endDate: CalendarDate;
   halfDays: ReadonlyMap<CalendarDate, DayPart>;
   note: string | null;
+  /** Saving refuses a total cost other than this one; null when nobody was shown one. */
+  expectedDays: number | null;
 }
 
 /** Refuses ids, dates, a note or half days that are not what a booking takes. */
@@ -40,5 +42,6 @@ export function parseBooking(input: BookingInput): ParsedBooking {
       ({ date, dayPart }) => [parseDateField("halfDays", date), dayPart] as const,
     ),
   );
-  return { employeeId, timeOffTypeId, startDate, endDate, halfDays, note };
+  const expectedDays = input.expectedDays ?? null;
+  return { employeeId, timeOffTypeId, startDate, endDate, halfDays, note, expectedDays };
 }

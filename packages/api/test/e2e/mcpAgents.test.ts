@@ -258,20 +258,6 @@ test("an agent cannot ask for a token for another resource", async ({ env }) => 
   expect(location.searchParams.get("error")).toBe("invalid_target");
 });
 
-test("who_am_i refuses a token without broccoli:read", async ({ env }) => {
-  const { browser } = await env.signInAsOwner();
-  const clientId = await registerAgentClient(env, "Write-only client");
-  const { accessToken } = await connectAgent(env, browser, {
-    clientId,
-    scope: "broccoli:write offline_access",
-  });
-
-  const response = await callMcpTool(env, accessToken, "who_am_i");
-
-  expect(response.status).toBe(403);
-  expect(response.headers.get("www-authenticate")).toContain('error="insufficient_scope"');
-});
-
 test("resetting a password ends the agent's access and refresh tokens", async () => {
   const { env, owner, resend } = await startMailTestEnv();
   const saved = await owner.graphql(SAVE_MAIL_SETTINGS, { input: RESEND_CHOICE });

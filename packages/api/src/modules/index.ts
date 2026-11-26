@@ -177,7 +177,7 @@ export function createModules(
     slackModule(slackConnection),
     importsModule(importServices),
     externalAgentsModule({ ...core, mode: deployment.mode, imports: importServices }),
-    mcpAgentsModule(core),
+    mcpAgentsModule({ ...core, timeOff, bankHolidays, approvals, tasks }),
     timeOffModule({
       ...core,
       timeOff,

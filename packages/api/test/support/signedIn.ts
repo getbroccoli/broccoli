@@ -13,9 +13,10 @@ import { employeeDirectory } from "../../src/modules/employees";
  */
 export function signedIn(
   orm: Orm,
-  options: { employeeId: string | null } & (
-    { profiles: readonly PermissionProfile[] } | { grants: readonly Grant[] }
-  ),
+  options: {
+    employeeId: string | null;
+    agentConnection?: { id: string; scopes: readonly string[] };
+  } & ({ profiles: readonly PermissionProfile[] } | { grants: readonly Grant[] }),
 ) {
   const profiles = "profiles" in options ? options.profiles : (["EMPLOYEE"] as const);
   return PrincipalSecurityContext.user(
@@ -27,11 +28,18 @@ export function signedIn(
       employeeId: options.employeeId,
     },
     employeeDirectory(orm),
-    "grants" in options
-      ? {
-          ...PERMISSION_PROFILES,
-          EMPLOYEE: { builtIn: true, grants: options.grants, operations: [] },
-        }
-      : undefined,
+    {
+      profiles:
+        "grants" in options
+          ? {
+              ...PERMISSION_PROFILES,
+              EMPLOYEE: { builtIn: true, grants: options.grants, operations: [] },
+            }
+          : undefined,
+      agentConnection: options.agentConnection && {
+        id: options.agentConnection.id,
+        scopes: new Set(options.agentConnection.scopes),
+      },
+    },
   );
 }

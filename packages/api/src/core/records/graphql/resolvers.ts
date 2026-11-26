@@ -81,11 +81,9 @@ export function createResolvers(
       __resolveType: (record) => record.__typename as AnyRecordTypeName,
     },
     RecordChangeAuthor: {
-      userId: (author) => (author.kind === "SIGNED_IN_USER" ? author.id : null),
+      userId: (author) => (isUser(author.kind) ? author.id : null),
       email: (author, _args, context) =>
-        author.kind === "SIGNED_IN_USER" && author.id
-          ? authorEmails(context).load(author.id)
-          : null,
+        isUser(author.kind) && author.id ? authorEmails(context).load(author.id) : null,
     },
   };
 }
@@ -150,3 +148,8 @@ type AnyRecordTypeName = Extract<
   Awaited<ReturnType<NonNullable<NonNullable<Resolvers["AnyRecord"]>["__resolveType"]>>>,
   string
 >;
+
+/** A person made the change, in the browser or through their connected agent. */
+function isUser(kind: string): boolean {
+  return kind === "SIGNED_IN_USER" || kind === "CONNECTED_AGENT";
+}
