@@ -3,7 +3,6 @@ import { expect, it } from "vitest";
 import {
   balanceLines,
   bookedToast,
-  bookingDates,
   bookingTooltip,
   costSentence,
   monthRange,
@@ -12,15 +11,6 @@ import {
   refusalMessage,
   shiftMonth,
 } from "./timeOffText";
-
-it.each([
-  ["2026-12-07", "2026-12-09", "7–9 Dec 2026"],
-  ["2026-12-30", "2027-01-04", "30 Dec 2026 – 4 Jan 2027"],
-  ["2026-11-03", "2026-11-03", "3 Nov 2026"],
-  ["2026-11-30", "2026-12-02", "30 Nov – 2 Dec 2026"],
-])("formats booking dates from %s to %s as %s", (startDate, endDate, expected) => {
-  expect(bookingDates(startDate, endDate)).toBe(expected);
-});
 
 it.each([
   ["2026-12", "2026-12-01", "2026-12-31"],

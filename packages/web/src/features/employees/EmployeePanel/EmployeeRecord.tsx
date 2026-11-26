@@ -140,7 +140,11 @@ export function EmployeeRecord({ employee, onClose }: Props) {
           />
 
           {employee.timeOffTypes && (
-            <TimeOffSection timeOffTypes={employee.timeOffTypes} onBook={bookTimeOff} />
+            <TimeOffSection
+              person={employee}
+              timeOffTypes={employee.timeOffTypes}
+              onBook={bookTimeOff}
+            />
           )}
 
           <EmployeeDetails employee={employee} draft={draft} canEdit={canEdit} />
