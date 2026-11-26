@@ -1,4 +1,5 @@
 import { ApplicationError } from "../../../core/applicationError";
+import type { ApprovalService } from "../../../core/approvals";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
 import type { Task, TaskService } from "../../../core/tasks";
@@ -59,18 +60,20 @@ const NO_EMPLOYEE = "You have no employee record in Broccoli.";
 export function createMcpAgentToolService({
   timeOff,
   bankHolidays,
+  approvals,
   tasks,
   today = todayInLondon,
   ...dependencies
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   timeOff: TimeOffService;
   bankHolidays: BankHolidayService;
+  approvals: Pick<ApprovalService, "requestApproval" | "cancelApproval">;
   tasks: Pick<TaskService, "listMyTasks">;
   today?: () => CalendarDate;
 }): McpAgentToolService {
   const employees = createEmployeeReadService(dependencies);
   const managers = createEmployeeManagerService(dependencies);
-  const timeOffServices = { ...dependencies, timeOff, bankHolidays, today };
+  const timeOffServices = { ...dependencies, timeOff, bankHolidays, approvals, today };
   const bookings = createBookTimeOffService(timeOffServices);
   const requests = createTimeOffRequestService(timeOffServices);
   const whenYouAsk = async (ctx: SecurityContext, typeIds: readonly string[]) =>

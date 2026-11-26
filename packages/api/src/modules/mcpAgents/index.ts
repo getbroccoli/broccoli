@@ -4,6 +4,7 @@ import {
   deleteOldAgentActivityJob,
 } from "../../core/agentAccess";
 import { readSdl } from "../../core/graphql";
+import type { ApprovalService } from "../../core/approvals";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import type { TaskService } from "../../core/tasks";
 import type { BankHolidayService } from "../bankHolidays";
@@ -23,6 +24,7 @@ export function mcpAgentsModule(
   dependencies: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
     timeOff: TimeOffService;
     bankHolidays: BankHolidayService;
+    approvals: Pick<ApprovalService, "requestApproval" | "cancelApproval">;
     tasks: Pick<TaskService, "listMyTasks">;
   },
 ): ModuleManifest {

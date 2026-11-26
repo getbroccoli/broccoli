@@ -3,6 +3,7 @@ import { createLogger } from "../../src/core/logger";
 import { createMcpAgentToolService } from "../../src/modules/mcpAgents";
 import { bankHolidayService } from "./bankHolidayService";
 import { calendarDate } from "./calendarDate";
+import { approvalService } from "./processService";
 import { taskService } from "./taskService";
 import { testTransactor } from "./testTransactor";
 import { timeOffService } from "./timeOffService";
@@ -15,6 +16,7 @@ export function mcpAgentToolService(
     transact = testTransactor(orm),
     timeOff = timeOffService(orm, { today: today() }),
     tasks = taskService(orm, { transact }),
+    approvals = approvalService(orm, { transact }),
   } = {},
 ) {
   return createMcpAgentToolService({
@@ -24,6 +26,7 @@ export function mcpAgentToolService(
     today,
     timeOff,
     bankHolidays: bankHolidayService(),
+    approvals,
     tasks,
   });
 }
