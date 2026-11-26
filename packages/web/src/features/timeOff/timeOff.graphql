@@ -25,9 +25,7 @@ fragment WhosOutTimeOff on TimeOff {
     decidedAt
     comment
   }
-  access {
-    canDelete
-  }
+  canCancel
 }
 
 # Everyone the viewer may read, by name, with their month of who's out.

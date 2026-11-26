@@ -5,7 +5,11 @@ import {
 } from "../core/instance";
 import type { Deployment } from "../core/env";
 import type { ModuleDependencies, Modules } from "../core/moduleManifest";
-import { APPROVAL_TRIGGERING_EVENTS, approvalsModule } from "../core/approvals";
+import {
+  APPROVAL_TRIGGERING_EVENTS,
+  approvalsModule,
+  createApprovalService,
+} from "../core/approvals";
 import { createNotifications, notificationsModule } from "../core/notifications";
 import { recordsManifest } from "../core/records";
 import { PrincipalSecurityContext } from "../core/security";
@@ -118,6 +122,7 @@ export function createModules(
       notifications.actions,
     ]),
   });
+  const approvals = createApprovalService({ processes });
   // Every path that clears the people resets time off, processes and tasks too, back to a fresh workspace.
   const deleteAllEmployees: typeof employeeSetup.deleteAllEmployees = async (ctx, tx) => {
     // The policies' lock first: turning time off on holds it while its allowances wait on employee rows.
@@ -177,6 +182,7 @@ export function createModules(
       ...core,
       timeOff,
       bankHolidays,
+      approvals,
       timeOffSetup: createTimeOffSetupService({
         ...core,
         decisions: aiSettings.decisions,
@@ -186,7 +192,7 @@ export function createModules(
     tasksModule({ orm: core.orm, tasks }),
     processesModule({ logger: core.logger, processes }),
     notificationsModule({ logger: core.logger, notifications }),
-    approvalsModule({ logger: core.logger }),
+    approvalsModule({ logger: core.logger, approvals }),
   ];
   return {
     manifests: [...manifests, recordsManifest(core, manifests)],

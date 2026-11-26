@@ -1,3 +1,4 @@
+import type { ApprovalService } from "../../core/approvals";
 import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import type { BankHolidayService } from "../bankHolidays";
@@ -48,13 +49,20 @@ export function timeOffModule({
   timeOff,
   timeOffSetup,
   bankHolidays,
+  approvals,
   ...dependencies
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   timeOff: TimeOffService;
   timeOffSetup: TimeOffSetupService;
   bankHolidays: BankHolidayService;
+  approvals: ApprovalService;
 }): ModuleManifest {
-  const requests = createTimeOffRequestService({ ...dependencies, timeOff, bankHolidays });
+  const requests = createTimeOffRequestService({
+    ...dependencies,
+    timeOff,
+    bankHolidays,
+    approvals,
+  });
   return {
     name: "timeOff",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
@@ -62,7 +70,7 @@ export function timeOffModule({
       timeOff,
       timeOffSetup,
       policies: createTimeOffPolicyService({ ...dependencies, timeOff }),
-      booking: createBookTimeOffService({ ...dependencies, timeOff, bankHolidays }),
+      booking: createBookTimeOffService({ ...dependencies, timeOff, bankHolidays, approvals }),
       whosOut: createWhosOutService({ ...dependencies, bankHolidays }),
       ownRules: {
         ownRules: createOwnTimeOffRulesService({ ...dependencies, timeOff }),

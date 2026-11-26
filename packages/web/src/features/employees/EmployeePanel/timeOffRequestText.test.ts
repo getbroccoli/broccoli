@@ -1,6 +1,14 @@
 import { expect, it } from "vitest";
 
-import { decisionLine, modeOf, recordedLine, statusLabel, waitingLine } from "./timeOffRequestText";
+import {
+  cancellationLine,
+  decisionLine,
+  modeOf,
+  recordedLine,
+  requestEnding,
+  statusLabel,
+  waitingLine,
+} from "./timeOffRequestText";
 
 it.each([
   ["ALLOWED", "book"],
@@ -11,14 +19,49 @@ it.each([
 });
 
 it.each([
-  ["REQUESTED", false, "Waiting for approval"],
-  ["APPROVED", true, "Approved"],
-  ["REJECTED", true, "Rejected"],
-  ["CANCELLED", true, "Cancelled"],
-  ["CANCELLED", false, "Ended with no decision"],
-] as const)("labels %s with decision present %s as %s", (status, hasDecision, expected) => {
-  expect(statusLabel(status, hasDecision)).toBe(expected);
-});
+  ["REQUESTED", false, null, "Waiting for approval"],
+  ["APPROVED", true, null, "Approved"],
+  ["REJECTED", true, null, "Rejected"],
+  ["CANCELLED", true, "the_person", "Cancelled"],
+  ["CANCELLED", false, "the_person", "Withdrawn"],
+  ["CANCELLED", false, "someone_else", "Cancelled"],
+  ["CANCELLED", false, null, "Ended with no decision"],
+] as const)(
+  "labels %s with decision %s and canceller %s as %s",
+  (status, hasDecision, cancelledBy, expected) => {
+    expect(statusLabel(status, { hasDecision, cancelledBy })).toBe(expected);
+  },
+);
+
+it.each([
+  [null, null, false, null],
+  [{}, null, true, null],
+  [null, { cancelledBy: { id: "amira" } }, false, "the_person"],
+  [null, { cancelledBy: { id: "hannah" } }, false, "someone_else"],
+  [null, { cancelledBy: null }, false, "someone_else"],
+  [{}, { cancelledBy: { id: "amira" } }, true, "the_person"],
+] as const)(
+  "reads the ending for decision %j and cancellation %j",
+  (decision, cancellation, hasDecision, cancelledBy) => {
+    expect(requestEnding({ decision, cancellation }, "amira")).toEqual({
+      hasDecision,
+      cancelledBy,
+    });
+  },
+);
+
+it.each([
+  ["2026-11-26T12:00:00Z", "Amira Hassan", true, "Withdrawn on Thu 26 Nov."],
+  ["2026-11-26T12:00:00Z", "Amira Hassan", false, "Cancelled by Amira Hassan on Thu 26 Nov."],
+  ["2026-11-26T12:00:00Z", "Hannah Weber", false, "Cancelled by Hannah Weber on Thu 26 Nov."],
+  ["2026-11-26T12:00:00Z", null, false, "Cancelled on Thu 26 Nov."],
+  ["2026-07-01T23:30:00Z", null, false, "Cancelled on Thu 2 Jul."],
+] as const)(
+  "formats cancellation at %s by %s (withdrawal %s) as %s",
+  (cancelledAt, cancelledByName, withdrawn, expected) => {
+    expect(cancellationLine({ cancelledAt, cancelledByName, withdrawn })).toBe(expected);
+  },
+);
 
 it("shows when a request started waiting for approval", () => {
   expect(decisionLine("REQUESTED", null, requestedAt)).toBe(

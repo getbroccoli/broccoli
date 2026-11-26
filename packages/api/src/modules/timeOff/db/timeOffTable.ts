@@ -31,11 +31,16 @@ export const timeOff = pgTable(
     decidedByEmployeeId: uuid("decided_by_employee_id"),
     /** The approver's comment, such as why it was rejected. */
     decisionComment: text("decision_comment"),
+    /** When someone cancelled it; null until then, and when its approval ended without a decision. */
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    /** Who cancelled it; null when no employee did, or once that employee is deleted. */
+    cancelledByEmployeeId: uuid("cancelled_by_employee_id"),
   },
   (table) => [
     index("time_off_employee_idx").on(table.employeeId),
     index("time_off_time_off_type_idx").on(table.timeOffTypeId),
-    // Deleting an employee clears the decisions they made without scanning all time off.
+    // Deleting an employee clears the decisions they made, and the cancels, without scanning all time off.
     index("time_off_decided_by_idx").on(table.decidedByEmployeeId),
+    index("time_off_cancelled_by_idx").on(table.cancelledByEmployeeId),
   ],
 );

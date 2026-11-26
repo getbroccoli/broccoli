@@ -534,8 +534,12 @@ type TimeOff implements AnyRecord {
   id: ID!
   "Changes to this time off, newest first; empty for who may not read this person's time off."
   history("Page size, 1 to 10000." first: Int = 50, after: String): RecordChangeConnection!
-  "What the signed-in user's permissions allow: canDelete is the admins' grant, so cancelling still needs approved time off in an open leave year; nobody edits it."
+  "What the signed-in user's permissions allow: canDelete is the delete grant alone, so read canCancel for the button; nobody edits it."
   access: RecordAccess!
+  "Whether the signed-in user may cancel this time off now, among time off they may read: the person withdraws their own waiting request at any time, and cancels approved time off they asked for or booked only before its first day; admins cancel anyone's waiting request, or approved time off in a leave year that is still open."
+  canCancel: Boolean!
+  "Who cancelled it and when; null unless someone cancelled it (an approval that ended without a decision is no cancellation), and for callers who may not read this person's time off."
+  cancellation: TimeOffCancellation
   "Null unless the caller may read this person's time off."
   status: TimeOffStatus
   "Set once a request is decided; null for bookings, waiting requests, requests that ended without a decision, and callers who may not read this person's time off."
@@ -560,6 +564,13 @@ enum TimeOffStatus {
   APPROVED
   REJECTED
   CANCELLED
+}
+
+"Who cancelled time off, and when."
+type TimeOffCancellation {
+  "Null when no employee cancelled it, such as an owner without one, or once that person is deleted."
+  cancelledBy: Employee
+  cancelledAt: DateTime!
 }
 
 "Who decided a request, when, and their comment."
@@ -702,7 +713,7 @@ type TimeOffMutations {
   bookTimeOff(input: TimeOffBookInput!): TimeOffBookPayload!
   "Asks for your own time off: it holds its days while it waits for the approval its type names (your manager's, the workspace owner's when you have no manager, or the owner's), and the balance changes only once it is approved; it comes back CANCELLED when nobody can approve it. Refused for anyone you may book for straight away, or may not ask for (FORBIDDEN); for a type booked straight away (`timeOffTypeId` / `needs_no_approval`); and, as a ConflictError, when the approval could not start."
   requestTimeOff(input: TimeOffBookInput!): TimeOffRequestPayload!
-  "Cancels approved time off, giving its days back; refused with a ConflictError for anything not approved, or when its first day is in a leave year that has closed. Admins only, for now."
+  "Cancels time off: a waiting request, ending its approval and cancelling the approver's task, or approved time off, giving its days back. The person withdraws their own waiting request, and cancels approved time off they asked for or booked before its first day; admins cancel anyone's. A ConflictError for rejected or cancelled time off, time off that has started, a leave year that has closed, or a request decided meanwhile."
   cancelTimeOff(input: TimeOffCancelInput!): TimeOffCancelPayload!
   "Cancels a planned stop: the rules it ends, the type's last on their owner and ending on or after today, run on open-ended. Refused with a ConflictError when they are no planned stop. Admins only."
   cancelPolicyStop(input: TimeOffPolicyCancelStopInput!): TimeOffPolicyCancelStopPayload!

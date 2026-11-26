@@ -14,8 +14,18 @@ export function modeOf(permit: Permit): DialogMode | null {
   return permit === "ALLOWED" ? "book" : permit === "ALLOWED_WITH_APPROVAL" ? "request" : null;
 }
 
-/** A status as a chip says it; a cancelled request without a decision ended with none. */
-export function statusLabel(status: TimeOffStatus, hasDecision: boolean): string {
+/** How a request ended: whether someone decided it, and who cancelled it, if anyone. */
+export interface RequestEnding {
+  hasDecision: boolean;
+  /** Null when nobody cancelled it, such as an approval that ended without a decision. */
+  cancelledBy: "the_person" | "someone_else" | null;
+}
+
+/**
+ * A status as a chip says it: a request the person cancelled while it waited was withdrawn, one
+ * nobody cancelled or decided ended with no decision.
+ */
+export function statusLabel(status: TimeOffStatus, ending: RequestEnding): string {
   switch (status) {
     case "REQUESTED":
       return t("timeOff.waiting");
@@ -24,8 +34,46 @@ export function statusLabel(status: TimeOffStatus, hasDecision: boolean): string
     case "REJECTED":
       return t("timeOff.status.rejected");
     case "CANCELLED":
-      return hasDecision ? t("timeOff.status.cancelled") : t("timeOff.status.endedWithoutDecision");
+      if (isWithdrawn(ending)) return t("timeOff.status.withdrawn");
+      return ending.hasDecision || ending.cancelledBy
+        ? t("timeOff.status.cancelled")
+        : t("timeOff.status.endedWithoutDecision");
   }
+}
+
+/** Whether the person cancelled their own request while it waited, never decided. */
+export function isWithdrawn(ending: RequestEnding): boolean {
+  return !ending.hasDecision && ending.cancelledBy === "the_person";
+}
+
+/** How a request ended, from its decision and cancellation, for the person it is about. */
+export function requestEnding(
+  request: { decision: object | null; cancellation: { cancelledBy: { id: string } | null } | null },
+  employeeId: string,
+): RequestEnding {
+  const { decision, cancellation } = request;
+  return {
+    hasDecision: decision !== null,
+    cancelledBy: !cancellation
+      ? null
+      : cancellation.cancelledBy?.id === employeeId
+        ? "the_person"
+        : "someone_else",
+  };
+}
+
+/** The line under a cancelled request: "Withdrawn on Thu 26 Nov.", "Cancelled by Hannah Weber on Thu 26 Nov." or "Cancelled on Thu 26 Nov.". */
+export function cancellationLine(cancellation: {
+  cancelledAt: string;
+  cancelledByName: string | null;
+  /** The person cancelled it while it waited, never decided. */
+  withdrawn: boolean;
+}): string {
+  const date = weekdayDayAt(cancellation.cancelledAt);
+  if (cancellation.withdrawn) return t("timeOff.cancellation.withdrawnOn", { date });
+  return cancellation.cancelledByName
+    ? t("timeOff.cancellation.cancelledBy", { name: cancellation.cancelledByName, date })
+    : t("timeOff.cancellation.cancelledOn", { date });
 }
 
 /** Who decided a request and when: "Approved by Rachel Doyle on Fri 27 Nov.", or since when it waits. */

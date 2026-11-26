@@ -31,7 +31,7 @@ A manual check of the Time off page, booking time off for someone, asking for on
 ## Details and cancel
 
 - [ ] Click a bar: the booking shows its type, person, dates, days with Full day or Morning, note and "Booked on".
-- [ ] Cancel booking asks "Cancel this booking?"; Keep booking leaves it; Cancel booking removes the bar, shows "Booking cancelled." and gives the days back on the panel.
+- [ ] Cancel time off asks "Cancel this time off?"; Keep time off leaves it; Cancel time off removes the bar, shows "Time off cancelled." and gives the days back on the panel.
 
 ## Request and approve
 
@@ -42,12 +42,20 @@ Add two people with `example.com` addresses (demo people can't be invited), make
 - [ ] Request: the toast reads "2.5 days requested."; the bar is hatched; its tooltip ends "Waiting for approval"; the Off each day counts don't change.
 - [ ] Their panel: Annual leave Remaining 20 with "2.5 days waiting for approval", and a Requests row with "Waiting for approval".
 - [ ] A second request on Tue 8 Dec is refused as a clash.
-- [ ] Booking details show "Waiting for approval", "Waiting for approval since …" and "Nobody can cancel a waiting request yet." with no Cancel.
+- [ ] Booking details show "Waiting for approval", "Waiting for approval since …" and Withdraw request.
 - [ ] As the colleague outside the line, before any decision: the hatched bar isn't there.
 - [ ] As the manager: the task "Approve <name>'s Annual leave, 7–9 Dec" is in Needs you, with the days, the balance and the note.
 - [ ] Approve: the bar turns solid, the counts go up, the employee's panel shows Used 2.5, Remaining 17.5 and the row "Approved", and booking details "Approved by <manager> on …".
 - [ ] Another request, then Reject with a comment: the bar disappears; the row reads "Rejected" with the comment.
-- [ ] As the owner, the employee's approved leave shows Cancel booking; a waiting one does not.
+- [ ] As the owner, the employee's approved leave shows Cancel time off; a waiting one shows Cancel request.
+
+## Withdraw and cancel
+
+- [ ] As the employee, Withdraw request on a waiting request asks "Withdraw this request?"; confirming shows "Request withdrawn.", removes the hatched bar, drops the waiting line and shows the Requests row "Withdrawn".
+- [ ] As the manager: the task is in Resolved recently, Cancelled, reading "<name> withdrew this request.".
+- [ ] As the owner, Cancel request on another waiting request: the row reads "Cancelled"; the manager's task reads "This request was cancelled." (an owner linked to an employee is named instead).
+- [ ] As the employee, approved leave that starts tomorrow or later shows Cancel time off; cancelling gives the days back and the row reads "Cancelled".
+- [ ] As the employee, approved leave that started today or earlier, and time off the owner booked for them, show no Cancel.
 
 ## Who approves
 
@@ -59,7 +67,7 @@ Same people as above. The owner needs an employee record for Owner approval.
 
 ## Who sees what
 
-- [ ] As an employee: no Book time off, no day buttons on colleagues' rows, and no Cancel booking.
+- [ ] As an employee: no Book time off, no day buttons on colleagues' rows, and no Cancel on colleagues' time off.
 - [ ] A colleague's Annual leave shows its colour and name with no note; a colleague's Sickness shows as a grey "Off".
 - [ ] Their own Sickness shows by name, with its note.
 

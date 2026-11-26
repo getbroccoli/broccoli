@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, min, sql } from "drizzle-orm";
 
 import { anyOf, type Orm, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
@@ -23,13 +23,25 @@ export interface RequestDecision {
   comment: string | null;
 }
 
-/** Time off without its days, with how its request was decided. */
+/** Time off without its days, with who recorded it, how its request was decided and who cancelled it. */
 export interface StoredTimeOff {
   id: string;
   employeeId: string;
   timeOffTypeId: string;
   status: TimeOffStatus;
+  /** The signed-in user who booked or requested it; null when Broccoli itself did. */
+  createdByUserId: string | null;
+  firstDate: CalendarDate;
   decision: RequestDecision | null;
+  /** Null unless someone cancelled it; an approval that ended without a decision is no cancellation. */
+  cancellation: TimeOffCancellation | null;
+}
+
+/** When time off was cancelled, and by whom. */
+export interface TimeOffCancellation {
+  cancelledAt: Date;
+  /** Null when no employee cancelled it, such as an owner without one, or once that employee is deleted. */
+  cancelledByEmployeeId: string | null;
 }
 
 /** How requested time off ended: approved or rejected by someone, or cancelled without a decision. */
@@ -49,7 +61,7 @@ export interface TimeOffRequestRepository {
     employeeIds: readonly string[];
     from: CalendarDate;
   }): Promise<TimeOffRequest[]>;
-  /** Time off by id, without its days. */
+  /** Time off by id, without its days but with its first one. */
   findByIds(ids: readonly string[]): Promise<StoredTimeOff[]>;
   /** The time off's days that are not cancelled, oldest first. */
   findDaysOf(id: string): Promise<{ date: CalendarDate; dayPart: DayPart }[]>;
@@ -90,20 +102,45 @@ export function timeOffRequestRepository(db: Orm | Tx): TimeOffRequestRepository
       }));
     },
     async findByIds(ids) {
+      const firstDays = ormOf(db)
+        .select({
+          timeOffId: timeOffDays.timeOffId,
+          firstDate: min(timeOffDays.date).as("first_date"),
+        })
+        .from(timeOffDays)
+        .where(and(anyOf(timeOffDays.timeOffId, ids), isNull(timeOffDays.cancelledAt)))
+        .groupBy(timeOffDays.timeOffId)
+        .as("first_days");
       const rows = await ormOf(db)
         .select({
           id: timeOff.id,
           employeeId: timeOff.employeeId,
           timeOffTypeId: timeOff.timeOffTypeId,
           status: timeOff.status,
+          createdByUserId: timeOff.createdByUserId,
+          firstDate: firstDays.firstDate,
           ...DECISION,
+          cancelledAt: timeOff.cancelledAt,
+          cancelledByEmployeeId: timeOff.cancelledByEmployeeId,
         })
         .from(timeOff)
+        .innerJoin(firstDays, eq(firstDays.timeOffId, timeOff.id))
         .where(anyOf(timeOff.id, ids));
-      return rows.map(({ decidedAt, decidedByEmployeeId, decisionComment, ...row }) => ({
-        ...row,
-        decision: decisionOf({ decidedAt, decidedByEmployeeId, decisionComment }),
-      }));
+      return rows.map(
+        ({
+          decidedAt,
+          decidedByEmployeeId,
+          decisionComment,
+          cancelledAt,
+          cancelledByEmployeeId,
+          ...row
+        }) => ({
+          ...row,
+          firstDate: row.firstDate!,
+          decision: decisionOf({ decidedAt, decidedByEmployeeId, decisionComment }),
+          cancellation: cancelledAt ? { cancelledAt, cancelledByEmployeeId } : null,
+        }),
+      );
     },
     async findDaysOf(id) {
       return ormOf(db)

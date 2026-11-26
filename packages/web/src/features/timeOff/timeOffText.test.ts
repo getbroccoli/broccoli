@@ -3,6 +3,7 @@ import { expect, it } from "vitest";
 import {
   balanceLines,
   bookingTooltip,
+  cancelDialogWords,
   costSentence,
   monthRange,
   offCounts,
@@ -288,5 +289,23 @@ it.each(["REQUESTED", "REJECTED", "CANCELLED"] as const)(
     expect(offCounts([{ timeOff: [{ status, days: [{ date: "2026-12-07" }] }] }])).toEqual(
       new Map(),
     );
+  },
+);
+
+it.each([
+  ["REQUESTED", true, "Withdraw request", "Request withdrawn."],
+  ["REQUESTED", false, "Cancel request", "Request cancelled."],
+  ["APPROVED", true, "Cancel time off", "Time off cancelled."],
+  ["APPROVED", false, "Cancel time off", "Time off cancelled."],
+] as const)(
+  "confirms and announces cancellation of %s by the person %s",
+  (status, byThePerson, confirm, done) => {
+    const words = cancelDialogWords(status, byThePerson, {
+      name: "Amira",
+      type: "Annual leave",
+      dates: "7–9 Dec",
+    });
+
+    expect(words).toMatchObject({ confirm, done });
   },
 );

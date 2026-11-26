@@ -104,6 +104,7 @@ export function createResolvers({
     },
     TimeOff: { ...bookings.TimeOff, ...requested.TimeOff },
     TimeOffDecision: requested.TimeOffDecision,
+    TimeOffCancellation: requested.TimeOffCancellation,
     TimeOffMutations: {
       ...bookings.TimeOffMutations,
       ...requested.TimeOffMutations,

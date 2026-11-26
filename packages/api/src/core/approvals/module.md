@@ -55,9 +55,11 @@ Approvals let a feature ask for approval of one of its records and hear how it e
 
    The feature handles it before the commit, so its record and the decision commit together; its failure rolls the decision back. Sam sees the outcome on the task, and gets the done email with the result.
 
+4. Had Sam withdrawn the request instead, time off would call `approvals.cancelApproval(ctx, tx, { record, reason: "Sam withdrew this request." })` in the transaction that cancels it: the run is cancelled (`cancelled_because_record_was_withdrawn`), Mia's open task too with that reason, and `approvals.approval_finished` arrives with `endedWithoutOutcome: "run_cancelled"`.
+
 ## Rules
 
 - A feature names an approval process by key; only the processes approvals seeds are approval processes: `manager_approval` (the manager of the person the request is about, or else the owner) and `owner_approval` (the owner, with no fallback). An unknown key is refused when asked.
-- A request that started its run ends with exactly one `approvals.approval_finished`, and one that started none fails its change and publishes nothing. It comes with an outcome, or `endedWithoutOutcome` `no_approver` (its decision step had nobody: for `manager_approval` no manager and no owner employee, for `owner_approval` no owner employee) or `run_cancelled` (the daily check cancelled it, such as when the approver was removed).
+- A request that started its run ends with exactly one `approvals.approval_finished`, and one that started none fails its change and publishes nothing. It comes with an outcome, or `endedWithoutOutcome` `no_approver` (its decision step had nobody: for `manager_approval` no manager and no owner employee, for `owner_approval` no owner employee) or `run_cancelled` (the feature withdrew the record, or the daily check cancelled it, such as when the approver was removed).
 - A request starts its run in the requesting transaction. Approvals checks it in the next before-commit round, where processes' `processes.runs_started_on_event` arrives, whatever order the handlers run in.
 - Only the assignee decides; asking gives the requester no right to finish or delete the task.

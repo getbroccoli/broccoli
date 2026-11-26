@@ -1,5 +1,4 @@
 export { expect } from "vitest";
-export { createApprovalService } from "../../src/core/approvals";
 export { createEmployeeSetupService, employeeDirectory } from "../../src/modules/employees";
 export {
   ADMIN,
@@ -81,9 +80,15 @@ export {
   passwordResetEmail,
 } from "./services";
 export type { EmployeeServices } from "./services";
-export { approvalRequest, approvalToday, approvalParticipants } from "./approvals";
+export {
+  approvalRequest,
+  approvalToday,
+  approvalParticipants,
+  observeApprovals,
+} from "./approvals";
 export {
   afterCommitProcesses,
+  approvalService,
   processService,
   transactWithApprovals,
   transactWithProcesses,
@@ -212,5 +217,10 @@ export { hostileText, storedTextSnapshot } from "./hostileText";
 export { storedTextProbe } from "./storedTextProbe";
 export { seedPagingBoundary } from "./pagingBoundary";
 export { seedMixedCountsEmployee } from "./seedMixedCountsEmployee";
-export { setUpRequests, signInEmployee } from "./timeOffRequestBrowser";
-export { leaveRequestSetup } from "./leaveRequests";
+export {
+  REQUEST_TIME_OFF,
+  setUpRequests,
+  signInEmployee,
+  submitRequest,
+} from "./timeOffRequestBrowser";
+export { leaveRequestSetup, pendingRequest } from "./leaveRequests";

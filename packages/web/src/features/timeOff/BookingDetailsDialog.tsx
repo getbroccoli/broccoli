@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import {
   CancelTimeOffDocument,
   EmployeePanelDocument,
+  MyTasksDocument,
   TimeOffBookingPreviewDocument,
   WhosOutDocument,
 } from "@/__generated__/graphql";
@@ -26,6 +27,7 @@ import { calendarDayOf } from "@/lib/calendarDay";
 import { formatDays } from "@/lib/formatDays";
 
 import { evictWhosOut } from "./cache";
+import { cancelDialogWords } from "./timeOffText";
 import { bookingDates, dateRange, dayMonthYear, weekdayDay } from "@/lib/formatDate";
 import type { WhosOutPerson, WhosOutTimeOff } from "./WhosOutGrid";
 
@@ -33,7 +35,8 @@ type Props = {
   employeeId: string;
   timeOff: WhosOutTimeOff;
   person: Pick<WhosOutPerson, "firstName" | "lastName" | "avatarUrl">;
-  canCancel: boolean;
+  /** The signed-in user's employee: the person withdraws their own request, others cancel it. */
+  viewerEmployeeId: string | null;
   onClose: () => void;
 };
 
@@ -45,17 +48,40 @@ const PART_LABELS = {
 
 /**
  * One booking or request as the viewer may see it: its type (or "Off"), dates and, for who may
- * read the person's time off, its days, cost, note, status and decision. Admins cancel approved
- * time off from here.
+ * read the person's time off, its days, cost, note, status and decision. Whoever may cancel it,
+ * or withdraw their own request, does it from here.
  */
-export function BookingDetailsDialog({ employeeId, timeOff, person, canCancel, onClose }: Props) {
+export function BookingDetailsDialog({
+  employeeId,
+  timeOff,
+  person,
+  viewerEmployeeId,
+  onClose,
+}: Props) {
   const [confirming, setConfirming] = useState(false);
   const [cancel, cancelling] = usePayloadMutation(CancelTimeOffDocument, {
     update: (cache) => evictWhosOut(cache, employeeId),
-    // An open Book time off may have clashed with this booking.
-    refetch: [WhosOutDocument, EmployeePanelDocument, TimeOffBookingPreviewDocument],
+    // An open Book time off may have clashed with this booking; a cancelled request's task ended.
+    refetch: [
+      WhosOutDocument,
+      EmployeePanelDocument,
+      TimeOffBookingPreviewDocument,
+      ...(timeOff.status === "REQUESTED" ? [MyTasksDocument] : []),
+    ],
   });
   const typeName = timeOff.timeOffType?.name ?? t("timeOff.off");
+  const cancellable =
+    timeOff.canCancel && (timeOff.status === "REQUESTED" || timeOff.status === "APPROVED")
+      ? timeOff.status
+      : null;
+  const byThePerson = viewerEmployeeId === employeeId;
+  const cancelWords =
+    cancellable &&
+    cancelDialogWords(cancellable, byThePerson, {
+      name: person.firstName,
+      type: typeName,
+      dates: dateRange(timeOff.startDate, timeOff.endDate),
+    });
   const detailed = timeOff.cost !== null && timeOff.cost !== undefined;
   // A booking is approved straight away with no decision; anything else was asked for.
   const requested = timeOff.status !== "APPROVED" || Boolean(timeOff.decision);
@@ -73,7 +99,7 @@ export function BookingDetailsDialog({ employeeId, timeOff, person, canCancel, o
       toast.error(t("timeOff.cancel.failed"));
       return;
     }
-    toast(t("timeOff.cancel.done"));
+    toast(cancelWords!.done);
     onClose();
   };
 
@@ -87,7 +113,10 @@ export function BookingDetailsDialog({ employeeId, timeOff, person, canCancel, o
           <div className="flex items-center justify-between gap-3 pr-8">
             <DialogTitle className="text-lg">{typeName}</DialogTitle>
             {timeOff.status && (timeOff.status !== "APPROVED" || timeOff.decision) && (
-              <TimeOffStatusChip status={timeOff.status} hasDecision={Boolean(timeOff.decision)} />
+              <TimeOffStatusChip
+                status={timeOff.status}
+                ending={{ hasDecision: Boolean(timeOff.decision), cancelledBy: null }}
+              />
             )}
           </div>
           <div className="flex items-center gap-2 text-sm">
@@ -146,45 +175,36 @@ export function BookingDetailsDialog({ employeeId, timeOff, person, canCancel, o
               })}
             </p>
           )}
-          {timeOff.status === "REQUESTED" && (
-            <p className="text-xs text-muted-foreground">
-              {t("timeOff.details.cantCancelWaiting")}
-            </p>
-          )}
-          {canCancel && (
+          {cancelWords && (
             <DialogFooter>
               <Button variant="outline" onClick={() => setConfirming(true)}>
-                {t("timeOff.details.cancelBooking")}
+                {cancelWords.confirm}
               </Button>
             </DialogFooter>
           )}
         </DialogContent>
       </Dialog>
-      <AlertDialog
-        open={confirming}
-        onOpenChange={(open) => !open && !cancelling.loading && setConfirming(false)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("timeOff.cancel.title")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("timeOff.cancel.body", {
-                name: person.firstName,
-                type: typeName,
-                dates: dateRange(timeOff.startDate, timeOff.endDate),
-              })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={cancelling.loading}>
-              {t("timeOff.cancel.keep")}
-            </AlertDialogCancel>
-            <AlertDialogAction disabled={cancelling.loading} onClick={() => void confirm()}>
-              {t("timeOff.cancel.confirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {cancelWords && (
+        <AlertDialog
+          open={confirming}
+          onOpenChange={(open) => !open && !cancelling.loading && setConfirming(false)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{cancelWords.title}</AlertDialogTitle>
+              <AlertDialogDescription>{cancelWords.body}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={cancelling.loading}>
+                {cancelWords.keep}
+              </AlertDialogCancel>
+              <AlertDialogAction disabled={cancelling.loading} onClick={() => void confirm()}>
+                {cancelWords.confirm}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </>
   );
 }

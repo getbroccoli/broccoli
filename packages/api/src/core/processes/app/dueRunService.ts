@@ -2,16 +2,15 @@ import { isUniqueViolation, type Orm, type Transact, type Tx } from "../../db";
 import type { Logger } from "../../logger";
 import type { SecurityContext } from "../../security";
 import { addDays, type CalendarDate, dateInLondon } from "../../../utils";
-import { processRepository, runStepRepository, type StoredProcess } from "../db";
+import { processRepository, type StoredProcess } from "../db";
 import type { TaskService } from "../../tasks";
 import {
   dueTriggerDate,
-  openTaskIdsOf,
   type ProcessRun,
   type ProcessRunFields,
   type RecordDateTrigger,
 } from "../domain";
-import type { RunLifecycleService } from "./runLifecycleService";
+import { lockRunWithOpenTasks, type RunLifecycleService } from "./runLifecycleService";
 import type { DefinitionReader, ProcessRecordTypes, RunStarter } from "./runStarter";
 
 /** Broccoli's daily pass over processes. */
@@ -63,8 +62,10 @@ export function createDueRunService(dependencies: DueRunDependencies): DueRunSer
       for (const run of await processRepository(orm).listRunsInProgress()) {
         try {
           const checked = await transact((tx) => checkRun(dependencies, tx, run.id));
-          if (!checked) logger.info({ runId: run.id }, "Process run check left for the next pass");
-          if (checked?.status !== "cancelled") continue;
+          if (checked === LEFT_FOR_NEXT_PASS) {
+            logger.info({ runId: run.id }, "Process run check left for the next pass");
+          }
+          if (checked === LEFT_FOR_NEXT_PASS || checked?.status !== "cancelled") continue;
           runsCancelled += 1;
           logger.info({ runId: run.id, cancelCause: checked.cancelCause }, "Process run cancelled");
         } catch (error) {
@@ -78,18 +79,17 @@ export function createDueRunService(dependencies: DueRunDependencies): DueRunSer
 
 /**
  * Cancels the run if it can no longer run, taking its open tasks before the run, as a task's
- * change does; null when its open tasks changed meanwhile, left for the next pass.
+ * change does: the run this pass cancelled or left running; null when it ended or went since the
+ * list, such as by a withdrawal; `LEFT_FOR_NEXT_PASS` when its open tasks changed meanwhile.
  */
 async function checkRun(
   { tasks, lifecycle }: DueRunDependencies,
   tx: Tx,
   runId: string,
-): Promise<ProcessRun | null> {
-  const runs = processRepository(tx);
-  const locked = openTaskIdsOf(await runStepRepository(tx).findSteps(runId));
-  await tasks.lockInTransaction(tx, locked);
-  const run = (await runs.lockRun(runId))!;
-  if (String(run.openTaskIds()) !== String(locked)) return null;
+): Promise<ProcessRun | typeof LEFT_FOR_NEXT_PASS | null> {
+  const { run, tasksChanged } = await lockRunWithOpenTasks(tasks, tx, runId);
+  if (run?.status !== "in_progress") return null;
+  if (tasksChanged) return LEFT_FOR_NEXT_PASS;
   return lifecycle.cancelIfCannotRun(tx, run);
 }
 
@@ -184,3 +184,6 @@ async function stillDueOn(
 function errorKind(error: unknown): string | undefined {
   return (error as Error | undefined)?.constructor?.name;
 }
+
+/** A run whose open tasks changed between the read and the locks: the next pass checks it. */
+const LEFT_FOR_NEXT_PASS = "left_for_next_pass";

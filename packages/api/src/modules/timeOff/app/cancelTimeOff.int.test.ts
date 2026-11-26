@@ -3,7 +3,6 @@ import {
   expect,
   seedAnnualLeaveEmployee,
   OWNER,
-  signedIn,
   test,
   bookTimeOffService,
   whosOutService,
@@ -97,6 +96,7 @@ test("refuses to cancel a booking twice", async ({ orm, seed, transact }) => {
 
   await expect(service.cancelTimeOff(OWNER, { timeOffId: booked.id })).rejects.toMatchObject({
     code: "CONFLICT",
+    message: "This time off is already cancelled.",
   });
 });
 
@@ -106,19 +106,4 @@ test("reports an unknown booking as not found", async ({ orm }) => {
       timeOffId: "00000000-0000-4000-8000-000000000001",
     }),
   ).rejects.toMatchObject({ code: "NOT_FOUND" });
-});
-
-test("forbids an employee from cancelling their own booking", async ({ orm, seed, transact }) => {
-  const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-  const service = bookTimeOffService(orm);
-  const booked = await service.bookTimeOff(OWNER, {
-    ...person,
-    startDate: "2026-12-07",
-    endDate: "2026-12-07",
-  });
-  const self = signedIn(orm, { employeeId: person.employeeId, profiles: ["EMPLOYEE"] });
-
-  await expect(service.cancelTimeOff(self, { timeOffId: booked.id })).rejects.toMatchObject({
-    code: "FORBIDDEN",
-  });
 });

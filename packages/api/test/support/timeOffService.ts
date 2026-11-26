@@ -2,6 +2,7 @@ import { asc, eq } from "drizzle-orm";
 
 import { type Orm, ormOf, type Transact, transactor, type Tx } from "../../src/core/db";
 import { createEventBus } from "../../src/core/events";
+import type { ApprovalService } from "../../src/core/approvals";
 import type { SecurityContext } from "../../src/core/security";
 import { createLogger } from "../../src/core/logger";
 import { createDemoFillService } from "../../src/modules/demo";
@@ -37,7 +38,7 @@ import { bankHolidayService } from "./bankHolidayService";
 import { employeeSetup } from "./statelessServices";
 import { OWNER } from "./testSecurityContext";
 import type { TestSeed } from "./testSeed";
-import { processService } from "./processService";
+import { approvalService, processService } from "./processService";
 import { testTransactor } from "./testTransactor";
 
 /** The time off service on `orm` with the shipped bank holidays and silent logs; `today` is the engine's date. */
@@ -67,7 +68,8 @@ export function bookTimeOffService(
   {
     today = "2026-11-09",
     transact = testTransactor(orm),
-  }: { today?: string; transact?: Transact } = {},
+    approvals = approvalService(orm, { transact }),
+  }: { today?: string; transact?: Transact; approvals?: ApprovalService } = {},
 ) {
   return createBookTimeOffService({
     orm,
@@ -75,6 +77,7 @@ export function bookTimeOffService(
     logger: createLogger("silent"),
     timeOff: timeOffService(orm, { today }),
     bankHolidays: bankHolidayService(),
+    approvals,
     today: () => today as CalendarDate,
   });
 }
@@ -266,6 +269,7 @@ export function transactWithTimeOffEvents(orm: Orm): Transact {
         bankHolidays: bankHolidayService(),
       }),
       bankHolidays: bankHolidayService(),
+      approvals: approvalService(orm),
       transact: testTransactor(orm),
       logger: createLogger("silent"),
     }).events!,

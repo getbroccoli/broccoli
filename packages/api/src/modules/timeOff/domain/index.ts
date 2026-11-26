@@ -26,6 +26,7 @@ export {
   type DatedWorkingWeek,
   yearlyDays,
 } from "./allowanceCalculator";
+export { cancelRefusal, type CancelRefusal } from "./cancelRefusal";
 export { chargedDays } from "./chargedDays";
 export { dateRangeLabel, dayLabel } from "./dateLabels";
 export {

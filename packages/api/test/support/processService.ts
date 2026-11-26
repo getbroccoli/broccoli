@@ -1,4 +1,8 @@
-import { APPROVAL_TRIGGERING_EVENTS, approvalsModule } from "../../src/core/approvals";
+import {
+  APPROVAL_TRIGGERING_EVENTS,
+  approvalsModule,
+  createApprovalService,
+} from "../../src/core/approvals";
 import {
   type BeforeCommitHandler,
   createBeforeCommitBus,
@@ -108,8 +112,16 @@ export function transactWithApprovals(
   options: { today: () => CalendarDate; recordTypes?: RecordTypeRegistry },
   ...handlers: BeforeCommitHandler[]
 ): Transact {
-  const approvals = approvalsModule({ logger: createLogger("silent") });
+  const approvals = approvalsModule({
+    logger: createLogger("silent"),
+    approvals: approvalService(orm),
+  });
   return transactWithProcesses(orm, options, approvals.eventsBeforeCommit!, ...handlers);
+}
+
+/** The approval service on `orm`, withdrawing approvals through the process service built with these options. */
+export function approvalService(orm: Orm, options: Parameters<typeof processService>[1] = {}) {
+  return createApprovalService({ processes: processService(orm, options) });
 }
 
 /** Collects after-commit jobs and delivers them through the real handler and before-commit bus. */

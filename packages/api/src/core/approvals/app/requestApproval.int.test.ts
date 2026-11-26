@@ -4,18 +4,18 @@ import {
   ADMIN,
   approvalParticipants,
   approvalRequest,
+  approvalService,
   approvalToday,
+  taskService,
+  transactWithApprovals,
+  processService,
+  test,
   expect,
   expectBlockedBy,
-  processService,
-  taskService,
-  test,
-  transactWithApprovals,
 } from "#test/support";
 
 import { ormOf } from "../../db";
 import { MANAGER_APPROVAL } from "../domain";
-import { createApprovalService } from "./approvalService";
 
 test("starts one approval run with the requester's task for their manager", async ({
   orm,
@@ -27,7 +27,7 @@ test("starts one approval run with the requester's task for their manager", asyn
   const processes = processService(orm);
   const tasks = taskService(orm);
 
-  await transact((tx) => createApprovalService().requestApproval(requester, tx, request));
+  await transact((tx) => approvalService(orm).requestApproval(requester, tx, request));
 
   const runs = await processes.listRuns(ADMIN, MANAGER_APPROVAL);
   expect(runs).toMatchObject([{ record: request.record, status: "in_progress" }]);
@@ -61,7 +61,7 @@ test("refuses an unknown approval process key and rolls back the caller's work",
   await expect(
     transact(async (tx) => {
       await tasks.createTask(requester, tx, preparationTask(sam.id));
-      await createApprovalService().requestApproval(requester, tx, request);
+      await approvalService(orm).requestApproval(requester, tx, request);
     }),
   ).rejects.toMatchObject({
     code: "INVALID_INPUT",
@@ -81,7 +81,7 @@ test("rolls back the caller's work when Manager approval is off", async ({ orm, 
   await expect(
     transact(async (tx) => {
       await tasks.createTask(requester, tx, preparationTask(sam.id));
-      await createApprovalService().requestApproval(requester, tx, approvalRequest(sam.id));
+      await approvalService(orm).requestApproval(requester, tx, approvalRequest(sam.id));
     }),
   ).rejects.toMatchObject(couldNotStart);
   expect((await tasks.listMyTasks(requester)).needsYou).toEqual([]);
@@ -95,7 +95,7 @@ test("refuses a second request for a record whose approval is in progress", asyn
   const { sam, requester } = await approvalParticipants(orm, seed);
   const transact = transactWithApprovals(orm, { today: approvalToday });
   const request = approvalRequest(sam.id);
-  const approvals = createApprovalService();
+  const approvals = approvalService(orm);
   await transact((tx) => approvals.requestApproval(requester, tx, request));
   const processes = processService(orm);
   const runs = await processes.listRuns(ADMIN, MANAGER_APPROVAL);
@@ -118,7 +118,7 @@ test("refuses an unregistered subject record type and rolls back the caller's wo
   await expect(
     transact(async (tx) => {
       await tasks.createTask(requester, tx, preparationTask(sam.id));
-      await createApprovalService().requestApproval(requester, tx, request);
+      await approvalService(orm).requestApproval(requester, tx, request);
     }),
   ).rejects.toThrow("Record type nope cannot be the subject of a process.");
 
@@ -132,7 +132,7 @@ test("a concurrent request for the same record gets a conflict and rolls back", 
 }) => {
   const { sam, requester } = await approvalParticipants(orm, seed);
   const request = approvalRequest(sam.id);
-  const approvals = createApprovalService();
+  const approvals = approvalService(orm);
   const tasks = taskService(orm);
   const locked = Promise.withResolvers<number>();
   const release = Promise.withResolvers<void>();

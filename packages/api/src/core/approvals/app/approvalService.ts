@@ -1,6 +1,7 @@
 import { ApplicationError, invalidInput } from "../../applicationError";
 import type { BeforeCommitHandler, Tx } from "../../db";
 import type { DomainEvents, PublishedEvent } from "../../events";
+import type { ProcessService } from "../../processes";
 import type { SecurityContext } from "../../security";
 import { APPROVAL_PROCESS_KEYS } from "../domain";
 
@@ -12,6 +13,16 @@ export interface ApprovalService {
    * run, or the transaction fails.
    */
   requestApproval(ctx: SecurityContext, tx: Tx, request: ApprovalRequest): Promise<void>;
+  /**
+   * Withdraws a record from its approval, in the caller's transaction (the feature authorized it):
+   * cancels its run in progress and the approver's open task with the reason; before the commit the
+   * feature hears `approvals.approval_finished` with `run_cancelled`. Null when none is in progress.
+   */
+  cancelApproval(
+    ctx: SecurityContext,
+    tx: Tx,
+    withdrawal: { record: ApprovalRequest["record"]; reason: string },
+  ): Promise<{ runId: string } | null>;
   /**
    * Before the commit: fails the transaction when a request started no run, and turns each ended
    * approval run into `approvals.approval_finished`.
@@ -32,7 +43,11 @@ export interface ApprovalRequest {
 const APPROVAL_NOT_STARTED =
   "The approval could not start: its process is off or this record already has an approval in progress.";
 
-export function createApprovalService(): ApprovalService {
+export function createApprovalService({
+  processes,
+}: {
+  processes: Pick<ProcessService, "cancelRunOfRecord">;
+}): ApprovalService {
   return {
     requestApproval(_ctx, tx, { approvalProcessKey, record, requesterEmployeeId, ...words }) {
       if (!APPROVAL_PROCESS_KEYS.includes(approvalProcessKey)) {
@@ -50,6 +65,16 @@ export function createApprovalService(): ApprovalService {
         description: words.description?.trim() || null,
       });
       return Promise.resolve();
+    },
+
+    async cancelApproval(ctx, tx, { record, reason }) {
+      const run = await processes.cancelRunOfRecord(tx, {
+        processKeys: APPROVAL_PROCESS_KEYS,
+        ...record,
+        reason,
+        byEmployeeId: ctx.user?.employeeId ?? null,
+      });
+      return run && { runId: run.id };
     },
 
     followApprovals(tx, events) {

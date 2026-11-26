@@ -14,7 +14,7 @@ Who may do what in Broccoli. Use cases ask their security context; nothing else 
 
 ## Profiles
 
-- `EMPLOYEE`: employee read on `all`; employee update on `self` (first name, last name, photo); employee update on `all_reports` (first name, last name, photo, job title); working pattern read on `self` and `all_reports`; time off read on `self` and `all_reports`, and create on `self`, which write modes classify as needing approval: employees preview their own time off, request it, and book it straight away only for a type nobody approves (such as Sickness). No operations.
+- `EMPLOYEE`: employee read on `all`; employee update on `self` (first name, last name, photo); employee update on `all_reports` (first name, last name, photo, job title); working pattern read on `self` and `all_reports`; time off read on `self` and `all_reports`, and create on `self`, which write modes classify as needing approval: employees preview their own time off, request it, and book it straight away only for a type nobody approves (such as Sickness); time off delete on `self`, which time off narrows to what the person asked for or booked themselves: a waiting request at any time, approved time off before its first day. So `RecordAccess.canDelete` is only the grant, and `TimeOff.canCancel` the answer. No operations.
 - `ADMIN`: create, read, update and delete on `all` for every object, every field; `MANAGE_WORKSPACE`, which also covers working patterns and the working pattern of each set of terms.
 - `OWNER`: Admin's grants and operations, shared in code rather than linked, plus `RESET_WORKSPACE`. A release that changes Admin's definition changes both; an admin's stored edits to the Admin profile, once the profile editor exists, will not reach the owner.
 

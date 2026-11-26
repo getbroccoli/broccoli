@@ -12,7 +12,7 @@ import type { StoredTimeOff, TimeOffRequestService } from "../app";
 import { dayCount } from "../domain";
 import { toBookingInput } from "./bookingResolvers";
 
-/** Requesting time off, its status and decision, and a person's requests; merged into the module's resolvers. */
+/** Requesting time off, its status, decision and cancellation, and a person's requests; merged into the module's resolvers. */
 export function requestResolvers(
   requests: TimeOffRequestService,
   employees: Pick<EmployeeReadService, "readEmployees">,
@@ -22,11 +22,15 @@ export function requestResolvers(
       const found = await requests.readStatuses(context.getActor(), ids);
       return ids.map((id) => found.get(id) ?? null);
     }),
+    cancellable: new DataLoader<string, boolean>(async (ids) => {
+      const found = await requests.readCancellable(context.getActor(), ids);
+      return ids.map((id) => found.has(id));
+    }),
     requests: new DataLoader(async (employeeIds: readonly string[]) => {
       const found = await requests.readRequests(context.getActor(), employeeIds);
       return employeeIds.map((id) => found.get(id) ?? null);
     }),
-    deciders: new DataLoader(async (employeeIds: readonly string[]) => {
+    people: new DataLoader(async (employeeIds: readonly string[]) => {
       const found = await employees.readEmployees(context.getActor(), employeeIds);
       return employeeIds.map((id) => found.get(id) ?? null);
     }),
@@ -56,6 +60,9 @@ export function requestResolvers(
       },
       decision: async ({ id }, _args, context) =>
         (await loaders(context).statuses.load(id))?.decision ?? null,
+      canCancel: ({ id }, _args, context) => loaders(context).cancellable.load(id),
+      cancellation: async ({ id }, _args, context) =>
+        (await loaders(context).statuses.load(id))?.cancellation ?? null,
       // Colleagues see a person's approved time off but not its history: theirs is empty.
       // shortcut: one history query per time off; batch it when a list selects history.
       history: async ({ id }, { first, after }, context) =>
@@ -65,7 +72,11 @@ export function requestResolvers(
     },
     TimeOffDecision: {
       decidedBy: ({ decidedByEmployeeId }, _args, context) =>
-        decidedByEmployeeId ? loaders(context).deciders.load(decidedByEmployeeId) : null,
+        decidedByEmployeeId ? loaders(context).people.load(decidedByEmployeeId) : null,
+    },
+    TimeOffCancellation: {
+      cancelledBy: ({ cancelledByEmployeeId }, _args, context) =>
+        cancelledByEmployeeId ? loaders(context).people.load(cancelledByEmployeeId) : null,
     },
   } satisfies Resolvers;
 }

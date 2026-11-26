@@ -234,13 +234,3 @@ test("directs an admin asking for their own time off to book it", async ({ orm, 
     message: "You can book this time off straight away.",
   });
 });
-
-test("refuses cancellation while the request is waiting for approval", async ({ orm, seed }) => {
-  const { requests, bookings, requester, input } = await leaveRequestSetup(orm, seed);
-  const request = await requests.requestTimeOff(requester, input);
-
-  await expect(bookings.cancelTimeOff(ADMIN, { timeOffId: request.id })).rejects.toMatchObject({
-    code: "CONFLICT",
-    message: "This time off is waiting for approval.",
-  });
-});

@@ -1,21 +1,21 @@
 import {
   ADMIN,
-  EMPLOYEE,
   approvalParticipants,
-  createApprovalService,
   approvalRequest,
+  approvalService,
   approvalToday,
+  taskService,
   calendarDate,
-  eventProcess,
-  seedProcess,
+  EMPLOYEE,
+  notificationFlow,
   transactWithApprovals,
   transactWithProcesses,
-  expect,
   processService,
-  notificationFlow,
+  seedProcess,
   signedIn,
-  taskService,
   test,
+  eventProcess,
+  expect,
 } from "#test/support";
 
 import type { Orm } from "../../db";
@@ -122,7 +122,7 @@ test("shows the outcome step's decision to its assignee and its asker", async ({
   const { sam, mia, manager, requester } = await approvalParticipants(orm, seed);
   const transact = transactWithApprovals(orm, { today: approvalToday });
   await transact((tx) =>
-    createApprovalService().requestApproval(requester, tx, approvalRequest(sam.id)),
+    approvalService(orm).requestApproval(requester, tx, approvalRequest(sam.id)),
   );
   const tasks = taskService(orm, { transact });
   const {

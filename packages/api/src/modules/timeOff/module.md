@@ -29,7 +29,7 @@ Hours, accrual, carry-over and other countries arrive later as new columns, valu
 - **`time_off_policy_assignments`:** exceptions, meaning one person on a named policy between two dates; never a terms' own. Reset setup and Exit demo delete every policy and allowance, and the company's own types, and give the seeded types back their names, looks and privacy.
 - **`allowances`:** one person's allowance for one type and one leave year. It has no amount column; its dates are fixed when it is created and never change.
 - **`allowance_ledger_lines`:** every change to an allowance (grants, bank holidays, booked days, manual adjustments, rounding), with its effective date, cause and author.
-- **`time_off`:** a person's time off and where it stands (`requested`, `approved`, `rejected`, `cancelled`), never what waits on it. A request sets `requested_at`; its decision sets `decided_at`, `decided_by_employee_id` (null once that employee is deleted) and `decision_comment`, and an approval that ended without a decision leaves them null on `cancelled`.
+- **`time_off`:** a person's time off and where it stands (`requested`, `approved`, `rejected`, `cancelled`), never what waits on it. A request sets `requested_at`; its decision sets `decided_at`, `decided_by_employee_id` (null once that employee is deleted) and `decision_comment`, and an approval that ended without a decision leaves them null on `cancelled`. Cancelling sets `cancelled_at` and `cancelled_by_employee_id` (null for a caller without an employee, or once that employee is deleted); an approval that ended without a decision sets neither.
 - **`time_off_days`:** the days of a time off, each a full day, a morning or an afternoon. What a day costs is written as ledger lines, never stored on the day.
 
 ## Standard leave policies
@@ -93,13 +93,12 @@ Full-timer in England and Wales employed all of 2026 on the statutory minimum: g
 
 ## Booking time off
 
-`BookTimeOffService` books time off, approved straight away, for whoever the caller may book for directly (write mode `direct`: admins, through `time_off.manage.all`), and cancels it (the `time_off` delete scope, admins only). Anyone with the `time_off` create scope previews it, so employees preview their own (`time_off.create.self`), whose write mode is `request`: they book their own time off only of a type nobody approves (see Who approves); for any other type booking refuses them with "Your time off needs to be requested."
+`BookTimeOffService` books time off, approved straight away, for whoever the caller may book for directly (write mode `direct`: admins, through `time_off.manage.all`), and cancels it (see Cancelling). Anyone with the `time_off` create scope previews it, so employees preview their own (`time_off.create.self`), whose write mode is `request`: they book their own time off only of a type nobody approves (see Who approves); for any other type booking refuses them with "Your time off needs to be requested."
 
 - A day costs 1, a morning or afternoon 0.5, and 0 on a weekday the person's working week has no minutes for or on a bank holiday of that week's calendar (`domain/bookedDay.ts`). Only days that cost something are stored as `time_off_days`.
 - `bookTimeOff` refuses, as invalid input on `dates`: a clash with approved or requested time off of any type (a morning and an afternoon can share a day), no working days, a type with no policy for the person on some date, a date outside employment, a date before the start of the leave year holding today or after the end of the next one, and more than 366 days. Over the balance is never refused.
 - `previewBooking` books and runs the engine in a transaction it rolls back, so what it shows is what booking writes: each date's cost and reason, and each touched leave year's remaining before and after.
-- `cancelTimeOff` marks the time off cancelled; its days stay.
-- Both run the engine for the person in the same transaction, causes `time_off_booked` and `time_off_cancelled` (ref: the time off id).
+- Booking and cancelling approved time off run the engine for the person in the same transaction, causes `time_off_booked` and `time_off_cancelled` (ref: the time off id).
 - `WhosOutService.readWhosOut` gives everyone signed in each readable person's dates (working, not a working day, bank holiday, not employed) and approved bookings over at most 62 days. A private type's id, and every booking's cost, note and booked time, are left out for anyone outside the person's `time_off` read scope.
 
 ## Who approves
@@ -118,7 +117,32 @@ Each type says who approves a person's own time off of it (`time_off_types.appro
 
 `finishApprovals` handles `approvals.approval_finished` for `time_off` before the commit, in the decision's transaction: approved re-checks the window, employment and the type's offer for every day (refusing the decision, so the task stays to do, when one no longer fits), sets `approved` and the decision, and runs the engine (cause `time_off_approved`); rejected stores the comment; an approval that ended without a decision cancels it. Time off no longer `requested` is left alone. Each change appends a `time_off` history line, the decision's caused by its process run; the outcome is logged after commit from `timeOff.request_decided`.
 
-Only approved time off is cancelled. Who's out shows requested time off only to who may read the person's time off. Resetting time off purges its history. `Employee.timeOffRequests` lists a person's requests from their current leave year on. Days recorded and Settings' days taken count approved time off only.
+Who's out shows requested time off only to who may read the person's time off. Resetting time off purges its history. `Employee.timeOffRequests` lists a person's requests from their current leave year on. Days recorded and Settings' days taken count approved time off only.
+
+## Cancelling
+
+`cancelTimeOff` cancels a whole time off, requested or approved; its days stay, marked by the time off's status. Its rule is `cancelRefusal` (domain), for the caller's `time_off` delete scope:
+
+- On someone else's time off, or one's own with a delete grant reaching everyone (admins): requested, or approved outside a closed leave year.
+- On one's own otherwise (employees, `time_off.delete.self`): only what their own user requested or booked, and approved time off only before its first day. Time off someone else booked for them is refused.
+- Rejected and cancelled time off is refused for everyone.
+
+A requested one is withdrawn from its approval first (`approvals.cancelApproval`, after the employees' write guard, which deleting the person takes before their tasks, and taking the approver's task and the run before the person, as approving does; the canceller's employee row is locked with the person's, in id order): the run is cancelled and the approver's task reads "Amira withdrew this request." or "Hannah Weber cancelled this request."; `finishApprovals` then finds it no longer `requested`. It writes no ledger lines. An approved one runs the engine, cause `time_off_cancelled`. Time off decided or cancelled between the read and the locks is refused ("This request was decided meanwhile. Look again."). `TimeOff.canCancel` answers the same rule, for time off the caller may also read; `TimeOff.cancellation` says who and when.
+
+```json
+// Amira withdraws her waiting request
+{
+  "time_off": {
+    "status": "cancelled",
+    "cancelled_by_employee_id": "emp_amira",
+    "decided_at": null
+  },
+  "process_runs": [
+    { "status": "cancelled", "cancel_cause": "cancelled_because_record_was_withdrawn" }
+  ],
+  "tasks": [{ "status": "cancelled", "cancel_reason": "Amira withdrew this request." }]
+}
+```
 
 The engine treats each booked day as a line identity, `time_off_booked` per `time_off_day_id`, on the allowance whose leave year holds the day: minus the day's cost under the working week of that day while the time off is approved, 0 once cancelled. Every run re-costs booked days in open leave years, so a later terms move, own week or bank holiday change gives days back or takes them. A booked day in a later leave year creates that year's allowance.
 

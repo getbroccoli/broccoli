@@ -7,7 +7,7 @@ import { createTimeOffRequestService, timeOffRecordType } from "../../src/module
 import { STANDARD_TIME_OFF_TYPES } from "../../src/modules/timeOff/domain";
 import { bankHolidayService } from "./bankHolidayService";
 import { calendarDate } from "./calendarDate";
-import { processService, transactWithApprovals } from "./processService";
+import { approvalService, processService, transactWithApprovals } from "./processService";
 import { taskService } from "./services";
 import { signedIn } from "./signedIn";
 import { ADMIN } from "./testSecurityContext";
@@ -20,10 +20,14 @@ import {
 } from "./timeOffService";
 
 /** A requester with 20 days, their manager, and the same before-commit handlers as the API. */
-export async function leaveRequestSetup(orm: Orm, seed: TestSeed) {
-  const today = () => calendarDate("2026-11-26");
+export async function leaveRequestSetup(
+  orm: Orm,
+  seed: TestSeed,
+  { today: day = "2026-11-26" } = {},
+) {
+  const today = () => calendarDate(day);
   vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(new Date("2026-11-26T12:00:00Z"));
+  vi.setSystemTime(new Date(`${day}T12:00:00Z`));
   onTestFinished(() => {
     vi.useRealTimers();
   });
@@ -31,9 +35,11 @@ export async function leaveRequestSetup(orm: Orm, seed: TestSeed) {
   const transact: Transact = transactWithApprovals(orm, { today, recordTypes }, (tx, events) =>
     requests.finishApprovals(tx, events),
   );
+  const approvals = approvalService(orm, { today, transact, recordTypes });
   const requests = createTimeOffRequestService({
     orm,
     transact,
+    approvals,
     today,
     timeOff: timeOffService(orm, { today: today() }),
     logger: createLogger("silent"),
@@ -63,8 +69,21 @@ export async function leaveRequestSetup(orm: Orm, seed: TestSeed) {
     requester: signedIn(orm, { employeeId: amira.id, profiles: ["EMPLOYEE"] }),
     manager: signedIn(orm, { employeeId: rachel.id, profiles: ["EMPLOYEE"] }),
     requests,
-    bookings: bookTimeOffService(orm, { today: today(), transact }),
+    bookings: bookTimeOffService(orm, { today: today(), transact, approvals }),
     tasks: taskService(orm, { transact }),
     processes: processService(orm, { today, transact, recordTypes }),
   };
+}
+
+/** A waiting request and its manager’s open approval task. */
+export async function pendingRequest(
+  orm: Orm,
+  seed: TestSeed,
+  dates?: { startDate: string; endDate: string },
+) {
+  const setup = await leaveRequestSetup(orm, seed);
+  const input = dates ? { ...setup.input, ...dates, halfDays: [] } : setup.input;
+  const request = await setup.requests.requestTimeOff(setup.requester, input);
+  const [task] = (await setup.tasks.listMyTasks(setup.manager)).needsYou;
+  return { ...setup, input, request, task: task! };
 }
