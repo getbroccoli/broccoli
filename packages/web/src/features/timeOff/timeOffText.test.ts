@@ -2,7 +2,6 @@ import { expect, it } from "vitest";
 
 import {
   balanceLines,
-  bookedToast,
   bookingTooltip,
   costSentence,
   monthRange,
@@ -113,7 +112,10 @@ it("labels each balance when the booking crosses leave years", () => {
   ]);
 });
 
-it("explains that a booking beyond the balance is still allowed", () => {
+it.each([
+  ["book", "0.5 days more than Sam has. You can still book it."],
+  ["request", "0.5 days more than you have. You can still ask for it."],
+] as const)("explains how to proceed beyond the balance in %s mode", (mode, over) => {
   const lines = balanceLines(
     [
       {
@@ -125,6 +127,7 @@ it("explains that a booking beyond the balance is still allowed", () => {
       },
     ],
     "Sam",
+    mode,
   );
 
   expect(lines).toEqual([
@@ -132,7 +135,7 @@ it("explains that a booking beyond the balance is still allowed", () => {
       label: null,
       before: 2,
       after: -0.5,
-      over: "0.5 days more than Sam has. You can still book it.",
+      over,
       unlimited: null,
     },
   ]);
@@ -219,13 +222,23 @@ it.each([
     startDate: "2026-12-07",
     endDate: "2026-12-09",
     cost: 2.5,
+    status: "APPROVED",
     expected: "Annual leave · 7–9 Dec · 2.5 days",
+  },
+  {
+    typeName: "Annual leave",
+    startDate: "2026-12-07",
+    endDate: "2026-12-09",
+    cost: 2.5,
+    status: "REQUESTED",
+    expected: "Annual leave · 7–9 Dec · 2.5 days · Waiting for approval",
   },
   {
     typeName: "Annual leave",
     startDate: "2026-12-30",
     endDate: "2027-01-04",
     cost: 3,
+    status: "APPROVED",
     expected: "Annual leave · 30 Dec – 4 Jan · 3 days",
   },
   {
@@ -233,18 +246,19 @@ it.each([
     startDate: "2026-11-03",
     endDate: "2026-11-03",
     cost: null,
+    status: null,
     expected: "Off · 3 Nov",
   },
-])("formats a booking tooltip as $expected", ({ expected, ...booking }) => {
+] as const)("formats a booking tooltip as $expected", ({ expected, ...booking }) => {
   expect(bookingTooltip(booking)).toBe(expected);
 });
 
 it("counts each person off on each date", () => {
   const people = [
-    { timeOff: [{ days: [{ date: "2026-12-07" }, { date: "2026-12-08" }] }] },
-    { timeOff: [{ days: [{ date: "2026-12-08" }] }] },
+    { timeOff: [{ status: "APPROVED", days: [{ date: "2026-12-07" }, { date: "2026-12-08" }] }] },
+    { timeOff: [{ status: null, days: [{ date: "2026-12-08" }] }] },
     { timeOff: [] },
-  ];
+  ] as const;
 
   expect(offCounts(people)).toEqual(
     new Map([
@@ -258,19 +272,21 @@ it("counts a person with morning and afternoon bookings on the same date only on
   const people = [
     {
       timeOff: [
-        { days: [{ date: "2026-12-07", dayPart: "MORNING" }] },
-        { days: [{ date: "2026-12-07", dayPart: "AFTERNOON" }] },
+        { status: "APPROVED", days: [{ date: "2026-12-07", dayPart: "MORNING" }] },
+        { status: "APPROVED", days: [{ date: "2026-12-07", dayPart: "AFTERNOON" }] },
       ],
     },
-    { timeOff: [{ days: [{ date: "2026-12-07", dayPart: "MORNING" }] }] },
-  ];
+    { timeOff: [{ status: "APPROVED", days: [{ date: "2026-12-07", dayPart: "MORNING" }] }] },
+  ] as const;
 
   expect(offCounts(people)).toEqual(new Map([["2026-12-07", 2]]));
 });
 
-it.each([
-  [2.5, false, "2.5 days booked for Sam."],
-  [1, true, "1 day booked for you."],
-] as const)("confirms a %s-day booking with self %s", (cost, isSelf, expected) => {
-  expect(bookedToast(cost, "Sam", isSelf)).toBe(expected);
-});
+it.each(["REQUESTED", "REJECTED", "CANCELLED"] as const)(
+  "excludes %s time off from the daily count",
+  (status) => {
+    expect(offCounts([{ timeOff: [{ status, days: [{ date: "2026-12-07" }] }] }])).toEqual(
+      new Map(),
+    );
+  },
+);

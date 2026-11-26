@@ -6,6 +6,7 @@ import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
 import { weekdayDay } from "@/lib/formatDate";
+import { modeOf } from "@/features/employees";
 import { BookingPart } from "./BookingPart";
 import type { WhosOutPerson, WhosOutTimeOff } from "./WhosOutGrid";
 
@@ -73,10 +74,14 @@ export function PersonRow({ person, columns, onOpen, onBook }: Props) {
                 onOpen={() => onOpen(timeOff, person)}
               />
             ))}
-            {free && onBook && (
+            {free && onBook && modeOf(person.canCreate) && (
               <button
                 type="button"
-                aria-label={t("timeOff.bookFor", { name: fullName, date: weekdayDay(day.date) })}
+                aria-label={
+                  modeOf(person.canCreate) === "book"
+                    ? t("timeOff.bookFor", { name: fullName, date: weekdayDay(day.date) })
+                    : t("timeOff.requestOn", { date: weekdayDay(day.date) })
+                }
                 onClick={() => onBook(person.id, day.date)}
                 className="absolute inset-0 hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
               />

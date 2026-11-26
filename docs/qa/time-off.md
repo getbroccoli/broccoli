@@ -1,6 +1,6 @@
-# QA: Time off and booking
+# QA: Time off, booking and requests
 
-A manual check of the Time off page, booking time off for someone and cancelling it, against a development stack.
+A manual check of the Time off page, booking time off for someone, asking for one's own with approval, and cancelling, against a development stack.
 
 ## Setup
 
@@ -33,9 +33,25 @@ A manual check of the Time off page, booking time off for someone and cancelling
 - [ ] Click a bar: the booking shows its type, person, dates, days with Full day or Morning, note and "Booked on".
 - [ ] Cancel booking asks "Cancel this booking?"; Keep booking leaves it; Cancel booking removes the bar, shows "Booking cancelled." and gives the days back on the panel.
 
+## Request and approve
+
+Add two people with `example.com` addresses (demo people can't be invited), make one the other's manager, invite both (see [Invites](invites.md)), and sign in as the employee. Keep a third person outside their reporting line for the colleague check.
+
+- [ ] The page's button reads "Request time off"; it opens the dialog with "Request time off" as its title and the employee as Who, with no picker. A day click on their own row opens it too; colleagues' rows have no day buttons.
+- [ ] Type lists only types that need approval (no Sickness); the note field reads "Note for your approver". Enter "Family visit". Mon 7 – Wed 9 Dec with a morning: "20 free now → 17.5 free after this"; the footer reads "Sent for approval." and the button "Request 2.5 days".
+- [ ] Request: the toast reads "2.5 days requested."; the bar is hatched; its tooltip ends "Waiting for approval"; the Off each day counts don't change.
+- [ ] Their panel: Annual leave Remaining 20 with "2.5 days waiting for approval", and a Requests row with "Waiting for approval".
+- [ ] A second request on Tue 8 Dec is refused as a clash.
+- [ ] Booking details show "Waiting for approval", "Waiting for approval since …" and "Nobody can cancel a waiting request yet." with no Cancel.
+- [ ] As the colleague outside the line, before any decision: the hatched bar isn't there.
+- [ ] As the manager: the task "Approve <name>'s Annual leave, 7–9 Dec" is in Needs you, with the days, the balance and the note.
+- [ ] Approve: the bar turns solid, the counts go up, the employee's panel shows Used 2.5, Remaining 17.5 and the row "Approved", and booking details "Approved by <manager> on …".
+- [ ] Another request, then Reject with a comment: the bar disappears; the row reads "Rejected" with the comment.
+- [ ] As the owner, the employee's approved leave shows Cancel booking; a waiting one does not.
+
 ## Who sees what
 
-- [ ] Invite an employee (see [Invites](invites.md)) and sign in as them: they see Time off without Book time off, without day buttons and without Cancel booking.
+- [ ] As an employee: no Book time off, no day buttons on colleagues' rows, and no Cancel booking.
 - [ ] A colleague's Annual leave shows its colour and name with no note; a colleague's Sickness shows as a grey "Off".
 - [ ] Their own Sickness shows by name, with its note.
 

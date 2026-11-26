@@ -1,15 +1,16 @@
 import { t } from "@/i18n";
+import type { DialogMode } from "@/features/employees";
 import { cn } from "@/lib/class-names";
 
 import { balanceLines } from "../timeOffText";
 import { BalanceFigure } from "./BalanceFigure";
 import type { BookingDraft } from "./useBookingDraft";
 
-type Props = { draft: BookingDraft; firstName: string };
+type Props = { draft: BookingDraft; firstName: string; mode: DialogMode };
 
 /** Free now and free after, a line per leave year; amber when it goes below zero. */
-export function BalanceStrip({ draft, firstName }: Props) {
-  const lines = balanceLines(draft.preview?.balances ?? [], firstName);
+export function BalanceStrip({ draft, firstName, mode }: Props) {
+  const lines = balanceLines(draft.preview?.balances ?? [], firstName, mode);
   return lines.map((line) => (
     <div
       key={line.label ?? "only"}

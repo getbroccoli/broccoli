@@ -118,6 +118,33 @@ fragment EmployeePanel_employee on Employee {
     bankHolidays
     remaining
     used
+    waiting
+  }
+  canCreateTimeOff: canCreate(recordType: TIME_OFF)
+  # The days, not the cost: Who's out costs a booking under today's working weeks.
+  timeOffRequests {
+    id
+    timeOffType {
+      id
+      name
+    }
+    startDate
+    endDate
+    days {
+      date
+      dayPart
+    }
+    status
+    bookedAt
+    decision {
+      decidedBy {
+        id
+        firstName
+        lastName
+      }
+      decidedAt
+      comment
+    }
   }
   employmentTerms {
     periods {

@@ -20,8 +20,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
-import { Avatar } from "@/features/employees";
+import { Avatar, decisionLine, TimeOffStatusChip } from "@/features/employees";
 import { t } from "@/i18n";
+import { calendarDayOf } from "@/lib/calendarDay";
 import { formatDays } from "@/lib/formatDays";
 
 import { evictWhosOut } from "./cache";
@@ -43,8 +44,9 @@ const PART_LABELS = {
 } as const;
 
 /**
- * One booking as the viewer may see it: its type (or "Off"), dates and, for who may read the
- * person's time off, its days, cost and note. Admins cancel it from here.
+ * One booking or request as the viewer may see it: its type (or "Off"), dates and, for who may
+ * read the person's time off, its days, cost, note, status and decision. Admins cancel approved
+ * time off from here.
  */
 export function BookingDetailsDialog({ employeeId, timeOff, person, canCancel, onClose }: Props) {
   const [confirming, setConfirming] = useState(false);
@@ -55,6 +57,8 @@ export function BookingDetailsDialog({ employeeId, timeOff, person, canCancel, o
   });
   const typeName = timeOff.timeOffType?.name ?? t("timeOff.off");
   const detailed = timeOff.cost !== null && timeOff.cost !== undefined;
+  // A booking is approved straight away with no decision; anything else was asked for.
+  const requested = timeOff.status !== "APPROVED" || Boolean(timeOff.decision);
 
   const confirm = async () => {
     const cancelled = await cancel({ variables: { input: { timeOffId: timeOff.id } } }).catch(
@@ -80,7 +84,12 @@ export function BookingDetailsDialog({ employeeId, timeOff, person, canCancel, o
           className="max-h-[92vh] overflow-y-auto sm:max-w-md"
           closeLabel={t("timeOff.details.close")}
         >
-          <DialogTitle className="text-lg">{typeName}</DialogTitle>
+          <div className="flex items-center justify-between gap-3 pr-8">
+            <DialogTitle className="text-lg">{typeName}</DialogTitle>
+            {timeOff.status && (timeOff.status !== "APPROVED" || timeOff.decision) && (
+              <TimeOffStatusChip status={timeOff.status} hasDecision={Boolean(timeOff.decision)} />
+            )}
+          </div>
           <div className="flex items-center gap-2 text-sm">
             <Avatar
               url={person.avatarUrl ?? null}
@@ -110,9 +119,36 @@ export function BookingDetailsDialog({ employeeId, timeOff, person, canCancel, o
             </ul>
           )}
           {timeOff.note && <p className="text-sm whitespace-pre-line">{timeOff.note}</p>}
+          {timeOff.status && timeOff.bookedAt && requested && (
+            <p className="text-sm">
+              {decisionLine(
+                timeOff.status,
+                timeOff.decision && {
+                  decidedByName:
+                    timeOff.decision.decidedBy &&
+                    `${timeOff.decision.decidedBy.firstName} ${timeOff.decision.decidedBy.lastName}`,
+                  decidedAt: timeOff.decision.decidedAt,
+                },
+                timeOff.bookedAt,
+              )}
+            </p>
+          )}
+          {timeOff.decision?.comment && (
+            <p className="rounded-lg bg-muted px-3 py-2 text-sm whitespace-pre-line">
+              {timeOff.decision.comment}
+            </p>
+          )}
           {timeOff.bookedAt && (
             <p className="text-xs text-muted-foreground">
-              {t("timeOff.details.bookedOn", { date: dayMonthYear(timeOff.bookedAt.slice(0, 10)) })}
+              {t(requested ? "timeOff.details.requestedOn" : "timeOff.details.bookedOn", {
+                // The instant's day in London, where the company's days are.
+                date: dayMonthYear(calendarDayOf(new Date(timeOff.bookedAt), "Europe/London")),
+              })}
+            </p>
+          )}
+          {timeOff.status === "REQUESTED" && (
+            <p className="text-xs text-muted-foreground">
+              {t("timeOff.details.cantCancelWaiting")}
             </p>
           )}
           {canCancel && (
