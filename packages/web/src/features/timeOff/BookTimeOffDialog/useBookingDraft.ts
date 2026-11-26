@@ -41,8 +41,8 @@ export interface BookingDraft {
   /** The preview of exactly `input`, the only one that may be booked. */
   currentPreview: Preview | undefined;
   previewFailed: boolean;
-  /** Asks the API again for the current input's preview. */
-  refreshPreview: () => void;
+  /** Asks the API again for the person's types and the current input's preview. */
+  refresh: () => void;
 }
 
 /** The dialog's state, starting from the person and day it was opened with. */
@@ -54,7 +54,7 @@ export function useBookingDraft(initial: { employeeId?: string; date?: string })
   );
   const [halfDays, setHalfDays] = useState<Map<string, TimeOffDayPart>>(new Map());
   const [note, setNote] = useState("");
-  const types = useBookingTypes(employeeId);
+  const { types, refetchTypes } = useBookingTypes(employeeId);
   // The person's types come first, Annual leave before the rest, so it is the default.
   const typeId = types?.some(({ timeOffType }) => timeOffType.id === chosenTypeId)
     ? chosenTypeId
@@ -106,28 +106,36 @@ export function useBookingDraft(initial: { employeeId?: string; date?: string })
     preview: current ?? preview.previousData?.timeOffBookingPreview,
     currentPreview: current,
     previewFailed: Boolean(preview.error),
-    refreshPreview: () => void preview.refetch(),
+    refresh: () => {
+      void refetchTypes();
+      void preview.refetch();
+    },
   };
 }
 
 /** The person's types with their figures, then every other company type. */
-function useBookingTypes(employeeId: string): BookingType[] | undefined {
+function useBookingTypes(employeeId: string): {
+  types: BookingType[] | undefined;
+  refetchTypes: () => Promise<unknown>;
+} {
   const { me } = useRouteContext({ from: "/_authenticated" });
   // Only admins read every company type; whoever else asks for time off gets their own types.
   const admin = me.operations.includes("MANAGE_WORKSPACE");
-  const own = useQuery(BookingPersonTypesDocument, {
+  const ownQuery = useQuery(BookingPersonTypesDocument, {
     variables: { id: employeeId },
     skip: !employeeId,
     // A decision in Tasks changes the figures without a write here.
     fetchPolicy: "cache-and-network",
-  }).data?.employee?.timeOffTypes;
+  });
+  const own = ownQuery.data?.employee?.timeOffTypes;
   const company = useQuery(BookingCompanyTypesDocument, { skip: !admin }).data?.timeOffSettings
     .timeOffTypes;
+  const refetchTypes = () => ownQuery.refetch();
   if (!own || (admin && !company)) {
-    return undefined;
+    return { types: undefined, refetchTypes };
   }
   const others = (company ?? []).filter(
     ({ timeOffType }) => !own.some((type) => type.timeOffType.id === timeOffType.id),
   );
-  return [...own, ...others];
+  return { types: [...own, ...others], refetchTypes };
 }

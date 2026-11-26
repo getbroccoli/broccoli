@@ -84,6 +84,7 @@ export async function changeType(
         (field) => JSON.stringify(before[field]) !== JSON.stringify(after[field]),
       ),
       defaultBalance: after.defaultRules.balance,
+      approvalProcessKeyBefore: before.approvalProcessKey,
       approvalProcessKey: after.approvalProcessKey,
     },
     "Changed a time off type",

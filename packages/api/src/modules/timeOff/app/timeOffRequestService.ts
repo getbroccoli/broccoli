@@ -43,8 +43,8 @@ import type { TimeOffService } from "./timeOffService";
 export interface TimeOffRequestService {
   /**
    * Saves the caller's own time off as requested, holding its days without touching the balance,
-   * and asks the manager approval for it in the same transaction. Refuses anyone who may book it
-   * straight away or may not ask for it, and a type that needs no approval.
+   * and asks the type's approval process for it in the same transaction. Refuses anyone who may
+   * book it straight away or may not ask for it, and a type booked straight away.
    */
   requestTimeOff: (ctx: SecurityContext, input: BookingInput) => Promise<BookedTimeOff>;
   /**
