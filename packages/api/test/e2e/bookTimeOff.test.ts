@@ -27,7 +27,12 @@ test("the owner previews, books, reads and cancels two working days", async ({ e
     data: {
       timeOff: {
         bookTimeOff: {
-          timeOff: { id: expect.any(String) as unknown, cost: 2, days },
+          timeOff: {
+            id: expect.any(String) as unknown,
+            cost: 2,
+            days,
+            history: { edges: [{ node: { operation: "CREATED" } }] },
+          },
           error: null,
         },
       },
@@ -119,7 +124,7 @@ async function setUpBooking(env: TestEnv) {
 
 const BOOK_TIME_OFF = `mutation Book($input: TimeOffBookInput!) {
   timeOff { bookTimeOff(input: $input) {
-    timeOff { id cost days { date dayPart } }
+    timeOff { id cost days { date dayPart } history { edges { node { operation } } } }
     error { __typename }
   } }
 }`;

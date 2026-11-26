@@ -11,6 +11,7 @@ import type {
   BookTimeOffService,
   PersonTimeOff,
   TimeOffPolicyService,
+  TimeOffRequestService,
   TimeOffSetupService,
   TimeOffService,
   TimeOffWithPolicies,
@@ -24,6 +25,7 @@ import {
 } from "../domain";
 import type { CalendarDate } from "../../../utils";
 import { bookingResolvers } from "./bookingResolvers";
+import { requestResolvers } from "./requestResolvers";
 import { BALANCE_KINDS, toGraphqlType } from "./graphqlValues";
 import { ownRulesResolvers, type OwnRulesServices } from "./ownRulesResolvers";
 import { toStoredRules } from "./storedRules";
@@ -38,8 +40,10 @@ export function createResolvers(
   booking: BookTimeOffService,
   whosOut: WhosOutService,
   ownRules: OwnRulesServices,
+  requests: TimeOffRequestService,
 ): Resolvers {
   const bookings = bookingResolvers(booking, whosOut);
+  const requested = requestResolvers(requests, ownRules.employees);
   const loaders = timeOffLoaders(timeOff);
   return {
     ...bookings,
@@ -80,8 +84,11 @@ export function createResolvers(
     Mutation: {
       timeOff: () => ({}),
     },
+    TimeOff: { ...bookings.TimeOff, ...requested.TimeOff },
+    TimeOffDecision: requested.TimeOffDecision,
     TimeOffMutations: {
       ...bookings.TimeOffMutations,
+      ...requested.TimeOffMutations,
       createType: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["TimeOffTypeCreatePayload"]>(
           async () => ({
@@ -146,6 +153,7 @@ export function createResolvers(
     Employee: {
       timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),
       ...bookings.Employee,
+      ...requested.Employee,
     },
     EmployeeEmploymentTerms: {
       timeOff: ({ employeeId, move, from }, args, context) => {

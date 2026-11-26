@@ -16,7 +16,12 @@ import {
   type EmployeeWorkingPatternService,
   parseDateField,
 } from "../../employees";
-import { type Booking, timeOffPolicyRepository, timeOffRepository } from "../db";
+import {
+  type Booking,
+  timeOffPolicyRepository,
+  timeOffRepository,
+  type TimeOffStatus,
+} from "../db";
 import { costedDays, type DayPart, datesFrom, type TimeOffType, totalCost } from "../domain";
 
 /** Who's out over a range, as the Time off page shows it. */
@@ -49,6 +54,8 @@ export interface WhosOutTimeOff {
   /** Null for a private type when the reader may not read the person's time off. */
   timeOffTypeId: string | null;
   days: { date: CalendarDate; dayPart: DayPart }[];
+  /** Approved for everyone; requested reaches only who may read the person's time off. */
+  status: TimeOffStatus;
   /** Null unless the reader may read the person's time off. */
   cost: number | null;
   note: string | null;
@@ -80,7 +87,8 @@ export function createWhosOutService({
       }
       const timeOffScope = await ctx.recordScope("time_off", "read");
       return await transact(async (tx) => {
-        const facts = await readFacts(dependencies, tx, employeeIds, range);
+        const readable = (employeeId: string) => isInRecordScope(timeOffScope, employeeId);
+        const facts = await readFacts(dependencies, tx, { employeeIds, range, readable });
         return new Map(
           employeeIds.map((employeeId) => [
             employeeId,
@@ -127,12 +135,16 @@ async function readableIds(
 async function readFacts(
   { employeeReads, workingWeeks, bankHolidays }: Dependencies,
   tx: Tx,
-  employeeIds: readonly string[],
-  range: Range,
+  {
+    employeeIds,
+    range,
+    readable,
+  }: { employeeIds: readonly string[]; range: Range; readable: (employeeId: string) => boolean },
 ) {
   const [periods, bookings, types] = await Promise.all([
     employeeReads.readEmploymentPeriods(tx, employeeIds),
-    timeOffRepository(tx).findBookings({ employeeIds, ...range }),
+    // Requested time off only for who may read the person's time off.
+    timeOffRepository(tx).findBookings({ employeeIds, ...range, requestedOf: readable }),
     timeOffPolicyRepository(tx).findAllTypes(),
   ]);
   // Bookings may run past the range; their costs need the weeks of their own days.
@@ -189,6 +201,7 @@ function whosOutOf(
       timeOffTypeId:
         readable || !facts.privateTypeIds.has(booking.timeOffTypeId) ? booking.timeOffTypeId : null,
       days: booking.days,
+      status: booking.status,
       cost: readable ? totalCost(costed(booking.days)) : null,
       note: readable ? booking.note : null,
       bookedAt: readable ? booking.createdAt : null,

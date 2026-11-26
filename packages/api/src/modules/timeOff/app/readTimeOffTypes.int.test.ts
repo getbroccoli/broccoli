@@ -165,6 +165,7 @@ test("returns used days and null figures for a person's unlimited policy", async
         icon: null,
         colour: null,
         private: false,
+        needsApproval: true,
         defaultRules: { balance: "no_balance", entitlementDays: null, bankHolidays: null },
       },
       balance: "unlimited_balance",
@@ -173,12 +174,13 @@ test("returns used days and null figures for a person's unlimited policy", async
       entitlement: null,
       bankHolidays: null,
       used: 0,
+      waiting: 0,
       remaining: null,
     },
   ]);
 });
 
-test("counts approved full and half sickness days but excludes declined days", async ({
+test("counts approved Family leave as used and requested days as waiting", async ({
   orm,
   seed,
   transact,
@@ -187,14 +189,14 @@ test("counts approved full and half sickness days but excludes declined days", a
   const service = timeOffService(orm);
   await giveTermsPolicies(orm, transact, {
     termsId: await seed.defaultTermsId(),
-    policies: [{ recordOnly: "sickness" }],
+    policies: [{ recordOnly: "family_leave" }],
   });
-  const sickness = (await orm.select().from(timeOffTypes)).find(
-    ({ typeKey }) => typeKey === "sickness",
+  const familyLeave = (await orm.select().from(timeOffTypes)).find(
+    ({ typeKey }) => typeKey === "family_leave",
   )!;
   await seedTimeOff(orm, {
     employeeId: employee.id,
-    timeOffTypeId: sickness.id,
+    timeOffTypeId: familyLeave.id,
     status: "approved",
     days: [
       { date: "2026-03-02", dayPart: "full_day" },
@@ -203,15 +205,22 @@ test("counts approved full and half sickness days but excludes declined days", a
   });
   await seedTimeOff(orm, {
     employeeId: employee.id,
-    timeOffTypeId: sickness.id,
-    status: "declined",
+    timeOffTypeId: familyLeave.id,
+    status: "rejected",
     days: [{ date: "2026-03-04", dayPart: "full_day" }],
+  });
+
+  await seedTimeOff(orm, {
+    employeeId: employee.id,
+    timeOffTypeId: familyLeave.id,
+    status: "requested",
+    days: [{ date: "2026-03-05", dayPart: "full_day" }],
   });
 
   const rows = await service.readTimeOffTypes(OWNER, { employeeIds: [employee.id] });
 
   expect(rows.get(employee.id)).toMatchObject([
-    { timeOffType: { name: "Sickness" }, balance: "no_balance", used: 1.5 },
+    { timeOffType: { name: "Family leave" }, balance: "no_balance", used: 1.5, waiting: 1 },
   ]);
 });
 

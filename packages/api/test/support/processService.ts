@@ -15,6 +15,7 @@ import {
   type ProcessActionRegistrations,
   type TriggeringEventRegistration,
 } from "../../src/core/processes";
+import type { RecordTypeRegistry } from "../../src/core/records";
 import { TASK_TRIGGERING_EVENTS, taskRecordType } from "../../src/core/tasks";
 import {
   createPeopleAdapter,
@@ -36,11 +37,13 @@ export function processService(
   {
     today = todayInLondon,
     actions = {},
+    recordTypes = {},
     transact = testTransactor(orm),
     jobs = { send: () => Promise.reject(new Error("Unexpected job")) },
   }: {
     today?: () => CalendarDate;
     actions?: ProcessActionRegistrations;
+    recordTypes?: RecordTypeRegistry;
     transact?: Transact;
     jobs?: JobQueue;
   } = {},
@@ -57,7 +60,11 @@ export function processService(
       transact,
       bankHolidays: bankHolidayService(),
     }),
-    recordTypes: { employee: employeeRecordType(orm), task: taskRecordType(orm) },
+    recordTypes: {
+      employee: employeeRecordType(orm),
+      task: taskRecordType(orm),
+      ...recordTypes,
+    },
     triggeringEvents: collectRegistrations<TriggeringEventRegistration>("triggering event", [
       APPROVAL_TRIGGERING_EVENTS,
       EMPLOYEE_TRIGGERING_EVENTS,
@@ -77,13 +84,19 @@ export function transactWithProcesses(
     today,
     jobs,
     actions = {},
-  }: { today: () => CalendarDate; jobs?: JobQueue; actions?: ProcessActionRegistrations },
+    recordTypes,
+  }: {
+    today: () => CalendarDate;
+    jobs?: JobQueue;
+    actions?: ProcessActionRegistrations;
+    recordTypes?: RecordTypeRegistry;
+  },
   ...handlers: BeforeCommitHandler[]
 ): Transact {
   const logger = createLogger("silent");
   const beforeCommit = createBeforeCommitBus();
   const transact = transactor(orm, createEventBus(logger), beforeCommit);
-  const processes = processService(orm, { today, transact, jobs, actions });
+  const processes = processService(orm, { today, transact, jobs, actions, recordTypes });
   beforeCommit.subscribe(processesModule({ logger, processes }).eventsBeforeCommit!);
   for (const handler of handlers) beforeCommit.subscribe(handler);
   return transact;
@@ -92,7 +105,7 @@ export function transactWithProcesses(
 /** Delivers approval events before commit, including to the feature that requested the approval. */
 export function transactWithApprovals(
   orm: Orm,
-  options: { today: () => CalendarDate },
+  options: { today: () => CalendarDate; recordTypes?: RecordTypeRegistry },
   ...handlers: BeforeCommitHandler[]
 ): Transact {
   const approvals = approvalsModule({ logger: createLogger("silent") });

@@ -51,10 +51,16 @@ export function timeOffService(orm: Orm, { today = "2026-06-01" }: { today?: str
 }
 
 /** The booking service on `orm`, with the engine of `timeOffService`; `today` is its date. */
-export function bookTimeOffService(orm: Orm, { today = "2026-11-09" }: { today?: string } = {}) {
+export function bookTimeOffService(
+  orm: Orm,
+  {
+    today = "2026-11-09",
+    transact = testTransactor(orm),
+  }: { today?: string; transact?: Transact } = {},
+) {
   return createBookTimeOffService({
     orm,
-    transact: testTransactor(orm),
+    transact,
     logger: createLogger("silent"),
     timeOff: timeOffService(orm, { today }),
     bankHolidays: bankHolidayService(),

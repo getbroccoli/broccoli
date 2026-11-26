@@ -1,8 +1,10 @@
 extend type Employee {
-  "Who's out: this person's dates and approved time off from `from` to `until`, at most 62 days. Everyone signed in reads it; a private type, the cost and the note only who may read this person's time off."
+  "Who's out: this person's dates and time off from `from` to `until`, at most 62 days: approved for everyone signed in, requested only for who may read this person's time off. A private type, the cost and the note only who may read this person's time off."
   whosOut(from: Date!, until: Date!): EmployeeWhosOut!
   "One per time off type with a policy for this person, in the leave year containing today (or their start, when later), Annual leave first; empty when there is none, such as while time off is off; null for callers who may not read this person's time off."
   timeOffTypes: [EmployeeTimeOffType!]
+  "This person's requests with a day in the current leave year of their type or later, whatever their status, newest first; null for callers who may not read this person's time off."
+  timeOffRequests: [TimeOff!]
 }
 
 "A time off type a person has in their current leave year, with its figures in days."
@@ -19,8 +21,10 @@ type EmployeeTimeOffType {
   bankHolidays: Float
   "Entitlement less bank holidays and days used; BALANCE_FROM_ALLOWANCE only."
   remaining: Float
-  "Days used from the allowance, or recorded for NO_BALANCE, in the period."
+  "Days used from the allowance, or recorded for NO_BALANCE, in the period; approved time off only."
   used: Float!
+  "Days of requested time off waiting for approval in the period, a half day 0.5."
+  waiting: Float!
 }
 
 "Time off as Settings shows it."
@@ -36,7 +40,7 @@ type TimeOffTypeSummary {
   timeOffType: TimeOffType!
   "The balance kind most of its policies have, the oldest policy's on a tie, so one policy may differ; null when it has none."
   balance: TimeOffBalanceKind
-  "Days everyone took this calendar year, approved or pending; a half day counts 0.5."
+  "Days of approved time off everyone took this calendar year; a half day counts 0.5."
   daysTakenThisYear: Float!
 }
 
@@ -48,6 +52,8 @@ type TimeOffType {
   icon: TimeOffTypeIcon!
   "Its own colour, or YELLOW when it has none."
   colour: TimeOffTypeColour!
+  "Whether asking for it starts an approval; false for Sickness, which is recorded."
+  needsApproval: Boolean!
   "Which seeded type this is; null on the company's own types."
   typeKey: TimeOffTypeKey
   "Colleagues see that the person is off, not why. Always true for Sickness."
@@ -435,9 +441,17 @@ enum WhosOutDayKind {
   NOT_EMPLOYED
 }
 
-"Time off booked for a person: its days that cost something when it was booked."
-type TimeOff {
+"A person's time off, booked straight away or requested and decided by an approver: its days that cost something when it was saved."
+type TimeOff implements AnyRecord {
   id: ID!
+  "Changes to this time off, newest first."
+  history("Page size, 1 to 10000." first: Int = 50, after: String): RecordChangeConnection!
+  "What the signed-in user may do to it: admins cancel approved time off; nobody edits it."
+  access: RecordAccess!
+  "Null unless the caller may read this person's time off."
+  status: TimeOffStatus
+  "Set once a request is decided; null for bookings, waiting requests, requests that ended without a decision, and callers who may not read this person's time off."
+  decision: TimeOffDecision
   "Null for a private type, such as Sickness, when the caller may not read this person's time off."
   timeOffType: TimeOffType
   startDate: Date!
@@ -447,8 +461,25 @@ type TimeOff {
   cost: Float
   "Null unless the caller may read this person's time off."
   note: String
-  "Null unless the caller may read this person's time off."
+  "When it was booked or requested; null unless the caller may read this person's time off."
   bookedAt: DateTime
+}
+
+"Where time off stands."
+enum TimeOffStatus {
+  "Asked for and waiting for approval; its days are held."
+  REQUESTED
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+"Who decided a request, when, and their comment."
+type TimeOffDecision {
+  "Null once that person is deleted."
+  decidedBy: Employee
+  decidedAt: DateTime!
+  comment: String
 }
 
 type TimeOffDay {
@@ -581,7 +612,9 @@ type TimeOffMutations {
   cancelPolicyChange(input: TimeOffPolicyCancelChangeInput!): TimeOffPolicyCancelChangePayload!
   "Books approved time off for a person's working days from start to end; refused with an InvalidInputError whose field `dates` carries a TimeOffBookingRefusalReason in lower case. Booking over the balance is allowed. Only for people the caller may book for straight away (`Employee.canCreate` ALLOWED); otherwise FORBIDDEN, and for one's own time off (`ALLOWED_WITH_APPROVAL`) the message says it needs to be requested."
   bookTimeOff(input: TimeOffBookInput!): TimeOffBookPayload!
-  "Cancels a whole booking, giving its days back. Admins only, for now."
+  "Asks for your own time off: it holds its days and waits for your manager's approval, and the balance changes only once it is approved. Refused for anyone you may book for straight away, or may not ask for (FORBIDDEN); for a type that needs no approval (`timeOffTypeId` / `needs_no_approval`); and, as a ConflictError, when the approval could not start."
+  requestTimeOff(input: TimeOffBookInput!): TimeOffRequestPayload!
+  "Cancels approved time off, giving its days back; refused with a ConflictError for anything not approved. Admins only, for now."
   cancelTimeOff(input: TimeOffCancelInput!): TimeOffCancelPayload!
   "Cancels a planned stop: the rules it ends, the type's last on their owner and ending on or after today, run on open-ended. Refused with a ConflictError when they are no planned stop. Admins only."
   cancelPolicyStop(input: TimeOffPolicyCancelStopInput!): TimeOffPolicyCancelStopPayload!
@@ -594,6 +627,14 @@ type TimeOffMutations {
   "Removes a change to a person's own rules for a type that has not started: new own rules, a change to them, or a return to their terms. Refused with a ConflictError once it has started, or while cancelling it would leave their booked time off of the type without rules. Admins only."
   cancelOwnRulesChange(input: TimeOffOwnRulesCancelChangeInput!): TimeOffOwnRulesPayload!
 }
+
+"The requested time off, or why it was refused."
+type TimeOffRequestPayload {
+  timeOff: TimeOff
+  error: TimeOffRequestError
+}
+
+union TimeOffRequestError = InvalidInputError | NotFoundError | ConflictError
 
 "The booked time off, or why it was refused."
 type TimeOffBookPayload {

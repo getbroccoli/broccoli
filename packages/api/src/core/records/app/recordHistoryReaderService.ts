@@ -217,7 +217,8 @@ export function createRecordHistoryReaderService(
           return [
             id,
             {
-              canUpdate,
+              // A type with no editable field, such as time off, is never updated.
+              canUpdate: canUpdate && editableFields.length > 0,
               canDelete,
               editableFields: editableFields.filter(
                 (field) => writableFields === "*" || writableFields.includes(field),

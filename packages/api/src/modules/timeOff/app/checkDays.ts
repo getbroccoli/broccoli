@@ -4,7 +4,7 @@ import { PrincipalSecurityContext } from "../../../core/security";
 import type { CalendarDate } from "../../../utils";
 import { BANK_HOLIDAY_CALENDARS, type BankHolidayService } from "../../bankHolidays";
 import type { EmployeeWorkingPatternService } from "../../employees";
-import { timeOffRepository } from "../db";
+import { HELD, timeOffRepository } from "../db";
 import {
   type BookingRefusal,
   type CostedDay,
@@ -56,6 +56,7 @@ export async function checkDays(
         ? []
         : await timeOffRepository(tx).findBookedDays({
             employeeIds: [booking.employeeId],
+            statuses: HELD,
             from: charged[0]!.date,
             until: charged.at(-1)!.date,
           }),

@@ -1,8 +1,9 @@
 import type { Transact, Tx } from "../../../core/db";
 import { isInRecordScope, type SecurityContext } from "../../../core/security";
-import { type CalendarDate, parseUuid } from "../../../utils";
-import { type Allowance, allowanceRepository, timeOffRepository } from "../db";
+import { type CalendarDate, isWithin, parseUuid } from "../../../utils";
+import { type Allowance, allowanceRepository, type BookedDay, timeOffRepository } from "../db";
 import {
+  dayCount,
   type LedgerLineKind,
   type PolicyVersion,
   type TimeOffPolicy,
@@ -25,6 +26,8 @@ export interface EmployeeTimeOffType {
   remaining: number | null;
   /** Days used from an allowance, or recorded for a type with no balance, in the period. */
   used: number;
+  /** Days of requested time off waiting for approval in the period; a half day counts 0.5. */
+  waiting: number;
 }
 
 type Dependencies = Pick<AllowanceEngineDependencies, "employeeReads" | "today"> & {
@@ -43,6 +46,8 @@ interface ShownType {
 interface Figures {
   sums: Map<string, { kind: LedgerLineKind; amount: number }[]>;
   recorded: { employeeId: string; timeOffTypeId: string; year: number; days: number }[];
+  /** Days of requested time off over every shown period. */
+  waiting: BookedDay[];
 }
 
 const TYPE_ORDER: readonly TimeOffTypeKey[] = ["annual_leave", "sickness", "family_leave", "other"];
@@ -160,15 +165,41 @@ async function readFigures(
             .sort()
             .at(-1)!,
         });
-  return { sums, recorded };
+  const waiting = await timeOffRepository(tx).findBookedDays({
+    employeeIds,
+    from: shown.map(({ period }) => period.start).sort()[0] ?? LAST_DAY,
+    until:
+      shown
+        .map(({ period }) => period.end)
+        .sort()
+        .at(-1) ?? LAST_DAY,
+    statuses: ["requested"],
+  });
+  return { sums, recorded, waiting };
 }
+
+/** A day after any time off, for reading none. */
+const LAST_DAY = "9999-12-31" as CalendarDate;
 
 function toEmployeeTimeOffType(
   { employeeId, policy, period, allowance }: ShownType,
-  { sums, recorded }: Figures,
+  { sums, recorded, waiting }: Figures,
 ): EmployeeTimeOffType {
   const { timeOffType, balance } = policy;
-  const row = { timeOffType, balance, periodStart: period.start, periodEnd: period.end };
+  const row = {
+    timeOffType,
+    balance,
+    periodStart: period.start,
+    periodEnd: period.end,
+    waiting: dayCount(
+      waiting.filter(
+        (day) =>
+          day.employeeId === employeeId &&
+          day.timeOffTypeId === timeOffType.id &&
+          isWithin(day.date, period.start, period.end),
+      ),
+    ),
+  };
   const noFigures = { entitlement: null, bankHolidays: null, remaining: null };
   if (!allowance) {
     const days = recorded.find(

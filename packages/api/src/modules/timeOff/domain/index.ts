@@ -21,6 +21,7 @@ export {
   yearlyDays,
 } from "./allowanceCalculator";
 export { chargedDays } from "./chargedDays";
+export { dateRangeLabel, dayLabel } from "./dateLabels";
 export {
   type BookedDayLine,
   ledgerDifference,
@@ -38,6 +39,7 @@ export {
   totalCost,
 } from "./bookingRules";
 export {
+  dayCount,
   clashes,
   costedDays,
   costOfDay,

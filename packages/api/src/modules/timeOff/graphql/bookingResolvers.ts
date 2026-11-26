@@ -77,7 +77,7 @@ export function bookingResolvers(booking: BookTimeOffService, whosOut: WhosOutSe
 }
 
 /** A booking as the service takes it, from GraphQL input. */
-function toBookingInput(input: ResolversTypes["TimeOffBookInput"]): BookingInput {
+export function toBookingInput(input: ResolversTypes["TimeOffBookInput"]): BookingInput {
   return {
     ...input,
     halfDays: input.halfDays?.map(({ date, dayPart }) => ({

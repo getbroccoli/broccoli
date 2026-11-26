@@ -21,6 +21,8 @@ export interface TimeOffType {
   colour: TimeOffTypeColour | null;
   /** Colleagues see that the person is off, not why. Always true for Sickness. */
   private: boolean;
+  /** Whether asking for it starts an approval; false for Sickness, which is recorded. */
+  needsApproval: boolean;
   /** The rules offering the type on terms starts from; the terms' policy holds the ones people get. */
   defaultRules: TimeOffRules;
 }

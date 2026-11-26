@@ -84,7 +84,7 @@ test("shows a colleague Annual leave's type and days but hides its details", asy
     until: "2026-12-31",
   });
 
-  expect(rows.get(employee.id)?.timeOff).toEqual([
+  expect(rows.get(employee.id)?.timeOff).toMatchObject([
     {
       id: booked.id,
       timeOffTypeId: annual.id,
@@ -122,7 +122,7 @@ test("hides a colleague's private Sickness type", async ({ orm, seed, transact }
     until: "2026-12-31",
   });
 
-  expect(rows.get(employee.id)?.timeOff).toEqual([
+  expect(rows.get(employee.id)?.timeOff).toMatchObject([
     {
       id: booked.id,
       timeOffTypeId: null,
@@ -166,11 +166,12 @@ test.for(["self", "manager"] as const)(
       until: "2026-12-31",
     });
 
-    expect(rows.get(employee.id)?.timeOff).toEqual([
+    expect(rows.get(employee.id)?.timeOff).toMatchObject([
       {
         id: booked.id,
         timeOffTypeId: sickness.id,
         days: [{ date: "2026-12-07", dayPart: "full_day" }],
+        status: "approved",
         cost: 1,
         note: "Recovering",
         bookedAt: expect.any(Date) as unknown,

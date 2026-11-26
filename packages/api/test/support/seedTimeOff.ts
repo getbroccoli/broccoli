@@ -120,7 +120,11 @@ export async function seedTimeOff(
   input: {
     employeeId: string;
     timeOffTypeId: string;
-    status: "approved" | "pending_approval" | "declined" | "cancelled";
+    status: typeof timeOff.$inferInsert.status;
+    requestedAt?: Date;
+    decidedAt?: Date;
+    decidedByEmployeeId?: string;
+    decisionComment?: string;
     days: { date: string; dayPart: "full_day" | "morning" | "afternoon" }[];
   },
 ): Promise<void> {
@@ -130,6 +134,10 @@ export async function seedTimeOff(
       employeeId: input.employeeId,
       timeOffTypeId: input.timeOffTypeId,
       status: input.status,
+      requestedAt: input.requestedAt,
+      decidedAt: input.decidedAt,
+      decidedByEmployeeId: input.decidedByEmployeeId,
+      decisionComment: input.decisionComment,
     })
     .returning({ id: timeOff.id });
   await orm.insert(timeOffDays).values(

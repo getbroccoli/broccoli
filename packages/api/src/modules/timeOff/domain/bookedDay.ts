@@ -17,6 +17,11 @@ export interface CostedDay {
   bankHolidayName: string | null;
 }
 
+/** Days a list of days takes, as people count them: a full day 1, a morning or an afternoon 0.5. */
+export function dayCount(days: readonly { dayPart: DayPart }[]): number {
+  return days.reduce((sum, { dayPart }) => sum + (dayPart === "full_day" ? 1 : 0.5), 0);
+}
+
 /** A bank holiday with its name, as the bank holidays module gives it. */
 export interface NamedBankHoliday {
   date: CalendarDate;
