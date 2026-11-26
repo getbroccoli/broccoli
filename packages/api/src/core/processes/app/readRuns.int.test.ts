@@ -1,7 +1,15 @@
 import {
   ADMIN,
   EMPLOYEE,
+  approvalParticipants,
+  createApprovalService,
+  approvalRequest,
+  approvalToday,
   calendarDate,
+  eventProcess,
+  seedProcess,
+  transactWithApprovals,
+  transactWithProcesses,
   expect,
   processService,
   notificationFlow,
@@ -10,6 +18,8 @@ import {
   test,
 } from "#test/support";
 
+import type { Orm } from "../../db";
+import type { DomainEvents } from "../../events";
 import { WELCOME_NEW_STARTER } from "../domain";
 
 test("lists an admin's runs newest first", async ({ orm, seed }) => {
@@ -59,7 +69,14 @@ test("the coffee-calls assignee sees progress without the other step's details",
     recordId: employee.id,
   });
 
-  expect(await processes.readStepProgress(ctx, started.steps[1]!.task!.id)).toEqual({
+  const coffee = started.steps[1]!.task!.id;
+  const meeting = started.steps[0]!.task!.id;
+  const progress = await processes.readStepProgress(ctx, [coffee, meeting]);
+  expect([...progress.keys()]).toEqual([coffee]);
+  expect(progress.get(coffee)).toEqual({
+    endedAt: null,
+    decidesOutcome: false,
+    outcome: null,
     processName: "Welcome a new starter",
     subjectEmployeeId: employee.id,
     status: "in_progress",
@@ -86,14 +103,102 @@ test("hides a task's progress and completion commands from an unrelated caller",
   });
   const taskId = started.steps[1]!.task!.id;
 
-  await expect(processes.readStepProgress(ctx, taskId)).rejects.toMatchObject({
-    code: "NOT_FOUND",
-    message: "No task has this id.",
-  });
+  expect(await processes.readStepProgress(ctx, [taskId])).toEqual(new Map());
   await expect(taskService(orm).markDone(ctx, taskId)).rejects.toMatchObject({
     code: "NOT_FOUND",
     message: "No task has this id.",
   });
+});
+
+test("leaves out a task no process created", async ({ orm, seed }) => {
+  const employee = await seed.employee();
+  const ctx = signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] });
+  const task = await seed.task({ assigneeEmployeeId: employee.id });
+
+  expect(await processService(orm).readStepProgress(ctx, [task.id])).toEqual(new Map());
+});
+
+test("shows the outcome step's decision to its assignee and its asker", async ({ orm, seed }) => {
+  const { sam, mia, manager, requester } = await approvalParticipants(orm, seed);
+  const transact = transactWithApprovals(orm, { today: approvalToday });
+  await transact((tx) =>
+    createApprovalService().requestApproval(requester, tx, approvalRequest(sam.id)),
+  );
+  const tasks = taskService(orm, { transact });
+  const {
+    needsYou: [task],
+  } = await tasks.listMyTasks(manager);
+  const result = { code: "rejected", comment: "Clashes with the release week." };
+  await tasks.markDone(manager, task!.id, { result });
+
+  const processes = processService(orm);
+  for (const reader of [manager, requester]) {
+    const progress = await processes.readStepProgress(reader, [task!.id]);
+    expect(progress.get(task!.id)).toMatchObject({
+      status: "finished",
+      endedAt: expect.any(Date) as unknown,
+      decidesOutcome: true,
+      outcome: {
+        ...result,
+        label: "Rejected",
+        byEmployeeId: mia.id,
+        at: expect.any(Date) as unknown,
+      },
+    });
+  }
+});
+
+test("shows no outcome on another task of a run that has an outcome", async ({ orm, seed }) => {
+  const employee = await seed.employee();
+  const ctx = signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] });
+  const { key } = await seedReview(orm, "subject");
+  const transact = transactWithProcesses(orm, { today: approvalToday });
+  const processes = processService(orm, { today: approvalToday, transact });
+  const tasks = taskService(orm, { transact });
+  const run = await processes.startRun(ADMIN, { processKey: key, recordId: employee.id });
+  const decisionId = run.steps[0]!.task!.id;
+  const followUpId = run.steps[1]!.task!.id;
+  await tasks.markDone(ctx, decisionId, { result: { code: "no", comment: "Private reason" } });
+  await tasks.markDone(ctx, followUpId);
+
+  const progress = await processes.readStepProgress(ctx, [decisionId, followUpId]);
+
+  expect(progress.get(decisionId)?.outcome).toMatchObject({
+    label: "No",
+    comment: "Private reason",
+  });
+  expect(progress.get(followUpId)).toMatchObject({
+    status: "finished",
+    decidesOutcome: false,
+    outcome: null,
+  });
+});
+
+test("ending a run on a later step reports the employee who made the earlier decision", async ({
+  orm,
+  seed,
+}) => {
+  const { sam, requester, manager } = await approvalParticipants(orm, seed);
+  const { key } = await seedReview(orm, "subjects_manager");
+  const ended: DomainEvents["processes.run_ended"][] = [];
+  const transact = transactWithProcesses(orm, { today: approvalToday }, (_tx, events) => {
+    for (const event of events) {
+      if (event.type === "processes.run_ended") ended.push(event.payload);
+    }
+    return Promise.resolve();
+  });
+  const processes = processService(orm, { today: approvalToday, transact });
+  const tasks = taskService(orm, { transact });
+  const run = await processes.startRun(ADMIN, { processKey: key, recordId: sam.id });
+  const result = { code: "no", comment: "Still under review" };
+  await tasks.markDone(requester, run.steps[0]!.task!.id, { result });
+  expect(ended).toEqual([]);
+
+  await tasks.markDone(manager, run.steps[1]!.task!.id);
+
+  expect(ended).toMatchObject([
+    { runId: run.run.id, status: "finished", outcome: { ...result, byEmployeeId: sam.id } },
+  ]);
 });
 
 test("reports an unknown run", async ({ orm }) => {
@@ -134,3 +239,33 @@ test("reset removes runs, turns built-in processes on and other processes off", 
   );
   expect(reset.find(({ key }) => key === WELCOME_NEW_STARTER)).toMatchObject({ turnedOnAt: null });
 });
+
+function seedReview(orm: Orm, followUpAssignee: "subject" | "subjects_manager") {
+  const definition = eventProcess("employees.added");
+  const followUp = definition.steps[0]!;
+  const decide = {
+    ...followUp,
+    key: "decide",
+    task: {
+      ...followUp.task,
+      resultForm: {
+        kind: "choice" as const,
+        options: [
+          { code: "yes", label: "Yes" },
+          { code: "no", label: "No" },
+        ],
+      },
+    },
+  };
+  return seedProcess(orm, {
+    key: "review",
+    definition: {
+      ...definition,
+      steps: [
+        decide,
+        { ...followUp, task: { ...followUp.task, assignee: { kind: followUpAssignee } } },
+      ],
+      outcome: { step: "decide" },
+    },
+  });
+}

@@ -42,6 +42,18 @@ declare module "../../events" {
      * A run's steps completed as their tasks were marked done, and the steps that started after
      * them or will never start; logged once the change commits.
      */
+    /**
+     * A run finished or was cancelled, published before its change commits; `outcome` is its outcome
+     * step's result, and who gave it when the change that finished it knows.
+     */
+    "processes.run_ended": {
+      runId: string;
+      processKey: string;
+      recordType: string;
+      recordId: string;
+      status: "finished" | "cancelled";
+      outcome: { code: string; comment: string | null; byEmployeeId: string | null } | null;
+    };
     "processes.steps_completed": {
       runId: string;
       taskIds: string[];

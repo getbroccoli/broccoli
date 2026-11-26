@@ -14,6 +14,7 @@ import {
   type TriggerEvent,
 } from "../domain";
 import type { PeoplePort, RunSubject } from "../ports";
+import type { RunEndings } from "./runEndings";
 import type { StepStarter } from "./stepStarter";
 
 /** What processes may do with each record type that registered its process capabilities. */
@@ -71,16 +72,21 @@ export function createRunStarter({
   people,
   recordTypes,
   steps,
+  runEndings,
 }: {
   people: PeoplePort;
   recordTypes: ProcessRecordTypes;
   steps: StepStarter;
+  runEndings: RunEndings;
 }): RunStarter {
   const readPeople = (tx: Tx, ids: readonly string[]) =>
     ids.length === 0 ? Promise.resolve(new Map<string, RunSubject>()) : people.readPeople(tx, ids);
 
   return {
     async readRecordSubjects(tx, recordType, recordIds) {
+      if (!Object.hasOwn(recordTypes, recordType)) {
+        throw new Error(`Record type ${recordType} cannot be the subject of a process.`);
+      }
       const subjectIds = await recordTypes[recordType]!.readSubjects(tx, [...new Set(recordIds)]);
       const found = await readPeople(
         tx,
@@ -109,6 +115,11 @@ export function createRunStarter({
           processKey: starts[index]!.process.key,
           first: firstSteps[index]!,
         })),
+      );
+      // A run with nothing to do, such as one whose only step had nobody to give it to, ends at once.
+      await runEndings.publishEnded(
+        tx,
+        runs.map((run, index) => ({ ...run, steps: firstSteps[index]!.progress })),
       );
       return runs;
     },

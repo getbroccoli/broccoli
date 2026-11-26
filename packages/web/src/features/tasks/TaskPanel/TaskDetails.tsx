@@ -16,19 +16,14 @@ import { t } from "@/i18n";
 
 import { TASK_DESCRIPTION } from "../taskDescription";
 import { TaskStatus } from "../TaskStatus";
-import {
-  formatTaskDay,
-  isOpen,
-  personName,
-  resultText,
-  taskSource,
-  type TaskRow,
-} from "../taskText";
+import { formatTaskDay, isOpen, personName, resultText, type TaskRow } from "../taskText";
 import { useTaskActions } from "../useTaskActions";
 import { DeleteTaskDialog } from "./DeleteTaskDialog";
 import { PanelCloseButton } from "./PanelCloseButton";
 import { TaskResultButtons } from "./TaskResultButtons";
+import { TaskProcessRun } from "./TaskProcessRun";
 import { TaskResultForm } from "./TaskResultForm";
+import { SECTION_LABEL } from "./sectionLabel";
 
 type Props = {
   task: TaskRow;
@@ -45,8 +40,9 @@ export function TaskDetails({ task, onDeleted }: Props) {
   const [chosenCode, setChosenCode] = useState<string | null>(null);
   const holds = task.assignee.id === viewerId;
   const asked = task.askedBy?.id === viewerId;
-  const canDelete = asked && isOpen(task);
+  const canDelete = asked && isOpen(task) && task.type === "MANUAL_TO_DO";
   const canFinish = holds && task.status === "TO_DO";
+  const decides = task.processRun?.decidesOutcome ?? false;
   const form = task.resultForm;
 
   return (
@@ -151,36 +147,37 @@ export function TaskDetails({ task, onDeleted }: Props) {
         <aside className="flex flex-col gap-6 self-start rounded-xl bg-muted/50 p-4 text-sm">
           {holds && isOpen(task) && (
             <section className="flex flex-col gap-1.5">
-              <h3 className={SECTION_LABEL}>{t("tasks.panel.ifDone")}</h3>
-              <p>
-                {task.askedBy && !asked
-                  ? t("tasks.panel.ifDoneAsker", { name: task.askedBy.firstName })
-                  : t("tasks.panel.ifDoneNobody")}
-              </p>
+              <h3 className={SECTION_LABEL}>
+                {t(decides ? "tasks.panel.ifDecide" : "tasks.panel.ifDone")}
+              </h3>
+              <p>{ifDoneText(task, asked, decides)}</p>
             </section>
           )}
-          <section className="flex flex-col gap-1.5 text-muted-foreground">
-            <h3 className={SECTION_LABEL}>{t("tasks.panel.from")}</h3>
-            <p>{originLine(task, asked, viewerId)}</p>
-            {task.status === "DONE" && (
-              <p>
-                {task.doneBy?.id === viewerId
-                  ? t("tasks.panel.doneByYou", { date: formatTaskDay(task.doneAt!) })
-                  : t("tasks.panel.doneBy", {
-                      name: personName(task.doneBy),
-                      date: formatTaskDay(task.doneAt!),
-                    })}
-              </p>
-            )}
-            {task.status === "CANCELLED" && (
-              <p>
-                {t("tasks.panel.cancelledBy", {
-                  date: formatTaskDay(task.cancelledAt!),
-                  reason: task.cancelReason!,
-                })}
-              </p>
-            )}
-          </section>
+          {hasOrigin(task) && (
+            <section className="flex flex-col gap-1.5 text-muted-foreground">
+              <h3 className={SECTION_LABEL}>{t("tasks.panel.from")}</h3>
+              {task.askedBy && <p>{originLine(task, asked)}</p>}
+              {task.status === "DONE" && (
+                <p>
+                  {task.doneBy?.id === viewerId
+                    ? t("tasks.panel.doneByYou", { date: formatTaskDay(task.doneAt!) })
+                    : t("tasks.panel.doneBy", {
+                        name: personName(task.doneBy),
+                        date: formatTaskDay(task.doneAt!),
+                      })}
+                </p>
+              )}
+              {task.status === "CANCELLED" && (
+                <p>
+                  {t("tasks.panel.cancelledBy", {
+                    date: formatTaskDay(task.cancelledAt!),
+                    reason: task.cancelReason!,
+                  })}
+                </p>
+              )}
+            </section>
+          )}
+          {task.processRun && <TaskProcessRun task={task} viewerId={viewerId} />}
         </aside>
       </div>
       <DeleteTaskDialog
@@ -198,11 +195,21 @@ export function TaskDetails({ task, onDeleted }: Props) {
   );
 }
 
-function originLine(task: TaskRow, asked: boolean, viewerId: string | null): string {
-  const date = formatTaskDay(task.createdAt);
-  if (asked) return t("tasks.panel.youAsked", { name: task.assignee.firstName, date });
-  if (task.askedBy) return t("tasks.panel.askedBy", { name: personName(task.askedBy), date });
-  return taskSource(task, viewerId);
+/** Who learns of it once done: the asker, who sees a decision with its comment, or nobody. */
+function ifDoneText(task: TaskRow, asked: boolean, decides: boolean): string {
+  if (!task.askedBy || asked) return t("tasks.panel.ifDoneNobody");
+  const name = task.askedBy.firstName;
+  return t(decides ? "tasks.panel.ifDecideAsker" : "tasks.panel.ifDoneAsker", { name });
 }
 
-const SECTION_LABEL = "text-[11px] font-medium tracking-wider text-muted-foreground uppercase";
+/** Who asked, or how it ended; a process's task names its process in its own section instead. */
+function hasOrigin(task: TaskRow): boolean {
+  return Boolean(task.askedBy) || task.status !== "TO_DO";
+}
+
+/** Who asked for the task, which has someone who asked. */
+function originLine(task: TaskRow, asked: boolean): string {
+  const date = formatTaskDay(task.createdAt);
+  if (asked) return t("tasks.panel.youAsked", { name: task.assignee.firstName, date });
+  return t("tasks.panel.askedBy", { name: personName(task.askedBy), date });
+}

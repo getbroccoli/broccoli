@@ -25,7 +25,9 @@ export async function createTemplateDatabase(run: TestRun): Promise<void> {
   try {
     await database.migrate();
     // Off in tests, so creating a task starts no notification run unless a test turns one on.
-    await database.orm.execute(sql`update processes set turned_on_at = null where built_in`);
+    await database.orm.execute(
+      sql`update processes set turned_on_at = null where "key" in ('notifications.task_created', 'notifications.task_done')`,
+    );
   } finally {
     await database.close();
   }

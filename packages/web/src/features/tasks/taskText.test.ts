@@ -5,6 +5,7 @@ import {
   dueText,
   formatTaskDay,
   isLate,
+  processRunDetail,
   taskFact,
   taskSource,
   type TaskRow,
@@ -73,7 +74,7 @@ it("says when you completed a task", () => {
 it("names the person who completed a task for someone else", () => {
   const task = taskWith({ status: "DONE", doneAt: completedAt, doneBy: assignee });
 
-  expect(taskFact(task, asker.id)).toBe("Done by Mia Reed · Tue 10 Nov");
+  expect(taskFact(task, asker.id)).toBe("Done by Mia Park · Tue 10 Nov");
 });
 
 it("shows why a task was cancelled", () => {
@@ -89,7 +90,7 @@ it("shows why a task was cancelled", () => {
 it("names the assignee when someone else holds an open task", () => {
   const task = taskWith({ dueDate: "2026-11-09" });
 
-  expect(taskFact(task, asker.id)).toBe("With Mia Reed");
+  expect(taskFact(task, asker.id)).toBe("With Mia Park");
 });
 
 it("shows the description of a task to do that you hold", () => {
@@ -124,13 +125,79 @@ it("says you when you asked for a task", () => {
   expect(taskSource(taskWith(), asker.id)).toBe("You");
 });
 
-it("shows the process and step when no person asked for a task", () => {
+it("shows no source for a task with neither an asker nor a process", () => {
+  const task = taskWith({ askedBy: null, processRun: null });
+
+  expect(taskSource(task, assignee.id)).toBe("");
+});
+
+it("names the process when no person asked for a task", () => {
   const task = taskWith({
     askedBy: null,
-    processSource: { processKey: "onboarding", stepKey: "read_handbook" },
+    processRun: runWith({ processName: "Onboarding example" }),
   });
 
-  expect(taskSource(task, assignee.id)).toBe("onboarding · read_handbook");
+  expect(taskSource(task, assignee.id)).toBe("Onboarding example");
+});
+
+it("names who decided the outcome and on which day", () => {
+  const task = taskWith({ status: "DONE", processRun: runWith({ ...finishedRun, outcome }) });
+
+  expect(processRunDetail(task, asker.id)).toBe("By Mia Park on Fri 27 Nov");
+});
+
+it("shows the decision day when the decider is unknown", () => {
+  const task = taskWith({
+    status: "DONE",
+    processRun: runWith({ ...finishedRun, outcome: { ...outcome, decidedBy: null } }),
+  });
+
+  expect(processRunDetail(task, asker.id)).toBe("On Fri 27 Nov");
+});
+
+it("tells the assignee their open task is waiting for their decision", () => {
+  const task = taskWith({ processRun: runWith({ decidesOutcome: true }) });
+
+  expect(processRunDetail(task, assignee.id)).toBe("Waiting for your decision");
+});
+
+it("tells the requester who holds the decision and since when", () => {
+  const task = taskWith({ createdAt: requestedAt, processRun: runWith({ decidesOutcome: true }) });
+
+  expect(processRunDetail(task, asker.id)).toBe("With Mia Park since Thu 26 Nov");
+});
+
+it("counts completed steps for an in-progress task that does not decide the outcome", () => {
+  const task = taskWith({ processRun: runWith({ doneSteps: 2, totalSteps: 3 }) });
+
+  expect(processRunDetail(task, assignee.id)).toBe("2 of 3 steps done");
+});
+
+it("shows the cancellation day and missing decision on the outcome step", () => {
+  const task = taskWith({
+    status: "CANCELLED",
+    processRun: runWith({ status: "CANCELLED", endedAt: decisionDay, decidesOutcome: true }),
+  });
+
+  expect(processRunDetail(task, asker.id)).toBe("On Fri 27 Nov, with no decision");
+});
+
+it("shows the cancellation day alone on a step that does not decide the outcome", () => {
+  const task = taskWith({
+    status: "CANCELLED",
+    processRun: runWith({ status: "CANCELLED", endedAt: decisionDay }),
+  });
+
+  expect(processRunDetail(task, asker.id)).toBe("On Fri 27 Nov");
+});
+
+it("shows the end day for a finished run without an outcome", () => {
+  const task = taskWith({
+    status: "DONE",
+    processRun: runWith({ status: "FINISHED", endedAt: decisionDay }),
+  });
+
+  expect(processRunDetail(task, asker.id)).toBe("On Fri 27 Nov");
 });
 
 it("counts a task to do that you hold in needs you", () => {
@@ -174,7 +241,7 @@ function taskWith(overrides: Partial<TaskRow> = {}): TaskRow {
     cancelReason: null,
     resultForm: null,
     result: null,
-    processSource: null,
+    processRun: null,
     assignee: assignee,
     askedBy: asker,
     subject: null,
@@ -182,6 +249,37 @@ function taskWith(overrides: Partial<TaskRow> = {}): TaskRow {
   };
 }
 
-const assignee = { id: "assignee", firstName: "Mia", lastName: "Reed", avatarUrl: null };
+type ProcessRun = NonNullable<TaskRow["processRun"]>;
+
+function runWith(overrides: Partial<ProcessRun>): ProcessRun {
+  return {
+    processName: "Manager approval",
+    status: "IN_PROGRESS",
+    endedAt: null,
+    doneSteps: 0,
+    totalSteps: 1,
+    decidesOutcome: false,
+    outcome: null,
+    ...overrides,
+  };
+}
+
+const assignee = { id: "assignee", firstName: "Mia", lastName: "Park", avatarUrl: null };
 const asker = { id: "asker", firstName: "Sam", lastName: "Lee", avatarUrl: null };
 const completedAt = new Date(2026, 10, 10, 12).toISOString();
+const requestedAt = new Date(2026, 10, 26, 12).toISOString();
+const decisionDay = new Date(2026, 10, 27, 12).toISOString();
+const finishedRun = {
+  status: "FINISHED",
+  endedAt: new Date(2026, 10, 28, 12).toISOString(),
+  decidesOutcome: true,
+  doneSteps: 2,
+  totalSteps: 2,
+} as const;
+const outcome = {
+  code: "approved",
+  label: "Approved",
+  comment: null,
+  decidedAt: decisionDay,
+  decidedBy: assignee,
+};

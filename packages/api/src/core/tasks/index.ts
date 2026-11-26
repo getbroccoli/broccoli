@@ -13,7 +13,7 @@ export {
 
 // Public types.
 export type { NewTask, ReadEmployeeNames, TaskService } from "./app";
-export { MANUAL_TO_DO, TASK_RESULT_FORM_SCHEMA } from "./domain";
+export { MANUAL_TO_DO, resultLabel, TASK_RESULT_FORM_SCHEMA } from "./domain";
 export type { Task, TaskResult, TaskResultForm, TaskStatus } from "./domain";
 
 /** Work asked of people, and each person's My tasks. */

@@ -2,7 +2,7 @@ import type { Orm } from "../../db";
 import type { EmailTemplate } from "../../../integrations/mail";
 import { parseUuid } from "../../../utils";
 import { taskRepository } from "../db";
-import type { Task } from "../domain";
+import { resultText, type Task } from "../domain";
 import { TASK_ASSIGNED_TEMPLATE, type TaskAssignedValues } from "./taskAssigned.email";
 import { TASK_DONE_TEMPLATE, type TaskDoneValues } from "./taskDone.email";
 
@@ -58,7 +58,13 @@ export function taskEmailTemplates({
       );
       if (!doneByName) return null;
       return {
-        values: { taskId: task.id, title: task.title, doneByName, doneAt: task.doneAt },
+        values: {
+          taskId: task.id,
+          title: task.title,
+          doneByName,
+          doneAt: task.doneAt,
+          result: task.result && resultText(task.resultForm!, task.result),
+        },
         senderName: doneByName,
       };
     },

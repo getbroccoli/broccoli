@@ -1,4 +1,11 @@
-import { createBeforeCommitBus, type Orm, type Transact, transactor } from "../../src/core/db";
+import { APPROVAL_TRIGGERING_EVENTS, approvalsModule } from "../../src/core/approvals";
+import {
+  type BeforeCommitHandler,
+  createBeforeCommitBus,
+  type Orm,
+  type Transact,
+  transactor,
+} from "../../src/core/db";
 import { createEventBus } from "../../src/core/events";
 import type { JobQueue, Jobs } from "../../src/core/jobs";
 import { createLogger } from "../../src/core/logger";
@@ -52,6 +59,7 @@ export function processService(
     }),
     recordTypes: { employee: employeeRecordType(orm), task: taskRecordType(orm) },
     triggeringEvents: collectRegistrations<TriggeringEventRegistration>("triggering event", [
+      APPROVAL_TRIGGERING_EVENTS,
       EMPLOYEE_TRIGGERING_EVENTS,
       TASK_TRIGGERING_EVENTS,
     ]),
@@ -70,13 +78,25 @@ export function transactWithProcesses(
     jobs,
     actions = {},
   }: { today: () => CalendarDate; jobs?: JobQueue; actions?: ProcessActionRegistrations },
+  ...handlers: BeforeCommitHandler[]
 ): Transact {
   const logger = createLogger("silent");
   const beforeCommit = createBeforeCommitBus();
   const transact = transactor(orm, createEventBus(logger), beforeCommit);
   const processes = processService(orm, { today, transact, jobs, actions });
   beforeCommit.subscribe(processesModule({ logger, processes }).eventsBeforeCommit!);
+  for (const handler of handlers) beforeCommit.subscribe(handler);
   return transact;
+}
+
+/** Delivers approval events before commit, including to the feature that requested the approval. */
+export function transactWithApprovals(
+  orm: Orm,
+  options: { today: () => CalendarDate },
+  ...handlers: BeforeCommitHandler[]
+): Transact {
+  const approvals = approvalsModule({ logger: createLogger("silent") });
+  return transactWithProcesses(orm, options, approvals.eventsBeforeCommit!, ...handlers);
 }
 
 /** Collects after-commit jobs and delivers them through the real handler and before-commit bus. */

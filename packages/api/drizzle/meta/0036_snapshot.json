@@ -2416,7 +2416,7 @@
         },
         "tasks_asked_by_someone": {
           "name": "tasks_asked_by_someone",
-          "value": "(\"tasks\".\"type\" = 'manual_to_do') = (\"tasks\".\"asked_by_employee_id\" is not null)"
+          "value": "\"tasks\".\"type\" <> 'manual_to_do' or \"tasks\".\"asked_by_employee_id\" is not null"
         },
         "tasks_record_complete": {
           "name": "tasks_record_complete",

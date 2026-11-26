@@ -209,5 +209,31 @@ INSERT INTO "process_versions" ("process_id", "version", "status", "definition_s
 					"emailTemplateKey": "tasks.task_done" } } }
 		]
 	}'::jsonb FROM "processes" WHERE "key" = 'notifications.task_done';--> statement-breakpoint
+-- The built-in approval process, on: a feature asks for approval of its record and the requester's manager decides.
+INSERT INTO "processes" ("key", "name", "description", "built_in", "turned_on_at") VALUES (
+	'manager_approval',
+	'Manager approval',
+	'Asks the manager of the person a request is about, or the owner when they have none, to approve or reject it.',
+	true,
+	now()
+);--> statement-breakpoint
+INSERT INTO "process_versions" ("process_id", "version", "status", "definition_schema_version", "definition")
+	SELECT "id", 1, 'published', 1, '{
+		"subject": { "recordType": "from_event" },
+		"trigger": { "kind": "on_event", "event": "approvals.approval_requested",
+			"when": { "field": "approvalProcessKey", "in": ["manager_approval"] },
+			"run": "in_same_transaction", "faultMode": "rollback_transaction" },
+		"steps": [
+			{ "key": "decide", "kind": "task", "task": {
+				"assignee": { "kind": "subjects_manager", "otherwise": { "kind": "workspace_owner" } },
+				"askedBy": { "kind": "event_employee", "field": "requesterEmployeeId" },
+				"title": "{event.title}", "description": "{event.description}",
+				"due": { "amount": 2, "unit": "business_days" },
+				"resultForm": { "kind": "choice", "display": "buttons", "options": [
+					{ "code": "approved", "label": "Approve" },
+					{ "code": "rejected", "label": "Reject", "commentRequired": true } ] } } }
+		],
+		"outcome": { "step": "decide", "labels": { "approved": "Approved", "rejected": "Rejected" } }
+	}'::jsonb FROM "processes" WHERE "key" = 'manager_approval';--> statement-breakpoint
 UPDATE "processes" SET "active_version_id" = v."id" FROM "process_versions" v
 	WHERE v."process_id" = "processes"."id" AND "processes"."built_in";

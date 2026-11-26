@@ -8,6 +8,7 @@ test("lists the seeded processes, with the built-in notifications off in tests",
   const processes = await processService(orm).listProcesses(ADMIN);
 
   expect(processes).toMatchObject([
+    { key: "manager_approval", name: "Manager approval", isOn: true },
     {
       key: ONBOARDING_EXAMPLE,
       name: "Onboarding example",

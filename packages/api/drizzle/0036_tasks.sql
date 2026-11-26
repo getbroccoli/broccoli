@@ -20,7 +20,7 @@ CREATE TABLE "tasks" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "tasks_title_not_blank" CHECK (btrim("tasks"."title") <> ''),
-	CONSTRAINT "tasks_asked_by_someone" CHECK (("tasks"."type" = 'manual_to_do') = ("tasks"."asked_by_employee_id" is not null)),
+	CONSTRAINT "tasks_asked_by_someone" CHECK ("tasks"."type" <> 'manual_to_do' or "tasks"."asked_by_employee_id" is not null),
 	CONSTRAINT "tasks_record_complete" CHECK (("tasks"."record_type" is null) = ("tasks"."record_id" is null)),
 	CONSTRAINT "tasks_columns_follow_status" CHECK (("tasks"."status" = 'done') = ("tasks"."done_at" is not null)
         and ("tasks"."done_at" is null or "tasks"."cancelled_at" is null)

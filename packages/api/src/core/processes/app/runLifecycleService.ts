@@ -1,12 +1,19 @@
-import { ApplicationError } from "../../applicationError";
-import type { Orm, Transact, Tx } from "../../db";
+import type { Transact, Tx } from "../../db";
 import type { PublishedEvent } from "../../events";
 import { PrincipalSecurityContext, type SecurityContext } from "../../security";
 import { type CalendarDate, laterOf } from "../../../utils";
-import type { TaskService } from "../../tasks";
+import { resultLabel, type Task, type TaskService } from "../../tasks";
 import { processRepository, runStepRepository } from "../db";
-import { PROCESS_CANCELLED, type ProcessRun, type StepStatus, SUBJECT_REMOVED } from "../domain";
+import {
+  type OutcomeRule,
+  outcomeOf,
+  PROCESS_CANCELLED,
+  type ProcessRun,
+  type StepStatus,
+  SUBJECT_REMOVED,
+} from "../domain";
 import type { StepProgress } from "./processViews";
+import type { RunEndings } from "./runEndings";
 import type { RunStarter } from "./runStarter";
 import type { StepStarter } from "./stepStarter";
 
@@ -22,7 +29,10 @@ export interface RunLifecycleService {
    */
   completeStepsOfDoneTasks(tx: Tx, events: readonly PublishedEvent[]): Promise<void>;
   /** The run behind a task its assignee or asker reads, as counts. */
-  readStepProgress(ctx: SecurityContext, taskId: string): Promise<StepProgress>;
+  readStepProgress(
+    ctx: SecurityContext,
+    taskIds: readonly string[],
+  ): Promise<Map<string, StepProgress>>;
   /**
    * The locked run, cancelled and saved when its subject or a waiting step's assignee is gone;
    * else as it was. The run cancels itself, so Broccoli is the author. The caller holds the run's
@@ -32,18 +42,18 @@ export interface RunLifecycleService {
 }
 
 export function createRunLifecycleService({
-  orm,
   transact,
   tasks,
   starter,
   steps,
+  runEndings,
   today,
 }: {
-  orm: Orm;
   transact: Transact;
   tasks: TaskService;
   starter: RunStarter;
   steps: StepStarter;
+  runEndings: RunEndings;
   /** Today in London: the day a step that starts later resolves its assignee on. */
   today: () => CalendarDate;
 }): RunLifecycleService {
@@ -62,6 +72,7 @@ export function createRunLifecycleService({
         await runStepRepository(tx).findStepsByTaskIds([...resultsByTaskId.keys()])
       ).filter(({ status }) => status === "step_awaiting_task_completion");
       const now = new Date();
+      const ended: ProcessRun[] = [];
       for (const runId of [...new Set(awaiting.map((step) => step.runId))].sort()) {
         const run = (await runs.lockRun(runId))!;
         // A run that can no longer run stays in progress for the daily check, which cancels it.
@@ -71,6 +82,7 @@ export function createRunLifecycleService({
           ? await steps.startReadySteps(tx, completed, laterOf(today(), run.startDay))
           : completed;
         await runs.saveRun(changed);
+        if (run.status === "in_progress") ended.push(changed);
         tx.publish("processes.steps_completed", {
           runId,
           taskIds: run.openTaskIds().filter((taskId) => resultsByTaskId.has(taskId)),
@@ -79,27 +91,41 @@ export function createRunLifecycleService({
           runStatus: changed.status,
         });
       }
+      await runEndings.publishEnded(tx, ended);
     },
 
-    async readStepProgress(ctx, taskId) {
-      const task = await tasks.readTask(ctx, taskId);
-      const [step] = await runStepRepository(orm).findStepsByTaskIds([task.id]);
-      if (!step) throw new ApplicationError("CONFLICT", "This task does not belong to a process.");
+    async readStepProgress(ctx, taskIds) {
+      const employeeId = ctx.user?.employeeId;
+      if (!employeeId || taskIds.length === 0) return new Map();
       return transact(async (tx) => {
+        const taskSteps = await runStepRepository(tx).findStepsByTaskIds(taskIds);
         const runs = processRepository(tx);
-        // Locked, so a step change committing meanwhile cannot pair its steps with the old status.
-        const run = (await runs.lockRun(step.runId))!;
-        const [process] = await runs.findProcessesByIds([run.processId]);
-        const steps = run.steps.filter(
-          ({ status }) => status !== "step_skipped" && status !== "step_not_reached",
+        // The runs first: their share lock waits for a decision in flight, so the tasks read after
+        // it agree with them.
+        const runOf = byIds(await runs.readRunsWithSteps([...new Set(taskSteps.map(runIdOf))]));
+        const taskOf = byIds(
+          (await tasks.readTasksInTransaction(tx, taskSteps.map(taskIdOf))).filter((task) =>
+            task.isVisibleTo(employeeId),
+          ),
         );
-        return {
-          processName: process!.name,
-          subjectEmployeeId: run.subjectEmployeeId,
-          status: run.status,
-          doneSteps: steps.filter(({ status }) => status === "step_completed").length,
-          totalSteps: steps.length,
-        };
+        const runList = [...runOf.values()];
+        const processOf = byIds(
+          await runs.findProcessesByIds([...new Set(runList.map(processIdOf))]),
+        );
+        const ruleOf = await runEndings.readOutcomeRules(tx, runList.map(versionIdOf));
+        const progress = new Map<string, StepProgress>();
+        for (const step of taskSteps) {
+          const task = taskOf.get(taskIdOf(step));
+          if (!task) continue;
+          const run = runOf.get(step.runId)!;
+          const rule = ruleOf.get(run.processVersionId)!;
+          const processName = processOf.get(run.processId)!.name;
+          progress.set(
+            task.id,
+            progressOf(run, processName, rule, { task, stepKey: step.stepKey }),
+          );
+        }
+        return progress;
       });
     },
 
@@ -110,7 +136,8 @@ export function createRunLifecycleService({
       const reason =
         removal.cause === "cancelled_because_subject_was_removed"
           ? SUBJECT_REMOVED
-          : `The assignee of '${(await steps.stepTitles(tx, run)).get(removal.stepKey!)}' was removed from Broccoli.`;
+          : // The task goes with its assignee, or with the person who asked for it.
+            `The task '${(await steps.stepTitles(tx, run)).get(removal.stepKey!)}' was removed with the person it was given to or who asked for it.`;
       const cancelled = run.cancel({
         cause: removal.cause,
         reason,
@@ -123,9 +150,61 @@ export function createRunLifecycleService({
         cause: { kind: "PROCESS_RUN", ref: run.id },
       });
       await processRepository(tx).saveRun(cancelled);
+      await runEndings.publishEnded(tx, [cancelled]);
       return cancelled;
     },
   };
+}
+
+/** How far the run is, and its outcome when the task is its outcome step's. */
+function progressOf(
+  run: ProcessRun,
+  processName: string,
+  rule: OutcomeRule | null,
+  { task, stepKey }: { task: Task; stepKey: string },
+): StepProgress {
+  const counted = run.steps.filter(
+    ({ status }) => status !== "step_skipped" && status !== "step_not_reached",
+  );
+  const decides = stepKey === rule?.step;
+  const given = decides ? outcomeOf(rule, run) : null;
+  return {
+    processName,
+    subjectEmployeeId: run.subjectEmployeeId,
+    status: run.status,
+    endedAt: run.finishedAt ?? run.cancelledAt,
+    doneSteps: counted.filter(({ status }) => status === "step_completed").length,
+    totalSteps: counted.length,
+    decidesOutcome: decides,
+    outcome: given && {
+      ...given.result,
+      label: Object.hasOwn(rule!.labels, given.result.code)
+        ? rule!.labels[given.result.code]!
+        : resultLabel(task.resultForm!, given.result.code),
+      byEmployeeId: task.doneByEmployeeId,
+      at: given.finishedAt!,
+    },
+  };
+}
+
+function byIds<Item extends { id: string }>(items: readonly Item[]): Map<string, Item> {
+  return new Map(items.map((item) => [item.id, item]));
+}
+
+function taskIdOf({ taskId }: { taskId: string | null }): string {
+  return taskId!;
+}
+
+function runIdOf({ runId }: { runId: string }): string {
+  return runId;
+}
+
+function processIdOf({ processId }: { processId: string }): string {
+  return processId;
+}
+
+function versionIdOf({ processVersionId }: { processVersionId: string }): string {
+  return processVersionId;
 }
 
 /**

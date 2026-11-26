@@ -71,7 +71,7 @@ export const processRuns = pgTable(
     uniqueIndex("process_runs_start_key_unique")
       .on(table.processId, table.startKey)
       .where(sql`${table.startKey} is not null`),
-    uniqueIndex("process_runs_one_in_progress_per_record")
+    uniqueIndex(RUN_IN_PROGRESS_PER_RECORD)
       .on(table.processId, table.recordType, table.recordId)
       .where(sql`${table.status} = 'in_progress'`),
     index("process_runs_process_status_idx").on(table.processId, table.status),
@@ -104,6 +104,9 @@ export const processRuns = pgTable(
     ),
   ],
 );
+
+/** The index that keeps one run of a process in progress per record. */
+export const RUN_IN_PROGRESS_PER_RECORD = "process_runs_one_in_progress_per_record";
 
 /**
  * A run's progress on each step of its version's definition, by `step_key`; created with the run,

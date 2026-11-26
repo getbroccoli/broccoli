@@ -225,7 +225,10 @@ test("allows a manual welcome while automatic starts are off", async ({ orm, see
   });
 
   expect(details.run.status).toBe("in_progress");
-  expect((await processes.listProcesses(ADMIN))[0]!.isOn).toBe(false);
+  const welcome = (await processes.listProcesses(ADMIN)).find(
+    ({ key }) => key === WELCOME_NEW_STARTER,
+  );
+  expect(welcome!.isOn).toBe(false);
 });
 
 test("refuses a manual welcome without a create grant", async ({ orm, seed }) => {

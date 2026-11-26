@@ -30,9 +30,22 @@ fragment TaskFields on Task {
     label
     comment
   }
-  processSource {
-    processKey
-    stepKey
+  processRun {
+    processName
+    status
+    endedAt
+    doneSteps
+    totalSteps
+    decidesOutcome
+    outcome {
+      code
+      label
+      comment
+      decidedAt
+      decidedBy {
+        ...TaskPerson @unmask
+      }
+    }
   }
   assignee {
     ...TaskPerson @unmask

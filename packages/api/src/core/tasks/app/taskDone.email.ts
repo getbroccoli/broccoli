@@ -8,12 +8,25 @@ export interface TaskDoneValues {
   title: string;
   doneByName: string;
   doneAt: Date;
+  /** What its assignee gave, as people read it ("Reject — Clashes with the release week."). */
+  result: string | null;
 }
 
 export const TASK_DONE_TEMPLATE: EmailTemplate<TaskDoneValues & TaskEmailContext> = {
   name: "task_done",
-  render: ({ taskId, title, doneByName, doneAt, recipientEmail, linkOrigin, companyName }) => {
+  render: ({
+    taskId,
+    title,
+    doneByName,
+    doneAt,
+    result,
+    recipientEmail,
+    linkOrigin,
+    companyName,
+  }) => {
     const link = `${linkOrigin}/tasks/${taskId}`;
+    const resultLine =
+      result === null ? [] : [{ type: "paragraph" as const, text: `Result: ${result}` }];
     return {
       subject: `${doneByName} marked done: ${title}`,
       blocks: [
@@ -23,6 +36,7 @@ export const TASK_DONE_TEMPLATE: EmailTemplate<TaskDoneValues & TaskEmailContext
           type: "paragraph",
           text: `Done by ${doneByName} on ${formatShortDay(dateInLondon(doneAt))}`,
         },
+        ...resultLine,
         {
           type: "button",
           label: "Open task",

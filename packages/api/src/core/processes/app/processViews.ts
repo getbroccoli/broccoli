@@ -60,6 +60,22 @@ export interface StepProgress {
   processName: string;
   subjectEmployeeId: string | null;
   status: RunStatus;
+  /** When it finished or was cancelled. */
+  endedAt: Date | null;
   doneSteps: number;
   totalSteps: number;
+  /** Whether this task's step gives the run its outcome. */
+  decidesOutcome: boolean;
+  /** On the outcome step's own task once given; null otherwise. */
+  outcome: RunOutcome | null;
+}
+
+/** A run's outcome as its outcome step's readers see it: the result, labelled as an outcome. */
+export interface RunOutcome {
+  code: string;
+  label: string;
+  comment: string | null;
+  /** Who gave it; null once they are removed. */
+  byEmployeeId: string | null;
+  at: Date;
 }

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import { TASK_RESULT_FORM_SCHEMA, type TaskResultForm } from "../../tasks";
+import type { TaskResultForm } from "../../tasks";
+import { definitionSchema, STEP_JOINS } from "./definitionSchema";
 
 /** The shape of `process_versions.definition` this code reads; a migration moves older shapes on. */
 export const PROCESS_DEFINITION_SCHEMA_VERSION = 1;
@@ -16,11 +17,16 @@ export const ONBOARDING_EXAMPLE = "onboarding_example";
  * for nothing start with the run.
  */
 export interface ProcessDefinition {
-  /** The record a run is about, the trigger's record type. */
+  /** The record a run is about, the trigger's record type; `from_event` when each event names its own. */
   subject: { recordType: string };
   trigger: RecordDateTrigger | EventTrigger;
   steps: ProcessStep[];
+  /** The step whose result is the run's outcome, such as an approval's decision; null for none. */
+  outcome: OutcomeRule | null;
 }
+
+/** The record type of a process whose triggering event names each record's type in its payload. */
+export const FROM_EVENT = "from_event";
 
 /** A definition as stored and written: an `after` entry may be a step key, `after` and `join` missing. */
 export type StoredProcessDefinition = z.input<typeof definitionSchema>;
@@ -33,6 +39,13 @@ export interface ProcessCatalog {
   triggeringEvents: Readonly<Record<string, { recordType: string }>>;
   /** Actions an action step may name, with the schema of their params. */
   actions: Readonly<Record<string, { params: z.ZodType }>>;
+}
+
+/** The step that gives a run its outcome, and how people read each result as an outcome. */
+export interface OutcomeRule {
+  step: string;
+  /** Labels by result code, such as `rejected: "Rejected"`; a code left out reads as its option's label. */
+  labels: Record<string, string>;
 }
 
 /** Starts a run on a date of the subject record, plus an offset, by a daily pass. */
@@ -60,8 +73,6 @@ export type EventTrigger = {
   | { run: "after_commit" }
 );
 
-/** How many of the steps a step waits for must let it start: every one, or any one. */
-export const STEP_JOINS = ["all", "any"] as const;
 export type StepJoin = (typeof STEP_JOINS)[number];
 
 /** What every step has, whatever its kind: its key and the steps it waits for. */
@@ -105,6 +116,14 @@ export interface StepTask {
   due: DayOffset;
   /** What the task asks its assignee to give when they mark it done; copied onto the task. */
   resultForm: TaskResultForm | null;
+  /** Who the task names as having asked for it; nobody when left out. */
+  askedBy?: AskedByRule | null;
+}
+
+/** The employee whose id the trigger event's payload holds in `field`, such as an approval's requester. */
+export interface AskedByRule {
+  kind: "event_employee";
+  field: string;
 }
 
 /** Days before (negative) or after (positive) a date. */
@@ -136,6 +155,7 @@ export function parseProcessDefinition(
   refuseRepeatedStepKeys(parsed.steps);
   refuseUnrunnableWaits(parsed.steps);
   refuseResultsNotOffered(parsed.steps);
+  refuseOutcomeWithoutResult(parsed);
   const triggerOffsets = parsed.trigger.kind === "on_record_date" ? [parsed.trigger.offset] : [];
   for (const offset of [
     ...triggerOffsets,
@@ -193,7 +213,7 @@ function refuseUnregisteredRecord(
   { subject, trigger }: ProcessDefinition,
   { recordTypes }: ProcessCatalog,
 ): void {
-  if (!Object.hasOwn(recordTypes, subject.recordType)) {
+  if (subject.recordType !== FROM_EVENT && !Object.hasOwn(recordTypes, subject.recordType)) {
     throw new Error(`Record type ${subject.recordType} cannot be the subject of a process.`);
   }
   if (
@@ -263,6 +283,16 @@ function refuseResultsNotOffered(steps: readonly ProcessStep[]): void {
   }
 }
 
+/** Refuses an outcome step that is missing or asks for no result. */
+function refuseOutcomeWithoutResult({ outcome, steps }: ProcessDefinition): void {
+  if (!outcome) return;
+  const step = steps.find(({ key }) => key === outcome.step);
+  if (!step) throw new Error(`The outcome names ${outcome.step}, which is not a step.`);
+  if (step.kind !== "task" || !step.task.resultForm) {
+    throw new Error(`Step ${outcome.step} gives the outcome but asks for no result.`);
+  }
+}
+
 /** The steps that wait, directly or through others, for themselves, in definition order. */
 function stepsOnCycle(steps: readonly StepBase[]): string[] {
   const afterOf = new Map(steps.map(({ key, after }) => [key, after.map(({ step }) => step)]));
@@ -291,92 +321,3 @@ function refuseOffsetBeyondLimit({ amount, unit }: DayOffset): void {
 }
 
 const OFFSET_LIMITS = { calendar_days: 366, business_days: 260 } as const;
-
-const offsetSchema = z.object({
-  amount: z.number().int(),
-  unit: z.enum(["calendar_days", "business_days"]),
-});
-
-const assigneeRuleSchema: z.ZodType<AssigneeRule> = z.lazy(() =>
-  z.object({
-    kind: z.enum(["subject", "subjects_manager", "workspace_owner"]),
-    otherwise: assigneeRuleSchema.optional(),
-  }),
-);
-
-const whenFieldSchema = z.string().trim().min(1);
-const whenValuesSchema = z.array(z.string().nullable()).min(1);
-
-const triggerSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("on_record_date"),
-    recordType: z.string().min(1),
-    dateField: z.string().min(1),
-    offset: offsetSchema,
-    maxDaysLate: z.number().int().min(0),
-  }),
-  z.discriminatedUnion("run", [
-    eventTriggerSchema({
-      run: z.literal("in_same_transaction"),
-      faultMode: z.literal("rollback_transaction"),
-    }),
-    // A fault mode is refused rather than dropped: retrying is how an after-commit run handles faults.
-    eventTriggerSchema({ run: z.literal("after_commit"), faultMode: z.never().optional() }),
-  ]),
-]);
-
-function eventTriggerSchema<Shape extends z.ZodRawShape>(runShape: Shape) {
-  return z.object({
-    kind: z.literal("on_event"),
-    event: z.string().min(1),
-    when: z
-      .union([
-        z.object({ field: whenFieldSchema, in: whenValuesSchema }).strict(),
-        z.object({ field: whenFieldSchema, notIn: whenValuesSchema }).strict(),
-      ])
-      .optional(),
-    ...runShape,
-  });
-}
-
-const stepKeySchema = z.string().trim().min(1);
-
-const afterEntrySchema = z.union([
-  stepKeySchema.transform((step): AfterEntry => ({ step, when: null })),
-  z.object({
-    step: stepKeySchema,
-    when: z
-      .object({ result: z.string().min(1) })
-      .nullable()
-      .default(null),
-  }),
-]);
-
-const stepBaseSchema = z.object({
-  key: stepKeySchema,
-  after: z.array(afterEntrySchema).default([]),
-  join: z.enum(STEP_JOINS).default("all"),
-});
-
-const stepSchema = z.discriminatedUnion("kind", [
-  stepBaseSchema.extend({
-    kind: z.literal("task"),
-    task: z.object({
-      assignee: assigneeRuleSchema,
-      title: z.string().trim().min(1),
-      description: z.string().nullable().default(null),
-      due: offsetSchema,
-      resultForm: TASK_RESULT_FORM_SCHEMA.nullable().default(null),
-    }),
-  }),
-  stepBaseSchema.extend({
-    kind: z.literal("action"),
-    action: z.object({ name: z.string().min(1), params: z.unknown().default({}) }),
-  }),
-]);
-
-const definitionSchema = z.object({
-  subject: z.object({ recordType: z.string().min(1) }),
-  trigger: triggerSchema,
-  steps: z.array(stepSchema).min(1),
-});

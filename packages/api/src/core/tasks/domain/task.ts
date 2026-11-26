@@ -100,8 +100,11 @@ export class Task implements Readonly<TaskFields> {
     return this.with({ status: "cancelled", cancelledAt: now, cancelReason: reason });
   }
 
-  /** Only the person who asked deletes it, while it is open; a feature's task has nobody who asked. */
+  /** Only the person who asked deletes a to-do, while it is open; a feature's task stays with its feature. */
   requireDeletableBy(employeeId: string): void {
+    if (this.type !== MANUAL_TO_DO) {
+      throw new ApplicationError("FORBIDDEN", "A process's task cannot be deleted.");
+    }
     if (this.askedByEmployeeId !== employeeId) {
       throw new ApplicationError("FORBIDDEN", "Only the person who asked can delete this task.");
     }

@@ -159,16 +159,19 @@ async function startRunsOfJob(
     );
     return;
   }
-  const process = { ...current, activeVersion: (await runs.findVersion(versionId))! };
+  const [version] = await runs.findVersions([versionId]);
+  const process = { ...current, activeVersion: version! };
   const definition = dependencies.definitionOf(process.activeVersion);
   const starts = matchEventStarts(
     [{ processId, trigger: definition.trigger }],
     [event],
     dependencies.triggeringEvents,
   );
+  // One event's records share its record type.
+  const recordType = starts[0]?.recordType ?? definition.subject.recordType;
   const taken = await runs.findRecordsWithStartKeys(
     processId,
-    definition.subject.recordType,
+    recordType,
     starts.map((start) => ({ recordId: start.recordId, startKey: startKeyOf(start) })),
   );
   const fresh = starts.filter((start) => {
@@ -180,27 +183,42 @@ async function startRunsOfJob(
     await startProcessRuns(dependencies, tx, { process, definition, starts: fresh });
 }
 
-/**
- * Starts one process's runs in waves, each record at most once a wave, so a second event for a
- * record finds the first one's run when it is still in progress.
- */
+/** Starts one process's runs, for each record type its events name. */
 async function startProcessRuns(
+  dependencies: EventRunDependencies,
+  tx: Tx,
+  { process, definition, starts }: ProcessStarts,
+): Promise<void> {
+  for (const recordType of new Set(starts.map((start) => start.recordType))) {
+    const ofType = starts.filter((start) => start.recordType === recordType);
+    await startRunsOfType(dependencies, tx, recordType, { process, definition, starts: ofType });
+  }
+}
+
+interface ProcessStarts {
+  process: StoredProcess;
+  definition: ProcessDefinition;
+  starts: readonly Start[];
+}
+
+/**
+ * Starts one process's runs on records of one type in waves, each record at most once a wave, so a
+ * second event for a record finds the first one's run when it is still in progress.
+ */
+async function startRunsOfType(
   { logger, starter, today, triggeringEvents }: EventRunDependencies,
   tx: Tx,
-  {
-    process,
-    definition,
-    starts,
-  }: { process: StoredProcess; definition: ProcessDefinition; starts: readonly Start[] },
+  recordType: string,
+  { process, definition, starts }: ProcessStarts,
 ): Promise<void> {
-  const { recordType } = definition.subject;
   const subjects = await starter.readRecordSubjects(
     tx,
     recordType,
     starts.map(({ recordId }) => recordId),
   );
   const runs = processRepository(tx);
-  for (const wave of wavesOf(starts)) {
+  // In record order, so changes starting runs on the same records concurrently lock them alike.
+  for (const wave of wavesOf(starts).map((records) => records.toSorted(byRecordId))) {
     const inProgress = await runs.findRecordsWithRunInProgress(
       process.id,
       recordType,
@@ -292,4 +310,8 @@ function logSkip(
     { processKey: process.key, eventId: event.id, eventType: event.type, recordId, reason },
     "Process run not started for an event",
   );
+}
+
+function byRecordId(left: Start, right: Start): number {
+  return left.recordId < right.recordId ? -1 : left.recordId > right.recordId ? 1 : 0;
 }

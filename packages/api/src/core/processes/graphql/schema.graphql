@@ -1,4 +1,4 @@
-# Processes have no API yet; their runs' changes to tasks show in the tasks' history with this cause.
+# A process run's changes to tasks show in the tasks' history with this cause.
 enum RecordChangeCauseKind {
   "A process run made the change on its own, such as creating or cancelling a step's task; the ref is the run."
   PROCESS_RUN
@@ -9,13 +9,38 @@ extend enum TaskType {
   PROCESS_STEP_TO_DO
 }
 
-"The process step that created a task, by key: `welcome_new_starter` and `welcome_one_to_one`."
-type TaskProcessSource {
-  processKey: String!
-  stepKey: String!
+extend type Task {
+  "The run of the process that created it, as its readers may see it; null for a task no process created."
+  processRun: TaskProcessRun
 }
 
-extend type Task {
-  "The process step that created it; null for a task a person asked for."
-  processSource: TaskProcessSource
+"How far a task's process run is, never its other steps."
+type TaskProcessRun {
+  processName: String!
+  status: ProcessRunStatus!
+  "When it finished or was cancelled."
+  endedAt: DateTime
+  doneSteps: Int!
+  totalSteps: Int!
+  "Whether this task's step gives the run its outcome, such as an approval's decision."
+  decidesOutcome: Boolean!
+  "The run's outcome, on the task that gave it; null until given."
+  outcome: ProcessRunOutcome
+}
+
+enum ProcessRunStatus {
+  "Its steps are still going."
+  IN_PROGRESS
+  "Every step is done, skipped or not reached."
+  FINISHED
+  "It stopped before its end."
+  CANCELLED
+}
+
+"The result of a run's outcome step, labelled as an outcome (Approved, Rejected)."
+type ProcessRunOutcome {
+  code: String!
+  label: String!
+  comment: String
+  decidedAt: DateTime!
 }

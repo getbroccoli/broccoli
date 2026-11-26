@@ -673,10 +673,15 @@ enum RuleSource {
   THEIR_OWN
 }
 
+extend type ProcessRunOutcome {
+  "Who gave it; null once that person is removed."
+  decidedBy: Employee
+}
+
 extend type Task {
   "Who holds it: the one person who can do it."
   assignee: Employee!
-  "Who asked for it; null when a feature, such as a process step, created it."
+  "Who asked for it; a process step may name one, such as an approval's requester, or none. Asking lets a person delete only an open to-do they asked for."
   askedBy: Employee
   "Who it is about, when it is about someone; being its subject shows nobody the task."
   subject: Employee
