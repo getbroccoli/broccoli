@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { readFileSync } from "node:fs";
 
 import type { AgentActivityOutcome, AgentActivityService } from "../../../core/agentAccess";
 import { ApplicationError } from "../../../core/applicationError";
@@ -6,11 +7,15 @@ import type { Logger } from "../../../core/logger";
 import type { SecurityContext } from "../../../core/security";
 import type { McpAgentToolService } from "../app";
 import {
+  APPROVAL_CARD_URI,
+  DECIDE_APPROVAL,
   FIND_PEOPLE,
   LIST_MY_TASKS,
+  MCP_APP_MIME_TYPE,
   MY_LEAVE_BALANCE,
   PREVIEW_LEAVE,
   REQUEST_LEAVE,
+  SHOW_APPROVAL,
   WHO_AM_I,
 } from "./mcpAgentToolDefinitions";
 
@@ -23,6 +28,9 @@ export interface AgentCaller {
   origin: string;
 }
 
+/** The card a chat app shows for a task to decide; read once, shipped next to this file. */
+const APPROVAL_CARD_HTML = readFileSync(new URL("./approvalCard.html", import.meta.url), "utf8");
+
 /** Adds the tools to `server`, each acting as the person behind `caller` and recording its call. */
 export function registerMcpAgentTools(
   server: McpServer,
@@ -31,7 +39,10 @@ export function registerMcpAgentTools(
 ): void {
   const { ctx } = caller;
   const { tools } = dependencies;
-  const run = <T extends object>(call: ToolCall<T>) => resultOf(call, caller, dependencies);
+  const run: Run = Object.assign(
+    <T extends object>(call: ToolCall<T>) => resultOf(call, caller, dependencies),
+    { tools },
+  );
   server.registerTool("who_am_i", WHO_AM_I, () =>
     run({ tool: "who_am_i", answer: () => tools.whoAmI(ctx) }),
   );
@@ -59,6 +70,37 @@ export function registerMcpAgentTools(
         found.needsYou.length + found.waitingOnOthers.length + found.resolvedRecently.length,
     }),
   );
+  registerApprovalTools(server, caller, run);
+}
+
+/**
+ * The approval card and its two tools: the model shows the card, and only the card decides, with
+ * the one-time token Broccoli hands it beside the model's view.
+ */
+function registerApprovalTools(server: McpServer, caller: AgentCaller, run: Run): void {
+  const { ctx, origin } = caller;
+  const { tools } = run;
+  server.registerResource(
+    "approval-card",
+    APPROVAL_CARD_URI,
+    { title: "Approval card", mimeType: MCP_APP_MIME_TYPE },
+    () => ({
+      contents: [{ uri: APPROVAL_CARD_URI, mimeType: MCP_APP_MIME_TYPE, text: APPROVAL_CARD_HTML }],
+    }),
+  );
+  server.registerTool("show_approval", SHOW_APPROVAL, ({ taskId }) =>
+    run({
+      tool: "show_approval",
+      answer: () => tools.showApproval(ctx, { taskId, origin }),
+      split: ({ card, token, expiresAt }) => ({
+        shown: card,
+        meta: { "broccoli/cardToken": token, "broccoli/expiresAt": expiresAt },
+      }),
+    }),
+  );
+  server.registerTool("decide_approval", DECIDE_APPROVAL, (input) =>
+    run({ tool: "decide_approval", answer: () => tools.decideApproval(ctx, input) }),
+  );
 }
 
 /** One tool call: its answer, and how many records it returned for tools that count. */
@@ -66,14 +108,21 @@ interface ToolCall<T> {
   tool: string;
   answer: () => Promise<T>;
   countOf?: (value: T) => number;
+  /** What the model reads, and what only the chat app's card gets in `_meta`. */
+  split?: (value: T) => { shown: object; meta: Record<string, unknown> };
 }
+
+/** Runs one tool call as the caller, with the tools it answers from. */
+type Run = (<T extends object>(call: ToolCall<T>) => ReturnType<typeof resultOf<T>>) & {
+  tools: McpAgentToolService;
+};
 
 /**
  * The tool's answer; a refusal the person may read, or a failure that hides its cause. Records how
  * it ended as the person's agent activity.
  */
 async function resultOf<T extends object>(
-  { tool, answer, countOf }: ToolCall<T>,
+  { tool, answer, countOf, split }: ToolCall<T>,
   { ctx, clientId }: AgentCaller,
   { activity, logger }: { activity: AgentActivityService; logger: Logger },
 ) {
@@ -83,9 +132,11 @@ async function resultOf<T extends object>(
   try {
     const value = await answer();
     await record("answered_by_broccoli", countOf ? countOf(value) : null);
+    const { shown, meta } = split ? split(value) : { shown: value, meta: undefined };
     return {
-      content: [{ type: "text" as const, text: JSON.stringify(value) }],
-      structuredContent: value as Record<string, unknown>,
+      content: [{ type: "text" as const, text: JSON.stringify(shown) }],
+      structuredContent: shown as Record<string, unknown>,
+      ...(meta ? { _meta: meta } : {}),
     };
   } catch (error) {
     if (error instanceof ApplicationError) {

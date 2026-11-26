@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Broccoli approval</title>
+    <style>
+      :root {
+        --bg: #ffffff;
+        --fg: #1f1d1a;
+        --muted: #6b6760;
+        --line: #e4e1da;
+        --soft: #f5f3ee;
+        --brand: #3d7a4f;
+        --brand-fg: #ffffff;
+        --danger: #b3261e;
+        color-scheme: light;
+      }
+      :root[data-theme="dark"] {
+        --bg: #1c1b19;
+        --fg: #f2efe9;
+        --muted: #a8a39a;
+        --line: #34322e;
+        --soft: #262522;
+        --brand: #6fbf86;
+        --brand-fg: #10210f;
+        --danger: #f2b8b5;
+        color-scheme: dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --bg: #1c1b19;
+          --fg: #f2efe9;
+          --muted: #a8a39a;
+          --line: #34322e;
+          --soft: #262522;
+          --brand: #6fbf86;
+          --brand-fg: #10210f;
+          --danger: #f2b8b5;
+          color-scheme: dark;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          14px/1.45 system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+      }
+      h1 {
+        margin: 0 0 2px;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .meta,
+      .note {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .facts {
+        margin: 12px 0;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: var(--soft);
+        white-space: pre-wrap;
+      }
+      label {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      textarea {
+        width: 100%;
+        min-height: 56px;
+        padding: 8px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        font: inherit;
+        resize: vertical;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      button {
+        flex: 1 1 120px;
+        min-height: 36px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.primary {
+        border-color: var(--brand);
+        background: var(--brand);
+        color: var(--brand-fg);
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+      button:focus-visible,
+      textarea:focus-visible,
+      a:focus-visible {
+        outline: 2px solid var(--brand);
+        outline-offset: 2px;
+      }
+      a {
+        color: var(--brand);
+      }
+      .outcome {
+        margin-top: 12px;
+        font-weight: 600;
+      }
+      .error {
+        margin-top: 8px;
+        color: var(--danger);
+      }
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <main aria-live="polite">
+      <p id="waiting" class="note">Loading…</p>
+      <section id="card" hidden>
+        <h1 id="title"></h1>
+        <p id="meta" class="meta"></p>
+        <div id="facts" class="facts"></div>
+        <div id="decide">
+          <label for="comment" id="comment-label">Comment</label>
+          <textarea id="comment" maxlength="2000"></textarea>
+          <div id="actions" class="actions"></div>
+        </div>
+        <p id="no-buttons" class="note" hidden>Decide it in Broccoli.</p>
+        <p id="outcome" class="outcome" hidden></p>
+        <p id="error" class="error" role="alert" hidden></p>
+        <p class="note"><a id="open" href="#">Open in Broccoli ↗</a></p>
+      </section>
+    </main>
+    <script>
+      // The MCP Apps bridge: JSON-RPC over postMessage with the chat app that shows this card.
+      const PROTOCOL_VERSION = "2026-01-26";
+      const pending = new Map();
+      let nextId = 1;
+      let shown = null;
+
+      const $ = (id) => document.getElementById(id);
+
+      function send(message) {
+        window.parent.postMessage({ jsonrpc: "2.0", ...message }, "*");
+      }
+
+      function request(method, params) {
+        const id = nextId++;
+        send({ id, method, params });
+        return new Promise((resolve, reject) => pending.set(id, { resolve, reject }));
+      }
+
+      function setTheme(context) {
+        const theme = context && context.theme;
+        if (theme === "light" || theme === "dark") {
+          document.documentElement.dataset.theme = theme;
+        }
+      }
+
+      function reportSize() {
+        send({
+          method: "ui/notifications/size-changed",
+          params: { height: document.documentElement.scrollHeight },
+        });
+      }
+
+      function textOf(result) {
+        const text = (result.content || []).find((part) => part.type === "text");
+        return text ? text.text : "Broccoli couldn't answer. Open the task in Broccoli.";
+      }
+
+      // Shows the task the tool result names; buttons only when the card's token arrived.
+      function show(result) {
+        const card = result.structuredContent;
+        if (!card || !card.taskId) return;
+        const token = result._meta && result._meta["broccoli/cardToken"];
+        shown = { card, token };
+        $("title").textContent = card.title;
+        $("meta").textContent = [
+          card.askedBy && "Asked by " + card.askedBy,
+          card.dueOn && "due " + card.dueOn,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+        $("facts").textContent = card.description || "";
+        $("facts").hidden = !card.description;
+        const actions = $("actions");
+        actions.replaceChildren();
+        // The form's first option, such as Approve, goes last as the main button.
+        [...card.options].reverse().forEach((option, index, all) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = option.label;
+          if (index === all.length - 1) button.className = "primary";
+          button.addEventListener("click", () => decide(option));
+          actions.append(button);
+        });
+        const needsComment = card.options.some((option) => option.commentRequired);
+        $("comment-label").textContent = needsComment
+          ? "Comment (needed to " +
+            card.options
+              .filter((option) => option.commentRequired)
+              .map((option) => option.label.toLowerCase())
+              .join(" or ") +
+            ")"
+          : "Comment (optional)";
+        $("decide").hidden = !token;
+        $("no-buttons").hidden = Boolean(token);
+        $("waiting").hidden = true;
+        $("card").hidden = false;
+        reportSize();
+      }
+
+      async function decide(option) {
+        const comment = $("comment").value.trim();
+        $("error").hidden = true;
+        if (option.commentRequired && !comment) {
+          $("error").textContent = "Add a comment to " + option.label.toLowerCase() + ".";
+          $("error").hidden = false;
+          $("comment").focus();
+          reportSize();
+          return;
+        }
+        const buttons = [...$("actions").querySelectorAll("button")];
+        buttons.forEach((button) => (button.disabled = true));
+        try {
+          const result = await request("tools/call", {
+            name: "decide_approval",
+            arguments: {
+              taskId: shown.card.taskId,
+              cardToken: shown.token,
+              resultCode: option.code,
+              ...(comment ? { comment } : {}),
+            },
+          });
+          if (result.isError) throw new Error(textOf(result));
+          const decided = result.structuredContent.result;
+          $("decide").hidden = true;
+          $("outcome").textContent = decided.comment
+            ? decided.label + " — " + decided.comment
+            : decided.label;
+          $("outcome").hidden = false;
+        } catch (error) {
+          $("error").textContent =
+            (error && error.message) || "Broccoli couldn't save it. Open the task in Broccoli.";
+          $("error").hidden = false;
+          buttons.forEach((button) => (button.disabled = false));
+        }
+        reportSize();
+      }
+
+      window.addEventListener("message", (event) => {
+        if (event.source !== window.parent) return;
+        const message = event.data;
+        if (!message || message.jsonrpc !== "2.0") return;
+        if (message.id !== undefined && !message.method && pending.has(message.id)) {
+          const { resolve, reject } = pending.get(message.id);
+          pending.delete(message.id);
+          if (message.error) reject(new Error(message.error.message));
+          else resolve(message.result);
+          return;
+        }
+        if (message.method === "ui/notifications/tool-result") show(message.params);
+        if (message.method === "ui/notifications/host-context-changed") setTheme(message.params);
+      });
+
+      $("open").addEventListener("click", (event) => {
+        event.preventDefault();
+        if (shown) request("ui/open-link", { url: shown.card.link }).catch(() => {});
+      });
+
+      request("ui/initialize", {
+        appInfo: { name: "Broccoli approval card", version: "1" },
+        appCapabilities: {},
+        protocolVersion: PROTOCOL_VERSION,
+      }).then((result) => {
+        setTheme(result && result.hostContext);
+        send({ method: "ui/notifications/initialized", params: {} });
+      });
+    </script>
+  </body>
+</html>

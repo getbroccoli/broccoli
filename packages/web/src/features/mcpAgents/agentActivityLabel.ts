@@ -21,6 +21,10 @@ export function agentActivityLabel({ tool, resultCount }: AgentCall): string {
       return resultCount === null || resultCount === undefined
         ? t("mcpAgents.activity.listMyTasks")
         : t("mcpAgents.activity.listMyTasksFound", { count: String(resultCount) });
+    case "show_approval":
+      return t("mcpAgents.activity.showApproval");
+    case "decide_approval":
+      return t("mcpAgents.activity.decideApproval");
     default:
       return t("mcpAgents.activity.otherTool", { tool });
   }

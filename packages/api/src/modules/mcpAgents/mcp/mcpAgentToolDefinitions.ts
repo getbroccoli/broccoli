@@ -8,6 +8,8 @@ import type { AgentScope } from "../../../core/agentAccess";
 const MAX_SEARCH_LENGTH = 100;
 /** As long as the booking dialog's note. */
 const MAX_NOTE_LENGTH = 1_000;
+/** As long as a task result's comment. */
+const MAX_COMMENT_LENGTH = 2_000;
 
 /** Each tool an agent may call, with the scope its token must hold; nothing else is offered. */
 export const MCP_AGENT_TOOLS: Record<string, { scope: AgentScope }> = {
@@ -17,7 +19,15 @@ export const MCP_AGENT_TOOLS: Record<string, { scope: AgentScope }> = {
   preview_leave: { scope: "broccoli:read" },
   request_leave: { scope: "broccoli:write" },
   list_my_tasks: { scope: "broccoli:read" },
+  show_approval: { scope: "broccoli:write" },
+  decide_approval: { scope: "broccoli:write" },
 };
+
+/** Where the approval card lives among the MCP server's resources. */
+export const APPROVAL_CARD_URI = "ui://broccoli/approval-card";
+
+/** The MCP Apps type of a card a chat app shows. */
+export const MCP_APP_MIME_TYPE = "text/html;profile=mcp-app";
 
 const DATE = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "A date as YYYY-MM-DD");
 
@@ -163,7 +173,7 @@ export const REQUEST_LEAVE = {
 export const LIST_MY_TASKS = {
   title: "List my tasks",
   description:
-    "The person's tasks: what needs them, what waits on others, and what was resolved recently, each with its link in Broccoli. You can't approve, reject or complete tasks: send the person to the link.",
+    "The person's tasks: what needs them, what waits on others, and what was resolved recently, each with its link in Broccoli. To decide one, show its card with show_approval; you can't decide it yourself.",
   outputSchema: {
     needsYou: z.array(AGENT_TASK),
     waitingOnOthers: z.array(AGENT_TASK),
@@ -171,4 +181,43 @@ export const LIST_MY_TASKS = {
     reason: z.string().nullable(),
   },
   annotations: { readOnlyHint: true },
+};
+
+export const SHOW_APPROVAL = {
+  title: "Show an approval",
+  description:
+    "Shows the person a card for one of their tasks to decide, such as an approval, with its facts and its buttons. The person decides by pressing a button; you can't. Where no card shows, give them the link.",
+  inputSchema: { taskId: z.string().describe("From list_my_tasks, where decidable is true.") },
+  outputSchema: {
+    taskId: z.string(),
+    title: z.string(),
+    description: z.string().nullable(),
+    askedBy: z.string().nullable(),
+    dueOn: z.string().nullable(),
+    options: z.array(
+      z.object({ code: z.string(), label: z.string(), commentRequired: z.boolean() }),
+    ),
+    link: z.string(),
+  },
+  annotations: { readOnlyHint: true },
+  _meta: { ui: { resourceUri: APPROVAL_CARD_URI } },
+};
+
+export const DECIDE_APPROVAL = {
+  title: "Decide an approval",
+  description:
+    "Only the approval card calls this, when the person presses its button; it needs the card's token.",
+  inputSchema: {
+    taskId: z.string(),
+    cardToken: z.string(),
+    resultCode: z.string(),
+    comment: z.string().max(MAX_COMMENT_LENGTH).optional(),
+  },
+  outputSchema: {
+    taskId: z.string(),
+    status: z.enum(["DONE"]),
+    result: z.object({ label: z.string(), comment: z.string().nullable() }),
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  _meta: { ui: { visibility: ["app"] } },
 };

@@ -3,7 +3,6 @@ export {
   createAgentActivityService,
   createAgentConnectionService,
   deleteOldAgentActivityJob,
-  requireAgentWriteScope,
 } from "./app";
 export { agentAccessPlugins, agentSecurityResolver } from "./betterAuth";
 export { agentResourceMetadataOf } from "./domain";

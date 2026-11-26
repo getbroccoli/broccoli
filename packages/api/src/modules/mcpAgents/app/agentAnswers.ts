@@ -83,6 +83,37 @@ export interface LeaveRequestResult {
   totalDays: number;
 }
 
+/** A task to decide on a card: its facts, its options and the card's one-time token. */
+export interface ApprovalCardAnswer {
+  card: ApprovalCard;
+  /** For the card only; never shown to the model. */
+  token: string;
+  expiresAt: string;
+}
+
+export interface ApprovalCard {
+  taskId: string;
+  title: string;
+  description: string | null;
+  askedBy: string | null;
+  dueOn: string | null;
+  options: { code: string; label: string; commentRequired: boolean }[];
+  link: string;
+}
+
+export interface ApprovalDecisionInput {
+  taskId: string;
+  cardToken: string;
+  resultCode: string;
+  comment?: string;
+}
+
+export interface DecidedTask {
+  taskId: string;
+  status: "DONE";
+  result: { label: string; comment: string | null };
+}
+
 export interface AgentTasks {
   needsYou: AgentTask[];
   waitingOnOthers: AgentTask[];
@@ -207,3 +238,35 @@ const REQUEST_OUTCOMES = {
   // An approval with nobody to decide it ends before the commit, cancelling the request.
   cancelled: "ENDED_WITH_NO_DECISION",
 } as const;
+
+/** The card for a task with a result form, which the caller already checked. */
+export function approvalCardOf(
+  task: Task,
+  { names, origin }: { names: ReadonlyMap<string, string>; origin: string },
+): ApprovalCard {
+  return {
+    taskId: task.id,
+    title: task.title,
+    description: task.description,
+    askedBy: task.askedByEmployeeId ? (names.get(task.askedByEmployeeId) ?? null) : null,
+    dueOn: task.dueDate,
+    options: task.resultForm!.options.map(({ code, label, commentRequired }) => ({
+      code,
+      label,
+      commentRequired,
+    })),
+    link: `${origin}/tasks/${task.id}`,
+  };
+}
+
+/** A task an agent's card decided, as the card shows it. */
+export function decidedTaskOf(task: Task): DecidedTask {
+  return {
+    taskId: task.id,
+    status: "DONE",
+    result: {
+      label: resultLabel(task.resultForm!, task.result!.code),
+      comment: task.result!.comment,
+    },
+  };
+}
