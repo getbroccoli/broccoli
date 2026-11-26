@@ -12,7 +12,7 @@ import {
   user,
 } from "../../auth";
 import { type Orm, ormOf, type Tx } from "../../db";
-import type { AgentConnectionEnding, AgentScope } from "../domain";
+import { type AgentConnectionEnding, AGENT_WRITE_SCOPE } from "../domain";
 import { agentConnectionEndings } from "./agentConnectionEndingsTable";
 import { agentInvitationClosings } from "./agentInvitationClosingsTable";
 
@@ -20,9 +20,6 @@ import { agentInvitationClosings } from "./agentInvitationClosingsTable";
  * A person's agent connections, kept in the OAuth provider's tables: a consent per client, and
  * the tokens issued under it.
  */
-/** A connection holding it may change things. */
-const WRITE_SCOPE: AgentScope = "broccoli:write";
-
 export interface AgentConnectionRepository {
   /** The person's most recent connection, or null without one. */
   findConnection(userId: string): Promise<StoredAgentConnection | null>;
@@ -114,7 +111,7 @@ export function agentConnectionRepository(db: Orm | Tx): AgentConnectionReposito
         return null;
       }
       const { scopes, ...connection } = row;
-      return { ...connection, canChangeThings: scopes.includes(WRITE_SCOPE) };
+      return { ...connection, canChangeThings: scopes.includes(AGENT_WRITE_SCOPE) };
     },
     async findConnectionOf(userId, clientId) {
       const [row] = await orm()

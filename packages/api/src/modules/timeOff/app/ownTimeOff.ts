@@ -1,4 +1,4 @@
-import type { AgentScope } from "../../../core/agentAccess";
+import { requireAgentWriteScope } from "../../../core/agentAccess";
 import { ApplicationError } from "../../../core/applicationError";
 import type { Orm } from "../../../core/db";
 import { createWriteModeService } from "../../../core/records";
@@ -13,9 +13,6 @@ export type OwnTimeOffMode = "booked_straight_away" | "requested_with_approval" 
 export type OwnTimeOffInput = Omit<BookingInput, "employeeId" | "expectedDays"> & {
   expectedDays: number;
 };
-
-/** Changing anything needs this scope when a connected agent calls. */
-const WRITE_SCOPE: AgentScope = "broccoli:write";
 
 const writeModes = createWriteModeService();
 
@@ -57,9 +54,7 @@ export async function saveOwnTimeOff(
   if (!employeeId) {
     throw new ApplicationError("FORBIDDEN", "You have no employee record in Broccoli.");
   }
-  if (ctx.agentConnection && !ctx.agentConnection.scopes.has(WRITE_SCOPE)) {
-    throw new ApplicationError("FORBIDDEN", "Allow your agent to change things in Broccoli first.");
-  }
+  requireAgentWriteScope(ctx);
   const booking = { ...input, employeeId };
   const modes = await ownTimeOffModes(orm, ctx, [input.timeOffTypeId]);
   return modes.get(input.timeOffTypeId) === "booked_straight_away"
