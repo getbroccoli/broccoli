@@ -111,6 +111,10 @@ Each type says who approves a person's own time off of it (`time_off_types.appro
 { "name": "Sickness", "approval_process_key": null }
 ```
 
+## Saving one's own time off
+
+`TimeOffRequestService.saveOwnTimeOff` saves the caller's own time off the way `ownTimeOffModes` says for its type: `booked_straight_away` (a direct caller, or a type nobody approves) through `bookTimeOff`, `requested_with_approval` through `requestTimeOff`, `refused` otherwise. It takes the total cost the person was shown (`expectedDays`), and saving refuses another one (`CONFLICT`) inside the transaction, after the days are costed again; the preview ignores it. A connected agent's call without write scope is refused, and its history line names the person through their agent. A person's own agent uses it to ask for leave.
+
 ## Requesting time off
 
 `TimeOffRequestService.requestTimeOff` saves the caller's own time off as `requested` when their write mode for it is `request` (employees, for themselves; whoever books it straight away is refused, as is anyone else). Its type must name an approval process (`approval_process_key`), and the booking rules apply as for `bookTimeOff`. It writes no ledger lines: its days are held, so they clash with any other time off, the preview's "remaining before" takes them off, and `Employee.timeOffTypes` shows them as `waiting`. In the same transaction it asks the type's approval process (approvals) for the record type `time_off`; the approver's task reads the type, the dates and part days, the cost, the balance free now and after, and the note.
