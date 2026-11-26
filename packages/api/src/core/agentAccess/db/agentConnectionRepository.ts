@@ -116,7 +116,7 @@ export function agentConnectionRepository(db: Orm | Tx): AgentConnectionReposito
       return { ...connection, canChangeThings: scopes.includes(AGENT_WRITE_SCOPE) };
     },
     async findConnectionOf(userId, clientId) {
-      const [row] = await orm()
+      const rows = await orm()
         .select({
           id: oauthConsent.id,
           email: user.email,
@@ -125,8 +125,17 @@ export function agentConnectionRepository(db: Orm | Tx): AgentConnectionReposito
         })
         .from(oauthConsent)
         .innerJoin(user, eq(user.id, oauthConsent.userId))
-        .where(and(eq(oauthConsent.userId, userId), eq(oauthConsent.clientId, clientId)));
-      return row ?? null;
+        .where(and(eq(oauthConsent.userId, userId), eq(oauthConsent.clientId, clientId)))
+        .orderBy(desc(oauthConsent.createdAt));
+      const [newest] = rows;
+      if (!newest) {
+        return null;
+      }
+      // Concurrent first Allows can leave two consents; only what every one allows counts.
+      const scopes = newest.scopes.filter((scope) =>
+        rows.every((row) => row.scopes.includes(scope)),
+      );
+      return { ...newest, scopes };
     },
     async lockPerson(userId) {
       await orm().select({ id: user.id }).from(user).where(eq(user.id, userId)).for("update");

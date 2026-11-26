@@ -78,7 +78,7 @@ export interface LeavePreview {
 
 export interface LeaveRequestResult {
   /** `ENDED_WITH_NO_DECISION` when nobody could approve it, so it ended as it was saved. */
-  outcome: "WAITING_FOR_APPROVAL" | "BOOKED" | "ENDED_WITH_NO_DECISION";
+  outcome: "WAITING_FOR_APPROVAL" | "BOOKED" | "ENDED_WITH_NO_DECISION" | "REJECTED_BY_APPROVER";
   timeOffId: string;
   totalDays: number;
 }
@@ -192,11 +192,18 @@ export function agentTaskOf(
   };
 }
 
-/** What saving one's own time off ended in, from the status it was saved with. */
-export function requestOutcomeOf(status: string): LeaveRequestResult["outcome"] {
-  if (status === "approved") {
-    return "BOOKED";
-  }
-  // An approval with nobody to decide it ends before the commit, cancelling the request.
-  return status === "cancelled" ? "ENDED_WITH_NO_DECISION" : "WAITING_FOR_APPROVAL";
+/** What saving one's own time off ended in, from where it stood just after the save. */
+export function requestOutcomeOf(
+  status: "requested" | "approved" | "rejected" | "cancelled",
+): LeaveRequestResult["outcome"] {
+  return REQUEST_OUTCOMES[status];
 }
+
+const REQUEST_OUTCOMES = {
+  requested: "WAITING_FOR_APPROVAL",
+  approved: "BOOKED",
+  // Decided between the save and its read.
+  rejected: "REJECTED_BY_APPROVER",
+  // An approval with nobody to decide it ends before the commit, cancelling the request.
+  cancelled: "ENDED_WITH_NO_DECISION",
+} as const;

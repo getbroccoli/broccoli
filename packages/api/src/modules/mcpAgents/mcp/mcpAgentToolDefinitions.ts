@@ -148,7 +148,12 @@ export const REQUEST_LEAVE = {
     expectedDays: z.number().describe("The preview's totalDays the person agreed to."),
   },
   outputSchema: {
-    outcome: z.enum(["WAITING_FOR_APPROVAL", "BOOKED", "ENDED_WITH_NO_DECISION"]),
+    outcome: z.enum([
+      "WAITING_FOR_APPROVAL",
+      "BOOKED",
+      "ENDED_WITH_NO_DECISION",
+      "REJECTED_BY_APPROVER",
+    ]),
     timeOffId: z.string(),
     totalDays: z.number(),
   },
