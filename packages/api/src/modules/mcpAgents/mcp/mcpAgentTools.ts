@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { readFileSync } from "node:fs";
 
 import type { AgentActivityOutcome, AgentActivityService } from "../../../core/agentAccess";
-import { ApplicationError } from "../../../core/applicationError";
+import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import type { Logger } from "../../../core/logger";
 import type { SecurityContext } from "../../../core/security";
 import type { McpAgentToolService } from "../app";
@@ -148,12 +148,25 @@ async function resultOf<T extends object>(
       error instanceof ApplicationError
         ? refusalText(error)
         : "Broccoli could not answer; try again.";
-    return { content: [{ type: "text" as const, text: message }], isError: true };
+    // The code is for the approval card, which re-offers its buttons only after invalid input.
+    const code = error instanceof ApplicationError ? error.code : "INTERNAL";
+    return {
+      content: [{ type: "text" as const, text: message }],
+      isError: true,
+      _meta: { "broccoli/errorCode": code },
+    };
   }
 }
 
-/** A refusal's message with the fields and codes of invalid input, so the agent can explain it. */
+/**
+ * A refusal's message; the generic invalid-input one gains its fields and codes, so the agent can
+ * explain it. A specific message, which the approval card shows as it is, stays alone.
+ */
 function refusalText({ message, fieldErrors }: ApplicationError): string {
-  const fields = fieldErrors.map(({ field, code }) => `${field}: ${code}`).join("; ");
-  return fields ? `${message} ${fields}` : message;
+  if (message !== GENERIC_INVALID_INPUT) {
+    return message;
+  }
+  return `${message} ${fieldErrors.map(({ field, code }) => `${field}: ${code}`).join("; ")}`;
 }
+
+const GENERIC_INVALID_INPUT = invalidInput([]).message;

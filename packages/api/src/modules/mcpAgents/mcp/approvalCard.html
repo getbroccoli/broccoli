@@ -164,6 +164,8 @@
       const pending = new Map();
       let nextId = 1;
       let shown = null;
+      let host = {};
+      let expiry = null;
 
       const $ = (id) => document.getElementById(id);
 
@@ -187,7 +189,7 @@
       function reportSize() {
         send({
           method: "ui/notifications/size-changed",
-          params: { height: document.documentElement.scrollHeight },
+          params: { height: Math.ceil(document.body.getBoundingClientRect().height) },
         });
       }
 
@@ -199,6 +201,12 @@
           month: "short",
           timeZone: "UTC",
         });
+      }
+
+      function refusalOf(result) {
+        const refusal = new Error(textOf(result));
+        refusal.correctable = (result._meta || {})["broccoli/errorCode"] === "INVALID_INPUT";
+        return refusal;
       }
 
       function textOf(result) {
@@ -245,12 +253,17 @@
             ")"
           : "Comment (optional)";
         $("open").href = card.link;
-        $("decide").hidden = !token;
-        $("no-buttons").hidden = Boolean(token);
+        // Buttons only where they can work: the token arrived and the chat app passes tool calls on.
+        const canDecide = Boolean(token) && Boolean(host.serverTools);
+        $("decide").hidden = !canDecide;
+        $("no-buttons").hidden = canDecide;
+        if (!host.openLinks) showAddress();
         $("waiting").hidden = true;
         $("card").hidden = false;
         const expiresAt = result._meta && Date.parse(result._meta["broccoli/expiresAt"]);
-        if (token && expiresAt) setTimeout(expire, Math.max(0, expiresAt - Date.now()));
+        if (canDecide && expiresAt) {
+          expiry = setTimeout(expire, Math.max(0, expiresAt - Date.now()));
+        }
       }
 
       // Without the chat app's help, or once refused, the card says why and keeps no live buttons.
@@ -258,6 +271,11 @@
         $("waiting").hidden = true;
         $("problem").textContent = message;
         $("problem").hidden = false;
+      }
+
+      function showAddress() {
+        $("address").textContent = shown.card.link;
+        $("address").hidden = false;
       }
 
       function expire() {
@@ -271,13 +289,15 @@
         const comment = $("comment").value.trim();
         $("error").hidden = true;
         if (option.commentRequired && !comment) {
-          $("error").textContent = "Add a comment to " + option.label.toLowerCase() + ".";
+          $("error").textContent = "Add a comment before choosing “" + option.label + "”.";
           $("error").hidden = false;
           $("comment").focus();
           return;
         }
         const buttons = [...$("actions").querySelectorAll("button")];
         buttons.forEach((button) => (button.disabled = true));
+        // The server decides whether the card was still valid when pressed.
+        clearTimeout(expiry);
         try {
           const result = await request("tools/call", {
             name: "decide_approval",
@@ -288,17 +308,20 @@
               ...(comment ? { comment } : {}),
             },
           });
-          if (result.isError) throw new Error(textOf(result));
+          if (result.isError) throw refusalOf(result);
           const decided = result.structuredContent.result;
           $("decide").hidden = true;
+          $("error").hidden = true;
           $("outcome").textContent =
             "You chose " + decided.label + (decided.comment ? " — " + decided.comment : ".");
           $("outcome").hidden = false;
         } catch (error) {
-          // Expired, decided elsewhere or refused: pressing again can't work, so the buttons stay off.
           $("error").textContent =
             (error && error.message) || "Broccoli couldn't save it. Open the task in Broccoli.";
           $("error").hidden = false;
+          // Invalid input, such as leave that no longer fits, leaves the other choices open; expired,
+          // decided elsewhere or refused cards can't work again, so their buttons stay off.
+          if (error && error.correctable) buttons.forEach((button) => (button.disabled = false));
         }
       }
 
@@ -325,10 +348,9 @@
         event.preventDefault();
         if (!shown) return;
         // The chat app opens links; where it can't, the address is there to copy.
-        request("ui/open-link", { url: shown.card.link }).catch(() => {
-          $("address").textContent = shown.card.link;
-          $("address").hidden = false;
-        });
+        request("ui/open-link", { url: shown.card.link })
+          .then((result) => result && result.isError && showAddress())
+          .catch(showAddress);
       });
 
       new ResizeObserver(reportSize).observe(document.body);
@@ -339,6 +361,7 @@
         protocolVersion: PROTOCOL_VERSION,
       })
         .then((result) => {
+          host = (result && result.hostCapabilities) || {};
           setTheme(result && result.hostContext);
           send({ method: "ui/notifications/initialized", params: {} });
         })

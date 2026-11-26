@@ -37,7 +37,7 @@ On a public address, as the manager. Each case below needs its own waiting reque
 - [ ] Reject with an empty comment asks for a comment; with "Clashes with the release week." it shows "You chose Reject — Clashes with the release week.", and the employee's request is rejected with that reason.
 - [ ] Approve shows "You chose Approve." on the card; the employee's balance moves and the calendar shows the leave.
 - [ ] "Just approve it" without pressing the button: the agent says the person must press it; the task stays open.
-- [ ] A card left more than an hour says "This card has expired. Ask your agent to show it again." on a button press.
+- [ ] A card left open for an hour hides its buttons by itself and says "This card has expired. Ask your agent to show it again."
 - [ ] Dark mode follows the chat app's theme; the card reads well at phone width.
 - [ ] In Claude Code or Codex, asking to approve gives the task's link instead; nothing is decided.
 - [ ] Your agent shows "Showed you an approval" and "Your decision on the card".
