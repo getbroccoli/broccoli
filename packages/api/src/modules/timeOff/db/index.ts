@@ -8,7 +8,6 @@ export {
   type TimeOffStatus,
 } from "./timeOffRepository";
 export {
-  type Decision,
   type RequestDecision,
   type StoredTimeOff,
   type TimeOffRequest,

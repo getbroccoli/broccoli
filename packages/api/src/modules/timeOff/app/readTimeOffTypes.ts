@@ -46,8 +46,8 @@ interface ShownType {
 interface Figures {
   sums: Map<string, { kind: LedgerLineKind; amount: number }[]>;
   recorded: { employeeId: string; timeOffTypeId: string; year: number; days: number }[];
-  /** Days of requested time off over every shown period. */
-  waiting: BookedDay[];
+  /** Days of requested time off over every shown period, by `employeeId:timeOffTypeId`. */
+  waiting: Map<string, BookedDay[]>;
 }
 
 const TYPE_ORDER: readonly TimeOffTypeKey[] = ["annual_leave", "sickness", "family_leave", "other"];
@@ -165,21 +165,24 @@ async function readFigures(
             .sort()
             .at(-1)!,
         });
-  const waiting = await timeOffRepository(tx).findBookedDays({
-    employeeIds,
-    from: shown.map(({ period }) => period.start).sort()[0] ?? LAST_DAY,
-    until:
-      shown
-        .map(({ period }) => period.end)
-        .sort()
-        .at(-1) ?? LAST_DAY,
-    statuses: ["requested"],
-  });
-  return { sums, recorded, waiting };
+  const waiting =
+    shown.length === 0
+      ? []
+      : await timeOffRepository(tx).findBookedDays({
+          employeeIds,
+          from: shown.map(({ period }) => period.start).sort()[0]!,
+          until: shown
+            .map(({ period }) => period.end)
+            .sort()
+            .at(-1)!,
+          statuses: ["requested"],
+        });
+  return {
+    sums,
+    recorded,
+    waiting: Map.groupBy(waiting, (day) => `${day.employeeId}:${day.timeOffTypeId}`),
+  };
 }
-
-/** A day after any time off, for reading none. */
-const LAST_DAY = "9999-12-31" as CalendarDate;
 
 function toEmployeeTimeOffType(
   { employeeId, policy, period, allowance }: ShownType,
@@ -192,11 +195,8 @@ function toEmployeeTimeOffType(
     periodStart: period.start,
     periodEnd: period.end,
     waiting: dayCount(
-      waiting.filter(
-        (day) =>
-          day.employeeId === employeeId &&
-          day.timeOffTypeId === timeOffType.id &&
-          isWithin(day.date, period.start, period.end),
+      (waiting.get(`${employeeId}:${timeOffType.id}`) ?? []).filter(({ date }) =>
+        isWithin(date, period.start, period.end),
       ),
     ),
   };

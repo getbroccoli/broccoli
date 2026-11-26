@@ -417,11 +417,11 @@ type Query {
   timeOffBookingPreview(input: TimeOffBookInput!): TimeOffBookingPreview!
 }
 
-"One person's dates and approved time off over a range."
+"One person's dates and time off over a range."
 type EmployeeWhosOut {
   "Every date of the range, oldest first."
   days: [WhosOutDay!]!
-  "Approved time off with a day in the range, oldest first."
+  "Approved time off with a day in the range, and requested time off for who may read this person's time off, oldest first."
   timeOff: [TimeOff!]!
 }
 
@@ -444,9 +444,9 @@ enum WhosOutDayKind {
 "A person's time off, booked straight away or requested and decided by an approver: its days that cost something when it was saved."
 type TimeOff implements AnyRecord {
   id: ID!
-  "Changes to this time off, newest first."
+  "Changes to this time off, newest first; empty for who may not read this person's time off."
   history("Page size, 1 to 10000." first: Int = 50, after: String): RecordChangeConnection!
-  "What the signed-in user may do to it: admins cancel approved time off; nobody edits it."
+  "What the signed-in user's permissions allow: canDelete is the admins' grant, so cancelling still needs approved time off in an open leave year; nobody edits it."
   access: RecordAccess!
   "Null unless the caller may read this person's time off."
   status: TimeOffStatus
@@ -537,7 +537,7 @@ enum TimeOffDayCostReason {
   NOT_A_WORKING_DAY
 }
 
-"A leave year's figures before and after a booking."
+"A leave year's figures before and after a booking, as projections: waiting requests count as if approved, and nothing is saved."
 type TimeOffBalanceChange {
   periodStart: Date!
   periodEnd: Date!
@@ -554,7 +554,7 @@ type TimeOffBookingRefusal {
   reason: TimeOffBookingRefusalReason!
   "The first date the reason applies to, when it is about one date."
   date: Date
-  "The booking it clashes with, for CLASHES_WITH_TIME_OFF."
+  "The time off it clashes with, booked or waiting for approval, for CLASHES_WITH_TIME_OFF."
   clashingTimeOffId: ID
 }
 

@@ -68,7 +68,7 @@ Full-timer in England and Wales employed all of 2026 on the statutory minimum: g
 - A type shows when a policy applies to the person on that date (see below), Annual leave first, then Sickness, Family leave, Other and the company's own types by name.
 - `balance_from_allowance`: the allowance whose leave year holds the date, summed by line kind over the whole year. Entitlement is the grants, rounding and manual adjustments; bank holidays are those taken; used is the days booked; remaining is entitlement − bank holidays − used. Each is rounded to two decimals and remaining is worked out from the rounded figures, so a row adds up.
 - `unlimited_balance`: only the days booked on its allowance.
-- `no_balance`: no leave year exists, so the calendar year; the days of approved or pending time off of that type, a half day 0.5; shown only when the person is employed on some day of that year.
+- `no_balance`: no leave year exists, so the calendar year; the days of approved time off of that type, a half day 0.5; shown only when the person is employed on some day of that year.
 - No allowance for the year (the person left before it) or no policy at all (time off is off) gives no row; while time off is off the list is empty for everyone.
 
 ## Booking time off
@@ -86,9 +86,9 @@ Full-timer in England and Wales employed all of 2026 on the statutory minimum: g
 
 `TimeOffRequestService.requestTimeOff` saves the caller's own time off as `requested` when their write mode for it is `request` (employees, for themselves; whoever books it straight away is refused, as is anyone else). Its type must need approval (`needs_approval`, false for Sickness), and the booking rules apply as for `bookTimeOff`. It writes no ledger lines: its days are held, so they clash with any other time off, the preview's "remaining before" takes them off, and `Employee.timeOffTypes` shows them as `waiting`. In the same transaction it asks `manager_approval` (approvals) for the record type `time_off`; the approver's task reads the type, the dates and part days, the cost, the balance free now and after, and the note.
 
-`finishApprovals` handles `approvals.approval_finished` for `time_off` before the commit, in the decision's transaction: approved re-checks the window, employment and the type's offer for every day (refusing the decision, so the task stays to do, when one no longer fits), sets `approved` and the decision, and runs the engine (cause `time_off_approved`); rejected stores the comment; an approval that ended without a decision cancels it. Time off no longer `requested` is left alone. Each change appends a `time_off` history line, the decision's caused by its process run.
+`finishApprovals` handles `approvals.approval_finished` for `time_off` before the commit, in the decision's transaction: approved re-checks the window, employment and the type's offer for every day (refusing the decision, so the task stays to do, when one no longer fits), sets `approved` and the decision, and runs the engine (cause `time_off_approved`); rejected stores the comment; an approval that ended without a decision cancels it. Time off no longer `requested` is left alone. Each change appends a `time_off` history line, the decision's caused by its process run; the outcome is logged after commit from `timeOff.request_decided`.
 
-Only approved time off is cancelled. Who's out shows requested time off only to who may read the person's time off. `Employee.timeOffRequests` lists a person's requests from their current leave year on. Days recorded and Settings' days taken count approved time off only.
+Only approved time off is cancelled. Who's out shows requested time off only to who may read the person's time off. Resetting time off purges its history. `Employee.timeOffRequests` lists a person's requests from their current leave year on. Days recorded and Settings' days taken count approved time off only.
 
 The engine treats each booked day as a line identity, `time_off_booked` per `time_off_day_id`, on the allowance whose leave year holds the day: minus the day's cost under the working week of that day while the time off is approved, 0 once cancelled. Every run re-costs booked days in open leave years, so a later terms move, own week or bank holiday change gives days back or takes them. A booked day in a later leave year creates that year's allowance.
 
@@ -97,7 +97,7 @@ The engine treats each booked day as a line identity, `time_off_booked` per `tim
 `TimeOffService.listTimeOffTypes`, for admins (`MANAGE_WORKSPACE`), answers `Query.timeOffSettings`: every time off type in the order above, with or without a policy, and how many people have time off.
 
 - Each type's balance kind is the one most of its policies share, each by its version in force today or else its latest version, the oldest policy's on a tie; none when the type has no policy.
-- Days taken are everyone's approved or pending days of that type in the calendar year of today, a half day 0.5.
+- Days taken are everyone's approved days of that type in the calendar year of today, a half day 0.5.
 - People are those with an allowance whose leave year has not ended, counted in one query; someone with only types that have no balance is not counted.
 
 ## Changing a policy from a date

@@ -25,12 +25,12 @@ export async function readRequests(
     // A leave year starts at most a year before today; each type's own start filters further.
     const from = `${Number(today().slice(0, 4)) - 1}-01-01` as CalendarDate;
     const requests = await timeOffRequestRepository(tx).findRequests({ employeeIds: ids, from });
+    const byPerson = Map.groupBy(requests, ({ employeeId }) => employeeId);
     return new Map(
       people.map((person) => [
         person.employeeId,
-        requests.filter(
-          ({ employeeId, timeOffTypeId, days }) =>
-            employeeId === person.employeeId &&
+        (byPerson.get(person.employeeId) ?? []).filter(
+          ({ timeOffTypeId, days }) =>
             days.at(-1)!.date >= windowOf(person, timeOffTypeId, today()).start,
         ),
       ]),

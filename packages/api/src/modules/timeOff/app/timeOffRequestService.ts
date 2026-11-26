@@ -1,7 +1,6 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import { createApprovalService, MANAGER_APPROVAL } from "../../../core/approvals";
 import type { BeforeCommitHandler, Orm, Transact, Tx } from "../../../core/db";
-import type { DomainEvents } from "../../../core/events";
 import type { Logger } from "../../../core/logger";
 import {
   createRecordHistoryReaderService,
@@ -10,7 +9,7 @@ import {
 } from "../../../core/records";
 import type { Connection } from "../../../core/pagination";
 import { timeOffRecordType } from "./timeOffRecordType";
-import { PrincipalSecurityContext, type SecurityContext } from "../../../core/security";
+import type { SecurityContext } from "../../../core/security";
 import { type CalendarDate, todayInLondon } from "../../../utils";
 import type { BankHolidayService } from "../../bankHolidays";
 import {
@@ -19,8 +18,9 @@ import {
   type TimeOffRequest,
   timeOffRequestRepository,
 } from "../db";
+import { finishApproval } from "./finishTimeOffApproval";
 import { readRequests, readStatuses } from "./readTimeOffRequests";
-import { dateRangeLabel, dayLabel, refusalOfBounds, refusalOfDates, totalCost } from "../domain";
+import { dateRangeLabel, dayLabel, totalCost } from "../domain";
 import {
   type BalanceChange,
   type BookedTimeOff,
@@ -29,13 +29,11 @@ import {
   createBookTimeOffService,
 } from "./bookTimeOffService";
 import {
-  appendStatusChange,
   begin,
   type BookingDependencies,
   bookingDependencies,
   checkBooking,
   saveTimeOff,
-  windowOf,
 } from "./bookingSteps";
 import { type ParsedBooking, parseBooking } from "./parseBooking";
 import type { TimeOffService } from "./timeOffService";
@@ -122,6 +120,10 @@ async function requestTimeOff(
   // What the dialog showed, for the approver: free now and after this, per leave year.
   const { balances } = await preview.previewBooking(ctx, input);
   const saved = await saveRequest(dependencies, ctx, booking, balances);
+  // An approval with nobody to decide ends before the commit, cancelling the request.
+  const [committed] = await dependencies.transact((tx) =>
+    timeOffRequestRepository(tx).findByIds([saved.id]),
+  );
   const cost = totalCost(saved.booked);
   dependencies.logger.info(
     {
@@ -138,7 +140,7 @@ async function requestTimeOff(
     employeeId: booking.employeeId,
     timeOffTypeId: booking.timeOffTypeId,
     days: saved.booked.map(({ date, dayPart }) => ({ date, dayPart })),
-    status: "requested",
+    status: committed!.status,
     cost,
     note: booking.note,
     bookedAt: saved.createdAt,
@@ -245,83 +247,3 @@ async function approvalWords(
       .join(" "),
   };
 }
-
-/** Records how the approval of requested time off ended; nothing for time off no longer waiting. */
-async function finishApproval(
-  dependencies: BookingDependencies,
-  tx: Tx,
-  finished: DomainEvents["approvals.approval_finished"],
-): Promise<void> {
-  const repository = timeOffRequestRepository(tx);
-  const [stored] = await repository.findByIds([finished.recordId]);
-  if (stored?.status !== "requested") {
-    dependencies.logger.info(
-      { timeOffId: finished.recordId, runId: finished.runId },
-      "Approval finished for time off no longer waiting",
-    );
-    return;
-  }
-  const status = !finished.outcome
-    ? "cancelled"
-    : finished.outcome.code === "approved"
-      ? "approved"
-      : "rejected";
-  if (status === "approved") {
-    await requireStillBookable(dependencies, tx, stored);
-  }
-  const decision = {
-    decidedByEmployeeId: finished.outcome?.byEmployeeId ?? null,
-    comment: finished.outcome?.comment ?? null,
-  };
-  await repository.decide(stored.id, { status, ...decision });
-  await appendStatusChange(SYSTEM, tx, {
-    id: stored.id,
-    from: "requested",
-    to: status,
-    cause: { kind: "PROCESS_RUN", ref: finished.runId },
-    decision: finished.outcome ? decision : undefined,
-  });
-  if (status === "approved") {
-    await dependencies.timeOff.ensureAllowances(SYSTEM, tx, {
-      employeeIds: [stored.employeeId],
-      cause: { kind: "TIME_OFF_APPROVED", ref: stored.id },
-    });
-  }
-  dependencies.logger.info(
-    { timeOffId: stored.id, employeeId: stored.employeeId, runId: finished.runId, status },
-    "Finished time off approval",
-  );
-}
-
-/**
- * Refuses approving time off whose days no longer fit: outside the person's employment, a type
- * no longer offered, or a day in a leave year that has closed. Clashes and the balance are not
- * checked again: waiting days already blocked clashes, and over the balance is allowed.
- */
-async function requireStillBookable(
-  dependencies: BookingDependencies,
-  tx: Tx,
-  stored: { id: string; employeeId: string; timeOffTypeId: string },
-): Promise<void> {
-  const person = await begin(dependencies, tx, stored);
-  const days = await timeOffRequestRepository(tx).findDaysOf(stored.id);
-  const window = windowOf(person, stored.timeOffTypeId, dependencies.today());
-  const timeline = person.timelineOf(stored.timeOffTypeId);
-  const range = { startDate: days[0]!.date, endDate: days.at(-1)!.date };
-  const refusal =
-    refusalOfBounds(range, window) ??
-    refusalOfDates({
-      ...range,
-      employments: person.periods,
-      isOfferedOn: (date) => timeline.getVersionOnDate(date) !== null,
-    });
-  if (refusal) {
-    throw new ApplicationError(
-      "INVALID_INPUT",
-      "This time off can't be approved any more. Reject it instead.",
-      [{ field: "dates", code: refusal.reason }],
-    );
-  }
-}
-
-const SYSTEM = PrincipalSecurityContext.system();

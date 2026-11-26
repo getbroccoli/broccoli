@@ -73,6 +73,9 @@ export function timeOffModule({
     recordTypes: { time_off: timeOffRecordType(dependencies.orm) },
     events: {
       ...allowanceEventHandlers({ timeOff, ...dependencies }),
+      // Logged once the decision commits, with identifiers only.
+      "timeOff.request_decided": (decided) =>
+        Promise.resolve(dependencies.logger.info(decided, "Decided time off request")),
       "timeOff.time_off_turned_on": (turnedOn) =>
         Promise.resolve(dependencies.logger.info(turnedOn, "Turned time off on")),
     },

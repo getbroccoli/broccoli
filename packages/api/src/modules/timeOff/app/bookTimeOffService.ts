@@ -112,7 +112,7 @@ async function previewBooking(
         return { days, cost, balances: [], refusal };
       }
       // Rolled back with the rest: waiting days count as taken, so "before" is what is free now.
-      await timeOffRequestRepository(tx).approveRequested(booking.employeeId);
+      await timeOffRequestRepository(tx).approveRequested(booking);
       const { booked } = await saveTimeOff(ctx, tx, booking, { days, status: "approved" });
       await ensureBooked(dependencies, ctx, tx, { employeeId: booking.employeeId, id: null });
       const balances = await balancesAfter(tx, person, booking, booked);

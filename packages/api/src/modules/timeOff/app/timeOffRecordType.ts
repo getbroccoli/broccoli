@@ -1,6 +1,7 @@
 import type { Orm } from "../../../core/db";
 import type { RecordTypeRegistration } from "../../../core/records";
 import { parseUuid } from "../../../utils";
+import { dayCount } from "../domain";
 import { timeOffRequestRepository } from "../db";
 
 /**
@@ -17,20 +18,13 @@ export function timeOffRecordType(orm: Orm): RecordTypeRegistration {
       return new Map(found.map(({ id, employeeId }) => [id, employeeId]));
     },
     loadRecords: async (ids) => {
-      const found = await timeOffRequestRepository(orm).findByIds(ids);
-      // shortcut: one days query per record; batch it when a history page shows many time offs.
-      const records = await Promise.all(
-        found.map(async ({ id, timeOffTypeId, status }) => ({
-          id,
-          timeOffTypeId,
-          status,
-          days: await timeOffRequestRepository(orm).findDaysOf(id),
-          cost: null,
-          note: null,
-          bookedAt: null,
-        })),
+      const found = await timeOffRequestRepository(orm).findWithDays(ids);
+      return new Map(
+        found.map(({ createdAt, ...record }) => [
+          record.id,
+          { ...record, cost: dayCount(record.days), bookedAt: createdAt },
+        ]),
       );
-      return new Map(records.map((record) => [record.id, record]));
     },
     permissions: { object: "time_off", editableFields: [] },
     processes: {

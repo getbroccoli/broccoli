@@ -53,8 +53,10 @@ export interface TimeOffRequestRepository {
   findByIds(ids: readonly string[]): Promise<StoredTimeOff[]>;
   /** The time off's days that are not cancelled, oldest first. */
   findDaysOf(id: string): Promise<{ date: CalendarDate; dayPart: DayPart }[]>;
-  /** Marks the person's requested time off approved; only a preview does, rolling it back. */
-  approveRequested(employeeId: string): Promise<void>;
+  /** Time off by id with its days that are not cancelled, oldest day first. */
+  findWithDays(ids: readonly string[]): Promise<Booking[]>;
+  /** Marks the person's requested time off of a type approved; only a preview does, rolling it back. */
+  approveRequested(input: { employeeId: string; timeOffTypeId: string }): Promise<void>;
   /** Records the decision on requested time off: its new status, who decided, when, and their comment. */
   decide(id: string, decision: Decision): Promise<void>;
 }
@@ -110,11 +112,26 @@ export function timeOffRequestRepository(db: Orm | Tx): TimeOffRequestRepository
         .where(and(eq(timeOffDays.timeOffId, id), isNull(timeOffDays.cancelledAt)))
         .orderBy(asc(timeOffDays.date));
     },
-    async approveRequested(employeeId) {
+    async findWithDays(ids) {
+      const rows = await ormOf(db)
+        .select({ timeOff: TIME_OFF_COLUMNS, day: DAY_COLUMNS })
+        .from(timeOff)
+        .innerJoin(timeOffDays, eq(timeOffDays.timeOffId, timeOff.id))
+        .where(and(anyOf(timeOff.id, ids), isNull(timeOffDays.cancelledAt)))
+        .orderBy(asc(timeOff.id), asc(timeOffDays.date));
+      return groupDays(rows);
+    },
+    async approveRequested({ employeeId, timeOffTypeId }) {
       await ormOf(db)
         .update(timeOff)
         .set({ status: "approved" })
-        .where(and(eq(timeOff.employeeId, employeeId), eq(timeOff.status, "requested")));
+        .where(
+          and(
+            eq(timeOff.employeeId, employeeId),
+            eq(timeOff.timeOffTypeId, timeOffTypeId),
+            eq(timeOff.status, "requested"),
+          ),
+        );
     },
     async decide(id, { status, decidedByEmployeeId, comment }) {
       await ormOf(db)
