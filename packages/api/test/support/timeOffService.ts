@@ -7,6 +7,7 @@ import { createLogger } from "../../src/core/logger";
 import { createDemoFillService } from "../../src/modules/demo";
 import { createTaskService } from "../../src/core/tasks";
 import {
+  createAllowanceService,
   createBookTimeOffService,
   createOwnTimeOffRulesService,
   createTimeOffPolicyService,
@@ -47,6 +48,16 @@ export function timeOffService(orm: Orm, { today = "2026-06-01" }: { today?: str
     logger: createLogger("silent"),
     bankHolidays: bankHolidayService(),
     today: () => today as CalendarDate,
+  });
+}
+
+/** The allowance history and adjustment service with the same date as its figures. */
+export function allowanceService(orm: Orm, { today = "2026-11-26" }: { today?: string } = {}) {
+  return createAllowanceService({
+    orm,
+    transact: testTransactor(orm),
+    logger: createLogger("silent"),
+    today: () => calendarDate(today),
   });
 }
 
@@ -184,6 +195,17 @@ export async function seedAnnualLeaveEmployee(orm: Orm, seed: TestSeed, transact
     ({ typeKey }) => typeKey === "annual_leave",
   )!;
   return { employeeId: employee.id, timeOffTypeId: annual.id };
+}
+
+/** The employee and allowance id from their 2026 Annual leave card. */
+export async function seedAnnualLeaveAllowance(orm: Orm, seed: TestSeed, transact: Transact) {
+  const person = await seedAnnualLeaveEmployee(orm, seed, transact);
+  const cards = await timeOffService(orm).readTimeOffTypes(OWNER, {
+    employeeIds: [person.employeeId],
+  });
+  const allowanceId = cards.get(person.employeeId)?.[0]?.allowanceId;
+  if (!allowanceId) throw new Error("Expected an Annual leave allowance on the employee's card");
+  return { ...person, allowanceId };
 }
 
 /** The published policies these terms use on the fixed test date. */

@@ -71,6 +71,7 @@
       "src/i18n",
       "src/lib/calendarDay",
       "src/lib/class-names",
+      "src/lib/formatDate",
       "src/lib/formatDays"
     ],
     "src/features/demo": [

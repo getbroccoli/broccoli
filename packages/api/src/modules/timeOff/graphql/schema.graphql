@@ -9,8 +9,14 @@ extend type Employee {
 
 "A time off type a person has in their current leave year, with its figures in days."
 type EmployeeTimeOffType {
+  "The person, type and period together, so a client can tell rows apart."
+  id: ID!
   timeOffType: TimeOffType!
   balance: TimeOffBalanceKind!
+  "The allowance these figures come from; null unless BALANCE_FROM_ALLOWANCE."
+  allowanceId: ID
+  "Every change to the balance, newest first, one per change; null unless BALANCE_FROM_ALLOWANCE."
+  history: [AllowanceChange!]
   "The first day of the leave year, or of the calendar year for NO_BALANCE."
   periodStart: Date!
   "The last day of the leave year, or of the calendar year for NO_BALANCE."
@@ -26,6 +32,78 @@ type EmployeeTimeOffType {
   "Days of requested time off waiting for approval in the period, a half day 0.5."
   waiting: Float!
 }
+
+"One change to a balance: the lines one booking, adjustment or recalculation wrote."
+type AllowanceChange {
+  recordedAt: DateTime!
+  cause: AllowanceChangeCause!
+  "The date the cause names: the new start date, or the date a working week, terms or rules change applies from."
+  causeDate: Date
+  "The first day the change's booked days fall on in this leave year."
+  firstBookedDay: Date
+  "The last day the change's booked days fall on in this leave year."
+  lastBookedDay: Date
+  "Days the change added (positive) or took (negative): balanceAfter less the previous change's."
+  amount: Float!
+  "Days remaining after the change, worked out as remaining is, so the newest equals it."
+  balanceAfter: Float!
+  "What the change is made of, by kind, each rounded on its own so they may not add up to amount; kinds that add up to 0 are left out. A change whose amount and parts are all 0 is not listed."
+  parts: [AllowanceChangePart!]!
+  author: RecordChangeAuthor!
+  "The adjustment's comment; null for other causes."
+  comment: String
+}
+
+"The days of one kind a change is made of."
+type AllowanceChangePart {
+  kind: AllowanceLineKind!
+  amount: Float!
+}
+
+"What a ledger line of an allowance counts."
+enum AllowanceLineKind {
+  ENTITLEMENT_GRANT
+  BANK_HOLIDAY_ALLOWANCE_GRANT
+  BANK_HOLIDAY_TAKEN
+  TIME_OFF_BOOKED
+  MANUAL_ADJUSTMENT
+  ROUNDING_UP_TO_HALF_DAY
+}
+
+"Why a balance changed."
+enum AllowanceChangeCause {
+  TIME_OFF_TURNED_ON
+  EMPLOYEE_ADDED
+  START_DATE_CHANGED
+  WORKING_PATTERN_CHANGED
+  TERMS_CHANGED
+  TIME_OFF_RULES_CHANGED
+  LEAVE_YEAR_STARTED
+  DAILY_CHECK
+  TIME_OFF_BOOKED
+  "A request for time off was approved."
+  TIME_OFF_APPROVED
+  TIME_OFF_CANCELLED
+  ALLOWANCE_ADJUSTED
+}
+
+input AllowanceAdjustInput {
+  allowanceId: ID!
+  "Days to add (positive) or take (negative): not 0, at most two decimals and 366 days either way."
+  amount: Float!
+  "Why, 1 to 1,000 characters once trimmed; everyone who reads the balance sees it."
+  comment: String!
+  "Made once for each adjustment meant, so sending the same one again appends nothing."
+  requestId: ID
+}
+
+"The adjusted balance's figures, or why the adjustment was refused."
+type AllowanceAdjustPayload {
+  employeeTimeOffType: EmployeeTimeOffType
+  error: AllowanceAdjustError
+}
+
+union AllowanceAdjustError = InvalidInputError | ConflictError | NotFoundError
 
 "Time off as Settings shows it."
 type TimeOffSettings {
@@ -626,6 +704,8 @@ type TimeOffMutations {
   useTermsRules(input: TimeOffTermsRulesUseInput!): TimeOffOwnRulesPayload!
   "Removes a change to a person's own rules for a type that has not started: new own rules, a change to them, or a return to their terms. Refused with a ConflictError once it has started, or while cancelling it would leave their booked time off of the type without rules. Admins only."
   cancelOwnRulesChange(input: TimeOffOwnRulesCancelChangeInput!): TimeOffOwnRulesPayload!
+  "Adds days to or takes days from a person's current balance, with a comment everyone who reads the balance sees; refused for a leave year that has ended (ConflictError). Admins only."
+  adjustAllowance(input: AllowanceAdjustInput!): AllowanceAdjustPayload!
 }
 
 "The requested time off, or why it was refused."

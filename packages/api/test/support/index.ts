@@ -38,6 +38,7 @@ export { startFakeHttpServer } from "./fakeHttpServer";
 export { connectAndReadSlack, slackAuthorization } from "./fakeSlack";
 export { startSimpleHttpServer } from "./simpleHttpServer";
 export { allowanceInputs, balanceOf, onTopPolicy, calculatedRowsOf } from "./allowanceCalculator";
+export { seedCurrentAnnualLeaveCard } from "./seedCurrentAnnualLeaveCard";
 export { calendarDate } from "./calendarDate";
 export { recordCloneService } from "./recordCloneService";
 export { termsService } from "./termsService";
@@ -157,6 +158,8 @@ export {
   readAllowances,
   readTermsPolicies,
   readTermsPolicyVersions,
+  allowanceService,
+  seedAnnualLeaveAllowance,
   seedAnnualLeaveEmployee,
   type TermsPolicy,
   bookTimeOffService,

@@ -8,6 +8,7 @@ import {
   toEnum,
 } from "../../../core/graphql";
 import type {
+  AllowanceService,
   BookTimeOffService,
   PersonTimeOff,
   TimeOffPolicyService,
@@ -24,29 +25,45 @@ import {
   type TimeOffTypeIcon,
 } from "../domain";
 import type { CalendarDate } from "../../../utils";
+import { allowanceResolvers } from "./allowanceResolvers";
 import { bookingResolvers } from "./bookingResolvers";
 import { requestResolvers } from "./requestResolvers";
-import { BALANCE_KINDS, toGraphqlType } from "./graphqlValues";
+import { BALANCE_KINDS, toGraphqlTimeOffTypeRow, toGraphqlType } from "./graphqlValues";
 import { ownRulesResolvers, type OwnRulesServices } from "./ownRulesResolvers";
 import { toStoredRules } from "./storedRules";
 import { previewTimeOffLoader } from "./previewTimeOffLoader";
 
 type TimeOffTypeRow = ResolversTypes["EmployeeTimeOffType"];
 
-export function createResolvers(
-  timeOff: TimeOffService,
-  timeOffSetup: TimeOffSetupService,
-  policies: TimeOffPolicyService,
-  booking: BookTimeOffService,
-  whosOut: WhosOutService,
-  ownRules: OwnRulesServices,
-  requests: TimeOffRequestService,
-): Resolvers {
+/** The services the module's resolvers call. */
+export interface TimeOffResolverServices {
+  timeOff: TimeOffService;
+  timeOffSetup: TimeOffSetupService;
+  policies: TimeOffPolicyService;
+  booking: BookTimeOffService;
+  whosOut: WhosOutService;
+  ownRules: OwnRulesServices;
+  allowances: AllowanceService;
+  requests: TimeOffRequestService;
+}
+
+export function createResolvers({
+  timeOff,
+  timeOffSetup,
+  policies,
+  booking,
+  whosOut,
+  ownRules,
+  allowances,
+  requests,
+}: TimeOffResolverServices): Resolvers {
   const bookings = bookingResolvers(booking, whosOut);
+  const allowanceChanges = allowanceResolvers(allowances);
   const requested = requestResolvers(requests, ownRules.employees);
   const loaders = timeOffLoaders(timeOff);
   return {
     ...bookings,
+    ...allowanceChanges,
     Query: {
       ...bookings.Query,
       timeOffSettings: async (_parent, _args, context) => {
@@ -89,6 +106,7 @@ export function createResolvers(
     TimeOffMutations: {
       ...bookings.TimeOffMutations,
       ...requested.TimeOffMutations,
+      ...allowanceChanges.TimeOffMutations,
       createType: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["TimeOffTypeCreatePayload"]>(
           async () => ({
@@ -226,14 +244,7 @@ function timeOffLoaders(timeOff: TimeOffService) {
   return perRequest((context) => ({
     timeOffTypes: new DataLoader<string, TimeOffTypeRow[] | null>(async (employeeIds) => {
       const read = await timeOff.readTimeOffTypes(context.getActor(), { employeeIds });
-      return employeeIds.map(
-        (id) =>
-          read.get(id)?.map((row) => ({
-            ...row,
-            timeOffType: toGraphqlType(row.timeOffType),
-            balance: BALANCE_KINDS[row.balance],
-          })) ?? null,
-      );
+      return employeeIds.map((id) => read.get(id)?.map(toGraphqlTimeOffTypeRow) ?? null);
     }),
     personTimeOff: new DataLoader<string, PersonTimeOff[] | null>(async (employeeIds) => {
       const read = await timeOff.readPersonTimeOff(context.getActor(), { employeeIds });

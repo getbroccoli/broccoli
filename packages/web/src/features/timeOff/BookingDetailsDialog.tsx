@@ -25,7 +25,7 @@ import { t } from "@/i18n";
 import { formatDays } from "@/lib/formatDays";
 
 import { evictWhosOut } from "./cache";
-import { bookingDates, dateRange, dayMonthYear, weekdayDay } from "./timeOffText";
+import { bookingDates, dateRange, dayMonthYear, weekdayDay } from "@/lib/formatDate";
 import type { WhosOutPerson, WhosOutTimeOff } from "./WhosOutGrid";
 
 type Props = {

@@ -3,6 +3,7 @@ import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManife
 import type { BankHolidayService } from "../bankHolidays";
 import {
   allowanceEventHandlers,
+  createAllowanceService,
   createBookTimeOffService,
   createOwnTimeOffRulesService,
   createTimeOffPolicyService,
@@ -18,6 +19,7 @@ import { createResolvers } from "./graphql";
 
 // Public values.
 export {
+  createAllowanceService,
   createBookTimeOffService,
   createOwnTimeOffRulesService,
   createTimeOffPolicyService,
@@ -56,18 +58,19 @@ export function timeOffModule({
   return {
     name: "timeOff",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
-    resolvers: createResolvers(
+    resolvers: createResolvers({
       timeOff,
       timeOffSetup,
-      createTimeOffPolicyService({ ...dependencies, timeOff }),
-      createBookTimeOffService({ ...dependencies, timeOff, bankHolidays }),
-      createWhosOutService({ ...dependencies, bankHolidays }),
-      {
+      policies: createTimeOffPolicyService({ ...dependencies, timeOff }),
+      booking: createBookTimeOffService({ ...dependencies, timeOff, bankHolidays }),
+      whosOut: createWhosOutService({ ...dependencies, bankHolidays }),
+      ownRules: {
         ownRules: createOwnTimeOffRulesService({ ...dependencies, timeOff }),
         employees: createEmployeeReadService(dependencies),
       },
+      allowances: createAllowanceService(dependencies),
       requests,
-    ),
+    }),
     // The decision on requested time off commits with the approval that decided it.
     eventsBeforeCommit: requests.finishApprovals,
     recordTypes: { time_off: timeOffRecordType(dependencies.orm) },

@@ -71,6 +71,26 @@ Full-timer in England and Wales employed all of 2026 on the statutory minimum: g
 - `no_balance`: no leave year exists, so the calendar year; the days of approved time off of that type, a half day 0.5; shown only when the person is employed on some day of that year.
 - No allowance for the year (the person left before it) or no policy at all (time off is off) gives no row; while time off is off the list is empty for everyone.
 
+## Balance history and adjustments
+
+`AllowanceService` explains a balance and lets admins change it.
+
+- `readAllowanceHistory` (the `time_off` read scope) gives each allowance's changes, newest first: its lines grouped by the transaction that wrote them (`created_at`), cause and ref; each adjustment is a change of its own. Each change carries its parts by kind, the booked days it touched, the date its cause names, the remaining figure after it (worked out as the panel works it out, so the newest equals Remaining) and its amount, the difference from the change before. A change is left out only when its amount and every rounded part are 0.
+- `adjustAllowance` (the `time_off` update scope, admins for now) appends one `manual_adjustment` line with the comment as its reason, cause `allowance_adjusted` and the signed-in user as author, dated today within the leave year. It takes a non-zero amount of at most two decimals and 366 days either way and a comment of 1 to 1,000 characters, refuses a leave year that has ended (CONFLICT) and any allowance other than the person's current `balance_from_allowance` one. The balance may go negative. A `requestId` the dialog makes once per adjustment becomes the line's idempotency key, so sending it again appends nothing. Reusing a `requestId` for other values is refused (`requestId` / `taken`). The check and the append run in one transaction that takes employee writes, policies and the person in the order bookings take them. The engine never reads or writes `manual_adjustment` lines, so an adjustment stays through every recalculation; a wrong one is undone by another.
+
+```json
+{
+  "kind": "manual_adjustment",
+  "amount": "2",
+  "effective_date": "2026-11-26",
+  "cause_kind": "allowance_adjusted",
+  "cause_ref": null,
+  "reason": "Carried over from 2025",
+  "author_kind": "signed_in_user",
+  "author_id": "usr_hannah"
+}
+```
+
 ## Booking time off
 
 `BookTimeOffService` books time off, approved straight away, for whoever the caller may book for directly (write mode `direct`: admins, through `time_off.manage.all`), and cancels it (the `time_off` delete scope, admins only). Anyone with the `time_off` create scope previews it, so employees preview their own (`time_off.create.self`), whose write mode is `request`: booking refuses them with "Your time off needs to be requested."

@@ -1,5 +1,11 @@
 export type { AllowanceCause } from "./allowanceCause";
 export {
+  allowanceHistory,
+  type AllowanceChange,
+  type AllowanceChangeCause,
+  type StoredLedgerLine,
+} from "./allowanceHistory";
+export {
   changesCountsMidYear,
   parseRules,
   refuseCountsChangesMidYear,

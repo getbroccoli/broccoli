@@ -105,11 +105,13 @@ fragment EmployeePanel_employee on Employee {
     editableFields
   }
   timeOffTypes {
+    id
     timeOffType {
       id
       name
     }
     balance
+    allowanceId
     periodStart
     periodEnd
     entitlement

@@ -1,8 +1,9 @@
-import { and, countDistinct, gte, ne, sql } from "drizzle-orm";
+import { and, countDistinct, eq, gte, ne, sql } from "drizzle-orm";
 
 import { anyOf, ormOf, type Tx } from "../../../core/db";
+import type { HistoryAuthor } from "../../../core/records";
 import type { CalendarDate } from "../../../utils";
-import type { LedgerLineKind, LedgerSum, NewLedgerLine } from "../domain";
+import type { LedgerLineKind, LedgerSum, NewLedgerLine, StoredLedgerLine } from "../domain";
 import { allowanceLedgerLines } from "./allowanceLedgerLinesTable";
 import { allowances } from "./allowancesTable";
 
@@ -18,6 +19,7 @@ export interface Allowance {
 /** Allowances and their ledger lines, inside a transaction. */
 export interface AllowanceRepository {
   findByEmployees(employeeIds: readonly string[]): Promise<Allowance[]>;
+  findByIds(ids: readonly string[]): Promise<Allowance[]>;
   /** How many people have an allowance whose leave year ends on `date` or later. */
   countEmployeesWithAllowanceUntil(date: CalendarDate): Promise<number>;
   insert(newAllowances: readonly Omit<Allowance, "id">[]): Promise<Allowance[]>;
@@ -29,6 +31,26 @@ export interface AllowanceRepository {
   ): Promise<Map<string, { kind: LedgerLineKind; amount: number }[]>>;
   /** Appends the lines, skipping those whose idempotency key is taken; returns how many it added. */
   insertLines(lines: readonly NewLedgerLine[]): Promise<number>;
+  /** Each allowance's lines, by allowance id. */
+  findLines(allowanceIds: readonly string[]): Promise<Map<string, StoredLedgerLine[]>>;
+  /** Appends one manual adjustment and returns its id; null when its request was appended before. */
+  insertAdjustment(adjustment: NewAdjustment): Promise<string | null>;
+  /** The adjustment appended for this request, if any. */
+  findAdjustment(
+    request: Pick<NewAdjustment, "allowanceId" | "requestId">,
+  ): Promise<{ amount: string; reason: string | null } | null>;
+}
+
+/** Days someone added to or took from an allowance, with their comment. */
+export interface NewAdjustment {
+  allowanceId: string;
+  /** Days with at most two decimal places. */
+  amount: string;
+  effectiveDate: CalendarDate;
+  reason: string;
+  author: HistoryAuthor;
+  /** One per adjustment meant, so a repeated request appends nothing. */
+  requestId: string;
 }
 
 export function allowanceRepository(tx: Tx): AllowanceRepository {
@@ -40,6 +62,10 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
         .from(allowances)
         .where(anyOf(allowances.employeeId, employeeIds))
         .orderBy(allowances.leaveYearStart);
+    },
+
+    findByIds(ids) {
+      return orm().select().from(allowances).where(anyOf(allowances.id, ids));
     },
 
     async countEmployeesWithAllowanceUntil(date) {
@@ -124,6 +150,65 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
       }
       return added;
     },
+
+    async findLines(allowanceIds) {
+      const rows = await orm()
+        .select()
+        .from(allowanceLedgerLines)
+        .where(anyOf(allowanceLedgerLines.allowanceId, allowanceIds));
+      const lines = rows.map((row) => ({ allowanceId: row.allowanceId, ...toStoredLine(row) }));
+      return Map.groupBy(lines, ({ allowanceId }) => allowanceId);
+    },
+
+    async insertAdjustment({ allowanceId, amount, effectiveDate, reason, author, requestId }) {
+      const [row] = await orm()
+        .insert(allowanceLedgerLines)
+        .values({
+          allowanceId,
+          effectiveDate,
+          unit: "days",
+          amount,
+          kind: "manual_adjustment",
+          causeKind: "allowance_adjusted" satisfies StoredLedgerLine["causeKind"],
+          causeRef: null,
+          reason,
+          authorKind: author.kind.toLowerCase(),
+          authorId: author.id,
+          idempotencyKey: adjustmentKey(allowanceId, requestId),
+        })
+        .onConflictDoNothing({ target: allowanceLedgerLines.idempotencyKey })
+        .returning({ id: allowanceLedgerLines.id });
+      return row?.id ?? null;
+    },
+
+    async findAdjustment({ allowanceId, requestId }) {
+      const [row] = await orm()
+        .select({ amount: allowanceLedgerLines.amount, reason: allowanceLedgerLines.reason })
+        .from(allowanceLedgerLines)
+        .where(eq(allowanceLedgerLines.idempotencyKey, adjustmentKey(allowanceId, requestId)));
+      return row ?? null;
+    },
+  };
+}
+
+function adjustmentKey(allowanceId: string, requestId: string): string {
+  return `${allowanceId}:manual_adjustment:${requestId}`;
+}
+
+function toStoredLine(row: typeof allowanceLedgerLines.$inferSelect): StoredLedgerLine {
+  return {
+    id: row.id,
+    kind: row.kind,
+    amount: row.amount,
+    effectiveDate: row.effectiveDate,
+    causeKind: row.causeKind as StoredLedgerLine["causeKind"],
+    causeRef: row.causeRef,
+    reason: row.reason,
+    author: {
+      kind: row.authorKind.toUpperCase() as HistoryAuthor["kind"],
+      id: row.authorId,
+    },
+    createdAt: row.createdAt,
   };
 }
 

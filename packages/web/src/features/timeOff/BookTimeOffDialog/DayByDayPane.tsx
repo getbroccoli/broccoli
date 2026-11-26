@@ -1,7 +1,7 @@
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
-import { weekdayDay } from "../timeOffText";
+import { weekdayDay } from "@/lib/formatDate";
 import { isWeekend } from "./calendarDates";
 import type { BookingDraft } from "./useBookingDraft";
 

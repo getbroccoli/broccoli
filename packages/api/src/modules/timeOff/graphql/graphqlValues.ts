@@ -1,4 +1,5 @@
 import { toEnum } from "../../../core/graphql";
+import type { EmployeeTimeOffType } from "../app";
 import { DEFAULT_TIME_OFF_TYPE_LOOK, type TimeOffType } from "../domain";
 
 /** Balance kinds as GraphQL names them. */
@@ -23,5 +24,15 @@ export function toGraphqlType(type: TimeOffType) {
       entitlementDays: type.defaultRules.entitlementDays,
       bankHolidays: type.defaultRules.bankHolidays && toEnum(type.defaultRules.bankHolidays),
     },
+  };
+}
+
+/** A person's time off type and figures with its id, type and balance kind as GraphQL values. */
+export function toGraphqlTimeOffTypeRow(row: EmployeeTimeOffType) {
+  return {
+    ...row,
+    id: `${row.employeeId}:${row.timeOffType.id}:${row.periodStart}`,
+    timeOffType: toGraphqlType(row.timeOffType),
+    balance: BALANCE_KINDS[row.balance],
   };
 }
