@@ -14,7 +14,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ExitDemoDialog, useDemoPresent } from "@/features/demo";
-import { ResetSetupDialog } from "@/features/setup";
 import { t } from "@/i18n";
 
 import { useMenuFinalFocus } from "./useMenuFinalFocus";
@@ -27,7 +26,6 @@ export function WorkspaceMenu() {
   const { onOpenChange, finalFocus } = useMenuFinalFocus();
   // Outside the menu, which closes when an item is chosen.
   const [exitingDemo, setExitingDemo] = useState(false);
-  const [resettingSetup, setResettingSetup] = useState(false);
   const name = company?.name ?? t("workspace.name");
   const logo = company?.logoUrl ? (
     <img
@@ -74,18 +72,11 @@ export function WorkspaceMenu() {
               <span className="truncate text-[13px] font-semibold text-foreground">{name}</span>
             </DropdownMenuLabel>
           </DropdownMenuGroup>
-          {(canManage || canReset) && <DropdownMenuSeparator />}
+          {canManage && <DropdownMenuSeparator />}
           {canManage && (
             <DropdownMenuItem render={<Link to="/settings" />}>
               <GearSix size={14} />
               {t("settings.title")}
-            </DropdownMenuItem>
-          )}
-          {/* The demo's owner exits the demo instead. */}
-          {demoPresent === false && canReset && (
-            <DropdownMenuItem variant="destructive" onClick={() => setResettingSetup(true)}>
-              <ArrowCounterClockwise size={14} />
-              {t("setup.reset.open")}
             </DropdownMenuItem>
           )}
           {demoPresent && canReset && (
@@ -101,7 +92,6 @@ export function WorkspaceMenu() {
         </DropdownMenuContent>
       </DropdownMenu>
       <ExitDemoDialog open={exitingDemo} onOpenChange={setExitingDemo} />
-      <ResetSetupDialog open={resettingSetup} onOpenChange={setResettingSetup} />
     </>
   );
 }

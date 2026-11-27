@@ -49,10 +49,12 @@ As an admin, with terms "Scotland" added in Settings › Employment terms (the d
 
 ## Reset setup
 
-1. On a finished setup, open the workspace menu and choose "Reset setup", then "Cancel": nothing changes.
+1. On a finished setup, as the owner, open Settings, then "Workspace" under System, and choose "Reset setup" in "Danger zone", then "Cancel": nothing changes.
 2. Choose "Reset setup" again and confirm.
 
 - [ ] The dialog reads "Reset setup?" and says everyone in the directory is deleted and setup starts again.
 - [ ] Confirming lands on `/setup/company`, still signed in, with the company name and logo filled in.
 - [ ] Finishing setup again with a new import shows only the new people on `/people`.
-- [ ] During the self-hosted demo the workspace menu shows "Exit demo" and no "Reset setup".
+- [ ] The workspace menu has no "Reset setup".
+- [ ] An admin who is not the owner sees no "Workspace" in Settings, and `/settings/workspace` opens Settings' first page.
+- [ ] During the self-hosted demo the workspace menu shows "Exit demo", Settings shows no "Workspace", and `/settings/workspace` says to exit the demo from the workspace menu.

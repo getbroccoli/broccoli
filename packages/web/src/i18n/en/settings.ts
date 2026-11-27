@@ -138,6 +138,11 @@ export const settingsEn = {
   "settings.locations.loadFailed": "Locations could not be loaded.",
   "settings.locations.notFound": "This location could not be found.",
   "settings.locations.retry": "Try again",
+  "settings.workspace.title": "Workspace",
+  "settings.workspace.description": "Changes to your whole workspace.",
+  "settings.workspace.dangerZone": "Danger zone",
+  "settings.workspace.inDemo":
+    "You’re in the demo. Exit it from the workspace menu to start your own setup.",
   "settings.email.title": "Email",
   "settings.email.description":
     "How Broccoli sends email, such as password reset links. People need email to reset a forgotten password.",
