@@ -19,7 +19,7 @@ import {
 import { connectDatabase } from "../../src/core/db";
 import { createLogger } from "../../src/core/logger";
 
-test("a manager receives a process task email and can open its task", async () => {
+test("a manager and starter receive distinct task emails and the manager can open their task", async () => {
   const relay = await startFakeMailRelay();
   onTestFinished(() => relay.stop());
   const { env, accounts } = await startManagedEnv({ mailRelayUrl: relay.url });
@@ -30,7 +30,12 @@ test("a manager receives a process task email and can open its task", async () =
   const credentials = { email: "manager@example.com", password: TEST_OWNER.password };
   const user = await env.seed.user(credentials);
   const manager = await env.seed.employee({ userId: user.id, email: credentials.email });
-  const starter = await env.seed.employee({ firstName: "Ada" });
+  const starterUser = await env.seed.user({ email: "ada@example.com" });
+  const starter = await env.seed.employee({
+    firstName: "Ada",
+    userId: starterUser.id,
+    email: starterUser.email,
+  });
   await env.seed.manager(starter.id, manager.id);
   const logger = createLogger("silent");
   const db = connectDatabase(env.db.url, logger);
@@ -50,12 +55,13 @@ test("a manager receives a process task email and can open its task", async () =
     recordId: starter.id,
   });
 
-  await expect.poll(() => relay.emails.length, { timeout: 15_000 }).toBe(1);
-  const email = relay.emails[0]!.body;
-  expect(email.to).toBe(manager.email);
+  await expect.poll(() => relay.emails.length, { timeout: 15_000 }).toBe(2);
+  const managerEmail = relay.emails.find(({ body }) => body.to === manager.email)!.body;
+  const starterEmail = relay.emails.find(({ body }) => body.to === starter.email)!.body;
+  expect(managerEmail.idempotencyKey).not.toBe(starterEmail.idempotencyKey);
   const step = started.steps.find((step) => step.task?.assigneeEmployeeId === manager.id)!;
   const task = step.task!;
-  expect(email.blocks).toContainEqual(
+  expect(managerEmail.blocks).toContainEqual(
     expect.objectContaining({
       type: "button",
       label: "Open task",
