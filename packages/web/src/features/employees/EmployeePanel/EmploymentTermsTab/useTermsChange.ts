@@ -13,7 +13,7 @@ import { PayloadFailure, usePayloadMutation } from "@/apollo";
 import { companyToday, shortDate, versionOn } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
-import { forgetHistory } from "../../cache";
+import { forgetTermsChange } from "../../cache";
 import { savedToast, skipError } from "../../ChangeTermsForm";
 
 /** The terms and date picked in Change terms; no terms until one is picked. */
@@ -63,7 +63,7 @@ export function useTermsChange({
   const { input, termsName, moves, skipped, loading, failed } = usePreview(employeeId, value, open);
   // The payload carries the person's new terms; History reads its new line when shown.
   const [changeTerms, mutation] = usePayloadMutation(ChangeTermsDocument, {
-    update: forgetHistory,
+    update: (cache) => forgetTermsChange(cache, employeeId),
     // A reopened draft may have previewed the person's terms before this save finished.
     refetch: [TermsChangePreviewDocument],
   });

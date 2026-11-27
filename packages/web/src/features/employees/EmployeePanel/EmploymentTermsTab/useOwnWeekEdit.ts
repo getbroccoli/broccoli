@@ -19,7 +19,7 @@ import {
 } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
-import { forgetHistory } from "../../cache";
+import { forgetTermsChange } from "../../cache";
 import {
   ownWeekSavedToast,
   ownWeekSaveLine,
@@ -67,10 +67,10 @@ export function useOwnWeekEdit(person: { employeeId: string; firstName: string }
   // A pending save belongs to the opening that submitted it, not a later draft.
   const opening = useRef(0);
   const [setOwn, setting] = usePayloadMutation(SetOwnWorkingWeekDocument, {
-    update: forgetHistory,
+    update: (cache) => forgetTermsChange(cache, employeeId),
   });
   const [returnToTerms, returning] = usePayloadMutation(UseTermsWorkingWeekDocument, {
-    update: forgetHistory,
+    update: (cache) => forgetTermsChange(cache, employeeId),
   });
   const today = companyToday();
   const shown = draft ?? { hours: [], calendar: "ENGLAND_AND_WALES" as const, startDate: today };

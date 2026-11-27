@@ -69,3 +69,21 @@ export function forgetHistory(cache: ApolloCache): void {
   cache.evict({ id: "ROOT_QUERY", fieldName: "recordHistory" });
   cache.gc();
 }
+
+/** Drops what a change to an employee's week or terms leaves stale: history and their who's out. */
+export function forgetTermsChange(cache: ApolloCache, employeeId: string): void {
+  forgetHistory(cache);
+  forgetWhosOut(cache, employeeId);
+}
+
+/**
+ * Drops an employee's cached who's out, for every month read, so Time off and Today read it again
+ * when shown: a change to their time off, week or terms can change what their time off costs.
+ */
+export function forgetWhosOut(cache: ApolloCache, employeeId: string): void {
+  cache.evict({
+    id: cache.identify({ __typename: "Employee", id: employeeId }),
+    fieldName: "whosOut",
+  });
+  cache.gc();
+}
