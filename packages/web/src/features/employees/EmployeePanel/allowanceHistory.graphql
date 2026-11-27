@@ -4,6 +4,11 @@ query AllowanceHistory($employeeId: ID!) {
     timeOffTypes {
       id
       allowanceId
+      # The card's figures come with the history, so a refreshed history never leaves them stale.
+      entitlement
+      bankHolidays
+      used
+      remaining
       history {
         recordedAt
         cause

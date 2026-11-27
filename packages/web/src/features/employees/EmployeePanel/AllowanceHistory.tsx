@@ -5,10 +5,16 @@ import { useRouteContext } from "@tanstack/react-router";
 import { AllowanceHistoryDocument } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
-import { calendarDayOf } from "@/lib/calendarDay";
+import { companyToday } from "@/features/termsDisplay";
 import { formatDays } from "@/lib/formatDays";
 
-import { changeTitle, partsLine, recordedDate, signedDays } from "./allowanceHistoryText";
+import {
+  type AllowanceChange,
+  changeTitle,
+  partsLine,
+  recordedDate,
+  signedDays,
+} from "./allowanceHistoryText";
 import { ReverseAdjustmentDialog } from "./ReverseAdjustmentDialog";
 
 type Props = {
@@ -27,14 +33,15 @@ export function AllowanceHistory({ employeeId, allowanceId, reverseFor }: Props)
     variables: { employeeId },
     fetchPolicy: "cache-and-network",
   });
-  const today = calendarDayOf(new Date(), "Europe/London");
+  const today = companyToday();
   const changes =
     data?.employee?.timeOffTypes?.find((type) => type.allowanceId === allowanceId)?.history ?? [];
 
   // Resolved against the latest history, so a refresh that marks it reversed retires the dialog.
-  const reversing = changes.find(
-    (change) => change.adjustmentId === reversingId && !change.reversed,
-  );
+  const reversing =
+    reversingId === null
+      ? undefined
+      : changes.find((change) => change.adjustmentId === reversingId && isReversible(change));
 
   if (loading && !data) {
     return (
@@ -79,13 +86,14 @@ export function AllowanceHistory({ employeeId, allowanceId, reverseFor }: Props)
                   <span className="text-muted-foreground break-words">{change.comment}</span>
                 )}
                 {parts && <span className="text-xs text-muted-foreground">{parts}</span>}
-                {reverseFor && change.cause === "ALLOWANCE_ADJUSTED" && !change.reversed && (
+                {reverseFor && isReversible(change) && (
                   <Button
                     variant="outline"
                     size="sm"
                     className="mt-1"
                     aria-label={t("people.panel.timeOff.reverse.openLabel", {
                       amount: signedDays(change.amount),
+                      date: recordedDate(change.recordedAt, today),
                     })}
                     onClick={() => setReversingId(change.adjustmentId)}
                   >
@@ -117,4 +125,9 @@ export function AllowanceHistory({ employeeId, allowanceId, reverseFor }: Props)
       )}
     </>
   );
+}
+
+/** An adjustment nobody has reversed yet; a reversal itself can't be reversed. */
+function isReversible(change: AllowanceChange): boolean {
+  return change.cause === "ALLOWANCE_ADJUSTED" && change.adjustmentId !== null && !change.reversed;
 }

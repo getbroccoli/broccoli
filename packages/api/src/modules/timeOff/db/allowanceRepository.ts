@@ -41,8 +41,9 @@ export interface AllowanceRepository {
     request: Pick<NewAdjustment, "allowanceId" | "requestId">,
   ): Promise<{ amount: string; reason: string | null } | null>;
   /**
-   * Days each time off takes from allowances now, minus its booked days' lines, by time off id;
-   * time off with no such lines, such as of a type without an allowance, is absent.
+   * Days each time off takes from allowances now, minus its booked days' lines on allowances that
+   * grant days, by time off id; time off with none, such as of a type without an allowance or
+   * unlimited, is absent.
    */
   findDeductedDays(timeOffIds: readonly string[]): Promise<Map<string, number>>;
   /** The adjustment line with this id; null when there is none or the line is no adjustment. */
@@ -211,16 +212,43 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
     },
 
     async findDeductedDays(timeOffIds) {
-      const rows = await orm()
+      if (timeOffIds.length === 0) {
+        return new Map();
+      }
+      const sums = await orm()
         .select({
           timeOffId: timeOffDays.timeOffId,
+          allowanceId: allowanceLedgerLines.allowanceId,
           amount: sql<string>`sum(${allowanceLedgerLines.amount})`,
         })
         .from(allowanceLedgerLines)
         .innerJoin(timeOffDays, eq(timeOffDays.id, allowanceLedgerLines.timeOffDayId))
         .where(anyOf(timeOffDays.timeOffId, timeOffIds))
-        .groupBy(timeOffDays.timeOffId);
-      return new Map(rows.map(({ timeOffId, amount }) => [timeOffId, -Number(amount) + 0]));
+        .groupBy(timeOffDays.timeOffId, allowanceLedgerLines.allowanceId);
+      // An unlimited year books usage lines too, but grants nothing: only granted allowances deduct.
+      const granted = new Set(
+        (
+          await orm()
+            .selectDistinct({ allowanceId: allowanceLedgerLines.allowanceId })
+            .from(allowanceLedgerLines)
+            .where(
+              and(
+                anyOf(
+                  allowanceLedgerLines.allowanceId,
+                  sums.map(({ allowanceId }) => allowanceId),
+                ),
+                eq(allowanceLedgerLines.kind, "entitlement_grant"),
+              ),
+            )
+        ).map(({ allowanceId }) => allowanceId),
+      );
+      const deducted = new Map<string, number>();
+      for (const { timeOffId, allowanceId, amount } of sums) {
+        if (granted.has(allowanceId)) {
+          deducted.set(timeOffId, (deducted.get(timeOffId) ?? 0) - Number(amount) + 0);
+        }
+      }
+      return deducted;
     },
 
     async findAdjustmentById(id) {

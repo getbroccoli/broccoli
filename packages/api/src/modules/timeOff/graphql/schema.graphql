@@ -52,7 +52,7 @@ type AllowanceChange {
   author: RecordChangeAuthor!
   "The adjustment's comment, or the reversal's reason; null for other causes and a reversal without one."
   comment: String
-  "The adjustment's own id, to reverse it by; set on ALLOWANCE_ADJUSTED and ALLOWANCE_ADJUSTMENT_REVERSED, null otherwise."
+  "The id of the adjustment or reversal this change is, set on ALLOWANCE_ADJUSTED and ALLOWANCE_ADJUSTMENT_REVERSED, null otherwise; reverseAllowanceAdjustment takes only an ALLOWANCE_ADJUSTED one."
   adjustmentId: ID
   "Whether a later change reversed this adjustment; false for other causes."
   reversed: Boolean!
@@ -564,9 +564,9 @@ type TimeOff implements AnyRecord {
   days: [TimeOffDay!]!
   "Days booked, a half day 0.5; null unless the caller may read this person's time off."
   cost: Float
-  "Each day's cost now, oldest first; null outside who's out, and unless the caller may read this person's time off."
+  "Each day's cost under the working week and bank holidays that apply on that date, oldest first; null outside who's out, and unless the caller may read this person's time off."
   dayCosts: [TimeOffDayCost!]
-  "Days approved time off takes from allowances now; null for requests, types without an allowance, outside who's out, and unless the caller may read this person's time off."
+  "Days approved time off has taken from allowances that grant days, as the ledger stands (0 when they were all given back); null for requests, types without an allowance or unlimited ones, outside who's out, and unless the caller may read this person's time off."
   deductedDays: Float
   "Null unless the caller may read this person's time off."
   note: String

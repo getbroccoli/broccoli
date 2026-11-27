@@ -5,14 +5,15 @@ import { barParts } from "./barParts";
 it("omits booked days on non-working days and bank holidays", () => {
   const parts = barParts({
     days: [
+      { date: "2026-12-23", kind: "WORKING_DAY" },
       { date: "2026-12-24", kind: "NOT_A_WORKING_DAY" },
       { date: "2026-12-25", kind: "BANK_HOLIDAY" },
     ],
     timeOff: [
       {
         id: "leave",
-        cost: null,
         days: [
+          { date: "2026-12-23", dayPart: "FULL_DAY" },
           { date: "2026-12-24", dayPart: "FULL_DAY" },
           { date: "2026-12-25", dayPart: "FULL_DAY" },
         ],
@@ -20,19 +21,43 @@ it("omits booked days on non-working days and bank holidays", () => {
     ],
   });
 
-  expect(parts).toEqual(new Map());
+  expect([...parts.keys()]).toEqual(["2026-12-23"]);
 });
 
-it("keeps a zero-cost booking on its non-working day so it can still be opened", () => {
+it("rounds both ends of a one-day booking on a non-working day", () => {
   const date = "2026-12-10";
   const parts = barParts({
     days: [{ date, kind: "NOT_A_WORKING_DAY" }],
-    timeOff: [{ id: "leave", cost: 0, days: [{ date, dayPart: "FULL_DAY" }] }],
+    timeOff: [{ id: "leave", days: [{ date, dayPart: "FULL_DAY" }] }],
   });
 
   expect(parts.get(date)).toEqual([
     { timeOffId: "leave", dayPart: "FULL_DAY", roundStart: true, roundEnd: true },
   ]);
+});
+
+it("keeps only the visible non-working day of a booking that continues next month", () => {
+  const parts = barParts({
+    days: [{ date: "2026-10-30", kind: "NOT_A_WORKING_DAY" }],
+    timeOff: [
+      {
+        id: "leave",
+        days: [
+          { date: "2026-10-30", dayPart: "FULL_DAY" },
+          { date: "2026-11-02", dayPart: "FULL_DAY" },
+        ],
+      },
+    ],
+  });
+
+  expect(parts).toEqual(
+    new Map([
+      [
+        "2026-10-30",
+        [{ timeOffId: "leave", dayPart: "FULL_DAY", roundStart: true, roundEnd: true }],
+      ],
+    ]),
+  );
 });
 
 it("rounds both sides of a Thursday the person no longer works", () => {
@@ -46,9 +71,7 @@ it("rounds both sides of a Thursday the person no longer works", () => {
 
   const parts = barParts({
     days,
-    timeOff: [
-      { id: "leave", cost: 4, days: days.map(({ date }) => ({ date, dayPart: "FULL_DAY" })) },
-    ],
+    timeOff: [{ id: "leave", days: days.map(({ date }) => ({ date, dayPart: "FULL_DAY" })) }],
   });
 
   expect(parts.get("2026-12-09")).toEqual([
@@ -65,7 +88,6 @@ it("ends the run at a booked morning", () => {
     timeOff: [
       {
         id: "leave",
-        cost: 2.5,
         days: [
           { date: tuesday.date, dayPart: "FULL_DAY" },
           { date: wednesday.date, dayPart: "MORNING" },
@@ -85,7 +107,7 @@ it("ends the run at a booked morning", () => {
 it("rounds both ends of a lone afternoon", () => {
   const parts = barParts({
     days: [tuesday],
-    timeOff: [{ id: "leave", cost: 0.5, days: [{ date: tuesday.date, dayPart: "AFTERNOON" }] }],
+    timeOff: [{ id: "leave", days: [{ date: tuesday.date, dayPart: "AFTERNOON" }] }],
   });
 
   expect(parts.get(tuesday.date)).toEqual([
@@ -104,7 +126,6 @@ it("breaks a booking's run across a weekend", () => {
     timeOff: [
       {
         id: "leave",
-        cost: 2,
         days: [
           { date: "2026-12-11", dayPart: "FULL_DAY" },
           { date: "2026-12-14", dayPart: "FULL_DAY" },

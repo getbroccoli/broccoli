@@ -3,7 +3,8 @@ import {
   seedAnnualLeaveEmployee,
   seedOwnWeek,
   seedWorkingPattern,
-  giveDefaultTermsStatutoryMinimum,
+  seedTimeOffAssignment,
+  seedTimeOffPolicy,
   giveTermsPolicies,
   leaveRequestSetup,
   OWNER,
@@ -24,11 +25,7 @@ test("lists every date of a month with employment, working days and bank holiday
 }) => {
   const employee = await seed.employee({ startDate: "2026-12-14" });
 
-  const rows = await whosOutService(orm).readWhosOut(OWNER, {
-    employeeIds: [employee.id],
-    from: "2026-12-01",
-    until: "2026-12-31",
-  });
+  const rows = await whosOutService(orm).readWhosOut(OWNER, decemberFor(employee.id));
 
   const days = rows.get(employee.id)?.days;
   expect(days?.map(({ date }) => date)).toEqual(
@@ -77,11 +74,7 @@ test("prices each booked day using the working week in effect on that date", asy
   });
   await makeThursdaysNonWorking(orm, person.employeeId);
 
-  const rows = await whosOutService(orm).readWhosOut(OWNER, {
-    employeeIds: [person.employeeId],
-    from: "2026-12-01",
-    until: "2026-12-31",
-  });
+  const rows = await whosOutService(orm).readWhosOut(OWNER, decemberFor(person.employeeId));
 
   expect(rows.get(person.employeeId)?.timeOff[0]?.dayCosts).toEqual([
     { date: "2026-12-09", cost: 0.5, reason: "working_day" },
@@ -161,21 +154,48 @@ test("shows no allowance deduction for approved record-only Sickness", async ({
   expect(rows.get(employee.id)?.timeOff).toMatchObject([{ id: booked.id, deductedDays: null }]);
 });
 
+test("shows no allowance deduction for a type that is unlimited for the whole leave year", async ({
+  orm,
+  seed,
+}) => {
+  const { id: employeeId } = await seed.employee({ startDate: "2025-01-01" });
+  const {
+    id: timeOffPolicyId,
+    timeOffTypeId,
+    versionId,
+  } = await seedTimeOffPolicy(orm, {
+    name: "Wellbeing days",
+    balance: "unlimited_balance",
+  });
+  await seedTimeOffAssignment(orm, { employeeId, timeOffPolicyId, timeOffTypeId, versionId });
+  const date = "2026-12-07";
+  const booking = await bookTimeOffService(orm).bookTimeOff(OWNER, {
+    employeeId,
+    timeOffTypeId,
+    startDate: date,
+    endDate: date,
+  });
+
+  const rows = await whosOutService(orm).readWhosOut(OWNER, {
+    employeeIds: [employeeId],
+    from: date,
+    until: date,
+  });
+
+  expect(rows.get(employeeId)?.timeOff).toMatchObject([
+    { id: booking.id, status: "approved", cost: 1, deductedDays: null },
+  ]);
+});
+
 test("shows a colleague Annual leave's type and days but hides its details", async ({
   orm,
   seed,
   transact,
 }) => {
-  const employee = await seed.employee({ startDate: "2025-01-01" });
+  const person = await seedAnnualLeaveEmployee(orm, seed, transact);
   const peer = await seed.employee();
-  await giveDefaultTermsStatutoryMinimum(orm, seed, transact);
-  const annual = (await orm.select().from(timeOffTypes)).find(
-    ({ typeKey }) => typeKey === "annual_leave",
-  )!;
-  const service = bookTimeOffService(orm);
-  const booked = await service.bookTimeOff(OWNER, {
-    employeeId: employee.id,
-    timeOffTypeId: annual.id,
+  const booked = await bookTimeOffService(orm).bookTimeOff(OWNER, {
+    ...person,
     startDate: "2026-12-07",
     endDate: "2026-12-08",
     halfDays: [{ date: "2026-12-08", dayPart: "morning" }],
@@ -183,16 +203,12 @@ test("shows a colleague Annual leave's type and days but hides its details", asy
   });
   const colleague = signedIn(orm, { employeeId: peer.id, profiles: ["EMPLOYEE"] });
 
-  const rows = await whosOutService(orm).readWhosOut(colleague, {
-    employeeIds: [employee.id],
-    from: "2026-12-01",
-    until: "2026-12-31",
-  });
+  const rows = await whosOutService(orm).readWhosOut(colleague, decemberFor(person.employeeId));
 
-  expect(rows.get(employee.id)?.timeOff).toMatchObject([
+  expect(rows.get(person.employeeId)?.timeOff).toMatchObject([
     {
       id: booked.id,
-      timeOffTypeId: annual.id,
+      timeOffTypeId: person.timeOffTypeId,
       days: [
         { date: "2026-12-07", dayPart: "full_day" },
         { date: "2026-12-08", dayPart: "morning" },
@@ -226,11 +242,7 @@ test("hides a colleague's private Sickness type", async ({ orm, seed, transact }
   });
   const colleague = signedIn(orm, { employeeId: peer.id, profiles: ["EMPLOYEE"] });
 
-  const rows = await whosOutService(orm).readWhosOut(colleague, {
-    employeeIds: [employee.id],
-    from: "2026-12-01",
-    until: "2026-12-31",
-  });
+  const rows = await whosOutService(orm).readWhosOut(colleague, decemberFor(employee.id));
 
   expect(rows.get(employee.id)?.timeOff).toMatchObject([
     {
@@ -270,11 +282,7 @@ test.for(["self", "manager"] as const)(
       profiles: ["EMPLOYEE"],
     });
 
-    const rows = await whosOutService(orm).readWhosOut(ctx, {
-      employeeIds: [employee.id],
-      from: "2026-12-01",
-      until: "2026-12-31",
-    });
+    const rows = await whosOutService(orm).readWhosOut(ctx, decemberFor(employee.id));
 
     expect(rows.get(employee.id)?.timeOff).toMatchObject([
       {
@@ -300,14 +308,14 @@ test("omits a cancelled booking from who's out", async ({ orm, seed, transact })
   });
   await service.cancelTimeOff(OWNER, { timeOffId: booked.id });
 
-  const rows = await whosOutService(orm).readWhosOut(OWNER, {
-    employeeIds: [person.employeeId],
-    from: "2026-12-01",
-    until: "2026-12-31",
-  });
+  const rows = await whosOutService(orm).readWhosOut(OWNER, decemberFor(person.employeeId));
 
   expect(rows.get(person.employeeId)?.timeOff).toEqual([]);
 });
+
+function decemberFor(employeeId: string) {
+  return { employeeIds: [employeeId], from: "2026-12-01", until: "2026-12-31" };
+}
 
 async function makeThursdaysNonWorking(orm: Orm, employeeId: string) {
   const pattern = await seedWorkingPattern(orm, { minutes: [450, 450, 450, 0, 450, 0, 0] });

@@ -5,7 +5,7 @@ import {
   AllowanceHistoryDocument,
   ReverseAllowanceAdjustmentDocument,
 } from "@/__generated__/graphql";
-import { usePayloadMutation } from "@/apollo";
+import { PayloadFailure, usePayloadMutation } from "@/apollo";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +26,7 @@ type Props = {
   balance: { remaining: number; firstName: string; isReader: boolean };
   /** `YYYY-MM-DD` in London, to tell whether the adjustment's date needs its year. */
   today: string;
-  /** Runs when the server refuses, such as when someone reversed it meanwhile. */
+  /** Runs when the server refuses, such as when someone reversed it meanwhile, before closing. */
   onRefused: () => void;
   onClose: () => void;
 };
@@ -35,10 +35,9 @@ type Props = {
 export function ReverseAdjustmentDialog({ adjustment, balance, today, onRefused, onClose }: Props) {
   const [reason, setReason] = useState("");
   // The payload updates the card's figures in the cache; only the history needs the server.
-  const [reverse, { loading, error, payloadError }] = usePayloadMutation(
-    ReverseAllowanceAdjustmentDocument,
-    { refetch: [AllowanceHistoryDocument] },
-  );
+  const [reverse, { loading, error }] = usePayloadMutation(ReverseAllowanceAdjustmentDocument, {
+    refetch: [AllowanceHistoryDocument],
+  });
   const words = reverseWords(adjustment, balance, today);
   const hintId = useId();
 
@@ -50,8 +49,13 @@ export function ReverseAdjustmentDialog({ adjustment, balance, today, onRefused,
           input: { adjustmentId: adjustment.adjustmentId!, ...(comment && { comment }) },
         },
       });
-    } catch {
-      onRefused();
+    } catch (error) {
+      if (error instanceof PayloadFailure) {
+        // Someone reversed or changed it meanwhile; the refreshed history shows how it stands.
+        toast.error(t("people.panel.timeOff.reverse.refused"));
+        onRefused();
+        onClose();
+      }
       return;
     }
     toast(words.done);
@@ -78,11 +82,9 @@ export function ReverseAdjustmentDialog({ adjustment, balance, today, onRefused,
             ? t("people.panel.timeOff.adjust.commentHintSelf")
             : t("people.panel.timeOff.adjust.commentHint", { name: balance.firstName })}
         </p>
-        {(error || payloadError) && (
+        {error && (
           <p role="alert" className="text-sm text-destructive">
-            {payloadError && payloadError.__typename !== "InvalidInputError"
-              ? payloadError.message
-              : t("people.panel.timeOff.reverse.failed")}
+            {t("people.panel.timeOff.reverse.failed")}
           </p>
         )}
         <AlertDialogFooter>
