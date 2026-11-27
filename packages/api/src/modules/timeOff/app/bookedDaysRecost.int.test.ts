@@ -78,9 +78,9 @@ test.for([
       cause: "working_pattern_changed",
       causeDate: startDate,
       amount: remaining - 10,
+      usedAfter: cost,
       bookedDays: { first: firstRefund, last: "2026-12-17" },
     });
-    expect(change?.parts).toContainEqual({ kind: "time_off_booked", amount: 10 - cost });
     const calendar = await whosOutService(orm, { today }).readWhosOut(OWNER, {
       employeeIds,
       from: decemberLeave.startDate,
@@ -139,7 +139,9 @@ test("cancels at the recalculated cost and refunds those eight days only once", 
     cause: "time_off_cancelled",
     amount: 8,
     balanceAfter: 19.5,
-    parts: [{ kind: "time_off_booked", amount: 8 }],
+    entitlementAfter: 27.5,
+    bankHolidaysAfter: 8,
+    usedAfter: 0,
   });
 
   await expect(bookings.cancelTimeOff(OWNER, { timeOffId: booking.id })).rejects.toMatchObject({

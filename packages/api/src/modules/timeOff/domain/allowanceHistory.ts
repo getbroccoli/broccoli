@@ -3,7 +3,7 @@ import Big from "big.js";
 import type { HistoryAuthor } from "../../../core/records";
 import type { CalendarDate } from "../../../utils";
 import type { AllowanceCause } from "./allowanceCause";
-import { type LedgerLineKind, timeOffFigures } from "./timeOffFigures";
+import { type LedgerLineKind, type TimeOffFigures, timeOffFigures } from "./timeOffFigures";
 
 /** Why a balance changed: a cause of the engine's lines, or someone adjusting it. */
 export type AllowanceChangeCause =
@@ -35,9 +35,11 @@ export interface AllowanceChange {
   bookedDays: { first: CalendarDate; last: CalendarDate } | null;
   /** Days added (positive) or taken (negative): the balance after less the one before. */
   amount: number;
+  /** The figures after the change, as the card shows them, so the newest equals the card's. */
+  entitlementAfter: number;
+  bankHolidaysAfter: number;
+  usedAfter: number;
   balanceAfter: number;
-  /** The change's lines summed by kind; kinds adding up to 0 are left out. */
-  parts: { kind: LedgerLineKind; amount: number }[];
   author: HistoryAuthor;
   /** The adjustment's comment, or the reversal's reason. */
   comment: string | null;
@@ -60,23 +62,25 @@ export function allowanceHistory(lines: readonly StoredLedgerLine[]): AllowanceC
   );
   const groups = Map.groupBy(oldestFirst, changeKeyOf);
   const sums = new Map<LedgerLineKind, Big>();
-  let previousBalance = 0;
+  let previous = timeOffFigures([]);
   const changes: AllowanceChange[] = [];
   for (const group of groups.values()) {
     for (const { kind, amount } of group) {
       sums.set(kind, (sums.get(kind) ?? Big(0)).plus(amount));
     }
-    const balanceAfter = timeOffFigures(
+    const after = timeOffFigures(
       [...sums].map(([kind, sum]) => ({ kind, amount: sum.toNumber() })),
-    ).remaining;
-    const change = toChange(group, balanceAfter, previousBalance, reversedIds);
-    previousBalance = balanceAfter;
-    if (change.amount !== 0 || change.parts.length > 0) {
-      changes.push(change);
+    );
+    if (FIGURES.some((figure) => after[figure] !== previous[figure])) {
+      changes.push(toChange(group, after, previous.remaining, reversedIds));
     }
+    previous = after;
   }
   return changes.reverse();
 }
+
+/** A change that moves none of these is left out; remaining follows from them. */
+const FIGURES = ["entitlement", "bankHolidays", "used"] as const;
 
 /** Causes whose reference is the date they apply from, or `<id>:<date>` for rules changes. */
 const DATED_CAUSES = new Set<AllowanceChangeCause>([
@@ -99,7 +103,7 @@ function changeKeyOf({ id, kind, createdAt, causeKind, causeRef }: StoredLedgerL
 
 function toChange(
   group: readonly StoredLedgerLine[],
-  balanceAfter: number,
+  after: TimeOffFigures,
   previousBalance: number,
   reversedIds: ReadonlySet<string>,
 ): AllowanceChange {
@@ -111,9 +115,11 @@ function toChange(
     cause: first.causeKind,
     causeDate: causeDateOf(first),
     bookedDays: bookedDaysOf(group),
-    amount: Big(balanceAfter).minus(previousBalance).toNumber() + 0,
-    balanceAfter,
-    parts: partsOf(group),
+    amount: Big(after.remaining).minus(previousBalance).toNumber() + 0,
+    entitlementAfter: after.entitlement,
+    bankHolidaysAfter: after.bankHolidays,
+    usedAfter: after.used,
+    balanceAfter: after.remaining,
     author: first.author,
     comment: adjustment ? first.reason : null,
     adjustmentId: adjustment ? first.id : null,
@@ -134,15 +140,4 @@ function bookedDaysOf(group: readonly StoredLedgerLine[]): AllowanceChange["book
     .map(({ effectiveDate }) => effectiveDate)
     .sort();
   return days.length === 0 ? null : { first: days[0]!, last: days.at(-1)! };
-}
-
-function partsOf(group: readonly StoredLedgerLine[]): AllowanceChange["parts"] {
-  const byKind = Map.groupBy(group, ({ kind }) => kind);
-  return [...byKind].flatMap(([kind, lines]) => {
-    const amount = lines
-      .reduce((sum, line) => sum.plus(line.amount), Big(0))
-      .round(2)
-      .toNumber();
-    return amount === 0 ? [] : [{ kind, amount: amount + 0 }];
-  });
 }

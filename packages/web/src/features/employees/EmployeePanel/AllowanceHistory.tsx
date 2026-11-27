@@ -1,20 +1,15 @@
 import { useQuery } from "@apollo/client/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useRouteContext } from "@tanstack/react-router";
 
 import { AllowanceHistoryDocument } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { companyToday } from "@/features/termsDisplay";
-import { formatDays } from "@/lib/formatDays";
 
-import {
-  type AllowanceChange,
-  changeTitle,
-  partsLine,
-  recordedDate,
-  signedDays,
-} from "./allowanceHistoryText";
+import { AllowanceChangeRow } from "./AllowanceChangeRow";
+import type { AllowanceChange } from "./allowanceHistoryText";
 import { ReverseAdjustmentDialog } from "./ReverseAdjustmentDialog";
 
 type Props = {
@@ -24,10 +19,12 @@ type Props = {
   reverseFor?: { firstName: string; isReader: boolean };
 };
 
-/** A balance's changes, newest first, each with what it did and the days left after it. */
+/** A balance's changes, newest first, each with what it did and how it moved the figures. */
 export function AllowanceHistory({ employeeId, allowanceId, reverseFor }: Props) {
   const { me } = useRouteContext({ from: "/_authenticated" });
   const [reversingId, setReversingId] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const firstRevealed = useRef<HTMLLIElement>(null);
   // Bookings and adjustments made while it was closed change it, so each open asks again.
   const { data, error, loading, refetch } = useQuery(AllowanceHistoryDocument, {
     variables: { employeeId },
@@ -60,59 +57,37 @@ export function AllowanceHistory({ employeeId, allowanceId, reverseFor }: Props)
       </p>
     );
   }
+  const shown = showAll ? changes : changes.slice(0, FIRST_SHOWN);
   return (
     <>
       <ol className="flex flex-col border-t border-border/60">
-        {changes.map((change, index) => {
-          const parts = partsLine(change);
-          return (
-            <li
-              key={`${change.recordedAt}:${change.cause}:${index}`}
-              className="grid grid-cols-[3.5rem_minmax(0,1fr)_auto] gap-x-2 border-b border-border/60 px-3 py-2 text-sm last:border-b-0"
-            >
-              <span className="text-muted-foreground">
-                {recordedDate(change.recordedAt, today)}
-              </span>
-              <span className="flex min-w-0 flex-col items-start">
-                <span className="flex flex-wrap items-center gap-x-2">
-                  {changeTitle(change, me.id)}
-                  {change.reversed && (
-                    <span className="rounded-full bg-muted px-2 text-xs text-muted-foreground">
-                      {t("people.panel.timeOff.history.reversedTag")}
-                    </span>
-                  )}
-                </span>
-                {change.comment && (
-                  <span className="text-muted-foreground break-words">{change.comment}</span>
-                )}
-                {parts && <span className="text-xs text-muted-foreground">{parts}</span>}
-                {reverseFor && isReversible(change) && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-1"
-                    aria-label={t("people.panel.timeOff.reverse.openLabel", {
-                      amount: signedDays(change.amount),
-                      date: recordedDate(change.recordedAt, today),
-                    })}
-                    onClick={() => setReversingId(change.adjustmentId)}
-                  >
-                    {t("people.panel.timeOff.reverse.open")}
-                  </Button>
-                )}
-              </span>
-              <span className="flex flex-col items-end">
-                <span className="font-medium tabular-nums">{signedDays(change.amount)}</span>
-                <span className="text-xs text-muted-foreground tabular-nums">
-                  {t("people.panel.timeOff.history.left", {
-                    days: formatDays(change.balanceAfter),
-                  })}
-                </span>
-              </span>
-            </li>
-          );
-        })}
+        {shown.map((change, index) => (
+          <AllowanceChangeRow
+            ref={index === FIRST_SHOWN ? firstRevealed : undefined}
+            key={`${change.recordedAt}:${change.cause}:${index}`}
+            change={change}
+            previous={changes[index + 1]}
+            readerUserId={me.id}
+            today={today}
+            onReverse={reverseFor && isReversible(change) ? setReversingId : undefined}
+          />
+        ))}
       </ol>
+      {!showAll && changes.length > FIRST_SHOWN && (
+        <div className="border-t border-border/60 px-1.5 py-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              // The button goes away, so focus moves to the first row it revealed.
+              flushSync(() => setShowAll(true));
+              firstRevealed.current?.focus();
+            }}
+          >
+            {t("people.panel.timeOff.history.showAll", { count: String(changes.length) })}
+          </Button>
+        </div>
+      )}
       {reversing && reverseFor && (
         <ReverseAdjustmentDialog
           adjustment={reversing}
@@ -126,6 +101,9 @@ export function AllowanceHistory({ employeeId, allowanceId, reverseFor }: Props)
     </>
   );
 }
+
+/** The newest changes shown before Show all. */
+const FIRST_SHOWN = 5;
 
 /** An adjustment nobody has reversed yet; a reversal itself can't be reversed. */
 function isReversible(change: AllowanceChange): boolean {

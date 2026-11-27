@@ -26,15 +26,13 @@ test("lists the statutory grant and eight bank holidays as one change", async ({
       cause: "time_off_turned_on",
       amount: 20,
       balanceAfter: 20,
-      parts: expect.arrayContaining([
-        { kind: "entitlement_grant", amount: 28 },
-        { kind: "bank_holiday_taken", amount: -8 },
-      ]) as unknown,
+      entitlementAfter: 28,
+      bankHolidaysAfter: 8,
+      usedAfter: 0,
       bookedDays: null,
       comment: null,
     },
   ]);
-  expect(history.get(allowanceId)![0]!.parts).toHaveLength(2);
 });
 
 test("lists the cancellation before its booking and restores the same two and a half days", async ({

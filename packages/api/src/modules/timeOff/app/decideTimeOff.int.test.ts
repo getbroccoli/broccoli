@@ -103,7 +103,7 @@ test("approval charges the eight days the employee still works after their week 
   expect(
     history.get(allowanceId)?.filter(({ cause }) => cause === "time_off_approved"),
   ).toMatchObject([
-    { amount: -8, balanceAfter: 11.5, parts: [{ kind: "time_off_booked", amount: -8 }] },
+    { amount: -8, balanceAfter: 11.5, entitlementAfter: 27.5, bankHolidaysAfter: 8, usedAfter: 8 },
   ]);
 });
 

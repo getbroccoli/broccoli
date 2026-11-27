@@ -51,27 +51,46 @@ it("takes each amount from the difference between successive rounded remaining f
   ]);
 
   expect(history).toMatchObject([
-    { amount: 0, balanceAfter: 4.51 },
     { amount: 0.01, balanceAfter: 4.51 },
     { amount: 4.5, balanceAfter: 4.5 },
   ]);
 });
 
-it("sums each part before rounding and leaves out kinds that cancel out", () => {
+it("shows allowance, bank holidays taken and days used after each change", () => {
   const history = allowanceHistory([
-    line(1, { amount: "3.123456" }),
-    line(2, { amount: "4.123456" }),
+    line(1, { amount: "6.25" }),
+    line(2, { kind: "rounding_up_to_half_day", amount: "0.25" }),
     line(3, { kind: "bank_holiday_taken", amount: "-1" }),
-    line(4, { kind: "bank_holiday_taken", amount: "1" }),
+    line(4, {
+      createdAt: laterTime,
+      causeKind: "time_off_booked",
+      kind: "time_off_booked",
+      amount: "-2",
+    }),
   ]);
 
-  expect(history[0]!.parts).toEqual([{ kind: "entitlement_grant", amount: 7.25 }]);
+  expect(history).toMatchObject([
+    { entitlementAfter: 6.5, bankHolidaysAfter: 1, usedAfter: 2 },
+    { entitlementAfter: 6.5, bankHolidaysAfter: 1, usedAfter: 0 },
+  ]);
 });
 
-it("omits a change whose amount and parts all cancel out", () => {
-  const history = allowanceHistory([line(1, { amount: "2" }), line(2, { amount: "-2" })]);
+it("omits a change whose lines cancel out within the allowance", () => {
+  const history = allowanceHistory([
+    line(1, { amount: "2" }),
+    line(2, { kind: "bank_holiday_allowance_grant", amount: "-2" }),
+  ]);
 
   expect(history).toEqual([]);
+});
+
+it("lists a zero-amount change when the allowance and bank holidays taken both increase", () => {
+  const history = allowanceHistory([
+    line(1, { amount: "1" }),
+    line(2, { kind: "bank_holiday_taken", amount: "-1" }),
+  ]);
+
+  expect(history).toMatchObject([{ amount: 0, entitlementAfter: 1, bankHolidaysAfter: 1 }]);
 });
 
 it("keeps both adjustments and their authors when opposite amounts are recorded at the same time", () => {

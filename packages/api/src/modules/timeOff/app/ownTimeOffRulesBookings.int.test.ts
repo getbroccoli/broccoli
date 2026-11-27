@@ -216,9 +216,8 @@ test("keeps personal Annual leave through a shared change and prorates a dated r
     causeDate: "2026-07-01",
     amount: -2,
     balanceAfter: 14,
+    entitlementAfter: 32,
   });
-  expect(change?.parts).toContainEqual({ kind: "entitlement_grant", amount: -2.02 });
-  expect(change?.parts).toContainEqual({ kind: "rounding_up_to_half_day", amount: 0.02 });
 });
 
 const twentyFiveDays = {
