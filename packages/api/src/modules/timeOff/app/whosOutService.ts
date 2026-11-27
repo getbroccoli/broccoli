@@ -24,6 +24,7 @@ import {
   type TimeOffStatus,
 } from "../db";
 import {
+  type CostedDay,
   costedDays,
   type DayCostReason,
   type DayPart,
@@ -220,39 +221,35 @@ function whosOutOf(
         : "not_employed",
       bankHolidayName,
     })),
-    timeOff: (facts.bookingsOf.get(employeeId) ?? []).map((booking) => {
-      const shown = {
-        id: booking.id,
-        timeOffTypeId:
-          readable || !facts.privateTypeIds.has(booking.timeOffTypeId)
-            ? booking.timeOffTypeId
-            : null,
-        days: booking.days,
-        status: booking.status,
-      };
-      if (!readable) {
-        return {
-          ...shown,
-          cost: null,
-          dayCosts: null,
-          deductedDays: null,
-          note: null,
-          bookedAt: null,
-        };
-      }
-      const dayCosts = costed(booking.days).map(({ date, cost, reason }) => ({
-        date,
-        cost,
-        reason,
-      }));
-      return {
-        ...shown,
-        cost: totalCost(dayCosts),
-        dayCosts,
-        deductedDays: facts.deductedDays.get(booking.id) ?? null,
-        note: booking.note,
-        bookedAt: booking.createdAt,
-      };
-    }),
+    timeOff: (facts.bookingsOf.get(employeeId) ?? []).map((booking) =>
+      timeOffAsShown(facts, booking, readable ? costed : null),
+    ),
+  };
+}
+
+/** A booking as its reader sees it: costed only when `costed` is given, for who may read it. */
+function timeOffAsShown(
+  facts: Facts,
+  booking: Booking,
+  costed: ((days: Booking["days"]) => CostedDay[]) | null,
+): WhosOutTimeOff {
+  const shown = {
+    id: booking.id,
+    timeOffTypeId:
+      costed || !facts.privateTypeIds.has(booking.timeOffTypeId) ? booking.timeOffTypeId : null,
+    days: booking.days,
+    status: booking.status,
+  };
+  if (!costed) {
+    return { ...shown, cost: null, dayCosts: null, deductedDays: null, note: null, bookedAt: null };
+  }
+  const dayCosts = costed(booking.days).map(({ date, cost, reason }) => ({ date, cost, reason }));
+  return {
+    ...shown,
+    cost: totalCost(dayCosts),
+    dayCosts,
+    deductedDays: facts.deductedDays.get(booking.id) ?? null,
+    note: booking.note,
+    bookedAt: booking.createdAt,
   };
 }
