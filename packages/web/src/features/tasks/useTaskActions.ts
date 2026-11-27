@@ -1,3 +1,4 @@
+import type { DocumentNode } from "graphql";
 import { toast } from "sonner";
 
 import {
@@ -14,12 +15,14 @@ import { addTaskHistoryLine, forgetStaleTask } from "./cache";
 /**
  * Mark done, with the result a task's form asks for, and Delete for the person who asked. Mark done returns the task, which updates in
  * place; the groups it belongs to change when Tasks next loads. A refusal, such as a change someone
- * made first, shows its reason and loads the task again as it now stands.
+ * made first, shows its reason and loads the task again as it now stands. `refetch` lists the
+ * active queries a done task changes outside Tasks, such as the record it decided.
  */
-export function useTaskActions() {
+export function useTaskActions({ refetch }: { refetch?: DocumentNode[] } = {}) {
   const cache = useCache();
   const [markDone, markDoneState] = usePayloadMutation(MarkTaskDoneDocument, {
     update: (cache, { data }) => addTaskHistoryLine(cache, data?.tasks.markDone),
+    refetch,
   });
   const [deleteTask, deleteState] = usePayloadMutation(DeleteTaskDocument);
 

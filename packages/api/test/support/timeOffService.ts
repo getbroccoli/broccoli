@@ -6,7 +6,6 @@ import type { ApprovalService } from "../../src/core/approvals";
 import type { SecurityContext } from "../../src/core/security";
 import { createLogger } from "../../src/core/logger";
 import { createDemoFillService } from "../../src/modules/demo";
-import { createTaskService } from "../../src/core/tasks";
 import {
   createAllowanceService,
   createBookTimeOffService,
@@ -39,6 +38,7 @@ import { employeeSetup } from "./statelessServices";
 import { OWNER } from "./testSecurityContext";
 import type { TestSeed } from "./testSeed";
 import { approvalService, processService } from "./processService";
+import { taskService } from "./taskService";
 import { testTransactor } from "./testTransactor";
 
 /** The time off service on `orm` with the shipped bank holidays and silent logs; `today` is the engine's date. */
@@ -248,12 +248,7 @@ export async function readTermsPolicyVersions(orm: Orm, termsId: string) {
 
 /** The demo fill on `orm`, turning time off on for "England and Wales" terms. */
 export function demoFillService(orm: Orm) {
-  const tasks = createTaskService({
-    orm,
-    transact: testTransactor(orm),
-    logger: createLogger("silent"),
-  });
-  return createDemoFillService({ timeOff: timeOffService(orm), tasks });
+  return createDemoFillService({ timeOff: timeOffService(orm), tasks: taskService(orm) });
 }
 
 /** Transactions on `orm` whose committed events reach time off's handlers, and no one else's. */
@@ -270,6 +265,7 @@ export function transactWithTimeOffEvents(orm: Orm, { today }: { today?: string 
       }),
       bankHolidays: bankHolidayService(),
       approvals: approvalService(orm),
+      tasks: taskService(orm),
       transact: testTransactor(orm),
       logger: createLogger("silent"),
     }).events!,
@@ -280,11 +276,7 @@ export function transactWithTimeOffEvents(orm: Orm, { today }: { today?: string 
 /** Deletes every employee and resets time off, processes and tasks, as startup composes it. */
 export function deleteAllEmployees(orm: Orm) {
   const timeOff = timeOffService(orm);
-  const tasks = createTaskService({
-    orm,
-    transact: testTransactor(orm),
-    logger: createLogger("silent"),
-  });
+  const tasks = taskService(orm);
   const processes = processService(orm);
   return async (ctx: SecurityContext, tx: Tx) => {
     await timeOff.lockPolicies(ctx, tx);

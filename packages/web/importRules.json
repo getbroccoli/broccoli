@@ -70,6 +70,7 @@
       "src/apollo",
       "src/components/ui",
       "src/features/employees",
+      "src/features/tasks",
       "src/features/termsDisplay",
       "src/i18n",
       "src/lib/calendarDay",

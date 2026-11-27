@@ -551,6 +551,8 @@ type TimeOff implements AnyRecord {
   access: RecordAccess!
   "Whether the signed-in user may cancel this time off now, among time off they may read: the person withdraws their own waiting request at any time, and cancels approved time off they asked for or booked only before its first day; admins cancel anyone's waiting request, or approved time off in a leave year that is still open."
   canCancel: Boolean!
+  "The signed-in user's open tasks on this time off, such as approving the request, soonest due first; empty for anyone else."
+  myOpenTasks: [Task!]!
   "Who cancelled it and when; null unless someone cancelled it (an approval that ended without a decision is no cancellation), and for callers who may not read this person's time off."
   cancellation: TimeOffCancellation
   "Null unless the caller may read this person's time off."

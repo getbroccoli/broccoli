@@ -62,7 +62,10 @@ Add two people with `example.com` addresses (demo people can't be invited), make
 - [ ] As the manager: the task "Approve <name>'s Annual leave, 7–9 Dec" is in Needs you, with the days, the balance and the note.
 - [ ] Approve: the bar turns solid, the counts go up, the employee's panel shows Used 2.5, Remaining 17.5 and the row "Approved", and booking details "Approved by <manager> on …".
 - [ ] Another request, then Reject with a comment: the bar disappears; the row reads "Rejected" with the comment.
-- [ ] As the owner, the employee's approved leave shows Cancel time off; a waiting one shows Cancel request.
+- [ ] As the manager, click a waiting request on the Time off calendar: its card shows Approve and Reject, and no Cancel request. Approve closes the card, the bar turns solid, and the task leaves Needs you.
+- [ ] On another waiting request's card, Reject asks for a comment and Send stays off until one is typed; sending it removes the bar.
+- [ ] As the manager, after another admin decided a request whose card is still open, Approve shows why it was refused and changes nothing.
+- [ ] As the owner who is not the approver, the employee's approved leave shows Cancel time off; a waiting one shows Cancel request and no Approve or Reject.
 
 ## Withdraw and cancel
 

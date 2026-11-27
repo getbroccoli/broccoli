@@ -1,6 +1,7 @@
 import DataLoader from "dataloader";
 
 import type { ApprovalProcessKey } from "../../../core/approvals";
+import type { TaskService } from "../../../core/tasks";
 import {
   mutationPayload,
   perRequest,
@@ -46,6 +47,7 @@ export interface TimeOffResolverServices {
   ownRules: OwnRulesServices;
   allowances: AllowanceService;
   requests: TimeOffRequestService;
+  tasks: Pick<TaskService, "listMyOpenTasksOnRecords">;
 }
 
 export function createResolvers({
@@ -57,10 +59,11 @@ export function createResolvers({
   ownRules,
   allowances,
   requests,
+  tasks,
 }: TimeOffResolverServices): Resolvers {
   const bookings = bookingResolvers(booking, whosOut);
   const allowanceChanges = allowanceResolvers(allowances);
-  const requested = requestResolvers(requests, ownRules.employees);
+  const requested = requestResolvers(requests, ownRules.employees, tasks);
   const loaders = timeOffLoaders(timeOff);
   return {
     ...bookings,

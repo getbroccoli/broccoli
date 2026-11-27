@@ -183,6 +183,7 @@ export function createModules(
       timeOff,
       bankHolidays,
       approvals,
+      tasks,
       timeOffSetup: createTimeOffSetupService({
         ...core,
         decisions: aiSettings.decisions,

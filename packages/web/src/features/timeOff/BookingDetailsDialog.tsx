@@ -8,7 +8,7 @@ import {
   TimeOffBookingPreviewDocument,
   WhosOutDocument,
 } from "@/__generated__/graphql";
-import { PayloadFailure, usePayloadMutation } from "@/apollo";
+import { PayloadFailure, useCache, usePayloadMutation } from "@/apollo";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, decisionLine, TimeOffStatusChip } from "@/features/employees";
+import { TaskDecision } from "@/features/tasks";
 import { t } from "@/i18n";
 import { calendarDayOf } from "@/lib/calendarDay";
 import { cn } from "@/lib/class-names";
@@ -42,8 +43,8 @@ type Props = {
 
 /**
  * One booking or request as the viewer may see it: its type (or "Off"), dates and, for who may
- * read the person's time off, its days, cost, note, status and decision. Whoever may cancel it,
- * or withdraw their own request, does it from here.
+ * read the person's time off, its days, cost, note, status and decision. Its approver decides it
+ * from here; anyone else who may cancel it, or withdraw their own request, does that.
  */
 export function BookingDetailsDialog({
   employeeId,
@@ -52,6 +53,7 @@ export function BookingDetailsDialog({
   viewerEmployeeId,
   onClose,
 }: Props) {
+  const cache = useCache();
   const [confirming, setConfirming] = useState(false);
   const [cancel, cancelling] = usePayloadMutation(CancelTimeOffDocument, {
     update: (cache) => evictWhosOut(cache, employeeId),
@@ -64,8 +66,12 @@ export function BookingDetailsDialog({
     ],
   });
   const typeName = timeOff.timeOffType?.name ?? t("timeOff.off");
+  const decisionTask = timeOff.myOpenTasks.find(hasResultForm) ?? null;
+  // The approver decides rather than cancels.
   const cancellable =
-    timeOff.canCancel && (timeOff.status === "REQUESTED" || timeOff.status === "APPROVED")
+    !decisionTask &&
+    timeOff.canCancel &&
+    (timeOff.status === "REQUESTED" || timeOff.status === "APPROVED")
       ? timeOff.status
       : null;
   const byThePerson = viewerEmployeeId === employeeId;
@@ -181,6 +187,18 @@ export function BookingDetailsDialog({
               })}
             </p>
           )}
+          {decisionTask && (
+            <DialogFooter className="sm:justify-start">
+              <TaskDecision
+                task={decisionTask}
+                refetch={[WhosOutDocument, EmployeePanelDocument, MyTasksDocument]}
+                onDone={() => {
+                  evictWhosOut(cache, employeeId);
+                  onClose();
+                }}
+              />
+            </DialogFooter>
+          )}
           {cancelWords && (
             <DialogFooter>
               <Button variant="outline" onClick={() => setConfirming(true)}>
@@ -218,4 +236,12 @@ export function BookingDetailsDialog({
 /** The part of the day booked on a date: full day, morning or afternoon. */
 function dayPartOn(timeOff: WhosOutTimeOff, date: string) {
   return timeOff.days.find((day) => day.date === date)!.dayPart;
+}
+
+type OpenTask = WhosOutTimeOff["myOpenTasks"][number];
+
+function hasResultForm(
+  task: OpenTask,
+): task is OpenTask & { resultForm: NonNullable<OpenTask["resultForm"]> } {
+  return task.resultForm !== null && task.resultForm !== undefined;
 }
