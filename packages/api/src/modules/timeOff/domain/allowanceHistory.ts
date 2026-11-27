@@ -7,9 +7,7 @@ import { type LedgerLineKind, timeOffFigures } from "./timeOffFigures";
 
 /** Why a balance changed: a cause of the engine's lines, or someone adjusting it. */
 export type AllowanceChangeCause =
-  | Lowercase<AllowanceCause["kind"]>
-  | "allowance_adjusted"
-  | "allowance_adjustment_reversed";
+  Lowercase<AllowanceCause["kind"]> | "allowance_adjusted" | "allowance_adjustment_reversed";
 
 /** A ledger line as stored, for the history. */
 export interface StoredLedgerLine {
