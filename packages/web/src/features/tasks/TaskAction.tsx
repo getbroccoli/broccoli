@@ -8,7 +8,7 @@ import { useTaskActions } from "./useTaskActions";
 
 type Props = {
   task: TaskRow;
-  /** Runs once Mark done ends, as the task may then leave the list holding focus. */
+  /** Runs once the task is marked done, as it may then leave the list holding focus. */
   onDone?: () => void;
 };
 
@@ -29,7 +29,7 @@ export function TaskAction({ task, onDone }: Props) {
       size="xs"
       variant="outline"
       disabled={actions.isPending}
-      onClick={() => void actions.markDone(task.id).then(onDone)}
+      onClick={() => void actions.markDone(task.id).then((done) => done && onDone?.())}
     >
       {t("tasks.markDone")}
     </Button>

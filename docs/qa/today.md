@@ -6,7 +6,8 @@ A manual check of the home page against a development stack: what needs you, who
 
 1. Start the stack with `pnpm dev --drop-db` and finish setup with "Create account" (not "Explore the demo", whose owner can't invite), as in [QA setup](setup.md).
 2. On People, add a manager, two of their reports and one person in another team, set the managers, and invite the manager and one report; accept both invites in separate browser profiles. Give one new person a start date within the next 13 days and another a start date one or more years ago whose anniversary falls within the next 13 days.
-3. As the report, request a few days of Annual leave in the next two weeks. As the owner, book a day of Annual leave today and a day of a private type such as Sickness for the other report, and a booking that needs no approval for the report, more than two weeks ahead.
+3. Insert a to-do the owner asks of the manager, as the plain to-do in [QA: Tasks](tasks.md) does.
+4. As the report, request two separate periods of Annual leave in the next two weeks. As the owner, book a day of Annual leave today and a day of a private type such as Sickness for the other report, and a booking that needs no approval for the report, more than two weeks ahead.
 
 ## Landing
 
@@ -19,14 +20,14 @@ A manual check of the home page against a development stack: what needs you, who
 ## Needs you
 
 - [ ] As the manager, "Needs you" lists the report's request with its due date and "Answer", which opens the task on Tasks.
-- [ ] A to-do without a result form shows "Mark done"; pressing it says "Marked done".
+- [ ] The inserted to-do shows "Mark done"; pressing it says "Marked done".
 - [ ] "See your tasks" opens `/tasks`; at most five tasks show on Today.
-- [ ] Pressing "Mark done" with the keyboard moves focus to "See your tasks" once the task leaves the list.
+- [ ] Pressing "Mark done" with the keyboard (Tab to it, Enter) moves focus to "See your tasks" once the task leaves the list.
 - [ ] With nothing to do, the card reads "Nothing needs you right now."
 
 ## Who's out
 
-- [ ] As the manager, "Your team" is chosen and lists the report off today under "Today", each with dates. The other report's request doesn't show; approve it with "Answer" in Needs you, and it shows under "Next 2 weeks".
+- [ ] As the manager, "Your team" is chosen and lists the report off today under "Today", each with dates. The report's requests don't show; approve the first with "Answer" in Needs you, and it shows under "Next 2 weeks".
 - [ ] A booking on a Friday and the next Monday shows under "Next 2 weeks", not "Today", on the Saturday.
 - [ ] "Everyone" lists approved time off of everyone else; your own never shows here.
 - [ ] As the report, a colleague's approved Annual leave shows with its type, and their Sickness shows as "Off".
@@ -36,12 +37,12 @@ A manual check of the home page against a development stack: what needs you, who
 
 ## Your time off
 
-- [ ] As the report, the card shows the Annual leave left, such as "20 of 25 days of Annual leave left", with a bar; the waiting request with its dates, type and "Waiting for approval"; the booking that needed no approval as "Approved"; and "Request time off".
+- [ ] As the report, the card shows the Annual leave left, such as "20 of 25 days of Annual leave left", with a bar; the approved request as "Approved" and the second as "Waiting for approval", each with its dates and type; the booking that needed no approval as "Approved"; and "Request time off".
 - [ ] "Request time off" opens the Time off dialog already set to you; Back closes it again.
 - [ ] As the manager, the card shows the same, with "Request time off" or "Book time off" as their own time off allows.
-- [ ] With nothing booked in the next two months, it reads "Nothing booked yet."
+- [ ] With nothing booked in the next two months, it reads "Nothing booked in the next 2 months."
 - [ ] With time off turned off ("Skip, turn on later" in setup), the card shows no request button.
-- [ ] "See all" opens your own person panel.
+- [ ] "See all" opens the Time off page on this month.
 
 ## Coming up
 
@@ -50,7 +51,7 @@ A manual check of the home page against a development stack: what needs you, who
 
 ## Failures
 
-- [ ] With the API stopped, a fresh load of Today shows "This couldn't load. Try again" in Who's out and Your time off, and "Tasks could not load. Try again" in Needs you; starting the API and pressing "Try again" fills the card.
+- [ ] Open People after a reload, switch the browser's dev tools to Offline, then open Today: Who's out and Your time off show "This couldn't load. Try again" (Needs you keeps the tasks the menu's count already loaded). Back online, "Try again" fills each card.
 
 ## Phone width
 

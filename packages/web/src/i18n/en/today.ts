@@ -19,7 +19,7 @@ export const todayEn = {
   "today.timeOff.title": "Your time off",
   "today.timeOff.seeAll": "See all",
   "today.timeOff.left": "of {days} of {name} left",
-  "today.timeOff.nothingBooked": "Nothing booked yet.",
+  "today.timeOff.nothingBooked": "Nothing booked in the next 2 months.",
   "today.comingUp.title": "Coming up",
   "today.loadFailed": "This couldn’t load.",
   "today.retry": "Try again",

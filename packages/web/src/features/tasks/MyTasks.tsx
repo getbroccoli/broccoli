@@ -6,8 +6,8 @@ import { MyTasksDocument, type MyTasksQuery } from "@/__generated__/graphql";
 import { DataTable, type DataTableColumn, TableState } from "@/components/dataTable";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/features/employees";
+import { companyToday } from "@/features/termsDisplay";
 import { t } from "@/i18n";
-import { calendarDayOf } from "@/lib/calendarDay";
 import { cn } from "@/lib/class-names";
 
 import { TaskAction } from "./TaskAction";
@@ -26,7 +26,7 @@ export function MyTasks() {
   const { data, error, loading, refetch } = useQuery(MyTasksDocument, {
     fetchPolicy: "cache-and-network",
   });
-  const today = calendarDayOf(new Date());
+  const today = companyToday();
   const rows =
     data && GROUPS.flatMap((group) => data.myTasks[group].map((task) => ({ group, task })));
 

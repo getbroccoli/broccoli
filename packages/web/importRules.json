@@ -58,6 +58,7 @@
       "src/components/ui",
       "src/features/employees",
       "src/features/records",
+      "src/features/termsDisplay",
       "src/i18n",
       "src/lib/calendarDay",
       "src/lib/class-names"

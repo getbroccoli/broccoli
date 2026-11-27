@@ -41,7 +41,11 @@ export function MyTimeOffCard({ employeeId, today }: Props) {
     <Card
       title={t("today.timeOff.title")}
       action={
-        <Link to="/me" className="text-sm font-medium hover:underline">
+        <Link
+          to="/time-off"
+          search={{ month: today.slice(0, 7) }}
+          className="text-sm font-medium hover:underline"
+        >
           {t("today.timeOff.seeAll")}
         </Link>
       }

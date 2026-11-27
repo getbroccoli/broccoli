@@ -78,8 +78,10 @@ export function TasksNeedingYouCard({ today }: Props) {
                 </div>
                 <TaskAction
                   task={task}
-                  // A done task leaves this list with its button; focus moves on instead of to the page's start.
                   onDone={() => {
+                    // Finishing a step can hand the person the next one, which only the server knows.
+                    void refetch();
+                    // The done task leaves this list with its button; focus moves on instead of to the page's start.
                     if (document.activeElement === document.body) seeAll.current?.focus();
                   }}
                 />

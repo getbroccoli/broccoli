@@ -32,10 +32,17 @@ export function useTaskActions() {
 
   return {
     isPending: markDoneState.loading || deleteState.loading,
+    /** Resolves true once marked done; a refusal shows and resolves false. */
     markDone: (id: string, result?: TaskResultInput) =>
       markDone({ variables: { input: { id, result } } }).then(
-        () => void toast(t("tasks.markedDone")),
-        refused(id),
+        () => {
+          toast(t("tasks.markedDone"));
+          return true;
+        },
+        (failure: unknown) => {
+          refused(id)(failure);
+          return false;
+        },
       ),
     /** Resolves true once deleted, the task gone from the cache; a refusal shows and resolves false. */
     delete: (id: string) =>

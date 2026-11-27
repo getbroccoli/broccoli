@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { TasksNeedingYouCard } from "@/features/tasks";
 import { companyToday } from "@/features/termsDisplay";
 import { t } from "@/i18n";
-import { utcDay } from "@/lib/calendarDay";
+import { weekdayDayMonth } from "@/lib/formatDate";
 import { PageHeader } from "@/shell";
 
 import { ComingUpCard } from "./ComingUpCard";
@@ -15,13 +15,6 @@ import { LoadFailed } from "./LoadFailed";
 import { MyTimeOffCard } from "./MyTimeOffCard";
 import { partOfDay } from "./partOfDay";
 import { WhosOutCard } from "./WhosOutCard";
-
-const DATE_TITLE = new Intl.DateTimeFormat("en-GB", {
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-  timeZone: "UTC",
-});
 
 /** The home page: what needs the person, who is out, their own time off and who starts soon. */
 export function TodayPage() {
@@ -47,7 +40,7 @@ export function TodayPage() {
             ? t(`today.greeting.${part}.named`, { name: firstName })
             : t(`today.greeting.${part}`)
         }
-        description={DATE_TITLE.format(utcDay(today))}
+        description={weekdayDayMonth(today)}
       />
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="flex flex-col gap-4">
