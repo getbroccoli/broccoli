@@ -2,6 +2,7 @@ import { useFragment, useQuery } from "@apollo/client/react";
 import { useRouteContext } from "@tanstack/react-router";
 
 import { Today_EmployeeFragmentDoc, TodayPeopleDocument } from "@/__generated__/graphql";
+import { Card } from "@/components/ui/card";
 import { TasksNeedingYouCard } from "@/features/tasks";
 import { companyToday } from "@/features/termsDisplay";
 import { t } from "@/i18n";
@@ -10,6 +11,7 @@ import { PageHeader } from "@/shell";
 
 import { ComingUpCard } from "./ComingUpCard";
 import { fortnightFrom } from "./fortnightFrom";
+import { LoadFailed } from "./LoadFailed";
 import { MyTimeOffCard } from "./MyTimeOffCard";
 import { partOfDay } from "./partOfDay";
 import { WhosOutCard } from "./WhosOutCard";
@@ -31,10 +33,11 @@ export function TodayPage() {
   const part = partOfDay(new Date());
   const today = companyToday();
   // Time off and Tasks change it without a write here, so revisits read it again.
-  const people = useQuery(TodayPeopleDocument, {
+  const { data, error, refetch } = useQuery(TodayPeopleDocument, {
     variables: fortnightFrom(today),
     fetchPolicy: "cache-and-network",
-  }).data?.employees.edges.map(({ node }) => node);
+  });
+  const people = data?.employees.edges.map(({ node }) => node);
 
   return (
     <div className="flex max-w-6xl flex-col">
@@ -48,8 +51,14 @@ export function TodayPage() {
       />
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="flex flex-col gap-4">
-          <TasksNeedingYouCard />
-          {people && <WhosOutCard people={people} viewerId={viewerId} today={today} />}
+          <TasksNeedingYouCard today={today} />
+          {people ? (
+            <WhosOutCard people={people} viewerId={viewerId} today={today} />
+          ) : (
+            <Card title={t("today.out.title")}>
+              {error && <LoadFailed onRetry={() => void refetch()} />}
+            </Card>
+          )}
         </div>
         <div className="flex flex-col gap-4">
           {viewerId && <MyTimeOffCard employeeId={viewerId} today={today} />}

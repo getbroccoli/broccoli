@@ -4,6 +4,8 @@ fragment Today_employee on Employee {
 }
 
 # Everyone the viewer may read, with who is out and who starts or has an anniversary soon.
+# shortcut: like Time off, this reads every readable person's range in the browser; move it to a
+# server-side summary when companies of thousands find Today slow.
 query TodayPeople($from: Date!, $until: Date!) {
   employees(first: 10000) {
     edges {
@@ -20,6 +22,9 @@ query TodayPeople($from: Date!, $until: Date!) {
             status
             startDate
             endDate
+            days {
+              date
+            }
             timeOffType {
               id
               name
@@ -31,8 +36,8 @@ query TodayPeople($from: Date!, $until: Date!) {
   }
 }
 
-# The signed-in person's allowances, requests and whether they book or ask for time off.
-query TodayMyTimeOff($id: ID!) {
+# The signed-in person's allowances, coming time off and whether they book or ask for it.
+query TodayMyTimeOff($id: ID!, $from: Date!, $until: Date!) {
   employee(id: $id) {
     id
     canCreateTimeOff: canCreate(recordType: TIME_OFF)
@@ -46,14 +51,17 @@ query TodayMyTimeOff($id: ID!) {
       entitlement
       remaining
     }
-    timeOffRequests {
-      id
-      status
-      startDate
-      endDate
-      timeOffType {
+    # Booked straight away or asked for: a booking that needs no approval is no request.
+    whosOut(from: $from, until: $until) {
+      timeOff {
         id
-        name
+        status
+        startDate
+        endDate
+        timeOffType {
+          id
+          name
+        }
       }
     }
   }

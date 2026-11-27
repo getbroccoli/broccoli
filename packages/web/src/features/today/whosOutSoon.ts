@@ -2,9 +2,12 @@ import type { TimeOffStatus } from "@/__generated__/graphql";
 
 export type OutTimeOff = {
   id: string;
+  /** Null for a viewer who may not read the person's time off; whosOut then only returns approved time off. */
   status: TimeOffStatus | null;
   startDate: string;
   endDate: string;
+  /** The booked dates, oldest first; a booking skips non-working days. */
+  days: readonly { date: string }[];
 };
 export type OutPerson = {
   id: string;
@@ -14,26 +17,36 @@ export type OutPerson = {
 };
 export type Absence<P extends OutPerson> = { person: P; timeOff: P["whosOut"]["timeOff"][number] };
 
-/** Others' approved time off: under way today, and starting later, each by start date then name. */
+/** Others' approved time off: booked today, and booked later in the range, each by its next booked date then name. */
 export function whosOutSoon<P extends OutPerson>(
   people: readonly P[],
   today: string,
 ): { today: Absence<P>[]; upcoming: Absence<P>[] } {
-  const absences = people
-    .flatMap((person) => person.whosOut.timeOff.map((timeOff) => ({ person, timeOff })))
-    .filter(({ timeOff }) => timeOff.status === "APPROVED" && timeOff.endDate >= today)
-    .sort(byStartThenName);
+  const dated = people
+    .flatMap((person) =>
+      person.whosOut.timeOff.filter(isApproved).flatMap((timeOff) => {
+        const next = nextBookedDay(timeOff, today);
+        return next ? [{ next, absence: { person, timeOff } }] : [];
+      }),
+    )
+    .sort(
+      (a, b) =>
+        a.next.localeCompare(b.next) ||
+        fullName(a.absence.person).localeCompare(fullName(b.absence.person)),
+    );
   return {
-    today: absences.filter(({ timeOff }) => timeOff.startDate <= today),
-    upcoming: absences.filter(({ timeOff }) => timeOff.startDate > today),
+    today: dated.filter(({ next }) => next === today).map(({ absence }) => absence),
+    upcoming: dated.filter(({ next }) => next > today).map(({ absence }) => absence),
   };
 }
 
-function byStartThenName(a: Absence<OutPerson>, b: Absence<OutPerson>): number {
-  return (
-    a.timeOff.startDate.localeCompare(b.timeOff.startDate) ||
-    fullName(a.person).localeCompare(fullName(b.person))
-  );
+/** Approved, or hidden from a viewer who may not read it, which whosOut returns only once approved. */
+function isApproved({ status }: OutTimeOff): boolean {
+  return status === "APPROVED" || status === null;
+}
+
+function nextBookedDay(timeOff: OutTimeOff, today: string): string | undefined {
+  return timeOff.days.find(({ date }) => date >= today)?.date;
 }
 
 function fullName({ firstName, lastName }: { firstName: string; lastName: string }): string {

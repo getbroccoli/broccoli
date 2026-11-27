@@ -19,7 +19,9 @@ type Props = { people: readonly Person[]; viewerId: string | null; today: string
 /** Others' approved time off today and in the next two weeks, for the viewer's team or everyone. */
 export function WhosOutCard({ people, viewerId, today }: Props) {
   const team = viewerId ? teamOf(people, viewerId) : new Set<string>();
-  const [scope, setScope] = useState<Scope>(team.size > 0 ? "team" : "everyone");
+  const [chosen, setScope] = useState<Scope>("team");
+  // Without a team, or once it is gone, everyone is the only choice.
+  const scope = team.size > 0 ? chosen : "everyone";
   const others = people.filter(
     ({ id }) => id !== viewerId && (scope === "everyone" || team.has(id)),
   );
@@ -61,7 +63,9 @@ export function WhosOutCard({ people, viewerId, today }: Props) {
       }
     >
       {nobody ? (
-        <p className="text-sm text-muted-foreground">{t("today.out.nobody")}</p>
+        <p className="text-sm text-muted-foreground">
+          {t(scope === "team" ? "today.out.nobodyOnTeam" : "today.out.nobody")}
+        </p>
       ) : (
         LISTS.map(({ list, label }) => {
           const absences = out[list].slice(0, SHOWN);

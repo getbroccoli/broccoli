@@ -1,35 +1,46 @@
 import { useQuery } from "@apollo/client/react";
 import { CheckSquare } from "@phosphor-icons/react";
 import { Link, useRouteContext } from "@tanstack/react-router";
+import { useRef } from "react";
 
 import { MyTasksDocument } from "@/__generated__/graphql";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { t } from "@/i18n";
-import { calendarDayOf } from "@/lib/calendarDay";
 import { cn } from "@/lib/class-names";
 
 import { TaskAction } from "./TaskAction";
 import { dueText, isLate, needsYou, taskFact } from "./taskText";
 
+type Props = {
+  /** The calendar day the page shows, so a task's lateness agrees with it. */
+  today: string;
+};
+
 /** The first tasks the signed-in person holds to do, by due date as on Tasks, each with its next step. */
-export function TasksNeedingYouCard() {
+export function TasksNeedingYouCard({ today }: Props) {
   const { me } = useRouteContext({ from: "/_authenticated" });
   const viewerId = me.employee?.id ?? null;
-  const { data, error } = useQuery(MyTasksDocument, { fetchPolicy: "cache-and-network" });
-  const today = calendarDayOf(new Date());
+  const { data, error, refetch } = useQuery(MyTasksDocument, { fetchPolicy: "cache-and-network" });
+  const seeAll = useRef<HTMLAnchorElement>(null);
   const tasks = data?.myTasks.needsYou.filter((task) => needsYou(task, viewerId)) ?? [];
 
   return (
     <Card
       title={t("tasks.group.needsYou")}
       action={
-        <Link to="/tasks" className="text-sm font-medium hover:underline">
-          {t("tasks.all")}
+        <Link ref={seeAll} to="/tasks" className="text-sm font-medium hover:underline">
+          {t("tasks.seeYours")}
         </Link>
       }
     >
       {error && !data ? (
-        <p className="text-sm text-muted-foreground">{t("tasks.loadFailed")}</p>
+        <p className="text-sm text-muted-foreground">
+          {t("tasks.loadFailed")}{" "}
+          <Button variant="link" className="h-auto p-0" onClick={() => void refetch()}>
+            {t("tasks.retry")}
+          </Button>
+        </p>
       ) : (
         data &&
         (tasks.length === 0 ? (
@@ -65,7 +76,13 @@ export function TasksNeedingYouCard() {
                     </span>
                   )}
                 </div>
-                <TaskAction task={task} />
+                <TaskAction
+                  task={task}
+                  // A done task leaves this list with its button; focus moves on instead of to the page's start.
+                  onDone={() => {
+                    if (document.activeElement === document.body) seeAll.current?.focus();
+                  }}
+                />
               </li>
             ))}
           </ul>

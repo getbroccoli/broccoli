@@ -7,26 +7,35 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { modeOf, TimeOffStatusChip } from "@/features/employees";
 import { t } from "@/i18n";
+import { addDays } from "@/lib/calendarDay";
 import { dateRange } from "@/lib/formatDate";
-import { formatDayCount } from "@/lib/formatDays";
+import { formatDayCount, formatDays } from "@/lib/formatDays";
 
+import { LoadFailed } from "./LoadFailed";
 import { upcomingTimeOff } from "./upcomingTimeOff";
 
 type Props = { employeeId: string; today: string };
 
 /** The signed-in person's leave: what is left of their first allowance, what is coming, and asking for more. */
 export function MyTimeOffCard({ employeeId, today }: Props) {
-  const { data } = useQuery(TodayMyTimeOffDocument, {
-    variables: { id: employeeId },
+  const { data, error, refetch } = useQuery(TodayMyTimeOffDocument, {
+    variables: { id: employeeId, from: today, until: addDays(today, WHOS_OUT_MAX_DAYS - 1) },
     fetchPolicy: "cache-and-network",
   });
   const employee = data?.employee;
-  if (!employee) return null;
+  if (!employee) {
+    return (
+      <Card title={t("today.timeOff.title")}>
+        {error && <LoadFailed onRetry={() => void refetch()} />}
+      </Card>
+    );
+  }
   const allowance = employee.timeOffTypes?.find(
     ({ balance }) => balance === "BALANCE_FROM_ALLOWANCE",
   );
-  const coming = upcomingTimeOff(employee.timeOffRequests ?? [], today).slice(0, SHOWN);
-  const mode = modeOf(employee.canCreateTimeOff);
+  const coming = upcomingTimeOff(employee.whosOut.timeOff, today).slice(0, SHOWN);
+  // Without a time off type of their own there is nothing to ask for.
+  const mode = employee.timeOffTypes?.length ? modeOf(employee.canCreateTimeOff) : null;
 
   return (
     <Card
@@ -45,7 +54,7 @@ export function MyTimeOffCard({ employeeId, today }: Props) {
             </span>
             <span className="text-sm text-muted-foreground">
               {t("today.timeOff.left", {
-                entitlement: formatDayCount(allowance.entitlement),
+                days: formatDays(allowance.entitlement),
                 name: allowance.timeOffType.name,
               })}
             </span>
@@ -98,6 +107,8 @@ function shareLeft(remaining: number, entitlement: number): number {
   return entitlement > 0 ? Math.min(Math.max(remaining / entitlement, 0), 1) : 0;
 }
 
+/** The most days `whosOut` reads at once; Today looks that far ahead for the person's own time off. */
+const WHOS_OUT_MAX_DAYS = 62;
 /** Today shows the next few; the person's panel has them all. */
 const SHOWN = 2;
 /** Requested or approved time off has no ending, so the chip never reads one. */
