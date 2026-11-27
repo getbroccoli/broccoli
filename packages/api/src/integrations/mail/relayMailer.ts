@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { z } from "zod";
 
 import { readText, urlUnder } from "../../utils";
@@ -22,6 +24,10 @@ export function createRelayMailer({
   return {
     send: async ({ template, values, to, fromName, idempotencyKey }) => {
       const { subject, blocks, footer } = template.render(values);
+      // Preserve accepted keys so a retry after upgrading still deduplicates.
+      const relayKey = RELAY_KEY_PATTERN.test(idempotencyKey)
+        ? idempotencyKey
+        : createHash("sha256").update(idempotencyKey).digest("hex");
       let response: Response;
       try {
         response = await fetch(urlUnder(url, "v2/send"), {
@@ -33,7 +39,7 @@ export function createRelayMailer({
             subject: fitHeader(subject, MAX_SUBJECT_LENGTH),
             blocks: blocks.map(fitBlock),
             footer: footer.slice(0, MAX_TEXT_LENGTH),
-            idempotencyKey,
+            idempotencyKey: relayKey,
           }),
           signal: AbortSignal.timeout(TIMEOUT_MS),
         });
@@ -60,6 +66,7 @@ const MAX_ANSWER_BYTES = 64 * 1024;
 const MAX_FROM_NAME_LENGTH = 100;
 const MAX_SUBJECT_LENGTH = 200;
 const MAX_TEXT_LENGTH = 1_000;
+const RELAY_KEY_PATTERN = /^[A-Za-z0-9_-]{1,100}$/;
 
 const sentSchema = z.object({ messageId: z.string() });
 const relayErrorSchema = z.object({ error: z.string() });

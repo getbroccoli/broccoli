@@ -29,7 +29,9 @@ export async function startFakeMailRelay() {
       body.fromName.length > 100 ||
       typeof body.subject !== "string" ||
       /[\r\n]/.test(body.subject) ||
-      body.subject.length > 200
+      body.subject.length > 200 ||
+      typeof body.idempotencyKey !== "string" ||
+      !/^[A-Za-z0-9_-]{1,100}$/.test(body.idempotencyKey)
     ) {
       response.status(400).json({ error: "invalid_request" });
       return;

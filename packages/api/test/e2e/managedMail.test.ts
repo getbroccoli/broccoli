@@ -51,7 +51,9 @@ test("a managed person receives an invite and a password reset through Broccoli'
       }),
     ]) as unknown,
     footer: `Sent to ${employee.email}. Not expecting this? Ignore it.`,
-    idempotencyKey: expect.stringMatching(/\S+/) as unknown,
+    idempotencyKey: expect.stringMatching(
+      /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/,
+    ) as unknown,
   });
   const inviteLink = new URL(invite.body.blocks.find((block) => block.type === "button")!.link);
   expect(
