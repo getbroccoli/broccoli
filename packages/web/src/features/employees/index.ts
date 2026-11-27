@@ -1,4 +1,5 @@
 export { Avatar } from "./Avatar";
+export { forgetWhosOut } from "./cache";
 export { EmployeeDirectory } from "./EmployeeDirectory";
 export {
   decisionLine,
