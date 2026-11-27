@@ -26,7 +26,7 @@ Hours, accrual, carry-over and other countries arrive later as new columns, valu
 - **`time_off_allowance_rules`:** the parts that add up to a version's allowance, never edited either. A rule outlives a removed version (its version id becomes null), since ledger lines granted from it point at it; deleting every policy deletes these too:
   - `yearly_entitlement`: days for a working week, as contracts state them (28 for 5), with an optional `max_days`;
   - `service_extra`: extra days after a number of years of service.
-- **`time_off_policy_assignments`:** exceptions, meaning one person on a named policy between two dates; never a terms' own. Reset setup and Exit demo delete every policy and allowance, and the company's own types, and give the seeded types back their names, looks and privacy.
+- **`time_off_policy_assignments`:** exceptions, meaning one person on a named policy between two dates; never a terms' own. A person's row without a policy or version is a stop: the type is not offered to them then, whatever their terms give (`stopOffering`; history value `{"startDate": …, "notOffered": true}`). Reset setup and Exit demo delete every policy and allowance, and the company's own types, and give the seeded types back their names, looks and privacy.
 - **`allowances`:** one person's allowance for one type and one leave year. It has no amount column; its dates are fixed when it is created and never change.
 - **`allowance_ledger_lines`:** every change to an allowance (grants, bank holidays, booked days, manual adjustments, rounding), with its effective date, cause and author.
 - **`time_off`:** a person's time off and where it stands (`requested`, `approved`, `rejected`, `cancelled`), never what waits on it. A request sets `requested_at`; its decision sets `decided_at`, `decided_by_employee_id` (null once that employee is deleted) and `decision_comment`, and an approval that ended without a decision leaves them null on `cancelled`. Cancelling sets `cancelled_at` and `cancelled_by_employee_id` (null for a caller without an employee, or once that employee is deleted); an approval that ended without a decision sets neither.
@@ -174,9 +174,10 @@ The engine treats each booked day as a line identity, `time_off_booked` per `tim
 
 For one employee, type and date:
 
-1. the person's assignment on that date, if any;
-2. otherwise their terms' own policy for that type;
-3. otherwise none, and the person cannot book that type.
+1. none, when the person has a stop on that date;
+2. otherwise the person's assignment on that date, if any;
+3. otherwise their terms' own policy for that type;
+4. otherwise none, and the person cannot book that type.
 
 That policy's version on that date gives the rules; with no version, none applies. The rule is the one that picks a working pattern, shared through the employees module's resolver.
 

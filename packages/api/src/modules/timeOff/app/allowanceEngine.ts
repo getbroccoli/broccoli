@@ -12,6 +12,7 @@ import {
   type Allowance,
   allowanceRepository,
   type BookedDay,
+  type OfferStop,
   offerStopRepository,
   type PolicyAssignment,
   timeOffPolicyRepository,
@@ -98,8 +99,8 @@ export interface Person {
 }
 
 /**
- * Every policy, and what decides each person's allowances; `assignments` replaces the stored
- * assignments read, as a publish would leave them.
+ * Every policy, what decides each person's allowances, and their stops; `assignments` replaces the
+ * stored assignments read, as a publish would leave them.
  */
 export async function readPeople(
   employeeReads: Pick<
@@ -109,7 +110,7 @@ export async function readPeople(
   tx: Tx,
   ids: readonly string[],
   assignments?: (stored: PolicyAssignment[]) => PolicyAssignment[],
-): Promise<{ people: Person[]; policies: TimeOffPolicy[] }> {
+): Promise<{ people: Person[]; policies: TimeOffPolicy[]; stops: OfferStop[] }> {
   const policyRepository = timeOffPolicyRepository(tx);
   const [policies, employments, memberships, existing] = await Promise.all([
     policyRepository.findAll(),
@@ -135,10 +136,8 @@ export async function readPeople(
       serviceStart: periods[0]?.startDate ?? null,
       timelineOf: (timeOffTypeId: string) =>
         createPersonTimeline({
-          direct: [
-            ...(rows.get(laneKey({ owner: { employeeId }, timeOffTypeId })) ?? []),
-            ...stopsOf(employeeId, timeOffTypeId).map((stop) => ({ ...stop, versionId: null })),
-          ],
+          direct: rows.get(laneKey({ owner: { employeeId }, timeOffTypeId })) ?? [],
+          stops: stopsOf(employeeId, timeOffTypeId),
           terms: memberships.get(employeeId) ?? [],
           termsAssignments: (termsId) =>
             rows.get(laneKey({ owner: { termsId }, timeOffTypeId })) ?? [],
@@ -147,7 +146,7 @@ export async function readPeople(
       allowances: existingOf.get(employeeId) ?? [],
     };
   });
-  return { people, policies };
+  return { people, policies, stops };
 }
 
 /** One owner's assignments for one type, as a key. */

@@ -110,7 +110,7 @@ function timelineOf({
 }: {
   direct?: TimelineCreateInputArgs<PatternVersion>["direct"];
   terms?: TimelineCreateInputArgs<PatternVersion>["terms"];
-  termsAssignments?: ReturnType<TimelineCreateInputArgs<PatternVersion>["termsAssignments"]>;
+  termsAssignments?: TimelineCreateInputArgs<PatternVersion>["direct"];
   versions?: Record<string, PatternVersion>;
 }) {
   return createPersonTimeline({

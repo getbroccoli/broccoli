@@ -1,9 +1,9 @@
 import { addDays, type CalendarDate, type CalendarDateRange, coversDate } from "../../../utils";
 
 /**
- * One person's working pattern, or their time off policy for one type, over time: their own
- * assignment wins, and one without a version means none; otherwise the assignment of the terms
- * they are on that day; otherwise none.
+ * One person's working pattern, or their time off policy for one type, over time: their own stop
+ * means none; otherwise their own assignment wins; otherwise the assignment of the terms they are
+ * on that day; otherwise none.
  */
 export interface PersonTimeline<V> {
   /** The version on `date`; null when none applies. */
@@ -36,8 +36,10 @@ type DatedVersionId = CalendarDateRange & { versionId: string };
 
 /** What a person's timeline is read from. */
 export interface TimelineCreateInputArgs<V> {
-  /** The person's own assignments; a null version stops what their terms give. */
-  direct: readonly (CalendarDateRange & { versionId: string | null })[];
+  /** The person's own assignments. */
+  direct: readonly DatedVersionId[];
+  /** Where the person has nothing, whatever their terms give. */
+  stops?: readonly CalendarDateRange[];
   /** The person's terms, dated. */
   terms: readonly (CalendarDateRange & { termsId: string })[];
   /** A set of terms' assignments. */
@@ -48,11 +50,12 @@ export interface TimelineCreateInputArgs<V> {
 
 export function createPersonTimeline<V>(args: TimelineCreateInputArgs<V>): PersonTimeline<V> {
   const getOnDate = (date: CalendarDate): { versionId: string; source: RuleSource } | null => {
+    if (args.stops?.some((row) => coversDate(row, date))) {
+      return null;
+    }
     const direct = args.direct.find((row) => coversDate(row, date));
     if (direct) {
-      return direct.versionId === null
-        ? null
-        : { versionId: direct.versionId, source: "their_own" };
+      return { versionId: direct.versionId, source: "their_own" };
     }
     const membership = args.terms.find((row) => coversDate(row, date));
     const inherited =
@@ -151,6 +154,7 @@ function changeDates<V>(
   const termsIds = new Set(args.terms.map(({ termsId }) => termsId));
   const rows: CalendarDateRange[] = [
     ...args.direct,
+    ...(args.stops ?? []),
     ...args.terms,
     ...[...termsIds].flatMap((termsId) => args.termsAssignments(termsId)),
   ];
