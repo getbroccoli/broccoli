@@ -1,6 +1,13 @@
 import { expect, it } from "vitest";
 
-import { bookedToast, dialogWords, headerMode, modeForType, requestedToast } from "./timeOffText";
+import {
+  bookedToast,
+  dialogWords,
+  headerButtons,
+  headerMode,
+  modeForType,
+  requestedToast,
+} from "./timeOffText";
 
 it.each([
   [["ALLOWED_WITH_APPROVAL", "ALLOWED"], "book"],
@@ -45,4 +52,52 @@ it.each([
   [1, "1 day requested."],
 ] as const)("confirms a request for %s days", (cost, expected) => {
   expect(requestedToast(cost)).toBe(expected);
+});
+
+it.each([
+  {
+    name: "shows a manager Request time off and Book for someone",
+    viewerEmployeeId: "manager",
+    people: [
+      { id: "report", canCreate: "ALLOWED" },
+      { id: "manager", canCreate: "ALLOWED_WITH_APPROVAL" },
+      { id: "colleague", canCreate: "NOT_ALLOWED" },
+    ],
+    expected: { own: "request", forSomeone: true },
+  },
+  {
+    name: "shows only Request time off to an employee who can request their own leave",
+    viewerEmployeeId: "employee",
+    people: [
+      { id: "employee", canCreate: "ALLOWED_WITH_APPROVAL" },
+      { id: "colleague", canCreate: "NOT_ALLOWED" },
+    ],
+    expected: { own: "request", forSomeone: false },
+  },
+  {
+    name: "shows an admin Book time off and Book for someone",
+    viewerEmployeeId: "admin",
+    people: [
+      { id: "admin", canCreate: "ALLOWED" },
+      { id: "colleague", canCreate: "ALLOWED" },
+    ],
+    expected: { own: "book", forSomeone: true },
+  },
+  {
+    name: "shows only Book for someone to a viewer without an employee who can book others",
+    viewerEmployeeId: null,
+    people: [{ id: "colleague", canCreate: "ALLOWED" }],
+    expected: { own: null, forSomeone: true },
+  },
+  {
+    name: "shows only Book time off when the viewer can book only their own leave",
+    viewerEmployeeId: "employee",
+    people: [
+      { id: "colleague", canCreate: "NOT_ALLOWED" },
+      { id: "employee", canCreate: "ALLOWED" },
+    ],
+    expected: { own: "book", forSomeone: false },
+  },
+] as const)("$name", ({ people, viewerEmployeeId, expected }) => {
+  expect(headerButtons(people, viewerEmployeeId)).toEqual(expected);
 });

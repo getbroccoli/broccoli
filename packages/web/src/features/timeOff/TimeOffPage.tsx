@@ -11,7 +11,7 @@ import { t } from "@/i18n";
 
 import { BookingDetailsDialog } from "./BookingDetailsDialog";
 import { BookTimeOffDialog } from "./BookTimeOffDialog";
-import { headerMode, monthRange, shiftMonth } from "./timeOffText";
+import { headerButtons, monthRange, shiftMonth } from "./timeOffText";
 import { WhosOutGrid } from "./WhosOutGrid";
 
 const MONTH_TITLE = new Intl.DateTimeFormat("en-GB", {
@@ -31,7 +31,10 @@ export function TimeOffPage() {
     variables: range,
     fetchPolicy: "cache-and-network",
   });
-  const mode = headerMode(data?.employees.edges.map(({ node }) => node.canCreate) ?? []);
+  const buttons = headerButtons(
+    data?.employees.edges.map(({ node }) => node) ?? [],
+    me.employee?.id ?? null,
+  );
   const company = useQuery(WorkspaceMenuDocument, { fetchPolicy: "cache-first" }).data?.company;
   const [filter, setFilter] = useState("");
   const query = useDeferredValue(filter.trim().toLowerCase());
@@ -73,15 +76,19 @@ export function TimeOffPage() {
               : t("timeOff.subtitleNoCompany")}
           </p>
         </div>
-        {mode && (
-          <Button
-            // Someone who may only ask for time off asks for their own.
-            onClick={() => setBooking(mode === "book" ? {} : { employeeId: me.employee?.id })}
-          >
-            <CalendarPlus aria-hidden />
-            {mode === "book" ? t("timeOff.book") : t("timeOff.request")}
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {buttons.forSomeone && (
+            <Button variant="outline" onClick={() => setBooking({})}>
+              {t("timeOff.bookForSomeone")}
+            </Button>
+          )}
+          {buttons.own && (
+            <Button onClick={() => setBooking({ employeeId: me.employee?.id })}>
+              <CalendarPlus aria-hidden />
+              {buttons.own === "book" ? t("timeOff.book") : t("timeOff.request")}
+            </Button>
+          )}
+        </div>
       </header>
 
       <div className="flex flex-wrap items-center gap-2 pb-4">
