@@ -135,6 +135,15 @@ export function callMcpTool(
   name: string,
   args: Record<string, unknown> = {},
 ): Promise<Response> {
+  return callMcpMethod(env, accessToken, "tools/call", { name, arguments: args });
+}
+
+export function callMcpMethod(
+  env: TestEnv,
+  accessToken: string,
+  method: string,
+  params?: Record<string, unknown>,
+): Promise<Response> {
   return fetch(`${env.url}/api/mcp`, {
     method: "POST",
     headers: {
@@ -142,12 +151,7 @@ export function callMcpTool(
       accept: "application/json, text/event-stream",
       "content-type": "application/json",
     },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: 1,
-      method: "tools/call",
-      params: { name, arguments: args },
-    }),
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
   });
 }
 

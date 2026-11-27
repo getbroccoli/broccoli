@@ -3,9 +3,6 @@ export const AGENT_SCOPES = ["broccoli:read", "broccoli:write"] as const;
 
 export type AgentScope = (typeof AGENT_SCOPES)[number];
 
-/** The scope that lets an agent change things, not only read. */
-export const AGENT_WRITE_SCOPE: AgentScope = "broccoli:write";
-
 /** Where agents call Broccoli's MCP server. */
 export const MCP_PATH = "/api/mcp";
 

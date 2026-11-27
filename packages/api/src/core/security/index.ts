@@ -3,7 +3,11 @@ export { permissionProfileRepository, userPermissionProfiles } from "./db";
 export { OPERATIONS, parseGivenProfiles, PERMISSION_PROFILES, profilesOf } from "./permissions";
 export { inRecordScope, isInRecordScope } from "./recordScope";
 export { PrincipalSecurityContext, requireSignedIn } from "./securityContext";
-export type { AgentConnectionOfCall } from "./agentConnectionOfCall";
+export {
+  AGENT_WRITE_SCOPE,
+  type AgentConnectionOfCall,
+  requireAgentWriteScope,
+} from "./agentConnectionOfCall";
 
 // Public types.
 export type {

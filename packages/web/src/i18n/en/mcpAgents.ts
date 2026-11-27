@@ -8,6 +8,8 @@ export const mcpAgentsEn = {
   "mcpAgents.allow.reads": "It reads what you can read in Broccoli, as you.",
   "mcpAgents.allow.asksForLeave":
     "It asks for leave for you, or books it when you’d book it yourself, after showing you the dates and cost.",
+  "mcpAgents.allow.youDecide":
+    "In chats that show cards, it shows you approvals with Approve and Reject buttons; elsewhere it gives you the link. You decide, not it.",
   "mcpAgents.allow.widenTitle": "Allow {client} to also change things for you?",
   "mcpAgents.allow.widenConnected": "{client} is connected and can read.",
   "mcpAgents.allow.neverApproves": "It never approves anything.",
@@ -23,7 +25,7 @@ export const mcpAgentsEn = {
     "Go back to your agent and connect Broccoli again. It opens a new page here.",
   "mcpAgents.page.title": "Your agent",
   "mcpAgents.page.description":
-    "Let your own Claude, ChatGPT or coding agent act as you: check your leave, ask for days off and see your tasks. It never approves anything.",
+    "Let your own Claude, ChatGPT or coding agent act as you: check your leave, ask for days off, see your tasks and approve with a click. It never decides for you.",
   "mcpAgents.page.failed": "Couldn’t load your agent. Try again in a moment.",
   "mcpAgents.address.label": "Your Broccoli address",
   "mcpAgents.address.copy": "Copy",
@@ -59,7 +61,7 @@ export const mcpAgentsEn = {
   "mcpAgents.connected.badge": "Connected",
   "mcpAgents.connected.since": "Acts as you, {name} · Connected {date} · Last active {lastActive}",
   "mcpAgents.connected.canRead": "Can read",
-  "mcpAgents.connected.canChangeThings": "Can read and ask for leave",
+  "mcpAgents.connected.canChangeThings": "Can read, ask for leave and show approvals",
   "mcpAgents.welcome.title": "{client} is connected. Nice.",
   "mcpAgents.welcome.detail": "Start a new chat with it and ask something below.",
   "mcpAgents.welcome.dismiss": "Dismiss",
@@ -82,6 +84,8 @@ export const mcpAgentsEn = {
   "mcpAgents.activity.requestLeave": "Asked for leave",
   "mcpAgents.activity.listMyTasks": "Listed your tasks",
   "mcpAgents.activity.listMyTasksFound": "Listed your tasks · {count} found",
+  "mcpAgents.activity.showApproval": "Showed you an approval",
+  "mcpAgents.activity.decideApproval": "Your decision on the card",
   "mcpAgents.activity.otherTool": "Used {tool}",
   "mcpAgents.activity.loadFailed": "Couldn’t load what your agent is doing. Try again in a moment.",
   "mcpAgents.activity.showHistory": "Show history",
@@ -99,7 +103,7 @@ export const mcpAgentsEn = {
   "mcpAgents.disconnect.failed": "Couldn’t disconnect your agent. Try again.",
   "mcpAgents.invitation.title": "Ask your own Claude or ChatGPT",
   "mcpAgents.invitation.detail":
-    "Connect it to Broccoli and it can check your leave, ask for days off and list your tasks. It acts only as you and never approves anything.",
+    "Connect it to Broccoli and it can check your leave, ask for days off, list your tasks and show you approvals to decide. It acts only as you and never decides for you.",
   "mcpAgents.invitation.connect": "Connect your agent",
   "mcpAgents.invitation.close": "Close the invitation to connect your agent",
   "mcpAgents.invitation.closeFailed": "Couldn’t close the invitation. Try again.",

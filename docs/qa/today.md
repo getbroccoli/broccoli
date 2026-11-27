@@ -16,7 +16,7 @@ A manual check of the home page and its invitation to connect your own agent, ag
 
 ## The invitation
 
-- [ ] Without an agent connected, the card "Ask your own Claude or ChatGPT" shows under the title, saying the agent can look you up and find people, reads only what you can and never approves anything. Nothing about time off, tasks or approvals.
+- [ ] Without an agent connected, the card "Ask your own Claude or ChatGPT" shows under the title, saying the agent can check your leave, ask for days off, list your tasks and show you approvals to decide, acts only as you and never decides for you.
 - [ ] Reloading shows the card without first flashing "Nothing new today.", and vice versa once closed.
 - [ ] "Connect your agent" opens Your agent.
 - [ ] Connect an agent as in [QA: Connect your own agent](connect-your-agent.md), then open Today: no card, and "Nothing new today." with "See your tasks", which opens `/tasks`.

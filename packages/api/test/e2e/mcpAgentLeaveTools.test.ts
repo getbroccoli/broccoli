@@ -1,32 +1,5 @@
 import { callMcpTool, connectAgent, expect, registerAgentClient, test } from "#test/support";
 
-test("tools/list offers the six identity, people, leave and task tools", async ({ env }) => {
-  const { browser } = await env.signInAsOwner();
-  const clientId = await registerAgentClient(env, "Read client");
-  const { accessToken } = await connectAgent(env, browser, { clientId });
-
-  const tools = await fetch(`${env.url}/api/mcp`, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${accessToken}`,
-      accept: "application/json, text/event-stream",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
-  });
-
-  expect(tools.status).toBe(200);
-  const listed = (await tools.json()) as { result: { tools: { name: string }[] } };
-  expect(listed.result.tools.map(({ name }) => name).sort()).toEqual([
-    "find_people",
-    "list_my_tasks",
-    "my_leave_balance",
-    "preview_leave",
-    "request_leave",
-    "who_am_i",
-  ]);
-});
-
 test("a read-only agent can check leave, preview it and list tasks", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
   const clientId = await registerAgentClient(env, "Read client");

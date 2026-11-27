@@ -14,6 +14,7 @@ export { createBrowser, type Browser } from "./browser";
 export {
   authorize,
   authorizeAgent,
+  callMcpMethod,
   callMcpTool,
   connectAgent,
   exchangeAgentCode,

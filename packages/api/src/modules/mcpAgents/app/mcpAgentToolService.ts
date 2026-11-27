@@ -17,6 +17,11 @@ import {
 } from "../../timeOff";
 import {
   type AgentTasks,
+  approvalCardOf,
+  type ApprovalCardAnswer,
+  type ApprovalDecisionInput,
+  type DecidedTask,
+  decidedTaskOf,
   agentTaskOf,
   bookingOf,
   type LeaveBalance,
@@ -50,6 +55,13 @@ export interface McpAgentToolService {
   requestLeave: (ctx: SecurityContext, input: LeaveRequestInput) => Promise<LeaveRequestResult>;
   /** The caller's tasks by where the ball is, each with its address in Broccoli at `origin`. */
   listMyTasks: (ctx: SecurityContext, input: { origin: string }) => Promise<AgentTasks>;
+  /** A card to decide the caller's own task with a result form, and its one-time token. */
+  showApproval: (
+    ctx: SecurityContext,
+    input: { taskId: string; origin: string },
+  ) => Promise<ApprovalCardAnswer>;
+  /** Decides the task with the result the person pressed on the card that carries `cardToken`. */
+  decideApproval: (ctx: SecurityContext, input: ApprovalDecisionInput) => Promise<DecidedTask>;
 }
 
 /** A page an agent can show or reason over in one go. */
@@ -68,7 +80,7 @@ export function createMcpAgentToolService({
   timeOff: TimeOffService;
   bankHolidays: BankHolidayService;
   approvals: Pick<ApprovalService, "requestApproval" | "cancelApproval">;
-  tasks: Pick<TaskService, "listMyTasks">;
+  tasks: Pick<TaskService, "listMyTasks" | "issueDecisionToken" | "markDone">;
   today?: () => CalendarDate;
 }): McpAgentToolService {
   const employees = createEmployeeReadService(dependencies);
@@ -145,7 +157,8 @@ export function createMcpAgentToolService({
       };
     },
     async listMyTasks(ctx, { origin }) {
-      if (!ctx.user?.employeeId) {
+      const employeeId = ctx.user?.employeeId;
+      if (!employeeId) {
         return { needsYou: [], waitingOnOthers: [], resolvedRecently: [], reason: NO_EMPLOYEE };
       }
       const mine = await tasks.listMyTasks(ctx);
@@ -155,13 +168,29 @@ export function createMcpAgentToolService({
         ...mine.resolvedRecently,
       ]);
       const shown = (list: readonly Task[]) =>
-        list.map((task) => agentTaskOf(task, { names, origin }));
+        list.map((task) => agentTaskOf(task, { names, origin, employeeId }));
       return {
         needsYou: shown(mine.needsYou),
         waitingOnOthers: shown(mine.waitingOnOthers),
         resolvedRecently: shown(mine.resolvedRecently),
         reason: null,
       };
+    },
+    async showApproval(ctx, { taskId, origin }) {
+      const { task, token, expiresAt } = await tasks.issueDecisionToken(ctx, taskId);
+      const names = await namesOf(employees, ctx, [task]);
+      return {
+        card: approvalCardOf(task, { names, origin }),
+        token,
+        expiresAt: expiresAt.toISOString(),
+      };
+    },
+    async decideApproval(ctx, { taskId, cardToken, resultCode, comment }) {
+      const { task } = await tasks.markDone(ctx, taskId, {
+        result: { code: resultCode, comment: comment ?? null },
+        decisionToken: cardToken,
+      });
+      return decidedTaskOf(task);
     },
   };
 }

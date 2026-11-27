@@ -94,6 +94,24 @@ export class Task implements Readonly<TaskFields> {
     });
   }
 
+  /** Whether the employee may decide it now: they hold it, it is open and it has a result form. */
+  isDecidableBy(employeeId: string): boolean {
+    return (
+      this.assigneeEmployeeId === employeeId && this.status === "to_do" && this.resultForm !== null
+    );
+  }
+
+  /** Only its assignee decides an open task with a result form, such as an approval. */
+  requireDecidableBy(employeeId: string): void {
+    if (this.assigneeEmployeeId !== employeeId) {
+      throw new ApplicationError("FORBIDDEN", "Only the person who holds this task decides it.");
+    }
+    this.refuseClosed();
+    if (!this.resultForm) {
+      throw new ApplicationError("CONFLICT", "This task has nothing to decide.");
+    }
+  }
+
   /** `reason` is the trimmed, non-blank reason the caller checked. */
   cancel(reason: string, now: Date): Task {
     this.refuseClosed();

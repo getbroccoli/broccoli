@@ -1,8 +1,7 @@
-import { requireAgentWriteScope } from "../../../core/agentAccess";
 import { ApplicationError } from "../../../core/applicationError";
 import type { Orm } from "../../../core/db";
 import { createWriteModeService } from "../../../core/records";
-import type { SecurityContext } from "../../../core/security";
+import { requireAgentWriteScope, type SecurityContext } from "../../../core/security";
 import { parseUuid } from "../../../utils";
 import { timeOffPolicyRepository } from "../db";
 import type { BookedTimeOff, BookingInput, BookTimeOffService } from "./bookTimeOffService";

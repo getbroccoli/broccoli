@@ -12,7 +12,8 @@ import {
   user,
 } from "../../auth";
 import { type Orm, ormOf, type Tx } from "../../db";
-import { type AgentConnectionEnding, AGENT_WRITE_SCOPE } from "../domain";
+import { AGENT_WRITE_SCOPE } from "../../security";
+import type { AgentConnectionEnding } from "../domain";
 import { agentConnectionEndings } from "./agentConnectionEndingsTable";
 import { agentInvitationClosings } from "./agentInvitationClosingsTable";
 

@@ -11,6 +11,7 @@ import type { SecurityContext } from "../../security";
 import { parseUuid } from "../../../utils";
 import { taskRepository } from "../db";
 import { createTasks, DIRECT_EDIT, type NewTask, requireText, type TaskCause } from "./createTasks";
+import { issueDecisionToken, redeemDecisionToken } from "./decisionTokens";
 import {
   groupMyTasks,
   type MyTasks,
@@ -47,6 +48,14 @@ export interface TaskService {
   listMyTasks(ctx: SecurityContext): Promise<MyTasks>;
   /** A task the caller holds or asked for. */
   readTask(ctx: SecurityContext, taskId: string): Promise<Task>;
+  /**
+   * A one-time token for deciding this task on a card in the caller's connected agent: their own
+   * open task with a result form; valid for an hour, for this connection only.
+   */
+  issueDecisionToken(
+    ctx: SecurityContext,
+    taskId: string,
+  ): Promise<{ task: Task; token: string; expiresAt: Date }>;
   /** A task's history, newest first, for its assignee and the person who asked; others get FORBIDDEN. */
   readTaskHistory(
     ctx: SecurityContext,
@@ -76,6 +85,8 @@ export interface TaskService {
 export interface MarkDoneInput {
   /** Required by a task with a form, refused by one without. */
   result?: TaskResult | null;
+  /** Required when a connected agent calls: the token of the card the person pressed. */
+  decisionToken?: string | null;
 }
 
 /** A task after a change, with the history line the change appended. */
@@ -134,16 +145,31 @@ export function createTaskService({
 
     readTaskHistory: (ctx, taskId, args) => historyReader.readHistory(ctx, "task", taskId, args),
 
-    async markDone(ctx, taskId, { result = null } = {}) {
+    issueDecisionToken: (ctx, taskId) =>
+      transact(async (tx) => {
+        const visible = await lockVisible(ctx, tx, taskId);
+        return { task: visible.task, ...(await issueDecisionToken(tx, ctx, visible)) };
+      }),
+
+    async markDone(ctx, taskId, { result = null, decisionToken = null } = {}) {
       const done = await transact(async (tx) => {
         const { task, employeeId } = await lockVisible(ctx, tx, taskId);
+        // An agent decides only through a card a person pressed.
+        if (ctx.agentConnection) {
+          await redeemDecisionToken(tx, ctx, { taskId: task.id, token: decisionToken });
+        }
         const saved = await taskRepository(tx).saveStatus(
           task.markDone(employeeId, new Date(), result),
         );
         return { task: saved, historyLine: await appendStatusChange(ctx, tx, task, saved) };
       });
       logger.info(
-        { taskId: done.task.id, type: done.task.type, resultCode: done.task.result?.code ?? null },
+        {
+          taskId: done.task.id,
+          type: done.task.type,
+          resultCode: done.task.result?.code ?? null,
+          agentConnectionId: ctx.agentConnection?.id ?? null,
+        },
         "Task marked done",
       );
       return done;

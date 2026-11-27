@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Broccoli approval</title>
+    <style>
+      :root {
+        --bg: #ffffff;
+        --fg: #1f1d1a;
+        --muted: #6b6760;
+        --line: #e4e1da;
+        --soft: #f5f3ee;
+        --brand: #3d7a4f;
+        --brand-fg: #ffffff;
+        --danger: #b3261e;
+        color-scheme: light;
+      }
+      :root[data-theme="dark"] {
+        --bg: #1c1b19;
+        --fg: #f2efe9;
+        --muted: #a8a39a;
+        --line: #34322e;
+        --soft: #262522;
+        --brand: #6fbf86;
+        --brand-fg: #10210f;
+        --danger: #f2b8b5;
+        color-scheme: dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --bg: #1c1b19;
+          --fg: #f2efe9;
+          --muted: #a8a39a;
+          --line: #34322e;
+          --soft: #262522;
+          --brand: #6fbf86;
+          --brand-fg: #10210f;
+          --danger: #f2b8b5;
+          color-scheme: dark;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          14px/1.45 system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+      }
+      h1 {
+        margin: 0 0 2px;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .meta,
+      .note {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .facts {
+        margin: 12px 0;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: var(--soft);
+        white-space: pre-wrap;
+      }
+      label {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      textarea {
+        width: 100%;
+        min-height: 56px;
+        padding: 8px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        font: inherit;
+        resize: vertical;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      button {
+        flex: 1 1 120px;
+        min-height: 36px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.primary {
+        border-color: var(--brand);
+        background: var(--brand);
+        color: var(--brand-fg);
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+      button:focus-visible,
+      textarea:focus-visible,
+      a:focus-visible {
+        outline: 2px solid var(--brand);
+        outline-offset: 2px;
+      }
+      a {
+        color: var(--brand);
+      }
+      .outcome {
+        margin-top: 12px;
+        font-weight: 600;
+      }
+      .error {
+        margin-top: 8px;
+        color: var(--danger);
+      }
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <main aria-live="polite">
+      <p id="waiting" class="note">Loading…</p>
+      <p id="problem" class="error" role="alert" hidden></p>
+      <section id="card" hidden>
+        <h1 id="title"></h1>
+        <p id="meta" class="meta"></p>
+        <div id="facts" class="facts"></div>
+        <div id="decide">
+          <label for="comment" id="comment-label">Comment</label>
+          <textarea id="comment" maxlength="2000"></textarea>
+          <div id="actions" class="actions"></div>
+        </div>
+        <p id="no-buttons" class="note" hidden>Decide it in Broccoli.</p>
+        <p id="outcome" class="outcome" hidden></p>
+        <p id="error" class="error" role="alert" hidden></p>
+        <p class="note">
+          <a id="open" href="#" target="_blank" rel="noopener noreferrer">Open in Broccoli ↗</a>
+        </p>
+        <p id="address" class="note" hidden></p>
+      </section>
+    </main>
+    <script>
+      // The MCP Apps bridge: JSON-RPC over postMessage with the chat app that shows this card.
+      const PROTOCOL_VERSION = "2026-01-26";
+      const pending = new Map();
+      let nextId = 1;
+      let shown = null;
+      let host = {};
+      let expiry = null;
+
+      const $ = (id) => document.getElementById(id);
+
+      function send(message) {
+        window.parent.postMessage({ jsonrpc: "2.0", ...message }, "*");
+      }
+
+      function request(method, params) {
+        const id = nextId++;
+        send({ id, method, params });
+        return new Promise((resolve, reject) => pending.set(id, { resolve, reject }));
+      }
+
+      function setTheme(context) {
+        const theme = context && context.theme;
+        if (theme === "light" || theme === "dark") {
+          document.documentElement.dataset.theme = theme;
+        }
+      }
+
+      function reportSize() {
+        send({
+          method: "ui/notifications/size-changed",
+          params: { height: Math.ceil(document.body.getBoundingClientRect().height) },
+        });
+      }
+
+      // A calendar date as people read it, such as "Mon 30 Nov"; it has no time zone.
+      function dayOf(date) {
+        return new Date(date + "T00:00:00Z").toLocaleDateString("en-GB", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+          timeZone: "UTC",
+        });
+      }
+
+      function refusalOf(result) {
+        const refusal = new Error(textOf(result));
+        refusal.correctable = (result._meta || {})["broccoli/errorCode"] === "INVALID_INPUT";
+        return refusal;
+      }
+
+      function textOf(result) {
+        const text = (result.content || []).find((part) => part.type === "text");
+        return text ? text.text : "Broccoli couldn't answer. Open the task in Broccoli.";
+      }
+
+      // Shows the task the tool result names; buttons only when the card's token arrived.
+      function show(result) {
+        const card = result.structuredContent;
+        if (result.isError || !card || !card.taskId) {
+          showProblem(textOf(result));
+          return;
+        }
+        const token = result._meta && result._meta["broccoli/cardToken"];
+        shown = { card, token };
+        $("title").textContent = card.title;
+        $("meta").textContent = [
+          card.askedBy && "Asked by " + card.askedBy,
+          card.dueOn && "due " + dayOf(card.dueOn),
+        ]
+          .filter(Boolean)
+          .join(" · ");
+        $("facts").textContent = card.description || "";
+        $("facts").hidden = !card.description;
+        const actions = $("actions");
+        actions.replaceChildren();
+        // The form's first option, such as Approve, goes last as the main button.
+        [...card.options].reverse().forEach((option, index, all) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = option.label;
+          if (index === all.length - 1) button.className = "primary";
+          button.addEventListener("click", () => decide(option));
+          actions.append(button);
+        });
+        const needsComment = card.options.some((option) => option.commentRequired);
+        $("comment-label").textContent = needsComment
+          ? "Comment (needed to " +
+            card.options
+              .filter((option) => option.commentRequired)
+              .map((option) => option.label.toLowerCase())
+              .join(" or ") +
+            ")"
+          : "Comment (optional)";
+        $("open").href = card.link;
+        // Buttons only where they can work: the token arrived and the chat app passes tool calls on.
+        const canDecide = Boolean(token) && Boolean(host.serverTools);
+        $("decide").hidden = !canDecide;
+        $("no-buttons").hidden = canDecide;
+        if (!host.openLinks) showAddress();
+        $("waiting").hidden = true;
+        $("card").hidden = false;
+        const expiresAt = result._meta && Date.parse(result._meta["broccoli/expiresAt"]);
+        if (canDecide && expiresAt) {
+          expiry = setTimeout(expire, Math.max(0, expiresAt - Date.now()));
+        }
+      }
+
+      // Without the chat app's help, or once refused, the card says why and keeps no live buttons.
+      function showProblem(message) {
+        $("waiting").hidden = true;
+        $("problem").textContent = message;
+        $("problem").hidden = false;
+      }
+
+      function showAddress() {
+        $("address").textContent = shown.card.link;
+        $("address").hidden = false;
+      }
+
+      function expire() {
+        if ($("decide").hidden) return;
+        $("decide").hidden = true;
+        $("error").textContent = "This card has expired. Ask your agent to show it again.";
+        $("error").hidden = false;
+      }
+
+      async function decide(option) {
+        const comment = $("comment").value.trim();
+        $("error").hidden = true;
+        if (option.commentRequired && !comment) {
+          $("error").textContent = "Add a comment before choosing “" + option.label + "”.";
+          $("error").hidden = false;
+          $("comment").focus();
+          return;
+        }
+        const buttons = [...$("actions").querySelectorAll("button")];
+        buttons.forEach((button) => (button.disabled = true));
+        // The server decides whether the card was still valid when pressed.
+        clearTimeout(expiry);
+        try {
+          const result = await request("tools/call", {
+            name: "decide_approval",
+            arguments: {
+              taskId: shown.card.taskId,
+              cardToken: shown.token,
+              resultCode: option.code,
+              ...(comment ? { comment } : {}),
+            },
+          });
+          if (result.isError) throw refusalOf(result);
+          const decided = result.structuredContent.result;
+          $("decide").hidden = true;
+          $("error").hidden = true;
+          $("outcome").textContent =
+            "You chose " + decided.label + (decided.comment ? " — " + decided.comment : ".");
+          $("outcome").hidden = false;
+        } catch (error) {
+          $("error").textContent =
+            (error && error.message) || "Broccoli couldn't save it. Open the task in Broccoli.";
+          $("error").hidden = false;
+          // Invalid input, such as leave that no longer fits, leaves the other choices open; expired,
+          // decided elsewhere or refused cards can't work again, so their buttons stay off.
+          if (error && error.correctable) buttons.forEach((button) => (button.disabled = false));
+        }
+      }
+
+      window.addEventListener("message", (event) => {
+        if (event.source !== window.parent) return;
+        const message = event.data;
+        if (!message || message.jsonrpc !== "2.0") return;
+        if (message.id !== undefined && !message.method && pending.has(message.id)) {
+          const { resolve, reject } = pending.get(message.id);
+          pending.delete(message.id);
+          if (message.error) reject(new Error(message.error.message));
+          else resolve(message.result);
+          return;
+        }
+        if (message.method === "ui/notifications/tool-result") show(message.params);
+        if (message.method === "ui/notifications/tool-cancelled") {
+          showProblem("Your agent stopped before showing this approval.");
+        }
+        if (message.method === "ui/resource-teardown") send({ id: message.id, result: {} });
+        if (message.method === "ui/notifications/host-context-changed") setTheme(message.params);
+      });
+
+      $("open").addEventListener("click", (event) => {
+        event.preventDefault();
+        if (!shown) return;
+        // The chat app opens links; where it can't, the address is there to copy.
+        request("ui/open-link", { url: shown.card.link })
+          .then((result) => result && result.isError && showAddress())
+          .catch(showAddress);
+      });
+
+      new ResizeObserver(reportSize).observe(document.body);
+
+      request("ui/initialize", {
+        appInfo: { name: "Broccoli approval card", version: "1" },
+        appCapabilities: {},
+        protocolVersion: PROTOCOL_VERSION,
+      })
+        .then((result) => {
+          host = (result && result.hostCapabilities) || {};
+          setTheme(result && result.hostContext);
+          send({ method: "ui/notifications/initialized", params: {} });
+        })
+        .catch(() => showProblem("This chat can't show the card. Open the task in Broccoli."));
+    </script>
+  </body>
+</html>
