@@ -16,7 +16,10 @@ type Scope = "team" | "everyone";
 
 type Props = { people: readonly Person[]; viewerId: string | null; today: string };
 
-/** Others' approved time off today and in the next two weeks, for the viewer's team or everyone. */
+/**
+ * Others' approved time off today and in the next two weeks, for the viewer's team or everyone;
+ * each person opens their panel.
+ */
 export function WhosOutCard({ people, viewerId, today }: Props) {
   const team = viewerId ? teamOf(people, viewerId) : new Set<string>();
   const [chosen, setScope] = useState<Scope>("team");
@@ -77,24 +80,30 @@ export function WhosOutCard({ people, viewerId, today }: Props) {
                 </h3>
                 <ul className="flex flex-col gap-3">
                   {absences.map(({ person, timeOff }) => (
-                    <li key={timeOff.id} className="flex items-center gap-3">
-                      <Avatar
-                        url={person.avatarUrl}
-                        firstName={person.firstName}
-                        lastName={person.lastName}
-                      />
-                      <div className="grid min-w-0 flex-1 gap-0.5">
-                        <span className="truncate text-sm font-medium">
-                          {person.firstName} {person.lastName}
+                    <li key={timeOff.id}>
+                      <Link
+                        to="/people/$employeeId"
+                        params={{ employeeId: person.id }}
+                        className="group/person flex items-center gap-3"
+                      >
+                        <Avatar
+                          url={person.avatarUrl}
+                          firstName={person.firstName}
+                          lastName={person.lastName}
+                        />
+                        <div className="grid min-w-0 flex-1 gap-0.5">
+                          <span className="truncate text-sm font-medium group-hover/person:underline">
+                            {person.firstName} {person.lastName}
+                          </span>
+                          {/* The type is private to who may read the person's time off. */}
+                          <span className="truncate text-xs text-muted-foreground">
+                            {timeOff.timeOffType?.name ?? t("today.out.off")}
+                          </span>
+                        </div>
+                        <span className="text-sm whitespace-nowrap tabular-nums">
+                          {dateRange(timeOff.startDate, timeOff.endDate)}
                         </span>
-                        {/* The type is private to who may read the person's time off. */}
-                        <span className="truncate text-xs text-muted-foreground">
-                          {timeOff.timeOffType?.name ?? t("today.out.off")}
-                        </span>
-                      </div>
-                      <span className="text-sm whitespace-nowrap tabular-nums">
-                        {dateRange(timeOff.startDate, timeOff.endDate)}
-                      </span>
+                      </Link>
                     </li>
                   ))}
                 </ul>
