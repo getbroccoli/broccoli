@@ -1,7 +1,9 @@
 import { eq } from "drizzle-orm";
 import {
   ADMIN,
+  OWNER,
   SYSTEM,
+  allowanceService,
   calendarDate,
   employeeServices,
   expect,
@@ -11,6 +13,9 @@ import {
   seedEmploymentEnd,
   test,
   timeOffService,
+  transactWithTimeOffEvents,
+  whosOutService,
+  workingPatternService,
 } from "#test/support";
 
 import { timeOff } from "../db";
@@ -42,6 +47,61 @@ test("approval charges the held days and records who decided", async ({ orm, see
     employeeIds: [input.employeeId],
   });
   expect(figures.get(input.employeeId)).toMatchObject([{ waiting: 0, used: 2.5, remaining: 17.5 }]);
+});
+
+test("approval charges the eight days the employee still works after their week changes", async ({
+  orm,
+  seed,
+}) => {
+  const today = "2026-11-27";
+  const { requests, tasks, manager, managerId, requester, input, timeOff } =
+    await leaveRequestSetup(orm, seed, { today });
+  const { employeeId, startDate } = input;
+  const endDate = "2026-12-18";
+  const employeeIds = [employeeId];
+  const request = await requests.requestTimeOff(requester, { ...input, endDate, halfDays: [] });
+  expect(request).toMatchObject({ status: "requested", cost: 10 });
+  const waiting = (await timeOff.readTimeOffTypes(requester, { employeeIds })).get(employeeId);
+  expect(waiting).toMatchObject([{ waiting: 10, used: 0, remaining: 20 }]);
+  const allowanceId = waiting![0]!.allowanceId!;
+  await workingPatternService(orm, {
+    today,
+    transact: transactWithTimeOffEvents(orm, { today }),
+  }).setOwnWorkingWeek(OWNER, {
+    employeeId,
+    startDate: today,
+    minutes: [450, 450, 450, 0, 450, 0, 0],
+    bankHolidayCalendar: "england_and_wales",
+  });
+  expect(
+    (await timeOff.readTimeOffTypes(requester, { employeeIds })).get(employeeId),
+  ).toMatchObject([{ used: 0, remaining: 19.5 }]);
+  const [task] = (await tasks.listMyTasks(manager)).needsYou;
+
+  await tasks.markDone(manager, task!.id, { result: approved });
+
+  expect(
+    (await timeOff.readTimeOffTypes(requester, { employeeIds })).get(employeeId),
+  ).toMatchObject([{ waiting: 0, used: 8, remaining: 11.5 }]);
+  const calendar = await whosOutService(orm, { today }).readWhosOut(manager, {
+    employeeIds,
+    from: startDate,
+    until: endDate,
+  });
+  expect(calendar.get(employeeId)?.timeOff).toMatchObject([
+    { id: request.id, status: "approved", cost: 8 },
+  ]);
+  expect((await requests.readStatuses(requester, [request.id])).get(request.id)).toMatchObject({
+    decision: { decidedByEmployeeId: managerId },
+  });
+  const history = await allowanceService(orm, { today }).readAllowanceHistory(requester, {
+    allowanceIds: [allowanceId],
+  });
+  expect(
+    history.get(allowanceId)?.filter(({ cause }) => cause === "time_off_approved"),
+  ).toMatchObject([
+    { amount: -8, balanceAfter: 11.5, parts: [{ kind: "time_off_booked", amount: -8 }] },
+  ]);
 });
 
 test("rejection records the reason and leaves the allowance alone", async ({ orm, seed }) => {

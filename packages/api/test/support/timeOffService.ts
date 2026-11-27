@@ -257,12 +257,12 @@ export function demoFillService(orm: Orm) {
 }
 
 /** Transactions on `orm` whose committed events reach time off's handlers, and no one else's. */
-export function transactWithTimeOffEvents(orm: Orm): Transact {
+export function transactWithTimeOffEvents(orm: Orm, { today }: { today?: string } = {}): Transact {
   const eventBus = createEventBus(createLogger("silent"));
   eventBus.subscribe(
     timeOffModule({
       orm,
-      timeOff: timeOffService(orm),
+      timeOff: timeOffService(orm, { today }),
       timeOffSetup: createTimeOffSetupService({
         logger: createLogger("silent"),
         decisions: { decide: () => Promise.reject(new Error("Unexpected model request")) },

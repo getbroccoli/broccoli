@@ -44,17 +44,64 @@ test("the owner previews, books, reads and cancels two working days", async ({ e
   expect(await calendar.json()).toEqual({
     data: { employee: { whosOut: { timeOff: [{ cost: 2, days }] } } },
   });
-  const cancelled = await browser.graphql(
-    `mutation Cancel($input: TimeOffCancelInput!) {
-    timeOff { cancelTimeOff(input: $input) { cancelledTimeOffId error { __typename } } }
-  }`,
-    { input: { timeOffId } },
-  );
+  const cancelled = await browser.graphql(CANCEL_TIME_OFF, { input: { timeOffId } });
   expect(await cancelled.json()).toEqual({
     data: { timeOff: { cancelTimeOff: { cancelledTimeOffId: timeOffId, error: null } } },
   });
   const after = await browser.graphql(WHOS_OUT, { employeeId });
   expect(await after.json()).toEqual({ data: { employee: { whosOut: { timeOff: [] } } } });
+});
+
+test("cancelling one booking over New Year returns one day to each leave year", async ({ env }) => {
+  const { browser, employeeId, timeOffTypeId } = await setUpBooking(env);
+  const person = { employeeId, timeOffTypeId };
+  const booked = await browser.graphql(BOOK_TIME_OFF, {
+    input: { ...person, startDate: "2026-12-31", endDate: "2027-01-04" },
+  });
+  const body = (await booked.json()) as {
+    data: { timeOff: { bookTimeOff: { timeOff: { id: string } } } };
+  };
+  expect(body).toMatchObject({
+    data: {
+      timeOff: {
+        bookTimeOff: {
+          timeOff: {
+            cost: 2,
+            days: [
+              { date: "2026-12-31", dayPart: "FULL_DAY" },
+              { date: "2027-01-04", dayPart: "FULL_DAY" },
+            ],
+          },
+          error: null,
+        },
+      },
+    },
+  });
+  const timeOffId = body.data.timeOff.bookTimeOff.timeOff.id;
+  const otherDays = {
+    december: { ...person, startDate: "2026-12-30", endDate: "2026-12-30" },
+    january: { ...person, startDate: "2027-01-05", endDate: "2027-01-05" },
+  };
+  const before = await browser.graphql(LEAVE_YEAR_BALANCES, otherDays);
+  expect(await before.json()).toEqual({
+    data: {
+      december: { balances: [{ periodStart: "2026-01-01", usedBefore: 1, remainingBefore: 19 }] },
+      january: { balances: [{ periodStart: "2027-01-01", usedBefore: 1, remainingBefore: 19 }] },
+    },
+  });
+
+  const cancelled = await browser.graphql(CANCEL_TIME_OFF, { input: { timeOffId } });
+
+  expect(await cancelled.json()).toEqual({
+    data: { timeOff: { cancelTimeOff: { cancelledTimeOffId: timeOffId, error: null } } },
+  });
+  const after = await browser.graphql(LEAVE_YEAR_BALANCES, otherDays);
+  expect(await after.json()).toEqual({
+    data: {
+      december: { balances: [{ periodStart: "2026-01-01", usedBefore: 0, remainingBefore: 20 }] },
+      january: { balances: [{ periodStart: "2027-01-01", usedBefore: 0, remainingBefore: 20 }] },
+    },
+  });
 });
 
 test("returns a weekend-only booking refusal as an InvalidInputError payload", async ({ env }) => {
@@ -152,7 +199,7 @@ test("a time off history line returns the booking's note, cost and booking time 
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(new Date("2026-11-09T12:00:00Z"));
+  vi.setSystemTime(new Date("2026-11-27T12:00:00Z"));
 });
 
 afterEach(() => vi.useRealTimers());
@@ -220,6 +267,24 @@ const BOOK_TIME_OFF = `mutation Book($input: TimeOffBookInput!) {
     timeOff { id bookedAt cost days { date dayPart } history { edges { node { operation } } } }
     error { __typename }
   } }
+}`;
+
+const CANCEL_TIME_OFF = `mutation Cancel($input: TimeOffCancelInput!) {
+  timeOff { cancelTimeOff(input: $input) {
+    cancelledTimeOffId
+    error { __typename ... on Error { message } }
+  } }
+}`;
+
+const LEAVE_YEAR_BALANCES = `query LeaveYearBalances(
+  $december: TimeOffBookInput!, $january: TimeOffBookInput!
+) {
+  december: timeOffBookingPreview(input: $december) {
+    balances { periodStart usedBefore remainingBefore }
+  }
+  january: timeOffBookingPreview(input: $january) {
+    balances { periodStart usedBefore remainingBefore }
+  }
 }`;
 
 const WHOS_OUT = `query Calendar($employeeId: ID!) {
