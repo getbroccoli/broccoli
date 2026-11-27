@@ -4,8 +4,8 @@ import type { DocumentNode } from "graphql";
 
 import type { TaskResultInput } from "@/__generated__/graphql";
 
-import { TaskResultButtons } from "./TaskPanel/TaskResultButtons";
-import { TaskResultForm } from "./TaskPanel/TaskResultForm";
+import { TaskResultButtons } from "./TaskResultButtons";
+import { TaskResultForm } from "./TaskResultForm";
 import type { TaskRow } from "./taskText";
 import { useTaskActions } from "./useTaskActions";
 

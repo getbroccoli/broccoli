@@ -20,10 +20,10 @@ import { formatTaskDay, isOpen, personName, resultText, type TaskRow } from "../
 import { useTaskActions } from "../useTaskActions";
 import { DeleteTaskDialog } from "./DeleteTaskDialog";
 import { PanelCloseButton } from "./PanelCloseButton";
-import { TaskResultButtons } from "./TaskResultButtons";
+import { TaskResultButtons } from "../TaskResultButtons";
 import { TaskProcessRun } from "./TaskProcessRun";
-import { TaskResultForm } from "./TaskResultForm";
-import { SECTION_LABEL } from "./sectionLabel";
+import { TaskResultForm } from "../TaskResultForm";
+import { SECTION_LABEL } from "../sectionLabel";
 
 type Props = {
   task: TaskRow;
