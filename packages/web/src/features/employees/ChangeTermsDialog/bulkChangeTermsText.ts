@@ -2,10 +2,7 @@ import type { EmployeeTermsChangeSkipReason, RuleSource } from "@/__generated__/
 import { shortDate, versionOn } from "@/features/termsDisplay";
 import { type MessageKey, t } from "@/i18n";
 
-import {
-  plannedNoTerms,
-  type TermsPeriod,
-} from "../EmployeePanel/EmploymentTermsTab/employmentTermsView";
+import { plannedNoTerms, type TermsPeriod } from "../EmployeePanel/EmploymentTermsTab";
 
 type Version = { source: RuleSource; startDate: string; endDate?: string | null };
 type Person = { firstName: string; lastName: string };

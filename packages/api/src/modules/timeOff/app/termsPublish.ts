@@ -107,6 +107,9 @@ export async function publishTerms(
   const from = parseChangeDate(input.startDate, today());
   const owners = parseOwners(input.owners);
   const result = await transact(async (tx) => {
+    // Employments first, as bookings take them: a terms change commits before this reads who is on
+    // the terms, so nobody moving onto them is left out of the booked time off check.
+    await employeeReads.holdEmployeeWrites(tx);
     await timeOffPolicyRepository(tx).lockPolicies();
     const termsId = await existingTerms(employeeReads, tx, input.termsId);
     const week = await workingPatterns.readPublish(tx, { termsId, from });

@@ -56,11 +56,7 @@ export function TermsCard({
       startDate,
     })),
   ].toSorted((a, b) => a.startDate.localeCompare(b.startDate));
-  // Before their first terms, such as before they start, a date reads as on those terms; in a gap, none.
-  const termsOn = (date: string) => {
-    const { current: onDate, planned: later } = termsPeriodsOn(periods, date);
-    return onDate ?? (later.length === periods.length ? (later[0] ?? null) : null);
-  };
+  const termsOn = (date: string) => termsPeriodsOn(periods, date).current;
   const termsNameOn = (date: string) => termsOn(date)?.termsName ?? "";
   // A type without a balance has no leave year; the first one with one says it.
   const leaveYear = timeOff

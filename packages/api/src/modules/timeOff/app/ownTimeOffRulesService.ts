@@ -199,10 +199,10 @@ async function changeOwnRules(
   const employeeId = parseUuid(input.employeeId);
   if (!employeeId) throw employeeNotFound();
   return transact(async (tx) => {
+    // Before any read, in the order bookings take them: a terms change holds employments to its
+    // commit, so this waits for it and checks the terms it left, and it waits for this one in turn.
+    await employeeReads.holdEmployeeWrites(tx);
     await timeOffPolicyRepository(tx).lockPolicies();
-    // Before any read: a terms change holds the person's row to its commit, so this waits for it
-    // and checks the terms it left, and it waits for this one in turn.
-    await employeeReads.lockEmployees(tx, [employeeId]);
     const { timeOffType, from } = await parseChange(
       { employeeReads, today: today() },
       tx,

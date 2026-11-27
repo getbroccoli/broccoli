@@ -13,6 +13,7 @@ import {
   test,
   type TestSeed,
   testTransactor,
+  timeOffPolicyService,
   timeOffService,
   workingPatternService,
 } from "#test/support";
@@ -36,11 +37,7 @@ test("refuses No terms and names the person, type and booked dates that would lo
   orm,
   seed,
 }) => {
-  const employee = await seed.employee({
-    firstName: "Aisha",
-    lastName: "Begum",
-    startDate: "2025-01-01",
-  });
+  const employee = await seed.employee(aishaBegum);
   const timeOffTypeId = await giveAnnualLeave(orm, await seed.defaultTermsId());
   await seedTimeOff(orm, {
     employeeId: employee.id,
@@ -115,15 +112,44 @@ test("refuses No terms without a deadlock when a concurrent return to inherited 
   );
 });
 
+test("refuses publishing a stop that would uncover an incoming employee's booked day", async ({
+  orm,
+  seed,
+}) => {
+  const { employeeId, timeOffTypeId } = await bookedInheritedLeave(orm, seed);
+  const termsId = await seed.terms("Scotland");
+  await giveAnnualLeave(orm, termsId);
+  const policies = timeOffPolicyService(orm, { today });
+  const stop = await policies.saveTimeOffStop(OWNER, { termsId, timeOffTypeId });
+  const move = { employeeIds: [employeeId], termsId, startDate };
+  const publish = { termsId, versions: [stop], owners: [{ termsId }], startDate };
+
+  await expectConcurrentBookingConflict(
+    orm,
+    (pause) => termsChanges(orm, pause).changeTerms(OWNER, move),
+    () => policies.publishTerms(OWNER, publish),
+  );
+
+  const rules = await timeOffService(orm, { today }).readPersonTimeOff(OWNER, {
+    employeeIds: [employeeId],
+    from: bookedDay,
+  });
+  expect(
+    rules.get(employeeId)?.find((row) => row.timeOffType.id === timeOffTypeId)?.versions,
+  ).toMatchObject([
+    {
+      startDate: bookedDay,
+      source: "from_their_terms",
+      version: { balance: "balance_from_allowance" },
+    },
+  ]);
+});
+
 test("refuses a move to other terms that do not offer a pending booking's type", async ({
   orm,
   seed,
 }) => {
-  const employee = await seed.employee({
-    firstName: "Ben",
-    lastName: "Carter",
-    startDate: "2025-01-01",
-  });
+  const employee = await seed.employee(benCarter);
   const timeOffTypeId = await giveAnnualLeave(orm, await seed.defaultTermsId());
   const scotland = await seed.terms("Scotland");
   await seedTimeOff(orm, {
@@ -150,16 +176,8 @@ test("a refused bulk move reports every lost booking and leaves everyone's terms
   seed,
   transact,
 }) => {
-  const ben = await seed.employee({
-    firstName: "Ben",
-    lastName: "Carter",
-    startDate: "2025-01-01",
-  });
-  const aisha = await seed.employee({
-    firstName: "Aisha",
-    lastName: "Begum",
-    startDate: "2025-01-01",
-  });
+  const ben = await seed.employee(benCarter);
+  const aisha = await seed.employee(aishaBegum);
   const unbooked = await seed.employee({ startDate: "2025-01-01" });
   const england = await seed.defaultTermsId();
   const annual = await giveAnnualLeave(orm, england);
@@ -225,24 +243,31 @@ test("No terms from December prorates the inherited allowance through November",
   );
 });
 
+const benCarter = { firstName: "Ben", lastName: "Carter", startDate: "2025-01-01" };
+const aishaBegum = { firstName: "Aisha", lastName: "Begum", startDate: "2025-01-01" };
 const today = "2026-11-09";
 const startDate = "2027-01-01";
+const bookedDay = calendarDate("2027-01-04");
 
 async function bookedOwnAndInheritedLeave(orm: Orm, seed: TestSeed) {
-  const { id: employeeId } = await seed.employee({ startDate: "2025-01-01" });
-  const timeOffTypeId = await giveAnnualLeave(orm, await seed.defaultTermsId());
-  const input = { employeeId, timeOffTypeId, startDate };
+  const input = { ...(await bookedInheritedLeave(orm, seed)), startDate };
   await ownTimeOffRulesService(orm, { today }).setOwnRules(OWNER, {
     ...input,
     rules: { balance: "unlimited_balance" },
   });
+  return input;
+}
+
+async function bookedInheritedLeave(orm: Orm, seed: TestSeed) {
+  const { id: employeeId } = await seed.employee({ startDate: "2025-01-01" });
+  const timeOffTypeId = await giveAnnualLeave(orm, await seed.defaultTermsId());
   await seedTimeOff(orm, {
     employeeId,
     timeOffTypeId,
     status: "approved",
-    days: [{ date: "2027-01-04", dayPart: "full_day" }],
+    days: [{ date: bookedDay, dayPart: "full_day" }],
   });
-  return input;
+  return { employeeId, timeOffTypeId };
 }
 
 async function expectConcurrentBookingConflict(
@@ -260,17 +285,13 @@ async function expectConcurrentBookingConflict(
   void firstChange.catch(checked.reject);
   const blockingPid = await checked.promise;
   const secondChange = second();
-  const results = Promise.allSettled([firstChange, secondChange]);
-  try {
-    await expectBlockedBy(orm, blockingPid);
-  } finally {
-    release.resolve();
-    await results;
-  }
+  const blocked = expectBlockedBy(orm, blockingPid).finally(release.resolve);
+  await Promise.allSettled([firstChange, secondChange, blocked]);
 
   await firstChange;
   await expect(secondChange).rejects.toBeInstanceOf(ApplicationError);
   await expect(secondChange).rejects.toMatchObject({ code: "CONFLICT" });
+  await blocked;
 }
 
 async function giveAnnualLeave(orm: Orm, termsId: string) {
