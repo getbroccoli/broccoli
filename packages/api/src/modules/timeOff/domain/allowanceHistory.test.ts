@@ -122,6 +122,43 @@ it("takes the comment and author from the manual adjustment line", () => {
   expect(history[0]).toMatchObject({ author, comment: "Carry-over" });
 });
 
+it("identifies an adjustment by its ledger line id", () => {
+  const adjustment = line(1, { kind: "manual_adjustment", causeKind: "allowance_adjusted" });
+
+  expect(allowanceHistory([adjustment])).toMatchObject([
+    { adjustmentId: adjustment.id, reversed: false },
+  ]);
+});
+
+it("marks only the reversed adjustment and lists its reversal as a separate change", () => {
+  const adjustment = line(1, { kind: "manual_adjustment", causeKind: "allowance_adjusted" });
+  const other = line(2, { kind: "manual_adjustment", causeKind: "allowance_adjusted" });
+  const reversal = line(3, {
+    kind: "manual_adjustment",
+    causeKind: "allowance_adjustment_reversed",
+    causeRef: adjustment.id,
+    amount: "-1",
+    createdAt: laterTime,
+  });
+
+  expect(allowanceHistory([adjustment, other, reversal])).toMatchObject([
+    {
+      cause: "allowance_adjustment_reversed",
+      adjustmentId: reversal.id,
+      reversed: false,
+      amount: -1,
+    },
+    { cause: "allowance_adjusted", adjustmentId: other.id, reversed: false },
+    { cause: "allowance_adjusted", adjustmentId: adjustment.id, reversed: true },
+  ]);
+});
+
+it("leaves the adjustment id null on other balance changes", () => {
+  expect(allowanceHistory([line(1, { causeKind: "employee_added" })])).toMatchObject([
+    { adjustmentId: null, reversed: false },
+  ]);
+});
+
 it.each([
   ["start_date_changed", "2026-02-01", "2026-02-01"],
   ["working_pattern_changed", "2026-09-01", "2026-09-01"],

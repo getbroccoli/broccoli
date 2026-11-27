@@ -30,6 +30,15 @@ export function allowanceResolvers(allowances: AllowanceService) {
           }),
           ["INVALID_INPUT", "CONFLICT", "NOT_FOUND"],
         ),
+      reverseAllowanceAdjustment: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["AllowanceAdjustPayload"]>(
+          async () => ({
+            employeeTimeOffType: toGraphqlTimeOffTypeRow(
+              await allowances.reverseAdjustment(context.getActor(), input),
+            ),
+          }),
+          ["INVALID_INPUT", "CONFLICT", "NOT_FOUND"],
+        ),
     },
     EmployeeTimeOffType: {
       // Only a balance from an allowance has an allowance id on its card.

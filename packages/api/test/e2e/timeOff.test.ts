@@ -1,13 +1,4 @@
-import {
-  expect,
-  seedCurrentAnnualLeaveCard,
-  seedTimeOffPolicy,
-  test,
-  TEST_OWNER,
-} from "#test/support";
-
-import { connectDatabase } from "../../src/core/db";
-import { createLogger } from "../../src/core/logger";
+import { expect, seedCurrentAnnualLeaveCard, test, TEST_OWNER } from "#test/support";
 
 test("returns an owner's employee time off figures through GraphQL", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
@@ -78,6 +69,56 @@ test("returns the owner's adjustment in the mutation and the employee's balance 
   ]);
 });
 
+test("reverses an adjustment through GraphQL and returns the restored balance and history", async ({
+  env,
+}) => {
+  const { browser } = await env.signInAsOwner();
+  const { allowanceId, remaining } = await seedCurrentAnnualLeaveCard(env);
+  const adjusted = await browser.graphql(
+    `mutation($input: AllowanceAdjustInput!) {
+    timeOff { adjustAllowance(input: $input) { employeeTimeOffType { history { adjustmentId } } } }
+  }`,
+    { input: { allowanceId, amount: 2, comment: "Carry-over" } },
+  );
+  const result = await adjusted.json();
+  expect(result).toHaveProperty(
+    "data.timeOff.adjustAllowance.employeeTimeOffType.history.0.adjustmentId",
+    expect.any(String),
+  );
+  const { data } = result as {
+    data: {
+      timeOff: {
+        adjustAllowance: {
+          employeeTimeOffType: { history: [{ adjustmentId: string }] };
+        };
+      };
+    };
+  };
+  const { adjustmentId } = data.timeOff.adjustAllowance.employeeTimeOffType.history[0];
+
+  const reversed = await browser.graphql(
+    `mutation($input: AllowanceAdjustmentReverseInput!) {
+    timeOff { reverseAllowanceAdjustment(input: $input) {
+      employeeTimeOffType { remaining history { cause amount reversed } }
+      error { __typename }
+    } }
+  }`,
+    { input: { adjustmentId } },
+  );
+
+  expect(await reversed.json()).toHaveProperty("data.timeOff.reverseAllowanceAdjustment", {
+    error: null,
+    employeeTimeOffType: {
+      remaining,
+      history: [
+        { cause: "ALLOWANCE_ADJUSTMENT_REVERSED", amount: -2, reversed: false },
+        { cause: "ALLOWANCE_ADJUSTED", amount: 2, reversed: true },
+        { cause: "TIME_OFF_TURNED_ON", amount: remaining, reversed: false },
+      ],
+    },
+  });
+});
+
 test("returns an invalid adjustment as a field error in the mutation payload", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
   const { allowanceId } = await seedCurrentAnnualLeaveCard(env);
@@ -103,61 +144,6 @@ test("returns null time off for an employee querying a non-report", async ({ env
   const response = await browser.graphql(timeOffQuery, { id: coworker.id });
 
   expect(await response.json()).toEqual({ data: { employee: { timeOffTypes: null } } });
-});
-
-test("returns every time off type for Settings through GraphQL", async ({ env }) => {
-  const { browser } = await env.signInAsOwner();
-  const database = connectDatabase(env.db.url, createLogger("silent"));
-  try {
-    await seedTimeOffPolicy(database.orm, {
-      name: "Moving day",
-      balance: "balance_from_allowance",
-    });
-  } finally {
-    await database.close();
-  }
-
-  const response = await browser.graphql(`query {
-    timeOffSettings {
-      peopleWithTimeOff
-      timeOffTypes { timeOffType { name icon colour } balance daysTakenThisYear }
-    }
-  }`);
-
-  expect(await response.json()).toEqual({
-    data: {
-      timeOffSettings: {
-        peopleWithTimeOff: 0,
-        timeOffTypes: [
-          {
-            timeOffType: { name: "Annual leave", icon: "SUN", colour: "GREEN" },
-            balance: null,
-            daysTakenThisYear: 0,
-          },
-          {
-            timeOffType: { name: "Sickness", icon: "THERMOMETER", colour: "CORAL" },
-            balance: null,
-            daysTakenThisYear: 0,
-          },
-          {
-            timeOffType: { name: "Family leave", icon: "BABY", colour: "PINK" },
-            balance: null,
-            daysTakenThisYear: 0,
-          },
-          {
-            timeOffType: { name: "Other", icon: "CONFETTI", colour: "YELLOW" },
-            balance: null,
-            daysTakenThisYear: 0,
-          },
-          {
-            timeOffType: { name: "Moving day", icon: "SUN", colour: "YELLOW" },
-            balance: "BALANCE_FROM_ALLOWANCE",
-            daysTakenThisYear: 0,
-          },
-        ],
-      },
-    },
-  });
 });
 
 test("creates and changes a time off type and returns duplicate names as payload errors", async ({

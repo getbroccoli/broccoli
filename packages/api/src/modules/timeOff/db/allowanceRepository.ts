@@ -6,6 +6,7 @@ import type { CalendarDate } from "../../../utils";
 import type { LedgerLineKind, LedgerSum, NewLedgerLine, StoredLedgerLine } from "../domain";
 import { allowanceLedgerLines } from "./allowanceLedgerLinesTable";
 import { allowances } from "./allowancesTable";
+import { timeOffDays } from "./timeOffDaysTable";
 
 /** One person's allowance for one type and leave year. */
 export interface Allowance {
@@ -39,6 +40,16 @@ export interface AllowanceRepository {
   findAdjustment(
     request: Pick<NewAdjustment, "allowanceId" | "requestId">,
   ): Promise<{ amount: string; reason: string | null } | null>;
+  /**
+   * Days each time off takes from allowances now, minus its booked days' lines on allowances that
+   * grant days, by time off id; time off with none, such as of a type without an allowance or
+   * unlimited, is absent.
+   */
+  findDeductedDays(timeOffIds: readonly string[]): Promise<Map<string, number>>;
+  /** The adjustment line with this id; null when there is none or the line is no adjustment. */
+  findAdjustmentById(id: string): Promise<{ allowanceId: string; amount: string } | null>;
+  /** Appends the reversal of an adjustment and returns its id; null when it was reversed before. */
+  insertReversal(reversal: NewReversal): Promise<string | null>;
 }
 
 /** Days someone added to or took from an allowance, with their comment. */
@@ -51,6 +62,17 @@ export interface NewAdjustment {
   author: HistoryAuthor;
   /** One per adjustment meant, so a repeated request appends nothing. */
   requestId: string;
+}
+
+/** A line undoing one adjustment, with an optional reason. */
+export interface NewReversal {
+  allowanceId: string;
+  adjustmentId: string;
+  /** Minus the adjustment's amount. */
+  amount: string;
+  effectiveDate: CalendarDate;
+  reason: string | null;
+  author: HistoryAuthor;
 }
 
 export function allowanceRepository(tx: Tx): AllowanceRepository {
@@ -187,6 +209,87 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
         .from(allowanceLedgerLines)
         .where(eq(allowanceLedgerLines.idempotencyKey, adjustmentKey(allowanceId, requestId)));
       return row ?? null;
+    },
+
+    async findDeductedDays(timeOffIds) {
+      if (timeOffIds.length === 0) {
+        return new Map();
+      }
+      const sums = await orm()
+        .select({
+          timeOffId: timeOffDays.timeOffId,
+          allowanceId: allowanceLedgerLines.allowanceId,
+          amount: sql<string>`sum(${allowanceLedgerLines.amount})`,
+        })
+        .from(allowanceLedgerLines)
+        .innerJoin(timeOffDays, eq(timeOffDays.id, allowanceLedgerLines.timeOffDayId))
+        .where(anyOf(timeOffDays.timeOffId, timeOffIds))
+        .groupBy(timeOffDays.timeOffId, allowanceLedgerLines.allowanceId);
+      // An unlimited year books usage lines too, but grants nothing: only granted allowances deduct.
+      const granted = new Set(
+        (
+          await orm()
+            .selectDistinct({ allowanceId: allowanceLedgerLines.allowanceId })
+            .from(allowanceLedgerLines)
+            .where(
+              and(
+                anyOf(
+                  allowanceLedgerLines.allowanceId,
+                  sums.map(({ allowanceId }) => allowanceId),
+                ),
+                eq(allowanceLedgerLines.kind, "entitlement_grant"),
+              ),
+            )
+        ).map(({ allowanceId }) => allowanceId),
+      );
+      const deducted = new Map<string, number>();
+      for (const { timeOffId, allowanceId, amount } of sums) {
+        if (granted.has(allowanceId)) {
+          deducted.set(timeOffId, (deducted.get(timeOffId) ?? 0) - Number(amount) + 0);
+        }
+      }
+      return deducted;
+    },
+
+    async findAdjustmentById(id) {
+      const [row] = await orm()
+        .select({
+          allowanceId: allowanceLedgerLines.allowanceId,
+          amount: allowanceLedgerLines.amount,
+        })
+        .from(allowanceLedgerLines)
+        .where(
+          and(
+            eq(allowanceLedgerLines.id, id),
+            eq(
+              allowanceLedgerLines.causeKind,
+              "allowance_adjusted" satisfies StoredLedgerLine["causeKind"],
+            ),
+          ),
+        );
+      return row ?? null;
+    },
+
+    async insertReversal({ allowanceId, adjustmentId, amount, effectiveDate, reason, author }) {
+      const [row] = await orm()
+        .insert(allowanceLedgerLines)
+        .values({
+          allowanceId,
+          effectiveDate,
+          unit: "days",
+          amount,
+          kind: "manual_adjustment",
+          causeKind: "allowance_adjustment_reversed" satisfies StoredLedgerLine["causeKind"],
+          causeRef: adjustmentId,
+          reason,
+          authorKind: author.kind.toLowerCase(),
+          authorId: author.id,
+          // One reversal per adjustment, however often it is asked for.
+          idempotencyKey: `${allowanceId}:adjustment_reversed:${adjustmentId}`,
+        })
+        .onConflictDoNothing({ target: allowanceLedgerLines.idempotencyKey })
+        .returning({ id: allowanceLedgerLines.id });
+      return row?.id ?? null;
     },
   };
 }

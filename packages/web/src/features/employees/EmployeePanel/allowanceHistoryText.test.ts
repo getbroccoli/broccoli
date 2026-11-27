@@ -5,6 +5,8 @@ import {
   changeTitle,
   parseAdjustment,
   partsLine,
+  recordedDate,
+  reverseWords,
   signedDays,
 } from "./allowanceHistoryText";
 
@@ -62,7 +64,23 @@ it.each([
 });
 
 it.each([
+  ["hannah", "Adjustment of +5 reversed by you"],
+  ["another-reader", "Adjustment of +5 reversed by hannah@example.com"],
+])("names the reversed adjustment and its author for reader %s", (reader, expected) => {
+  const change = {
+    ...grant,
+    cause: "ALLOWANCE_ADJUSTMENT_REVERSED" as const,
+    amount: -5,
+    adjustmentId: "reversal",
+    author: { kind: "SIGNED_IN_USER" as const, userId: "hannah", email: "hannah@example.com" },
+  };
+
+  expect(changeTitle(change, reader)).toBe(expected);
+});
+
+it.each([
   ["ALLOWANCE_ADJUSTED", "MANUAL_ADJUSTMENT", 2],
+  ["ALLOWANCE_ADJUSTMENT_REVERSED", "MANUAL_ADJUSTMENT", -5],
   ["TIME_OFF_BOOKED", "TIME_OFF_BOOKED", -1],
   ["TIME_OFF_CANCELLED", "TIME_OFF_BOOKED", 1],
 ] as const)(
@@ -131,7 +149,63 @@ it.each([
   expect(adjustLabel(amount)).toBe(expected);
 });
 
+it("omits the year when the recorded London day is in the current year", () => {
+  expect(recordedDate("2026-07-26T23:30:00Z", "2026-11-27")).toBe("27 Jul");
+});
+
+it("includes the year when the adjustment was recorded in an earlier year", () => {
+  expect(recordedDate("2025-11-27T12:00:00Z", "2026-11-27")).toBe("27 Nov 2025");
+});
+
+it("uses the London date for an adjustment recorded late at night", () => {
+  expect(recordedDate("2026-11-27T23:30:00Z", "2026-11-28")).toBe("27 Nov");
+});
+
+it("explains how reversing added days takes them away", () => {
+  const words = reverseWords(
+    { amount: 5, recordedAt },
+    { remaining: 16.5, firstName: "Aisha", isReader: false },
+    "2026-11-28",
+  );
+
+  expect(words).toEqual({
+    title: "Reverse this adjustment?",
+    body: "This takes away the 5 days added on 27 Nov. Aisha will have 11.5 days left.",
+    keep: "Keep adjustment",
+    confirm: "Reverse adjustment",
+    done: "Adjustment reversed.",
+  });
+});
+
+it("explains how reversing a deduction gives days back", () => {
+  const words = reverseWords(
+    { amount: -2, recordedAt },
+    { remaining: 9, firstName: "Aisha", isReader: false },
+    "2026-11-28",
+  );
+
+  expect(words.body).toBe(
+    "This gives back the 2 days taken away on 27 Nov. Aisha will have 11 days left.",
+  );
+});
+
+it("addresses the reader when reversing their own adjustment", () => {
+  const words = reverseWords(
+    { amount: 5, recordedAt },
+    { remaining: 16.5, firstName: "Aisha", isReader: true },
+    "2026-11-28",
+  );
+
+  expect(words.body).toBe(
+    "This takes away the 5 days added on 27 Nov. You will have 11.5 days left.",
+  );
+});
+
+const recordedAt = "2026-11-28T00:30:00+01:00";
+
 const grant = {
+  adjustmentId: null,
+  reversed: false,
   recordedAt: "2026-11-02T08:00:00Z",
   cause: "TIME_OFF_TURNED_ON" as const,
   causeDate: null,

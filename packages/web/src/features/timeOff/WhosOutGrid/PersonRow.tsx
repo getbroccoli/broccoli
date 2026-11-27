@@ -7,6 +7,7 @@ import { cn } from "@/lib/class-names";
 
 import { weekdayDay } from "@/lib/formatDate";
 import { modeOf } from "@/features/employees";
+import { barParts } from "../barParts";
 import { BookingPart } from "./BookingPart";
 import type { WhosOutPerson, WhosOutTimeOff } from "./WhosOutGrid";
 
@@ -20,6 +21,8 @@ type Props = {
 /** One person's month: their days off, bank holidays and bookings, and free days to book. */
 export function PersonRow({ person, columns, onOpen, onBook }: Props) {
   const fullName = `${person.firstName} ${person.lastName}`;
+  const partsOn = barParts(person.whosOut);
+  const timeOffById = new Map(person.whosOut.timeOff.map((timeOff) => [timeOff.id, timeOff]));
   return (
     <div
       role="row"
@@ -45,11 +48,7 @@ export function PersonRow({ person, columns, onOpen, onBook }: Props) {
         </Link>
       </div>
       {person.whosOut.days.map((day) => {
-        const parts = person.whosOut.timeOff.flatMap((timeOff) =>
-          timeOff.days
-            .filter(({ date }) => date === day.date)
-            .map(({ dayPart }) => ({ timeOff, dayPart })),
-        );
+        const parts = partsOn.get(day.date) ?? [];
         const free = day.kind === "WORKING_DAY" && parts.length === 0;
         return (
           <div
@@ -64,16 +63,17 @@ export function PersonRow({ person, columns, onOpen, onBook }: Props) {
                 "bg-[repeating-linear-gradient(135deg,var(--color-muted)_0_4px,transparent_4px_8px)]",
             )}
           >
-            {parts.map(({ timeOff, dayPart }) => (
-              <BookingPart
-                key={`${timeOff.id}-${dayPart}`}
-                timeOff={timeOff}
-                dayPart={dayPart}
-                first={timeOff.days[0]!.date === day.date}
-                last={timeOff.days.at(-1)!.date === day.date}
-                onOpen={() => onOpen(timeOff, person)}
-              />
-            ))}
+            {parts.map((part) => {
+              const timeOff = timeOffById.get(part.timeOffId)!;
+              return (
+                <BookingPart
+                  key={`${part.timeOffId}-${part.dayPart}`}
+                  timeOff={timeOff}
+                  part={part}
+                  onOpen={() => onOpen(timeOff, person)}
+                />
+              );
+            })}
             {free && onBook && modeOf(person.canCreate) && (
               <button
                 type="button"

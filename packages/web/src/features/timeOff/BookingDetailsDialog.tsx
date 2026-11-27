@@ -24,10 +24,10 @@ import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/u
 import { Avatar, decisionLine, TimeOffStatusChip } from "@/features/employees";
 import { t } from "@/i18n";
 import { calendarDayOf } from "@/lib/calendarDay";
-import { formatDays } from "@/lib/formatDays";
+import { cn } from "@/lib/class-names";
 
 import { evictWhosOut } from "./cache";
-import { cancelDialogWords } from "./timeOffText";
+import { bookingTotal, cancelDialogWords, dayCostLine } from "./timeOffText";
 import { bookingDates, dateRange, dayMonthYear, weekdayDay } from "@/lib/formatDate";
 import type { WhosOutPerson, WhosOutTimeOff } from "./WhosOutGrid";
 
@@ -39,12 +39,6 @@ type Props = {
   viewerEmployeeId: string | null;
   onClose: () => void;
 };
-
-const PART_LABELS = {
-  FULL_DAY: "timeOff.dialog.fullDay",
-  MORNING: "timeOff.dialog.morning",
-  AFTERNOON: "timeOff.dialog.afternoon",
-} as const;
 
 /**
  * One booking or request as the viewer may see it: its type (or "Off"), dates and, for who may
@@ -131,18 +125,30 @@ export function BookingDetailsDialog({
           <p className="text-sm">
             {bookingDates(timeOff.startDate, timeOff.endDate)}
             {detailed && (
-              <span className="text-muted-foreground"> · {formatDays(timeOff.cost!)}</span>
+              <span className="text-muted-foreground">
+                {" · "}
+                {bookingTotal({
+                  cost: timeOff.cost!,
+                  deductedDays: timeOff.deductedDays ?? null,
+                  typeName,
+                })}
+              </span>
             )}
           </p>
-          {detailed && (
+          {timeOff.dayCosts && (
             <ul className="overflow-hidden rounded-lg border border-border text-sm">
-              {timeOff.days.map(({ date, dayPart }) => (
+              {timeOff.dayCosts.map((day) => (
                 <li
-                  key={date}
-                  className="flex justify-between border-b border-border/60 px-3 py-1.5 last:border-b-0"
+                  key={day.date}
+                  className={cn(
+                    "flex justify-between gap-3 border-b border-border/60 px-3 py-1.5 last:border-b-0",
+                    day.reason !== "WORKING_DAY" && "text-muted-foreground",
+                  )}
                 >
-                  {weekdayDay(date)}
-                  <span className="text-muted-foreground">{t(PART_LABELS[dayPart])}</span>
+                  {weekdayDay(day.date)}
+                  <span className="text-right text-muted-foreground">
+                    {dayCostLine({ ...day, dayPart: dayPartOn(timeOff, day.date) })}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -207,4 +213,9 @@ export function BookingDetailsDialog({
       )}
     </>
   );
+}
+
+/** The part of the day booked on a date: full day, morning or afternoon. */
+function dayPartOn(timeOff: WhosOutTimeOff, date: string) {
+  return timeOff.days.find((day) => day.date === date)!.dayPart;
 }

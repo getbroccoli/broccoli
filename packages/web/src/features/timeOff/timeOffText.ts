@@ -11,7 +11,12 @@ export type RefusalReason =
   | "OUTSIDE_EMPLOYMENT"
   | "LONGER_THAN_A_YEAR";
 
-import type { TimeOffApproval } from "@/__generated__/graphql";
+import type {
+  TimeOffApproval,
+  TimeOffDayCostReason,
+  TimeOffDayPart,
+  WhosOutDayKind,
+} from "@/__generated__/graphql";
 import { type DialogMode, modeOf, type Permit, type TimeOffStatus } from "@/features/employees";
 
 /** One line of the dialog's balance strip. */
@@ -162,15 +167,21 @@ export function bookingTooltip(timeOff: {
  */
 export function offCounts(
   people: readonly {
+    days: readonly { date: string; kind: WhosOutDayKind }[];
     timeOff: readonly { status: TimeOffStatus | null; days: readonly { date: string }[] }[];
   }[],
 ): Map<string, number> {
   const counts = new Map<string, number>();
   for (const person of people) {
+    // A booked day the person no longer works, such as after their week changed, isn't time off.
+    const working = new Set(
+      person.days.filter(({ kind }) => kind === "WORKING_DAY").map(({ date }) => date),
+    );
     const dates = new Set(
       person.timeOff
         .filter(({ status }) => status === null || status === "APPROVED")
-        .flatMap(({ days }) => days.map(({ date }) => date)),
+        .flatMap(({ days }) => days.map(({ date }) => date))
+        .filter((date) => working.has(date)),
     );
     for (const date of dates) {
       counts.set(date, (counts.get(date) ?? 0) + 1);
@@ -237,6 +248,37 @@ export function requestedToast(cost: number): string {
   return t("timeOff.text.requested", { days: formatDays(cost) });
 }
 
+/** "8 days deducted from Annual leave" when it takes from an allowance, else its days: "3 days". */
+export function bookingTotal({
+  cost,
+  deductedDays,
+  typeName,
+}: {
+  cost: number;
+  deductedDays: number | null;
+  typeName: string;
+}): string {
+  return deductedDays === null
+    ? formatDays(cost)
+    : t("timeOff.details.deductedFrom", { days: formatDays(deductedDays), type: typeName });
+}
+
+/** One booked day and what it adds: "Full day · 1 day", "Non-working day · 0 days". */
+export function dayCostLine({
+  dayPart,
+  cost,
+  reason,
+}: {
+  dayPart: TimeOffDayPart;
+  cost: number;
+  reason: TimeOffDayCostReason;
+}): string {
+  return t("timeOff.details.dayCost", {
+    part: t(reason === "WORKING_DAY" ? DAY_PART_LABELS[dayPart] : DAY_REASON_LABELS[reason]),
+    days: formatDays(cost),
+  });
+}
+
 /**
  * The words for cancelling this time off: the person withdraws their own request, others cancel
  * it, and approved time off is cancelled; `confirm` is also the button that opens the confirmation.
@@ -298,3 +340,14 @@ const CANCEL_WORDS = {
     done: "timeOff.cancel.timeOffDone",
   },
 } as const satisfies Record<CancelAction, Record<string, MessageKey>>;
+
+const DAY_PART_LABELS = {
+  FULL_DAY: "timeOff.dialog.fullDay",
+  MORNING: "timeOff.dialog.morning",
+  AFTERNOON: "timeOff.dialog.afternoon",
+} as const satisfies Record<TimeOffDayPart, MessageKey>;
+
+const DAY_REASON_LABELS = {
+  NOT_A_WORKING_DAY: "timeOff.details.notWorkingDay",
+  BANK_HOLIDAY: "timeOff.details.bankHoliday",
+} as const satisfies Record<Exclude<TimeOffDayCostReason, "WORKING_DAY">, MessageKey>;

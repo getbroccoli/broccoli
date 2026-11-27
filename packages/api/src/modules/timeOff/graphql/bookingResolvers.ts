@@ -72,6 +72,9 @@ export function bookingResolvers(booking: BookTimeOffService, whosOut: WhosOutSe
       startDate: ({ days }) => days[0]!.date,
       endDate: ({ days }) => days.at(-1)!.date,
       days: ({ days }) => days.map(({ date, dayPart }) => ({ date, dayPart: toEnum(dayPart) })),
+      dayCosts: ({ dayCosts }) =>
+        dayCosts?.map(({ date, cost, reason }) => ({ date, cost, reason: toEnum(reason) })) ?? null,
+      deductedDays: ({ deductedDays }) => deductedDays ?? null,
     },
   } satisfies Resolvers;
 }

@@ -1,10 +1,11 @@
 import { expect, it } from "vitest";
 
 import {
-  balanceLines,
   bookingTooltip,
+  bookingTotal,
   cancelDialogWords,
   costSentence,
+  dayCostLine,
   monthRange,
   offCounts,
   parseMonth,
@@ -67,104 +68,6 @@ it("names Christmas bank holidays and excludes weekends from the comparison", ()
   expect(sentence).toBe(
     "That's 5 days, not 8. Fri 25 Dec is Christmas Day, Mon 28 Dec is Boxing Day, Fri 1 Jan is New Year's Day.",
   );
-});
-
-it("shows a single balance without a year label", () => {
-  const lines = balanceLines(
-    [
-      {
-        periodStart: "2026-01-01",
-        balance: "BALANCE_FROM_ALLOWANCE",
-        remainingBefore: 20,
-        remainingAfter: 17.5,
-        usedAfter: 2.5,
-      },
-    ],
-    "Sam",
-  );
-
-  expect(lines).toEqual([{ label: null, before: 20, after: 17.5, over: null, unlimited: null }]);
-});
-
-it("labels each balance when the booking crosses leave years", () => {
-  const lines = balanceLines(
-    [
-      {
-        periodStart: "2026-01-01",
-        balance: "BALANCE_FROM_ALLOWANCE",
-        remainingBefore: 17.5,
-        remainingAfter: 13.5,
-        usedAfter: 6.5,
-      },
-      {
-        periodStart: "2027-01-01",
-        balance: "BALANCE_FROM_ALLOWANCE",
-        remainingBefore: 20,
-        remainingAfter: 19,
-        usedAfter: 1,
-      },
-    ],
-    "Sam",
-  );
-
-  expect(lines).toEqual([
-    { label: "2026:", before: 17.5, after: 13.5, over: null, unlimited: null },
-    { label: "2027:", before: 20, after: 19, over: null, unlimited: null },
-  ]);
-});
-
-it.each([
-  ["book", "0.5 days more than Sam has. You can still book it."],
-  ["request", "0.5 days more than you have. You can still ask for it."],
-] as const)("explains how to proceed beyond the balance in %s mode", (mode, over) => {
-  const lines = balanceLines(
-    [
-      {
-        periodStart: "2026-01-01",
-        balance: "BALANCE_FROM_ALLOWANCE",
-        remainingBefore: 2,
-        remainingAfter: -0.5,
-        usedAfter: 20.5,
-      },
-    ],
-    "Sam",
-    mode,
-  );
-
-  expect(lines).toEqual([
-    {
-      label: null,
-      before: 2,
-      after: -0.5,
-      over,
-      unlimited: null,
-    },
-  ]);
-});
-
-it("shows the used-after figure for an unlimited balance", () => {
-  const lines = balanceLines(
-    [
-      {
-        periodStart: "2026-01-01",
-        balance: "UNLIMITED_BALANCE",
-        remainingBefore: null,
-        remainingAfter: null,
-        usedAfter: 3,
-      },
-    ],
-    "Sam",
-  );
-
-  expect(lines).toEqual([
-    {
-      label: null,
-      before: null,
-      after: null,
-      over: null,
-      unlimited: "Unlimited. 3 days used this year.",
-    },
-  ]);
 });
 
 it.each([
@@ -254,11 +157,37 @@ it.each([
   expect(bookingTooltip(booking)).toBe(expected);
 });
 
+it.each([
+  [8, "8 days deducted from Annual leave"],
+  [0.5, "0.5 days deducted from Annual leave"],
+] as const)("shows the allowance deduction of %s days", (deductedDays, expected) => {
+  expect(bookingTotal({ cost: 10, deductedDays, typeName: "Annual leave" })).toBe(expected);
+});
+
+it.each([
+  [3, "3 days"],
+  [1, "1 day"],
+] as const)("shows only the cost of %s when there is no deduction", (cost, expected) => {
+  expect(bookingTotal({ cost, deductedDays: null, typeName: "Sickness" })).toBe(expected);
+});
+
+it.each([
+  ["FULL_DAY", 1, "WORKING_DAY", "Full day · 1 day"],
+  ["MORNING", 0.5, "WORKING_DAY", "Morning · 0.5 days"],
+  ["MORNING", 0, "NOT_A_WORKING_DAY", "Non-working day · 0 days"],
+  ["FULL_DAY", 0, "BANK_HOLIDAY", "Bank holiday · 0 days"],
+] as const)("describes %s costing %s days on %s", (dayPart, cost, reason, expected) => {
+  expect(dayCostLine({ dayPart, cost, reason })).toBe(expected);
+});
+
 it("counts each person off on each date", () => {
   const people = [
-    { timeOff: [{ status: "APPROVED", days: [{ date: "2026-12-07" }, { date: "2026-12-08" }] }] },
-    { timeOff: [{ status: null, days: [{ date: "2026-12-08" }] }] },
-    { timeOff: [] },
+    {
+      days: workingDays,
+      timeOff: [{ status: "APPROVED", days: [{ date: "2026-12-07" }, { date: "2026-12-08" }] }],
+    },
+    { days: workingDays, timeOff: [{ status: null, days: [{ date: "2026-12-08" }] }] },
+    { days: workingDays, timeOff: [] },
   ] as const;
 
   expect(offCounts(people)).toEqual(
@@ -269,15 +198,30 @@ it("counts each person off on each date", () => {
   );
 });
 
+it("counts only the person who works on a shared booking date", () => {
+  const date = "2026-12-10";
+  const timeOff = [{ status: "APPROVED", days: [{ date }] }] as const;
+  const people = [
+    { days: [{ date, kind: "NOT_A_WORKING_DAY" }], timeOff },
+    { days: [{ date, kind: "WORKING_DAY" }], timeOff },
+  ] as const;
+
+  expect(offCounts(people)).toEqual(new Map([[date, 1]]));
+});
+
 it("counts a person with morning and afternoon bookings on the same date only once", () => {
   const people = [
     {
+      days: workingDays,
       timeOff: [
         { status: "APPROVED", days: [{ date: "2026-12-07", dayPart: "MORNING" }] },
         { status: "APPROVED", days: [{ date: "2026-12-07", dayPart: "AFTERNOON" }] },
       ],
     },
-    { timeOff: [{ status: "APPROVED", days: [{ date: "2026-12-07", dayPart: "MORNING" }] }] },
+    {
+      days: workingDays,
+      timeOff: [{ status: "APPROVED", days: [{ date: "2026-12-07", dayPart: "MORNING" }] }],
+    },
   ] as const;
 
   expect(offCounts(people)).toEqual(new Map([["2026-12-07", 2]]));
@@ -286,9 +230,9 @@ it("counts a person with morning and afternoon bookings on the same date only on
 it.each(["REQUESTED", "REJECTED", "CANCELLED"] as const)(
   "excludes %s time off from the daily count",
   (status) => {
-    expect(offCounts([{ timeOff: [{ status, days: [{ date: "2026-12-07" }] }] }])).toEqual(
-      new Map(),
-    );
+    expect(
+      offCounts([{ days: workingDays, timeOff: [{ status, days: [{ date: "2026-12-07" }] }] }]),
+    ).toEqual(new Map());
   },
 );
 
@@ -309,3 +253,8 @@ it.each([
     expect(words).toMatchObject({ confirm, done });
   },
 );
+
+const workingDays = [
+  { date: "2026-12-07", kind: "WORKING_DAY" },
+  { date: "2026-12-08", kind: "WORKING_DAY" },
+] as const;

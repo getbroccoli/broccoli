@@ -4,6 +4,11 @@ query AllowanceHistory($employeeId: ID!) {
     timeOffTypes {
       id
       allowanceId
+      # The card's figures come with the history, so a refreshed history never leaves them stale.
+      entitlement
+      bankHolidays
+      used
+      remaining
       history {
         recordedAt
         cause
@@ -22,6 +27,8 @@ query AllowanceHistory($employeeId: ID!) {
           email
         }
         comment
+        adjustmentId
+        reversed
       }
     }
   }
@@ -48,6 +55,27 @@ mutation AdjustAllowance($input: AllowanceAdjustInput!) {
             field
             code
           }
+        }
+      }
+    }
+  }
+}
+
+mutation ReverseAllowanceAdjustment($input: AllowanceAdjustmentReverseInput!) {
+  timeOff {
+    reverseAllowanceAdjustment(input: $input) {
+      employeeTimeOffType {
+        id
+        allowanceId
+        entitlement
+        bankHolidays
+        used
+        remaining
+      }
+      error {
+        __typename
+        ... on Error {
+          message
         }
       }
     }

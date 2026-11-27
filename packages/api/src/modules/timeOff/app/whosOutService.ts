@@ -17,12 +17,21 @@ import {
   parseDateField,
 } from "../../employees";
 import {
+  allowanceRepository,
   type Booking,
   timeOffPolicyRepository,
   timeOffRepository,
   type TimeOffStatus,
 } from "../db";
-import { costedDays, type DayPart, datesFrom, type TimeOffType, totalCost } from "../domain";
+import {
+  type CostedDay,
+  costedDays,
+  type DayCostReason,
+  type DayPart,
+  datesFrom,
+  type TimeOffType,
+  totalCost,
+} from "../domain";
 
 /** Who's out over a range, as the Time off page shows it. */
 export interface WhosOutService {
@@ -58,6 +67,16 @@ export interface WhosOutTimeOff {
   status: TimeOffStatus;
   /** Null unless the reader may read the person's time off. */
   cost: number | null;
+  /**
+   * Each day's cost and its reason under the person's working week and bank holidays on that
+   * date; null unless the reader may read the person's time off, absent outside who's out.
+   */
+  dayCosts?: { date: CalendarDate; cost: number; reason: DayCostReason }[] | null;
+  /**
+   * Days approved time off takes from allowances now; null for requests, a type without allowance
+   * lines and unless the reader may read the person's time off, absent outside who's out.
+   */
+  deductedDays?: number | null;
   note: string | null;
   bookedAt: Date | null;
 }
@@ -147,22 +166,26 @@ async function readFacts(
     timeOffRepository(tx).findBookings({ employeeIds, ...range, requestedOf: readable }),
     timeOffPolicyRepository(tx).findAllTypes(),
   ]);
-  // Bookings may run past the range; their costs need the weeks of their own days.
+  // Readable bookings may run past the range; their costs need the weeks of their own days.
+  const costed = bookings.filter(({ employeeId }) => readable(employeeId));
   const span = {
-    from: [range.from, ...bookings.map(({ days }) => days[0]!.date)].toSorted()[0]!,
-    until: [range.until, ...bookings.map(({ days }) => days.at(-1)!.date)].toSorted().at(-1)!,
+    from: [range.from, ...costed.map(({ days }) => days[0]!.date)].toSorted()[0]!,
+    until: [range.until, ...costed.map(({ days }) => days.at(-1)!.date)].toSorted().at(-1)!,
   };
-  const [weeks, holidays] = await Promise.all([
+  const approvedIds = costed.filter(({ status }) => status === "approved").map(({ id }) => id);
+  const [weeks, holidays, deductedDays] = await Promise.all([
     workingWeeks.readWorkingWeeksInTransaction(tx, { employeeIds, ...span }),
     bankHolidays.readBankHolidays(PrincipalSecurityContext.system(), {
       calendars: BANK_HOLIDAY_CALENDARS,
       ...span,
     }),
+    allowanceRepository(tx).findDeductedDays(approvedIds),
   ]);
   return {
     periods,
     weeks,
     holidays,
+    deductedDays,
     bookingsOf: Map.groupBy(bookings, ({ employeeId }) => employeeId),
     privateTypeIds: new Set(types.filter((type) => type.private).map(({ id }) => id)),
   };
@@ -174,14 +197,16 @@ function whosOutOf(
   range: Range,
   timeOffScope: RecordScope,
 ): WhosOut {
-  const costed = (days: Booking["days"]) =>
-    costedDays({
+  const costed = (days: Booking["days"]) => {
+    const halfDays = new Map(days.map(({ date, dayPart }) => [date, dayPart]));
+    return costedDays({
       from: days[0]!.date,
       until: days.at(-1)!.date,
-      halfDays: new Map(days.map(({ date, dayPart }) => [date, dayPart])),
+      halfDays,
       workingWeeks: facts.weeks.get(employeeId) ?? [],
       bankHolidays: facts.holidays,
-    }).filter(({ date }) => days.some((day) => day.date === date));
+    }).filter(({ date }) => halfDays.has(date));
+  };
   const employed = facts.periods.get(employeeId) ?? [];
   const readable = isInRecordScope(timeOffScope, employeeId);
   const rangeDays = datesFrom(range.from, range.until).map((date) => ({
@@ -196,15 +221,35 @@ function whosOutOf(
         : "not_employed",
       bankHolidayName,
     })),
-    timeOff: (facts.bookingsOf.get(employeeId) ?? []).map((booking) => ({
-      id: booking.id,
-      timeOffTypeId:
-        readable || !facts.privateTypeIds.has(booking.timeOffTypeId) ? booking.timeOffTypeId : null,
-      days: booking.days,
-      status: booking.status,
-      cost: readable ? totalCost(costed(booking.days)) : null,
-      note: readable ? booking.note : null,
-      bookedAt: readable ? booking.createdAt : null,
-    })),
+    timeOff: (facts.bookingsOf.get(employeeId) ?? []).map((booking) =>
+      timeOffAsShown(facts, booking, readable ? costed : null),
+    ),
+  };
+}
+
+/** A booking as its reader sees it: costed only when `costed` is given, for who may read it. */
+function timeOffAsShown(
+  facts: Facts,
+  booking: Booking,
+  costed: ((days: Booking["days"]) => CostedDay[]) | null,
+): WhosOutTimeOff {
+  const shown = {
+    id: booking.id,
+    timeOffTypeId:
+      costed || !facts.privateTypeIds.has(booking.timeOffTypeId) ? booking.timeOffTypeId : null,
+    days: booking.days,
+    status: booking.status,
+  };
+  if (!costed) {
+    return { ...shown, cost: null, dayCosts: null, deductedDays: null, note: null, bookedAt: null };
+  }
+  const dayCosts = costed(booking.days).map(({ date, cost, reason }) => ({ date, cost, reason }));
+  return {
+    ...shown,
+    cost: totalCost(dayCosts),
+    dayCosts,
+    deductedDays: facts.deductedDays.get(booking.id) ?? null,
+    note: booking.note,
+    bookedAt: booking.createdAt,
   };
 }

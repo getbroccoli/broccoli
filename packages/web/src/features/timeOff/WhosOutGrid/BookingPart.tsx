@@ -1,19 +1,20 @@
 import { tileStyle } from "@/features/termsDisplay";
 import { cn } from "@/lib/class-names";
 
+import type { BarPart } from "../barParts";
 import { bookingTooltip } from "../timeOffText";
 import type { WhosOutTimeOff } from "./WhosOutGrid";
 
 type Props = {
   timeOff: WhosOutTimeOff;
-  dayPart: string;
-  first: boolean;
-  last: boolean;
+  part: BarPart;
   onOpen: () => void;
 };
 
 /** One day's part of a booking's bar, hatched while it waits for approval, which opens the booking. */
-export function BookingPart({ timeOff, dayPart, first, last, onOpen }: Props) {
+export function BookingPart({ timeOff, part, onOpen }: Props) {
+  const { dayPart, roundStart, roundEnd } = part;
+  const half = dayPart !== "FULL_DAY";
   const label = bookingTooltip({
     typeName: timeOff.timeOffType?.name ?? null,
     startDate: timeOff.startDate,
@@ -46,8 +47,9 @@ export function BookingPart({ timeOff, dayPart, first, last, onOpen }: Props) {
           : dayPart === "AFTERNOON"
             ? "right-0 left-1/2"
             : "inset-x-0",
-        first && "ml-1 rounded-l-full",
-        last && "mr-1 rounded-r-full",
+        // A half cell keeps a narrower gap, so a lone half day stays wide enough to see and click.
+        roundStart && (half ? "ml-0.5 rounded-l-full" : "ml-1 rounded-l-full"),
+        roundEnd && (half ? "mr-0.5 rounded-r-full" : "mr-1 rounded-r-full"),
       )}
     />
   );

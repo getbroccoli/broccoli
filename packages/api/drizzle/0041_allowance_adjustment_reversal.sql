@@ -1,0 +1,2 @@
+ALTER TABLE "allowance_ledger_lines" DROP CONSTRAINT "allowance_ledger_lines_manual_adjustment_reason";--> statement-breakpoint
+ALTER TABLE "allowance_ledger_lines" ADD CONSTRAINT "allowance_ledger_lines_manual_adjustment_reason" CHECK ("allowance_ledger_lines"."kind" <> 'manual_adjustment' or "allowance_ledger_lines"."reason" is not null or "allowance_ledger_lines"."cause_kind" = 'allowance_adjustment_reversed');
