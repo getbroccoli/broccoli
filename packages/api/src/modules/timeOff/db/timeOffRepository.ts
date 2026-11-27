@@ -95,9 +95,10 @@ export interface TimeOffRepository {
   /** The days from `from` on that `employeeIds` have approved or requested time off of the type. */
   findDaysFrom(input: {
     employeeIds: readonly string[];
-    timeOffTypeId: string;
+    /** Omitted: every type. */
+    timeOffTypeId?: string;
     from: CalendarDate;
-  }): Promise<{ employeeId: string; date: CalendarDate }[]>;
+  }): Promise<{ employeeId: string; timeOffTypeId: string; date: CalendarDate }[]>;
 }
 
 export function timeOffRepository(tx: Orm | Tx): TimeOffRepository {
@@ -207,13 +208,17 @@ export function timeOffRepository(tx: Orm | Tx): TimeOffRepository {
     },
     async findDaysFrom({ employeeIds, timeOffTypeId, from }) {
       return ormOf(tx)
-        .selectDistinct({ employeeId: timeOff.employeeId, date: timeOffDays.date })
+        .selectDistinct({
+          employeeId: timeOff.employeeId,
+          timeOffTypeId: timeOff.timeOffTypeId,
+          date: timeOffDays.date,
+        })
         .from(timeOffDays)
         .innerJoin(timeOff, eq(timeOff.id, timeOffDays.timeOffId))
         .where(
           and(
             anyOf(timeOff.employeeId, employeeIds),
-            eq(timeOff.timeOffTypeId, timeOffTypeId),
+            timeOffTypeId ? eq(timeOff.timeOffTypeId, timeOffTypeId) : undefined,
             daysIn(HELD, from, LAST_DAY),
           ),
         );

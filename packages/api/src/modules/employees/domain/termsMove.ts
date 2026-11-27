@@ -1,9 +1,10 @@
+import { ApplicationError } from "../../../core/applicationError";
 import { addDays, type CalendarDate, coversDate } from "../../../utils";
 import { cancelPlannedVersion } from "./datedChange";
 import type { TermsMembership } from "./workingPatternTimeline";
 
 /** Why a person is left as they are by a move. */
-export type TermsMoveSkipReason = "ALREADY_ON_TERMS" | "LEFT_BEFORE_DATE";
+export type TermsMoveSkipReason = "ALREADY_ON_TERMS" | "ALREADY_ON_NO_TERMS" | "LEFT_BEFORE_DATE";
 
 /** What a move does to one person: their terms over time afterwards, or why they stay. */
 export type TermsMove =
@@ -18,16 +19,16 @@ export type TermsMove =
   | { kind: "skip"; reason: TermsMoveSkipReason };
 
 /**
- * Moves one person to `termsId` from `date`: the terms covering it end the day before, and the new
- * ones run to their old end, so a later move stays. A person who starts later moves from their
- * start, as if they had always been on the new terms.
+ * Moves one person to `termsId` from `date`, or to no terms when it is null: the terms covering it
+ * end the day before, and the new ones run to their old end, so a later move stays. A person who
+ * starts later moves from their start, as if they had always been on the new terms.
  */
 export function planTermsMove(
   person: {
     memberships: readonly TermsMembership[];
     employments: readonly { startDate: CalendarDate | null; endDate: CalendarDate | null }[];
   },
-  termsId: string,
+  termsId: string | null,
   date: CalendarDate,
 ): TermsMove {
   const ends = person.employments.map(({ endDate }) => endDate);
@@ -38,7 +39,7 @@ export function planTermsMove(
   const from = start !== null && start > date ? start : date;
   const fromTermsId = person.memberships.find((row) => coversDate(row, from))?.termsId ?? null;
   if (fromTermsId === termsId) {
-    return { kind: "skip", reason: "ALREADY_ON_TERMS" };
+    return { kind: "skip", reason: termsId ? "ALREADY_ON_TERMS" : "ALREADY_ON_NO_TERMS" };
   }
   return {
     kind: "move",
@@ -50,16 +51,34 @@ export function planTermsMove(
 
 /**
  * The person's terms once the move starting on `startDate` is cancelled: the terms before it run
- * on to its end. CONFLICT unless it starts after today.
+ * on to its end, or, for a move to no terms, until the next terms. CONFLICT unless it starts after
+ * today.
  */
 export function cancelTermsMove(
   memberships: readonly TermsMembership[],
   startDate: string,
   today: CalendarDate,
-): { cancelled: TermsMembership; memberships: TermsMembership[] } {
+): {
+  cancelled: { termsId: string | null; startDate: CalendarDate };
+  memberships: TermsMembership[];
+} {
+  const gapBefore = noTermsFrom(memberships, startDate);
+  if (gapBefore) {
+    if (startDate <= today) {
+      throw new ApplicationError("CONFLICT", "This change has already started.");
+    }
+    const next = memberships.toSorted(byStart).find((row) => (row.startDate ?? "") > startDate);
+    const endDate = next?.startDate ? addDays(next.startDate, -1) : null;
+    return {
+      cancelled: { termsId: null, startDate: startDate as CalendarDate },
+      memberships: merged(
+        memberships.map((row) => (row === gapBefore ? { ...row, endDate } : row)),
+      ),
+    };
+  }
   const { removed, extended } = cancelPlannedVersion(memberships, startDate, today);
   return {
-    cancelled: removed,
+    cancelled: { termsId: removed.termsId, startDate: removed.startDate! },
     memberships: merged(
       memberships
         .filter((row) => row !== removed)
@@ -69,13 +88,23 @@ export function cancelTermsMove(
 }
 
 /**
- * The rows with `termsId` from `from` to the end of the row covering it. From the person's first
- * day, a row they started on (no start date) is replaced whole, as if they had always been on the
- * new terms.
+ * The row ending the day before `startDate` when no terms start that day: the person's terms end
+ * there, a move to no terms; null otherwise.
+ */
+function noTermsFrom(rows: readonly TermsMembership[], startDate: string): TermsMembership | null {
+  if (rows.some((row) => row.startDate === startDate)) return null;
+  const dayBefore = addDays(startDate as CalendarDate, -1);
+  return rows.find(({ endDate }) => endDate === dayBefore) ?? null;
+}
+
+/**
+ * The rows with `termsId` from `from` to the end of the row covering it, or none from `from` when
+ * it is null. From the person's first day, a row they started on (no start date) is replaced whole,
+ * as if they had always been on the new terms.
  */
 function withRow(
   rows: readonly TermsMembership[],
-  termsId: string,
+  termsId: string | null,
   from: CalendarDate,
   fromFirstDay: boolean,
 ): TermsMembership[] {
@@ -93,7 +122,7 @@ function withRow(
     if (startDate === null || row.startDate === from) return [];
     return [{ ...row, endDate: addDays(from, -1) }];
   });
-  return merged([...kept, { termsId, startDate, endDate }]);
+  return merged(termsId ? [...kept, { termsId, startDate, endDate }] : kept);
 }
 
 /** Rows in date order, with back-to-back rows on the same terms joined into one. */

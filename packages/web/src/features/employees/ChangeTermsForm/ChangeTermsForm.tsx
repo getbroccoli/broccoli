@@ -6,6 +6,9 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { t } from "@/i18n";
 
+/** The choice in the terms list that takes people off terms; the API takes it as a null terms id. */
+export const NO_TERMS = "no-terms";
+
 type Props = {
   value: { termsId: string | null; startDate: string };
   onChange: (value: { termsId: string | null; startDate: string }) => void;
@@ -46,6 +49,7 @@ export function ChangeTermsForm({
             <option value="" disabled>
               {t("changeTerms.pick")}
             </option>
+            <option value={NO_TERMS}>{t("changeTerms.noTerms")}</option>
             {data?.allTerms.map(({ id, name }) => (
               <option key={id} value={id}>
                 {id === currentTermsId ? t("changeTerms.now", { terms: name }) : name}

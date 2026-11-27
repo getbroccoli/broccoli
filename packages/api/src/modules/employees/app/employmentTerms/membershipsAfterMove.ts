@@ -3,9 +3,9 @@ import type { CalendarDate } from "../../../../utils";
 import { employmentRepository, termsRepository } from "../../db";
 import { planTermsMove, type TermsMembership } from "../../domain";
 
-/** A move to look at before saving it: the terms and the date asked. */
+/** A move to look at before saving it: the terms (null for none) and the date asked. */
 export interface TermsMovePreview {
-  termsId: string;
+  termsId: string | null;
   startDate: CalendarDate;
 }
 

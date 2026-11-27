@@ -55,7 +55,7 @@ export function bulkGroups({
     skipped.filter((skip) => skip.reason === reason).map(({ employee }) => nameOf(employee));
   return {
     moving: moves.length,
-    alreadyOn: skippedFor("ALREADY_ON_TERMS"),
+    alreadyOn: [...skippedFor("ALREADY_ON_TERMS"), ...skippedFor("ALREADY_ON_NO_TERMS")],
     left: skippedFor("LEFT_BEFORE_DATE"),
     startLater: moves.filter((move) => move.startDate > startDate).map(personOf),
     keepOwn: moves.filter(keepsOwn).map(personOf),

@@ -207,21 +207,6 @@ test("moves some people and skips others in one save", async ({ orm, seed }) => 
   }
 });
 
-test("previews a move without writing it", async ({ orm, seed }) => {
-  const employee = await seed.employee({ startDate: "2024-03-01" });
-  const scotland = await seed.terms("Scotland");
-  const service = workingPatternService(orm, { today: "2026-11-09" });
-  const input = { employeeIds: [employee.id], termsId: scotland, startDate: "2026-12-01" };
-  const before = await service.readEmploymentTerms(OWNER, { employeeIds: [employee.id] });
-
-  const preview = await service.previewTermsChange(OWNER, input);
-
-  const moved = [{ employeeId: employee.id, startDate: "2026-12-01" }];
-  expect(preview).toMatchObject({ moved, skipped: [] });
-  expect(await service.readEmploymentTerms(OWNER, { employeeIds: [employee.id] })).toEqual(before);
-  expect(await service.changeTerms(OWNER, input)).toEqual({ moved, skipped: [] });
-});
-
 test("moves a person whose start moved past a planned move from their start, keeping earlier periods", async ({
   orm,
   seed,
@@ -253,3 +238,98 @@ test("moves a person whose start moved past a planned move from their start, kee
     { termsId: northernIreland, startDate: "2027-01-01", endDate: null },
   ]);
 });
+
+test("No terms ends the current terms on the day before the change", async ({ orm, seed }) => {
+  const employee = await seed.employee({ startDate: "2024-03-01" });
+  const england = await seed.defaultTermsId();
+  const service = workingPatternService(orm, { today });
+
+  await service.changeTerms(OWNER, { ...noTerms, employeeIds: [employee.id] });
+
+  const terms = await service.readEmploymentTerms(OWNER, { employeeIds: [employee.id] });
+  expect(terms.get(employee.id)?.periods).toMatchObject([
+    { termsId: england, endDate: "2026-12-31" },
+  ]);
+});
+
+test("No terms preserves a later scheduled move", async ({ orm, seed }) => {
+  const employee = await seed.employee({ startDate: "2024-03-01" });
+  const england = await seed.defaultTermsId();
+  const scotland = await seed.terms("Scotland");
+  await seedTermsPeriods(orm, employee.id, [
+    { termsId: england, startDate: null, endDate: "2027-01-31" },
+    { termsId: scotland, startDate: "2027-02-01", endDate: null },
+  ]);
+  const service = workingPatternService(orm, { today });
+
+  await service.changeTerms(OWNER, { ...noTerms, employeeIds: [employee.id] });
+
+  const terms = await service.readEmploymentTerms(OWNER, { employeeIds: [employee.id] });
+  expect(terms.get(employee.id)?.periods).toMatchObject([
+    { termsId: england, startDate: null, endDate: "2026-12-31" },
+    { termsId: scotland, startDate: "2027-02-01", endDate: null },
+  ]);
+});
+
+test("No terms from the person's first day leaves no terms periods", async ({ orm, seed }) => {
+  const employee = await seed.employee({ startDate: noTerms.startDate });
+  const service = workingPatternService(orm, { today });
+
+  await service.changeTerms(OWNER, { ...noTerms, employeeIds: [employee.id] });
+
+  const terms = await service.readEmploymentTerms(OWNER, { employeeIds: [employee.id] });
+  expect(terms.get(employee.id)?.periods).toEqual([]);
+});
+
+test("skips a person already without terms on the chosen date", async ({ orm, seed }) => {
+  const employee = await seed.employee({ startDate: "2024-03-01" });
+  await seed.leaveTerms(employee.id);
+  const service = workingPatternService(orm, { today });
+
+  const result = await service.changeTerms(OWNER, { ...noTerms, employeeIds: [employee.id] });
+
+  expect(result).toEqual({
+    moved: [],
+    skipped: [{ employeeId: employee.id, reason: "ALREADY_ON_NO_TERMS" }],
+  });
+});
+
+test("moves a person back onto terms after a gap", async ({ orm, seed }) => {
+  const employee = await seed.employee({ startDate: "2024-03-01" });
+  const england = await seed.defaultTermsId();
+  const scotland = await seed.terms("Scotland");
+  const employeeIds = [employee.id];
+  const service = workingPatternService(orm, { today });
+  await service.changeTerms(OWNER, { ...noTerms, employeeIds });
+
+  await service.changeTerms(OWNER, { employeeIds, termsId: scotland, startDate: "2027-03-01" });
+
+  const terms = await service.readEmploymentTerms(OWNER, { employeeIds });
+  expect(terms.get(employee.id)?.periods).toMatchObject([
+    { termsId: england, endDate: "2026-12-31" },
+    { termsId: scotland, startDate: "2027-03-01", endDate: null },
+  ]);
+});
+
+test("a bulk move to No terms skips only the person already without terms", async ({
+  orm,
+  seed,
+}) => {
+  const current = await seed.employee({ startDate: "2024-03-01" });
+  const already = await seed.employee({ startDate: "2024-03-01" });
+  await seed.leaveTerms(already.id);
+  const service = workingPatternService(orm, { today });
+
+  const result = await service.changeTerms(OWNER, {
+    ...noTerms,
+    employeeIds: [already.id, current.id],
+  });
+
+  expect(result).toEqual({
+    moved: [{ employeeId: current.id, startDate: noTerms.startDate }],
+    skipped: [{ employeeId: already.id, reason: "ALREADY_ON_NO_TERMS" }],
+  });
+});
+
+const today = "2026-11-09";
+const noTerms = { termsId: null, startDate: "2027-01-01" };

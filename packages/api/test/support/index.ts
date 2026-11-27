@@ -42,6 +42,7 @@ export { seedCurrentAnnualLeaveCard } from "./seedCurrentAnnualLeaveCard";
 export { calendarDate } from "./calendarDate";
 export { recordCloneService } from "./recordCloneService";
 export { termsService } from "./termsService";
+export { seedNoTermsMove, seedBookedTermsDay } from "./seedNoTermsMove";
 export { seedTermsPeriods } from "./seedTerms";
 export { termsChangedEvents } from "./termsChangedEvents";
 export { PNG, JPEG, WEBP } from "./images";

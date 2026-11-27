@@ -21,7 +21,7 @@ import { companyToday, shortDate } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
 import { forgetHistory } from "../cache";
-import { ChangeTermsForm } from "../ChangeTermsForm";
+import { ChangeTermsForm, NO_TERMS } from "../ChangeTermsForm";
 import {
   bulkGroups,
   bulkLines,
@@ -54,7 +54,7 @@ export function ChangeTermsDialog({ employeeIds, open, onOpenChange, onChanged }
   const { data: terms } = useQuery(ChangeTermsFormTermsDocument, { skip: !open });
   const input = {
     employeeIds: [...employeeIds],
-    termsId: value.termsId ?? "",
+    termsId: value.termsId === NO_TERMS ? null : (value.termsId ?? ""),
     startDate: value.startDate,
   };
   const preview = useQuery(BulkTermsChangePreviewDocument, {
@@ -67,7 +67,10 @@ export function ChangeTermsDialog({ employeeIds, open, onOpenChange, onChanged }
     BulkChangeTermsDocument,
     { update: forgetHistory },
   );
-  const termsName = terms?.allTerms.find(({ id }) => id === value.termsId)?.name ?? "";
+  const termsName =
+    value.termsId === NO_TERMS
+      ? t("changeTerms.noTerms")
+      : (terms?.allTerms.find(({ id }) => id === value.termsId)?.name ?? "");
   const answer = open && value.termsId ? preview.data?.termsChangePreview : undefined;
   const groups = answer && bulkGroups({ ...answer, startDate: value.startDate });
   const close = () => {

@@ -33,3 +33,4 @@ export {
   type TimeOffSetupService,
   type LocationCalendarSuggestion,
 } from "./timeOffSetupService";
+export { refuseBookingsWithoutRules } from "./termsChangeBookings";

@@ -58,9 +58,9 @@ export function skipError({
   reason: EmployeeTermsChangeSkipReason;
 }): string {
   const values = { name: firstName, terms: termsName, date: shortDate(startDate) };
-  return reason === "ALREADY_ON_TERMS"
-    ? t("changeTerms.alreadyOn", values)
-    : t("changeTerms.leftBefore", values);
+  if (reason === "ALREADY_ON_TERMS") return t("changeTerms.alreadyOn", values);
+  if (reason === "ALREADY_ON_NO_TERMS") return t("changeTerms.alreadyNoTerms", values);
+  return t("changeTerms.leftBefore", values);
 }
 
 /** "a", "a and b", "a, b and c". */

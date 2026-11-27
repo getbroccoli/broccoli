@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { rowOf, ruleSourceLabel, termsPeriodsOn } from "./employmentTermsView";
+import { plannedNoTerms, rowOf, ruleSourceLabel, termsPeriodsOn } from "./employmentTermsView";
 
 it("keeps today's terms current and puts planned moves in date order", () => {
   const current = {
@@ -263,4 +263,22 @@ it("says a type stops when nothing follows its version", () => {
     },
     planned: [{ text: "From 1 Dec 2026: not offered", startDate: "2026-12-01" }],
   });
+});
+
+it("lists only future dates when terms end without other terms taking over, oldest first", () => {
+  const terms = { termsId: "england", termsName: "England and Wales" };
+  const periods = [
+    { ...terms, startDate: "2027-04-01", endDate: "2027-04-30" },
+    { ...terms, startDate: null, endDate: "2026-11-08" },
+    { ...terms, startDate: "2026-11-12", endDate: "2026-12-31" },
+    {
+      ...terms,
+      termsId: "scotland",
+      termsName: "Scotland",
+      startDate: "2027-01-01",
+      endDate: "2027-01-31",
+    },
+  ];
+
+  expect(plannedNoTerms(periods, "2026-11-09")).toEqual(["2027-02-01", "2027-05-01"]);
 });

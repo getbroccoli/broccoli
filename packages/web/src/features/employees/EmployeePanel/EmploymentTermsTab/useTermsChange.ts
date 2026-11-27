@@ -14,7 +14,7 @@ import { companyToday, shortDate, versionOn } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
 import { forgetTermsChange } from "../../cache";
-import { savedToast, skipError } from "../../ChangeTermsForm";
+import { NO_TERMS, savedToast, skipError } from "../../ChangeTermsForm";
 
 /** The terms and date picked in Change terms; no terms until one is picked. */
 export interface TermsChoice {
@@ -128,7 +128,7 @@ export function useTermsChange({
 function usePreview(employeeId: string, value: TermsChoice, open: boolean) {
   const input = {
     employeeIds: [employeeId],
-    termsId: value.termsId ?? "",
+    termsId: value.termsId === NO_TERMS ? null : (value.termsId ?? ""),
     startDate: value.startDate,
   };
   const { data: terms } = useQuery(ChangeTermsFormTermsDocument, { skip: !open });
@@ -136,11 +136,14 @@ function usePreview(employeeId: string, value: TermsChoice, open: boolean) {
   const preview = useQuery(TermsChangePreviewDocument, {
     variables: { input },
     fetchPolicy: "network-only",
-    skip: !open || !input.termsId,
+    skip: !open || !value.termsId,
   });
   return {
     input,
-    termsName: terms?.allTerms.find(({ id }) => id === input.termsId)?.name ?? "",
+    termsName:
+      value.termsId === NO_TERMS
+        ? t("changeTerms.noTerms")
+        : (terms?.allTerms.find(({ id }) => id === input.termsId)?.name ?? ""),
     // A skipped query keeps its last answer, which a closed edit must not show.
     ...((open && preview.data?.termsChangePreview) || { moves: [], skipped: [] }),
     loading: preview.loading,

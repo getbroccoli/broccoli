@@ -35,6 +35,7 @@ export {
   createEmployeeTermsService,
   type EmployeeTermsService,
   type TermsChange,
+  type TermsChangeInput,
 } from "./employmentTerms/employeeTermsService";
 export type { TermsMovePreview } from "./employmentTerms/membershipsAfterMove";
 export {
