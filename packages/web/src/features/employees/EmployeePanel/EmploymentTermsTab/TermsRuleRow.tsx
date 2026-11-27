@@ -78,6 +78,8 @@ export function TermsRuleRow({
                 <Button
                   variant="ghost"
                   size="icon"
+                  // Stays at the row's end when a narrow panel wraps it onto its own line.
+                  className="ml-auto"
                   aria-label={t("people.panel.terms.rowActions", { name })}
                 />
               }
