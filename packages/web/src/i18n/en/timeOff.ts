@@ -5,6 +5,7 @@ export const timeOffEn = {
   "timeOff.subtitleNoCompany": "Everyone's time off.",
   "timeOff.book": "Book time off",
   "timeOff.request": "Request time off",
+  "timeOff.bookForSomeone": "Book for someone",
   "timeOff.waiting": "Waiting for approval",
   "timeOff.previousMonth": "Previous month",
   "timeOff.nextMonth": "Next month",

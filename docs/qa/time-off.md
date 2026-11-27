@@ -67,7 +67,8 @@ Same people as above. The owner needs an employee record for Owner approval.
 
 ## Who sees what
 
-- [ ] As an employee: no Book time off, no day buttons on colleagues' rows, and no Cancel on colleagues' time off.
+- [ ] As an employee: no Book for someone, no day buttons on colleagues' rows, and no Cancel on colleagues' time off.
+- [ ] As an admin who is also a person here: the page shows "Book time off" and "Book for someone". Book time off opens with the admin as Who; Book for someone opens with Pick someone.
 - [ ] A colleague's Annual leave shows its colour and name with no note; a colleague's Sickness shows as a grey "Off".
 - [ ] Their own Sickness shows by name, with its note.
 

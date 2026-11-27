@@ -12,7 +12,7 @@ export type RefusalReason =
   | "LONGER_THAN_A_YEAR";
 
 import type { TimeOffApproval } from "@/__generated__/graphql";
-import type { DialogMode, Permit, TimeOffStatus } from "@/features/employees";
+import { type DialogMode, modeOf, type Permit, type TimeOffStatus } from "@/features/employees";
 
 /** One line of the dialog's balance strip. */
 export interface BalanceLine {
@@ -192,10 +192,24 @@ export function modeForType(mode: DialogMode, approval: TimeOffApproval | null):
   return approval === "NO_APPROVAL" ? "book" : mode;
 }
 
-/** The page's button: Book when the viewer books anyone straight away, else Request when they may ask. */
-export function headerMode(permits: readonly Permit[]): DialogMode | null {
+/** The dialog's mode before anyone is picked: Book when the viewer books anyone straight away, else Request. */
+export function unpickedMode(permits: readonly Permit[]): DialogMode | null {
   if (permits.includes("ALLOWED")) return "book";
   return permits.includes("ALLOWED_WITH_APPROVAL") ? "request" : null;
+}
+
+/** The page's buttons: the viewer's own time off, and Book for someone when they book anyone else straight away. */
+export function headerButtons(
+  people: readonly { id: string; canCreate: Permit }[],
+  viewerEmployeeId: string | null,
+): { own: DialogMode | null; forSomeone: boolean } {
+  const own = people.find(({ id }) => id === viewerEmployeeId);
+  return {
+    own: own ? modeOf(own.canCreate) : null,
+    forSomeone: people.some(
+      ({ id, canCreate }) => id !== viewerEmployeeId && canCreate === "ALLOWED",
+    ),
+  };
 }
 
 /** The dialog's title, footer and button for its mode; the button names the cost once known. */
