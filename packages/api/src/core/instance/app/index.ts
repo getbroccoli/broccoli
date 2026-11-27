@@ -1,3 +1,4 @@
+export { createActingAsService, type ActingAsService } from "./actingAsService";
 export {
   createAiSettingsService,
   type AiSettingsService,

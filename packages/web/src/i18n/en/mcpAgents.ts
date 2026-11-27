@@ -27,6 +27,7 @@ export const mcpAgentsEn = {
   "mcpAgents.page.description":
     "Let your own Claude, ChatGPT or coding agent act as you: check your leave, ask for days off, see your tasks and approve with a click. It never decides for you.",
   "mcpAgents.page.failed": "Couldn’t load your agent. Try again in a moment.",
+  "mcpAgents.page.acting": "Stop acting as someone else to connect your agent.",
   "mcpAgents.address.label": "Your Broccoli address",
   "mcpAgents.address.copy": "Copy",
   "mcpAgents.address.copied": "Copied",

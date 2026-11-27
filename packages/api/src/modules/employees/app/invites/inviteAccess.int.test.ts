@@ -1,7 +1,33 @@
-import { employeeDirectory, employeeInviteService, EMPLOYEE, expect, test } from "#test/support";
+import {
+  actingAs,
+  ADMIN,
+  employeeDirectory,
+  employeeInviteService,
+  EMPLOYEE,
+  expect,
+  test,
+} from "#test/support";
 
 import { PrincipalSecurityContext, type SecurityContext } from "../../../../core/security";
 import type { EmployeeInviteService } from "./employeeInviteService";
+
+test("refuses sending an invite while acting as another admin", async ({ orm, seed }) => {
+  const admin = await seed.user({ email: "casey@example.com", permissionProfiles: ["ADMIN"] });
+  const employee = await seed.employee({ userId: admin.id });
+  const invitee = await seed.employee();
+  const acting = actingAs(orm, {
+    actor: ADMIN,
+    employeeId: employee.id,
+    profiles: ["EMPLOYEE", "ADMIN"],
+  });
+
+  await expect(
+    employeeInviteService(orm).send(acting, { employeeIds: [invitee.id] }, "https://example.com"),
+  ).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    message: "Stop acting as someone else to do this.",
+  });
+});
 
 for (const profile of ["ADMIN", "OWNER"] as const) {
   test.for(["send", "cancel", "readStatuses", "delivery"] as const)(

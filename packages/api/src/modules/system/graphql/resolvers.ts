@@ -155,8 +155,8 @@ export async function readSetupView(orm: Orm, mode: Mode, security: SecurityCont
     holder: security?.isSetupHolder
       ? ("YOU" as const)
       : HOLDERS[await setupSessions.readSetupHolder(orm, { token: null, now: new Date() })],
-    // Only the owner learns when their demo ends.
-    demoExpiresAt: security?.user?.isOwner ? demoExpiresAt : null,
+    // Only the owner learns when their demo ends, also while acting as someone else.
+    demoExpiresAt: (security?.actor ?? security?.user)?.isOwner ? demoExpiresAt : null,
     ownerSignInMethod: ownerSignInMethod && OWNER_SIGN_IN_METHODS[ownerSignInMethod],
     // A managed instance emails through Broccoli's relay once assigned; it stores no mail choice.
     passwordResetByEmail:

@@ -10,6 +10,11 @@ query Session {
       ...ProfileMenu_employee
       ...Today_employee
     }
+    actingAs {
+      id
+      firstName
+      lastName
+    }
   }
   setup {
     id

@@ -5,6 +5,7 @@ const nobody: EmployeeDirectory = {
   managersAbove: () => Promise.resolve(new Map()),
   reportsBelow: () => Promise.resolve([]),
   ownersEmployeeId: () => Promise.resolve(null),
+  usersOfEmployees: () => Promise.resolve(new Map()),
 };
 
 export const OWNER = PrincipalSecurityContext.user(

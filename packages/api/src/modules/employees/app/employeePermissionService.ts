@@ -1,5 +1,5 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
-import { ormOf } from "../../../core/db";
+import { ormOf, type Tx } from "../../../core/db";
 import { createOwnerService } from "../../../core/instance";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import {
@@ -53,6 +53,7 @@ export function createEmployeePermissionService({
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger">): EmployeePermissionService {
   return {
     async setPermissionProfiles(ctx, { id, profiles, changeReason }) {
+      ctx.requireOwnIdentity();
       ctx.require("MANAGE_WORKSPACE");
       const given = parseGivenProfiles(profiles);
       const reason = parseChangeReason(changeReason);
@@ -61,21 +62,9 @@ export function createEmployeePermissionService({
         throw employeeNotFound();
       }
       const { employee, historyLine } = await transact(async (tx) => {
-        const employee = await employeeRepository(tx).findById(employeeId);
-        if (!employee) {
-          throw employeeNotFound();
-        }
-        if (!employee.userId) {
-          throw invalidInput([{ field: "id", code: "not_joined" }]);
-        }
-        if (employee.userId === (await owners.readOwner(ormOf(tx)))?.userId) {
-          throw new ApplicationError("FORBIDDEN", "The owner's permissions cannot change.");
-        }
+        const { employee, userId } = await readChangeableEmployee(tx, employeeId);
         // The set it replaces, not one read before, so two saves at once record one change.
-        const replaced = await permissionProfileRepository(tx).replaceProfiles(
-          employee.userId,
-          given,
-        );
+        const replaced = await permissionProfileRepository(tx).replaceProfiles(userId, given);
         const before = profilesOf(replaced, false).join(", ");
         const after = profilesOf(given, false).join(", ");
         if (before === after) {
@@ -125,4 +114,19 @@ export function createEmployeePermissionService({
       );
     },
   };
+}
+
+/** The employee whose profiles may change: one who joined and is not the owner; refuses others. */
+async function readChangeableEmployee(tx: Tx, employeeId: string) {
+  const employee = await employeeRepository(tx).findById(employeeId);
+  if (!employee) {
+    throw employeeNotFound();
+  }
+  if (!employee.userId) {
+    throw invalidInput([{ field: "id", code: "not_joined" }]);
+  }
+  if (employee.userId === (await owners.readOwner(ormOf(tx)))?.userId) {
+    throw new ApplicationError("FORBIDDEN", "The owner's permissions cannot change.");
+  }
+  return { employee, userId: employee.userId };
 }

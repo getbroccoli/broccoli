@@ -92,6 +92,7 @@ export function createAiSettingsService({
       return deployment.mode === "managed" ? null : readConfig(orm);
     },
     save: async (ctx, { source, openRouterKey }) => {
+      ctx.requireOwnIdentity();
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       if (deployment.mode === "managed") {
         throw new ApplicationError("CONFLICT", "A managed instance reads files with its own key.");

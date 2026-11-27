@@ -120,7 +120,7 @@ async function previewBooking(
   await ctx.requireInScope("time_off", "create", booking.employeeId);
   try {
     return await dependencies.transact(async (tx) => {
-      const person = await begin(dependencies, tx, booking);
+      const person = await begin(dependencies, tx, booking, ctx.user?.employeeId ?? null);
       const { days, refusal } = await checkBooking(dependencies, tx, booking, person);
       const cost = totalCost(days);
       if (refusal) {
@@ -150,7 +150,7 @@ async function bookTimeOff(
   const booking = parseBooking(input);
   const mode = await writeModes.requireCreate(ctx, "time_off", booking.employeeId);
   const result = await dependencies.transact(async (tx) => {
-    const person = await begin(dependencies, tx, booking);
+    const person = await begin(dependencies, tx, booking, ctx.user?.employeeId ?? null);
     // One's own time off is booked only for a type nobody approves; an unknown type fails the rules.
     if (mode === "request" && (await approvalProcessOf(tx, booking.timeOffTypeId))) {
       throw new ApplicationError("FORBIDDEN", NEEDS_REQUEST);

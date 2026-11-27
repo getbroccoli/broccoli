@@ -23,6 +23,8 @@ type Employee implements AnyRecord {
   access: RecordAccess!
   "Whether the signed-in user may create a record of this type about this person: straight away, only with approval, or not at all."
   canCreate(recordType: RecordType!): Permit!
+  "Whether the signed-in user may act as this person now: use Broccoli with their rights, records and tasks."
+  canActAs: Boolean!
   "The permission profiles of the user who signs in as this person, EMPLOYEE first; null when nobody does."
   permissionProfiles: [PermissionProfile!]
   "Whether this person can sign in, and their invite; null for callers who may not manage invites."
@@ -445,8 +447,10 @@ union EmployeeDeleteError = InvalidInputError | NotFoundError
 
 # Adds the signed-in user's employee to `me`; the server merges the types.
 type User {
-  "The signed-in user's own employee record; null for a user without one, such as the owner."
+  "The signed-in user's own employee record, or the one they act as; null for a user without one, such as the owner."
   employee: Employee
+  "The employee the signed-in user acts as, whose rights, records and tasks apply meanwhile; null when not acting."
+  actingAs: Employee
 }
 
 # Each module declares its own root fields; the server merges them into one type.

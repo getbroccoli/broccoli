@@ -28,8 +28,8 @@ import { SetManagersButton } from "./SetManagersButton";
 export function EmployeeDirectory() {
   const { me, demoExpiresAt } = useRouteContext({ from: "/_authenticated" });
   const isAdmin = me.operations.includes("MANAGE_WORKSPACE");
-  // Nobody signs in as the sample company's people.
-  const canInvite = isAdmin && !demoExpiresAt;
+  // Nobody signs in as the sample company's people, and nobody invites while acting as someone.
+  const canInvite = isAdmin && !demoExpiresAt && !me.actingAs;
   // Kept across pages, so a selection can span them.
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set());
   // As the cache holds them now, so a status changed elsewhere shows and a removed person drops out.

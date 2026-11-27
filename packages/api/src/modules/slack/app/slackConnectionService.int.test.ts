@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import { vi } from "vitest";
 
 import {
+  actingAs,
   expect,
   EMPLOYEE,
   OWNER,
@@ -14,6 +15,26 @@ import {
 } from "#test/support";
 
 import type { SlackAuthorization } from "../../../integrations/slack";
+
+test("refuses starting a Slack connection while acting as another employee", async ({
+  orm,
+  seed,
+}) => {
+  const employee = await seed.employee();
+  const acting = actingAs(orm, { actor: OWNER, employeeId: employee.id });
+
+  expect(() =>
+    slackServices(orm).beginSlackConnection(
+      acting,
+      "https://example.com/api/integrations/slack/callback",
+    ),
+  ).toThrow(
+    expect.objectContaining({
+      code: "FORBIDDEN",
+      message: "Stop acting as someone else to do this.",
+    }),
+  );
+});
 
 test("begins authorization with the callback, state and challenge", ({ orm }) => {
   const slack = slackServices(orm);

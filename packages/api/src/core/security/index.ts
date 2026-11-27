@@ -2,7 +2,8 @@
 export { permissionProfileRepository, userPermissionProfiles } from "./db";
 export { OPERATIONS, parseGivenProfiles, PERMISSION_PROFILES, profilesOf } from "./permissions";
 export { inRecordScope, isInRecordScope } from "./recordScope";
-export { PrincipalSecurityContext, requireSignedIn } from "./securityContext";
+export { PrincipalSecurityContext } from "./securityContext";
+export { requireSignedIn } from "./requestSecurity";
 export {
   AGENT_WRITE_SCOPE,
   type AgentConnectionOfCall,
@@ -21,11 +22,6 @@ export type {
   RecordScope,
   Subject,
 } from "./permissions";
-export type {
-  EmployeeDirectory,
-  RecordAccess,
-  RequestSecurity,
-  SecurityContext,
-  SecurityResolver,
-  SignedInUser,
-} from "./securityContext";
+export type { EmployeeDirectory } from "./employeeDirectory";
+export type { RequestSecurity, SecurityResolver } from "./requestSecurity";
+export type { RecordAccess, SecurityContext, SignedInUser } from "./securityContext";

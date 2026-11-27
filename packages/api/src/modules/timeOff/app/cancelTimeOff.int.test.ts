@@ -1,4 +1,7 @@
 import {
+  actingAs,
+  pendingRequest,
+  leaveRequestSetup,
   employeeServices,
   expect,
   seedAnnualLeaveEmployee,
@@ -10,6 +13,36 @@ import {
 } from "#test/support";
 
 import { ApplicationError } from "../../../core/applicationError";
+
+test("a manager acting as an employee withdraws the employee's waiting request", async ({
+  orm,
+  seed,
+}) => {
+  const { bookings, requests, request, requester, manager, input } = await pendingRequest(
+    orm,
+    seed,
+  );
+  const acting = actingAs(orm, { actor: manager, employeeId: input.employeeId });
+
+  await bookings.cancelTimeOff(acting, { timeOffId: request.id });
+
+  const statuses = await requests.readStatuses(requester, [request.id]);
+  expect(statuses.get(request.id)?.status).toBe("cancelled");
+});
+
+test("an employee withdraws a request their manager made while acting as them", async ({
+  orm,
+  seed,
+}) => {
+  const { bookings, requests, requester, manager, input } = await leaveRequestSetup(orm, seed);
+  const acting = actingAs(orm, { actor: manager, employeeId: input.employeeId });
+  const request = await requests.requestTimeOff(acting, input);
+
+  await bookings.cancelTimeOff(requester, { timeOffId: request.id });
+
+  const statuses = await requests.readStatuses(requester, [request.id]);
+  expect(statuses.get(request.id)?.status).toBe("cancelled");
+});
 
 test.for([1, 2, 3, 4, 5])(
   "cancels while the same person is deleted without a deadlock (run %i)",

@@ -29,8 +29,8 @@ export interface StoredTimeOff {
   employeeId: string;
   timeOffTypeId: string;
   status: TimeOffStatus;
-  /** The signed-in user who booked or requested it; null when Broccoli itself did. */
-  createdByUserId: string | null;
+  /** The employee who booked or requested it; null when none did, or once they are deleted. */
+  createdByEmployeeId: string | null;
   firstDate: CalendarDate;
   decision: RequestDecision | null;
   /** Null unless someone cancelled it; an approval that ended without a decision is no cancellation. */
@@ -117,7 +117,7 @@ export function timeOffRequestRepository(db: Orm | Tx): TimeOffRequestRepository
           employeeId: timeOff.employeeId,
           timeOffTypeId: timeOff.timeOffTypeId,
           status: timeOff.status,
-          createdByUserId: timeOff.createdByUserId,
+          createdByEmployeeId: timeOff.createdByEmployeeId,
           firstDate: firstDays.firstDate,
           ...DECISION,
           cancelledAt: timeOff.cancelledAt,

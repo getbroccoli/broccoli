@@ -90,7 +90,8 @@ export function ProfileMenu() {
               {avatar}
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-[13px] font-semibold text-foreground">{name}</span>
-                {me.employee && (
+                {/* The sign-in email is the signed-in user's, not the person acted as. */}
+                {me.employee && !me.actingAs && (
                   <span className="truncate text-[11px] text-muted-foreground">{me.email}</span>
                 )}
               </span>

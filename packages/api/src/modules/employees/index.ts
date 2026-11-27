@@ -3,6 +3,7 @@ import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManife
 import express from "express";
 
 import type { Mode } from "../../core/env";
+import { createActingAsService } from "../../core/instance";
 import {
   type CopyTermsParts,
   type LockTermsParts,
@@ -17,6 +18,7 @@ import {
   createTermsService,
   createWorkingPatternService,
   type EmployeeInviteService,
+  employeeDirectory,
   employeeRecordType,
   termsRecordType,
 } from "./app";
@@ -147,10 +149,14 @@ export function employeesModule({
     ...createEmployeeTermsService(dependencies),
     ...createOwnWorkingWeekService(dependencies),
   };
+  const actingAs = createActingAsService({
+    ...dependencies,
+    directory: employeeDirectory(dependencies.orm),
+  });
   return {
     name: "employees",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
-    resolvers: createResolvers(services, invites),
+    resolvers: createResolvers(services, invites, actingAs),
     recordTypes: {
       employee: employeeRecordType(dependencies.orm),
       terms: { ...termsRecordType(dependencies.orm), clone: services.cloneTerms },

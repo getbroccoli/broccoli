@@ -6,7 +6,7 @@ Who may do what in Broccoli. Use cases ask their security context; nothing else 
 
 - **Permission profile** (`EMPLOYEE`, `ADMIN`, `OWNER`): a named list of grants and operations. Every signed-in user has `EMPLOYEE` and any number of others; their rights are the union.
 - **Object** (`employee`, `working_pattern`, `terms`, `process_run`): a kind of record permissions apply to. A working pattern's subject is the person who works it; terms are about nobody; a process run's subject is the person it is about.
-- **Action** (`create`, `read`, `update`, `delete`): what can be done to one record of an object.
+- **Action** (`create`, `read`, `update`, `delete`, `act_as`): what can be done to one record of an object; `act_as` uses Broccoli as that employee (see [Acting as](#acting-as)).
 - **Subject**: whom a record is about, which scopes are measured against. An employee is their own subject; a time off request's subject is the requester. A record about nobody is **public**: every read grant on its object reaches it, whatever its scope, and only grants on `all` write it. Subjects are employees today; a later kind, such as a legal entity, is fixed in core and resolved where scopes resolve, without changing a contract.
 - **Scope** (`self`, `direct_reports`, `all_reports`, `managers`, `all`): which subjects a grant reaches, relative to the caller's employee: the caller, people they manage directly, everyone below them in the reporting line, everyone above them in it, or everyone. Neither report scope includes the caller.
 - **Grant** (`{ key, object, actions, scope, fields? }`): actions on one object within one scope. `fields` limits the write actions; `"*"` means every ordinary editable field. `key` is stable, so later stored changes can name a built-in grant.
@@ -14,8 +14,8 @@ Who may do what in Broccoli. Use cases ask their security context; nothing else 
 
 ## Profiles
 
-- `EMPLOYEE`: employee read on `all`; employee update on `self` (first name, last name, photo); employee update on `all_reports` (first name, last name, photo, job title); working pattern read on `self` and `all_reports`; time off read on `self` and `all_reports`, and create on `self`, which write modes classify as needing approval: employees preview their own time off, request it, and book it straight away only for a type nobody approves (such as Sickness); time off delete on `self`, which time off narrows to what the person asked for or booked themselves: a waiting request at any time, approved time off before its first day. So `RecordAccess.canDelete` is only the grant, and `TimeOff.canCancel` the answer. No operations.
-- `ADMIN`: create, read, update and delete on `all` for every object, every field; `MANAGE_WORKSPACE`, which also covers working patterns and the working pattern of each set of terms.
+- `EMPLOYEE`: employee read on `all`; employee update on `self` (first name, last name, photo); employee update on `all_reports` (first name, last name, photo, job title); employee act as on `direct_reports`; working pattern read on `self` and `all_reports`; time off read on `self` and `all_reports`, and create on `self`, which write modes classify as needing approval: employees preview their own time off, request it, and book it straight away only for a type nobody approves (such as Sickness); time off delete on `self`, which time off narrows to what the person asked for or booked themselves: a waiting request at any time, approved time off before its first day. So `RecordAccess.canDelete` is only the grant, and `TimeOff.canCancel` the answer. No operations.
+- `ADMIN`: create, read, update and delete on `all` for every object, every field, and act as on `all` employees; `MANAGE_WORKSPACE`, which also covers working patterns and the working pattern of each set of terms.
 - `OWNER`: Admin's grants and operations, shared in code rather than linked, plus `RESET_WORKSPACE`. A release that changes Admin's definition changes both; an admin's stored edits to the Admin profile, once the profile editor exists, will not reach the owner.
 
 - The profiles given to a user are stored in `user_permission_profiles` (`ADMIN` today). `EMPLOYEE` is never stored: everyone has it. `OWNER` is never stored either: the instance's owner has it. Employees who never sign in have none.
@@ -47,6 +47,16 @@ A write checks its write grant, and its result shows the record only when the ca
 **Write modes** (`core/records`, `WriteModeService`) say how a caller may write a record: `writeModes(ctx, object, action, subjects)` answers `direct`, `request` or `refused` per subject, in one reporting-line read. Out of the caller's scope → `refused`; in scope, someone else's record → `direct`; their own record → `direct` only when their grants for the action reach everyone, as an admin's do, else `request`; Broccoli itself → `direct`. A create calls `requireCreate`, which refuses `refused` and returns `direct` or `request`, so the feature decides what a request may still do straight away (time off books one's own time off of a type nobody approves); it is only the create check, so updates and deletes keep `requireWrite` and `requireInScope` with their fixed rules. `Employee.canCreate(recordType)` shows the create mode as `ALLOWED`, `ALLOWED_WITH_APPROVAL` or `NOT_ALLOWED`; a record type's permission object has its name.
 
 **Fixed rules**, applied in the same checks: the owner's profile never changes, and the owner's employee is never deleted. The second is about the `employee` object only: the owner's other records can be deleted.
+
+## Acting as
+
+A signed-in user acts as another employee in their browser session (`POST /api/auth/act-as`, `ActingAsService`): every request then runs with that employee's live profiles, records and tasks, and `ctx.actor` holds the signed-in user. Whom they may act as is one rule, for the profile's menu, the start and every request while acting:
+
+- their `act_as` grant reaches the employee: an admin anyone, a manager a direct report;
+- never themselves, and never while acting already or through their connected agent;
+- the employee holds no profile the signed-in user lacks, so acting never uses a profile they do not hold: a manager never acts as an admin, an admin never as the owner. Scopes such as `self` are then the employee's, so a manager may request leave as their report. Someone who never joined has only `EMPLOYEE`, so a demo owner acts as any seeded person.
+
+Once the rule fails, such as after a reporting line change, the session stops acting. While acting, `ctx.requireOwnIdentity()` refuses what changes who can sign in or what they may do, even when the employee could: permission profiles, invites, deleting people, the connected agent, and the workspace's mail, AI and Slack credentials. Every `/api/auth` endpoint but `/get-session`, `/sign-out` and `/act-as/stop` refuses too. History names the signed-in user as change author; time off they book or request names the employee as its booker, so its own cancel rules stay the employee's.
 
 ## Recipes
 

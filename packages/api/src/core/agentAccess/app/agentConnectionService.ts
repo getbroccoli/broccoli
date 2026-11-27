@@ -8,6 +8,7 @@ import {
   type StoredEndedAgentConnection,
 } from "../db";
 import type { AgentConnectionEnding } from "../domain";
+import { agentUserOf } from "./agentUserOf";
 
 /** A connection unused this long ends. */
 const UNUSED_CONNECTION_DAYS = 30;
@@ -117,7 +118,8 @@ export function createAgentConnectionService({
       await agentConnectionRepository(orm).deleteExpiredSessions(new Date());
     },
     async readMyAgentConnection(ctx) {
-      return ctx.user ? agentConnectionRepository(orm).findConnection(ctx.user.userId) : null;
+      const userId = agentUserOf(ctx);
+      return userId ? agentConnectionRepository(orm).findConnection(userId) : null;
     },
     async disconnectMyAgent(ctx) {
       if (!ctx.user) {
@@ -126,6 +128,7 @@ export function createAgentConnectionService({
           "Only a signed-in person can disconnect their agent.",
         );
       }
+      ctx.requireOwnIdentity();
       const { userId } = ctx.user;
       const ended = await endAllConnections(
         { transact, logger },
@@ -135,7 +138,8 @@ export function createAgentConnectionService({
       return ended.length > 0 ? agentConnectionRepository(orm).findLastEnding(userId) : null;
     },
     async readMyLastEndedConnection(ctx) {
-      return ctx.user ? agentConnectionRepository(orm).findLastEnding(ctx.user.userId) : null;
+      const userId = agentUserOf(ctx);
+      return userId ? agentConnectionRepository(orm).findLastEnding(userId) : null;
     },
   };
 }

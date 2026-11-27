@@ -22,7 +22,13 @@ import { createEventBus } from "./events";
 import { type GraphqlApi, startGraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
 import { createJobRunner } from "./jobs";
-import { refuseBearerAuth, resolveSecurityContext, selfHostedServer } from "./instance";
+import {
+  actingAsPlugin,
+  createActingAsService,
+  refuseBearerAuth,
+  resolveSecurityContext,
+  selfHostedServer,
+} from "./instance";
 import type { Logger } from "./logger";
 import { managedServer } from "./managedSignIn";
 import type { ModuleDependencies, ModuleManifest, Modules } from "./moduleManifest";
@@ -85,7 +91,13 @@ export async function startServer(
         jobs: jobRunner.queue,
       });
     modules = manifests;
+    const people = {
+      directory: employeeDirectory,
+      actingAs: createActingAsService({ orm: database.orm, directory: employeeDirectory, logger }),
+    };
     const plugins = [
+      // First, so its refusal while acting comes before any other plugin's checks.
+      actingAsPlugin(database.orm, people),
       ...modules.flatMap((module) => (module.authPlugin ? [module.authPlugin] : [])),
       ...agentAccessPlugins(agentConnections),
     ];
@@ -107,8 +119,7 @@ export async function startServer(
             passwordResetEmail,
           });
     const auth = deployment.auth;
-    resolveSecurity = (headers) =>
-      resolveSecurityContext(auth, database.orm, employeeDirectory, headers);
+    resolveSecurity = (headers) => resolveSecurityContext(auth, database.orm, people, headers);
     live = createLiveNudges(resolveSecurity);
     eventBus.subscribe(live.events);
     resolveAgentSecurity = agentSecurityResolver(

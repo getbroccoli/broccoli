@@ -43,7 +43,11 @@ export function YourAgentPage() {
           personName={employee ? `${employee.firstName} ${employee.lastName}` : me.email}
         />
       )}
-      {data && !connection && (
+      {/* An agent connection stays the signed-in user's own, so it can't be made as someone else. */}
+      {me?.actingAs && (
+        <p className="text-sm text-muted-foreground">{t("mcpAgents.page.acting")}</p>
+      )}
+      {data && !connection && !me?.actingAs && (
         <div className="flex flex-col gap-6">
           {ending && <LastEndingNote ending={ending} />}
           <section aria-labelledby="your-agent-address" className="flex flex-col gap-2">

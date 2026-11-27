@@ -16,8 +16,8 @@ type Props = {
   email: ReactNode;
   /** An unsaved or refused email marks its card as the panel marks its other fields. */
   emailMark: "changed" | "invalid" | null;
-  /** Shown to admins only, on the work email with its invite action. */
-  signIn: { status: SignInStatusFragment; onInvite: () => void } | null;
+  /** Shown to admins only, on the work email with its invite action; none while acting as someone. */
+  signIn: { status: SignInStatusFragment; onInvite: (() => void) | null } | null;
 };
 
 /** The facts at the top of a person's panel: start date, tenure and work email with sign-in. */
@@ -50,7 +50,9 @@ export function KeyFacts({ startDate, email, emailMark, signIn }: Props) {
       value: <div className="-mx-1.5">{email}</div>,
       mark: emailMark,
       status: signIn && <SignInLine status={signIn.status} />,
-      action: signIn && <InviteButton status={signIn.status} onInvite={signIn.onInvite} />,
+      action: signIn?.onInvite && (
+        <InviteButton status={signIn.status} onInvite={signIn.onInvite} />
+      ),
     },
   ];
 

@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, vi } from "vitest";
 
 import {
+  actingAs,
   ADMIN,
   agentConnectionService,
   domainEvents,
@@ -13,6 +14,17 @@ import {
   test,
 } from "#test/support";
 import { oauthConsent } from "../../auth";
+
+test("refuses disconnecting the agent while acting as another employee", async ({ orm, seed }) => {
+  const employee = await seed.employee();
+  await seed.agentConnection({ userId: ADMIN.user!.userId });
+  const acting = actingAs(orm, { actor: ADMIN, employeeId: employee.id });
+
+  await expect(agentConnectionService(orm).disconnectMyAgent(acting)).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    message: "Stop acting as someone else to do this.",
+  });
+});
 
 test("disconnect publishes one connection change for the caller", async ({ orm, seed }) => {
   const userId = OWNER.user!.userId;

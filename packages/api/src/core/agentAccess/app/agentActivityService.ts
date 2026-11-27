@@ -8,6 +8,7 @@ import {
   type StoredAgentActivity,
 } from "../db";
 import type { AgentActivityOutcome } from "../domain";
+import { agentUserOf } from "./agentUserOf";
 
 /** How long a line of agent activity is kept: as long as an unused connection lasts. */
 const ACTIVITY_KEPT_DAYS = 30;
@@ -60,7 +61,7 @@ export function createAgentActivityService({
       }
     },
     async listMyActivity(ctx, page) {
-      const userId = ctx.user?.userId;
+      const userId = agentUserOf(ctx);
       return paginate(page, {
         order: { field: "NEWEST", direction: "DESC" },
         keysetValues: { NEWEST: AGENT_ACTIVITY_SORT_VALUES },

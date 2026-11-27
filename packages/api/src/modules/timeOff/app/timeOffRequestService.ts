@@ -194,7 +194,7 @@ function saveRequest(
   let approvalAsked = false;
   return dependencies
     .transact(async (tx) => {
-      const person = await begin(dependencies, tx, booking);
+      const person = await begin(dependencies, tx, booking, ctx.user?.employeeId ?? null);
       const approvalProcessKey = await approvalProcessOf(tx, booking.timeOffTypeId);
       // A type booked straight away, such as Sickness, is never asked for.
       if (!approvalProcessKey) {

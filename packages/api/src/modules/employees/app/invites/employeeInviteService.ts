@@ -134,6 +134,7 @@ export function createEmployeeInviteService({
 
   return {
     send: async (ctx, input, linkOrigin) => {
+      ctx.requireOwnIdentity();
       ctx.require("MANAGE_WORKSPACE");
       const { employeeIds, profiles, note } = parseInviteInput(input);
       // A demo's owner is provisional; an account they invited would outlive the demo.
@@ -159,6 +160,7 @@ export function createEmployeeInviteService({
     },
 
     sendAtSetup: async (ctx, tx, { employeeIds, note, invitedByUserId }, linkOrigin) => {
+      ctx.requireOwnIdentity();
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       const trimmedNote = parseInviteNote(note);
       if (employeeIds.length === 0) {
@@ -176,6 +178,7 @@ export function createEmployeeInviteService({
     },
 
     cancel: async (ctx, { employeeId: id }) => {
+      ctx.requireOwnIdentity();
       ctx.require("MANAGE_WORKSPACE");
       const employeeId = parseUuid(id);
       if (!employeeId) {

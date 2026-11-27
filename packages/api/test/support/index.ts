@@ -140,7 +140,7 @@ export {
 export { expectHistoryReplaysTo } from "./employeeHistory";
 export { expectBlockedBy } from "./expectBlockedBy";
 export { recordChangedEvents } from "./recordChangedEvents";
-export { signedIn } from "./signedIn";
+export { actingAs, signedIn } from "./signedIn";
 export { bankHolidayService } from "./bankHolidayService";
 export { workingPatternService } from "./workingPatternService";
 

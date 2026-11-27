@@ -1,4 +1,5 @@
 import {
+  actingAs,
   expect,
   fakeMail,
   mailSettings,
@@ -10,6 +11,18 @@ import {
 } from "#test/support";
 
 import { MailRefusedError } from "../../../integrations/mail";
+
+test("refuses saving mail settings while acting as another employee", async ({ orm, seed }) => {
+  const employee = await seed.employee();
+  const acting = actingAs(orm, { actor: OWNER, employeeId: employee.id });
+
+  await expect(
+    mailSettings(orm).save(acting, { source: "no_email" }, ORIGIN),
+  ).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    message: "Stop acting as someone else to do this.",
+  });
+});
 
 test("reads no email on a new instance", async ({ orm }) => {
   expect(await mailSettings(orm).read(OWNER)).toEqual({
