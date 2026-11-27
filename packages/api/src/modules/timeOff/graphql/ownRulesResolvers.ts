@@ -26,6 +26,8 @@ export function ownRulesResolvers({ ownRules, employees }: OwnRulesServices) {
       payload(context, input.employeeId, () =>
         ownRules.setOwnRules(context.getActor(), { ...input, rules: toStoredRules(input.rules) }),
       ),
+    stopOffering: (_parent, { input }, context) =>
+      payload(context, input.employeeId, () => ownRules.stopOffering(context.getActor(), input)),
     useTermsRules: (_parent, { input }, context) =>
       payload(context, input.employeeId, () => ownRules.useTermsRules(context.getActor(), input)),
     cancelOwnRulesChange: (_parent, { input }, context) =>

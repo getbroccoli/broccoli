@@ -1,4 +1,5 @@
 export { allowanceRepository, type Allowance } from "./allowanceRepository";
+export { type OfferStop, offerStopRepository } from "./offerStopRepository";
 export { type PolicyAssignment, timeOffPolicyRepository } from "./timeOffPolicyRepository";
 export {
   type BookedDay,

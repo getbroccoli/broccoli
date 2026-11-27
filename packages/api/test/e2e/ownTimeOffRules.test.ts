@@ -1,4 +1,11 @@
-import { expect, giveTermsPolicies, test, TEST_OWNER, testTransactor } from "#test/support";
+import {
+  type Browser,
+  expect,
+  giveTermsPolicies,
+  test,
+  TEST_OWNER,
+  testTransactor,
+} from "#test/support";
 
 import { connectDatabase } from "../../src/core/db";
 import { createLogger } from "../../src/core/logger";
@@ -13,7 +20,7 @@ test("the owner sets own rules, returns to the terms and cancels that return thr
   const annual = data.timeOffSettings.timeOffTypes.find(
     ({ timeOffType }) => timeOffType.name === "Annual leave",
   )!.timeOffType;
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+  const today = todayInLondon();
   const year = Number(today.slice(0, 4));
   const input = { employeeId: employee.id, timeOffTypeId: annual.id };
   const returnDate = `${year + 2}-01-01`;
@@ -25,12 +32,9 @@ test("the owner sets own rules, returns to the terms and cancels that return thr
   expect(await own.json()).toEqual({
     data: { timeOff: { setOwnRules: { employee: { id: employee.id }, error: null } } },
   });
-  const returned = await browser.graphql(
-    `mutation Return($input: TimeOffTermsRulesUseInput!) {
-      timeOff { useTermsRules(input: $input) { employee { id } error { __typename } } }
-    }`,
-    { input: { ...input, startDate: returnDate } },
-  );
+  const returned = await browser.graphql(USE_TERMS_RULES, {
+    input: { ...input, startDate: returnDate },
+  });
   expect(await returned.json()).toEqual({
     data: { timeOff: { useTermsRules: { employee: { id: employee.id }, error: null } } },
   });
@@ -56,7 +60,7 @@ test("an employee cannot set own rules through GraphQL", async ({ env }) => {
   const user = await env.seed.user(credentials);
   const employee = await env.seed.employee({ userId: user.id, startDate: "2024-03-01" });
   const { browser } = await env.signIn(credentials);
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+  const today = todayInLondon();
 
   const response = await browser.graphql(SET_OWN_RULES, {
     input: {
@@ -116,6 +120,129 @@ test("reads a person's time off rules from a past date through GraphQL", async (
   });
 });
 
+test("the owner stops Family leave for one person on the same terms and restores it later", async ({
+  env,
+}) => {
+  const { browser } = await env.signInAsOwner();
+  const employee = await env.seed.employee({ startDate: "2024-03-01" });
+  const colleague = await env.seed.employee({ startDate: "2024-03-01" });
+  const termsId = await env.seed.defaultTermsId();
+  const today = todayInLondon();
+  const nextYear = Number(today.slice(0, 4)) + 1;
+  const startDate = `${nextYear}-01-01`;
+  const returnDate = `${nextYear}-02-01`;
+  const database = connectDatabase(env.db.url, createLogger("silent"));
+  try {
+    await giveTermsPolicies(database.orm, testTransactor(database.orm), {
+      termsId,
+      policies: [{ recordOnly: "family_leave" }],
+      today,
+    });
+  } finally {
+    await database.close();
+  }
+  const input = { employeeId: employee.id, timeOffTypeId: await familyLeaveId(browser) };
+
+  const stopped = await browser.graphql(STOP_OFFERING, { input: { ...input, startDate } });
+  expect(await stopped.json()).toEqual({
+    data: { timeOff: { stopOffering: { employee: { id: employee.id }, error: null } } },
+  });
+  const returned = await browser.graphql(USE_TERMS_RULES, {
+    input: { ...input, startDate: returnDate },
+  });
+  expect(await returned.json()).toEqual({
+    data: { timeOff: { useTermsRules: { employee: { id: employee.id }, error: null } } },
+  });
+
+  const people = await browser.graphql(
+    `query($employee: ID!, $colleague: ID!, $from: Date!) {
+    employee(id: $employee) { ...Terms }
+    colleague: employee(id: $colleague) { ...Terms }
+  }
+  fragment Terms on Employee { employmentTerms {
+    periods { termsId endDate }
+    timeOff(from: $from) { timeOffType { name } versions { startDate endDate source rules { balance } } }
+  } }`,
+    { employee: employee.id, colleague: colleague.id, from: startDate },
+  );
+  const fromTerms = {
+    startDate,
+    endDate: null,
+    source: "FROM_THEIR_TERMS",
+    rules: { balance: "NO_BALANCE" },
+  };
+  expect(await people.json()).toMatchObject({
+    data: {
+      employee: {
+        employmentTerms: {
+          periods: [{ termsId, endDate: null }],
+          timeOff: expect.arrayContaining([
+            {
+              timeOffType: { name: "Family leave" },
+              versions: [
+                { startDate, endDate: `${nextYear}-01-31`, source: "THEIR_OWN", rules: null },
+                { ...fromTerms, startDate: returnDate },
+              ],
+            },
+          ]) as unknown,
+        },
+      },
+      colleague: {
+        employmentTerms: {
+          periods: [{ termsId, endDate: null }],
+          timeOff: expect.arrayContaining([
+            { timeOffType: { name: "Family leave" }, versions: [fromTerms] },
+          ]) as unknown,
+        },
+      },
+    },
+  });
+});
+
+test("stopping an unoffered type returns a field error through GraphQL", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const employee = await env.seed.employee({ startDate: "2024-03-01" });
+  const timeOffTypeId = await familyLeaveId(browser);
+
+  const stopped = await browser.graphql(STOP_OFFERING, {
+    input: { employeeId: employee.id, timeOffTypeId, startDate: todayInLondon() },
+  });
+
+  expect(await stopped.json()).toEqual({
+    data: {
+      timeOff: {
+        stopOffering: {
+          employee: null,
+          error: {
+            __typename: "InvalidInputError",
+            fields: [{ field: "timeOffTypeId", code: "not_offered" }],
+          },
+        },
+      },
+    },
+  });
+});
+
+function todayInLondon() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+}
+
+async function familyLeaveId(browser: Browser) {
+  const response = await browser.graphql(TIME_OFF_TYPES);
+  const { data } = (await response.json()) as TimeOffTypesResponse;
+  return data.timeOffSettings.timeOffTypes.find(
+    ({ timeOffType }) => timeOffType.name === "Family leave",
+  )!.timeOffType.id;
+}
+
+const USE_TERMS_RULES = `mutation Return($input: TimeOffTermsRulesUseInput!) {
+  timeOff { useTermsRules(input: $input) { employee { id } error { __typename } } }
+}`;
+const STOP_OFFERING = `mutation Stop($input: TimeOffOfferStopInput!) {
+  timeOff { stopOffering(input: $input) {
+    employee { id } error { __typename ... on InvalidInputError { fields { field code } } }
+  } }
+}`;
 const TIME_OFF_TYPES = `query { timeOffSettings { timeOffTypes { timeOffType { id name } } } }`;
 const SET_OWN_RULES = `mutation Set($input: TimeOffOwnRulesSetInput!) {
   timeOff { setOwnRules(input: $input) { employee { id } error { __typename } } }

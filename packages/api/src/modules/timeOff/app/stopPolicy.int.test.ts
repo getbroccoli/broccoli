@@ -115,7 +115,7 @@ test.for(["approved", "requested"] as const)(
 
     await expect(stopping).rejects.toMatchObject({
       code: "CONFLICT",
-      message: "1 person has this time off type booked from that date.",
+      message: "Family leave is booked on 1 Jan.",
     });
     expect(await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).toEqual(
       before,

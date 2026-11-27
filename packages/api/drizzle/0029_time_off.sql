@@ -115,11 +115,12 @@ CREATE TABLE "time_off_policy_assignments" (
 	"employee_id" uuid,
 	"terms_id" uuid,
 	"time_off_type_id" uuid NOT NULL,
-	"time_off_policy_id" uuid NOT NULL,
-	"time_off_policy_version_id" uuid NOT NULL,
+	"time_off_policy_id" uuid,
+	"time_off_policy_version_id" uuid,
 	"start_date" date NOT NULL,
 	"end_date" date,
 	CONSTRAINT "time_off_policy_assignments_one_owner" CHECK (num_nonnulls("time_off_policy_assignments"."employee_id", "time_off_policy_assignments"."terms_id") = 1),
+	CONSTRAINT "time_off_policy_assignments_version_or_stop" CHECK (("time_off_policy_assignments"."time_off_policy_id" is null) = ("time_off_policy_assignments"."time_off_policy_version_id" is null) and ("time_off_policy_assignments"."employee_id" is not null or "time_off_policy_assignments"."time_off_policy_version_id" is not null)),
 	CONSTRAINT "time_off_policy_assignments_dates_in_order" CHECK ("time_off_policy_assignments"."end_date" >= "time_off_policy_assignments"."start_date")
 );
 --> statement-breakpoint

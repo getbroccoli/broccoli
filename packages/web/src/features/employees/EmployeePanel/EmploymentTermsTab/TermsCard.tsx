@@ -53,7 +53,7 @@ export function TermsCard({
   // A type without a balance has no leave year; the first one with one says it.
   const leaveYear = timeOff
     ?.flatMap(({ versions }) => versions)
-    .find(({ rules }) => rules.leaveYearStart)?.rules.leaveYearStart;
+    .find(({ rules }) => rules?.leaveYearStart)?.rules?.leaveYearStart;
   const editing = change?.open ?? false;
   const otherEdit = Boolean(weekEdit?.mode) || Boolean(rulesEdit?.mode);
   const changeDate = change?.value.startDate ?? today;

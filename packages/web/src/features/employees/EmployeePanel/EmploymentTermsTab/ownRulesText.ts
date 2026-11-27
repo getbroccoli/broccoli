@@ -30,6 +30,22 @@ export function ownRulesSaveLine({
   return withAllowance(t(key, values), firstName, startDate, today);
 }
 
+/** What saving a stop does: "Saving stops offering Sickness to Sam from 1 Jan 2027." */
+export function ownRulesStopLine({
+  firstName,
+  typeName,
+  startDate,
+  today,
+}: {
+  firstName: string;
+  typeName: string;
+  startDate: string;
+  today: string;
+}): string {
+  const values = { name: firstName, type: typeName, date: shortDate(startDate) };
+  return withAllowance(t("ownRules.saveStops", values), firstName, startDate, today);
+}
+
 /** What saving a return to the terms' rules does, or taking the type away where they don't offer it. */
 export function termsRulesSaveLine({
   firstName,

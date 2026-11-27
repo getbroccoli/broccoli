@@ -11,7 +11,8 @@ import {
   type TimeOffType,
   type TimeOffTypeKey,
 } from "../domain";
-import { type AllowanceEngineDependencies, type Person, readPeople } from "./allowanceEngine";
+import { type AllowanceEngineDependencies } from "./allowanceEngine";
+import { type Person, readPeople } from "./readPeople";
 
 /** One time off type a person has in their current leave year, with its figures in days. */
 export interface EmployeeTimeOffType {

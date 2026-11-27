@@ -20,7 +20,7 @@ import { describeRules, rowOf } from "./employmentTermsView";
 import { cancellableStarts, versionToEditFrom } from "./ownWeekText";
 import { RulesRowEditor } from "./RulesRowEditor";
 import { TermsRuleRow } from "./TermsRuleRow";
-import type { OwnRulesEdit, OwnRulesFailure, TermsOn } from "./useOwnRulesEdit";
+import type { OwnRulesEdit, OwnRulesFailure, OwnRulesMode, TermsOn } from "./useOwnRulesEdit";
 
 type TimeOff = NonNullable<EmploymentTermsTab_TermsFragment["timeOff"]>[number];
 type Version = TimeOff["versions"][number];
@@ -63,21 +63,22 @@ export function TimeOffTypeRow({
   const row = rowOf(
     versions,
     today,
-    describeRules,
+    (version) => describeRules(version, t("ownRules.notOfferedTo", { name: firstName })),
     sourceOf,
     t("people.panel.terms.notOfferedLower"),
   );
   const editing = edit?.timeOffTypeId === timeOffType.id ? edit.mode : null;
   const base = versionToEditFrom(versions, today);
+  const offered = Boolean(base?.rules);
   const { planned } = splitVersions(versions, today);
   const hasOwn = [base, ...planned].some((version) => version?.source === "THEIR_OWN");
   const canAct = edit !== null && edit.mode === null && !locked;
   const returnDate = base && base.startDate > today ? base.startDate : today;
-  const open = (mode: "own" | "terms") =>
+  const open = (mode: OwnRulesMode) =>
     edit?.open({
       mode,
       timeOffType,
-      current: base && rulesInputOf(base.rules),
+      current: base?.rules ? rulesInputOf(base.rules) : null,
       earliest,
       termsOn,
     });
@@ -123,8 +124,13 @@ export function TimeOffTypeRow({
           canAct && (
             <span className="flex gap-1">
               <Button variant="ghost" size="sm" onClick={() => open("own")}>
-                {base ? t("ownWeek.edit") : t("ownRules.offer", { name: firstName })}
+                {offered ? t("ownWeek.edit") : t("ownRules.offer", { name: firstName })}
               </Button>
+              {offered && (
+                <Button variant="ghost" size="sm" onClick={() => open("stop")}>
+                  {t("ownRules.stop", { name: firstName })}
+                </Button>
+              )}
               {hasOwn && (
                 <Button variant="ghost" size="sm" onClick={() => open("terms")}>
                   {t("ownRules.useTerms", { terms: termsOn(returnDate)?.termsName ?? "" })}
@@ -155,7 +161,7 @@ export function TimeOffTypeRow({
 }
 
 /** A version's rules as the form and the API take them. */
-function rulesInputOf(rules: Version["rules"]) {
+function rulesInputOf(rules: NonNullable<Version["rules"]>) {
   return {
     balance: rules.balance,
     entitlementDays: rules.yearlyEntitlement?.days ?? null,

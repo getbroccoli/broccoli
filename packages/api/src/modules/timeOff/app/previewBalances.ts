@@ -1,7 +1,7 @@
 import type { Tx } from "../../../core/db";
 import { allowanceRepository } from "../db";
 import { chargedDays, type CostedDay, timeOffFigures, totalCost } from "../domain";
-import { datedPolicies, type Person } from "./allowanceEngine";
+import { datedPolicies, type Person } from "./readPeople";
 import type { ParsedBooking } from "./parseBooking";
 import type { BalanceChange } from "./bookTimeOffService";
 

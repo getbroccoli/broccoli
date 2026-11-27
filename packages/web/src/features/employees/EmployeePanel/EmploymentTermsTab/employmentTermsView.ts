@@ -156,8 +156,12 @@ export function describeWeek({
   };
 }
 
-/** A type's rules as its row reads them: "20 days a year, bank holidays on top", or recorded only. */
-export function describeRules({ rules }: { rules: RuleText }) {
+/**
+ * A type's rules as its row reads them: "20 days a year, bank holidays on top", recorded only, or
+ * `notOffered` for the person's own stop (no rules).
+ */
+export function describeRules({ rules }: { rules: RuleText | null }, notOffered: string) {
+  if (!rules) return { text: notOffered };
   return {
     text: rules.balance === "NO_BALANCE" ? t("terms.rule.recorded") : ruleSummary(rules),
   };

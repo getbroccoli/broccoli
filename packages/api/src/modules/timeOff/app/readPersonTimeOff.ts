@@ -2,16 +2,20 @@ import type { Transact } from "../../../core/db";
 import { isInRecordScope, type SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseUuid } from "../../../utils";
 import { type PersonVersion, personVersionsFrom, type TermsMovePreview } from "../../employees";
-import { timeOffPolicyRepository } from "../db";
+import { type OfferStop, timeOffPolicyRepository } from "../db";
 import type { PolicyVersion, TimeOffType } from "../domain";
-import { type AllowanceEngineDependencies, readPeople } from "./allowanceEngine";
+import { type AllowanceEngineDependencies } from "./allowanceEngine";
+import { readPeople } from "./readPeople";
 import { byTypeOrder } from "./readTimeOffTypes";
 
 /** One company time off type, with a person's rules for it from today on. */
 export interface PersonTimeOff {
   timeOffType: TimeOffType;
-  /** Today's rules first, if any, then later changes; empty: not offered to the person. */
-  versions: PersonVersion<PolicyVersion>[];
+  /**
+   * Today's rules first, if any, then later changes; a null version is the person's own stop.
+   * Empty: not offered to the person.
+   */
+  versions: PersonVersion<PolicyVersion | null>[];
 }
 
 type Dependencies = Pick<AllowanceEngineDependencies, "employeeReads" | "today"> & {
@@ -40,16 +44,37 @@ export async function readPersonTimeOff(
       readTermsMemberships: (_tx: typeof tx, employeeIds: readonly string[]) =>
         employeeReads.readTermsMemberships(tx, employeeIds, input.move),
     };
-    const { people } = await readPeople(reads, tx, ids);
+    const { people, stopsOf } = await readPeople(reads, tx, ids);
     const date: CalendarDate = input.from ?? today();
     return new Map(
       people.map((person) => [
         person.employeeId,
         types.map((timeOffType) => ({
           timeOffType,
-          versions: personVersionsFrom(person.timelineOf(timeOffType.id), date),
+          versions: withOfferStops(
+            personVersionsFrom(person.timelineOf(timeOffType.id), date),
+            stopsOf(person.employeeId, timeOffType.id),
+            date,
+          ),
         })),
       ]),
     );
   });
+}
+
+/** The versions with the person's stops from `date` on, as their own null versions, by date. */
+function withOfferStops(
+  versions: PersonVersion<PolicyVersion>[],
+  stops: readonly OfferStop[],
+  date: CalendarDate,
+): PersonVersion<PolicyVersion | null>[] {
+  const shown = stops
+    .filter(({ endDate }) => endDate === null || endDate >= date)
+    .map(({ startDate, endDate }) => ({
+      source: "their_own" as const,
+      startDate: startDate < date ? date : startDate,
+      endDate,
+      version: null,
+    }));
+  return [...versions, ...shown].toSorted((a, b) => a.startDate.localeCompare(b.startDate));
 }

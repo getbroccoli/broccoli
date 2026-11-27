@@ -4,7 +4,7 @@ import { isInRecordScope, type RecordScope, type SecurityContext } from "../../.
 import { parseUuid } from "../../../utils";
 import { type StoredTimeOff, timeOffRepository, timeOffRequestRepository } from "../db";
 import { type CancelRefusal, cancelRefusal } from "../domain";
-import { readPeople } from "./allowanceEngine";
+import { readPeople } from "./readPeople";
 import { appendStatusChange, type BookingDependencies, lockPerson, windowOf } from "./bookingSteps";
 
 /**

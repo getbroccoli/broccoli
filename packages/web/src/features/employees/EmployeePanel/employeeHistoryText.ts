@@ -71,8 +71,9 @@ function weekSentence(oldValue: string | null, newValue: string | null): string 
 }
 
 /**
- * A change to the person's own rules for a type: given, changed, given back to the terms, or a
- * planned change cancelled (no new value). Null for a line in another shape, such as Publish's.
+ * A change to the person's own rules for a type: given, changed, stopped, given back to the terms,
+ * or a planned change cancelled (no new value). Null for a line in another shape, such as
+ * Publish's.
  */
 function rulesSentence(
   oldValue: string | null,
@@ -88,6 +89,7 @@ function rulesSentence(
     );
   }
   const date = shortDate(after.startDate);
+  if (after.notOffered) return t("ownRules.history.stopped", { type: typeName, date });
   if (!after.rules) return t("ownRules.history.back", { type: typeName, date });
   // Mid-sentence: "to unlimited", not "to Unlimited".
   const rule = ruleSummary(storedRuleText(after.rules)).toLowerCase();
@@ -98,15 +100,19 @@ function rulesSentence(
   });
 }
 
-/** An own-rules change's stored value: the rules, null for the terms', and the date they apply from. */
+/**
+ * An own-rules change's stored value: the rules, null for the terms', or not offered, and the date
+ * they apply from.
+ */
 type RulesChange = {
   startDate: string;
+  notOffered?: true;
   rules: { balance: string; entitlementDays: number | null; bankHolidays: string | null } | null;
 };
 
 function parseRulesChange(value: string | null): RulesChange | null {
   const parsed = value === null ? null : (JSON.parse(value) as Partial<RulesChange>);
-  return parsed && "rules" in parsed ? (parsed as RulesChange) : null;
+  return parsed && ("rules" in parsed || "notOffered" in parsed) ? (parsed as RulesChange) : null;
 }
 
 /** An own-week change's stored value: the week, null for the terms', and the date it applies from. */

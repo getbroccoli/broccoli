@@ -80,7 +80,7 @@ export async function publishStop(
   }
   const refuseLostBookings = await watchBookedTimeOff(employeeReads, tx, {
     employeeIds: [...people],
-    timeOffTypeId: policy.timeOffType.id,
+    timeOffType: policy.timeOffType,
     from,
   });
   for (const { owner, plan, refusal, replaced } of ticked) {
