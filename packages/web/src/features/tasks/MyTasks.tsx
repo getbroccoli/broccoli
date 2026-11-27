@@ -4,7 +4,7 @@ import { Link, useNavigate, useRouteContext } from "@tanstack/react-router";
 
 import { MyTasksDocument, type MyTasksQuery } from "@/__generated__/graphql";
 import { DataTable, type DataTableColumn, TableState } from "@/components/dataTable";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Avatar } from "@/features/employees";
 import { t } from "@/i18n";
 import { calendarDayOf } from "@/lib/calendarDay";
@@ -35,7 +35,7 @@ export function MyTasks() {
     {
       id: "task",
       header: t("tasks.column.task"),
-      className: "min-w-72",
+      className: "min-w-[50vw] sm:min-w-72",
       cell: ({ task }) => (
         <div className="flex items-center gap-3">
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-muted text-foreground/75">
@@ -99,13 +99,13 @@ export function MyTasks() {
         if (task.status !== "TO_DO" || task.assignee.id !== viewerId) return null;
         // A task that asks for a result is answered in its panel, not with one click.
         return task.resultForm ? (
-          <Button
-            size="xs"
-            variant="outline"
-            render={<Link to="/tasks/$taskId" params={{ taskId: task.id }} />}
+          <Link
+            to="/tasks/$taskId"
+            params={{ taskId: task.id }}
+            className={cn(buttonVariants({ size: "xs", variant: "outline" }))}
           >
             {t("tasks.answer")}
-          </Button>
+          </Link>
         ) : (
           <Button
             size="xs"
