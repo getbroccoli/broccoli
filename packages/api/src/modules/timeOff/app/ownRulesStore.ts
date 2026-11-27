@@ -31,16 +31,18 @@ export async function readOwnRules(
   );
   const stops = (await offerStopRepository(tx).findByEmployees([employeeId]))
     .filter((stop) => stop.timeOffTypeId === timeOffTypeId)
+    // Its own id as the version, so back-to-back stops stay separate changes to cancel.
     .map(({ id, startDate, endDate }) => ({
       id,
       owner: { employeeId },
-      versionId: NOT_OFFERED,
+      versionId: id,
       startDate,
       endDate,
     }));
+  const stopIds = new Set(stops.map(({ id }) => id));
   return {
     stretches: ownStretchesOf<OwnRules>([...rows, ...stops], (id) =>
-      id === NOT_OFFERED ? NOT_OFFERED : versionOf(policies, id),
+      stopIds.has(id) ? NOT_OFFERED : versionOf(policies, id),
     ),
     versions: rows.map(({ versionId }) => versionOf(policies, versionId)),
   };

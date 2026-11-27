@@ -15,7 +15,7 @@ import {
 } from "../../employees";
 import { type PolicyAssignment, timeOffPolicyRepository } from "../db";
 import { type PolicyVersion, refuseCountsChangesMidYear, type TimeOffPolicy } from "../domain";
-import { laneKey, type Person, readPeople } from "./allowanceEngine";
+import { laneKey, type Person, readPeople } from "./readPeople";
 import { ownerIds } from "./policyRules";
 
 /** What publishing one of a set of terms' unpublished policy versions from a date would do. */

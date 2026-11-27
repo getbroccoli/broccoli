@@ -154,6 +154,25 @@ test("cancelling a planned stop lets the terms' rules run on", async ({ orm, see
   ]);
 });
 
+test("cancelling an earlier stop keeps a later planned stop", async ({ orm, seed, transact }) => {
+  const person = await seedAnnualLeaveEmployee(orm, seed, transact);
+  const service = ownTimeOffRulesService(orm, { today });
+  await service.stopOffering(OWNER, { ...person, startDate: "2027-02-01" });
+  await service.stopOffering(OWNER, { ...person, startDate });
+
+  await service.cancelOwnRulesChange(OWNER, { ...person, startDate });
+
+  expect(await versionsFor(orm, person)).toMatchObject([
+    {
+      source: "from_their_terms",
+      startDate: today,
+      endDate: "2027-01-31",
+      version: { balance: "balance_from_allowance" },
+    },
+    { source: "their_own", startDate: "2027-02-01", endDate: null, version: null },
+  ]);
+});
+
 test("refuses to cancel a stop that has started", async ({ orm, seed, transact }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
   const input = { ...person, startDate };

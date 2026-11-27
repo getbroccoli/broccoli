@@ -13,7 +13,7 @@ import {
   refusalOfDates,
   refusalOfDays,
 } from "../domain";
-import type { Person } from "./allowanceEngine";
+import type { Person } from "./readPeople";
 import type { ParsedBooking } from "./parseBooking";
 
 type Dependencies = {

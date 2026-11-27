@@ -4,7 +4,8 @@ import { type CalendarDate, parseUuid } from "../../../utils";
 import { type PersonVersion, personVersionsFrom, type TermsMovePreview } from "../../employees";
 import { type OfferStop, timeOffPolicyRepository } from "../db";
 import type { PolicyVersion, TimeOffType } from "../domain";
-import { type AllowanceEngineDependencies, readPeople } from "./allowanceEngine";
+import { type AllowanceEngineDependencies } from "./allowanceEngine";
+import { readPeople } from "./readPeople";
 import { byTypeOrder } from "./readTimeOffTypes";
 
 /** One company time off type, with a person's rules for it from today on. */
@@ -43,7 +44,7 @@ export async function readPersonTimeOff(
       readTermsMemberships: (_tx: typeof tx, employeeIds: readonly string[]) =>
         employeeReads.readTermsMemberships(tx, employeeIds, input.move),
     };
-    const { people, stops } = await readPeople(reads, tx, ids);
+    const { people, stopsOf } = await readPeople(reads, tx, ids);
     const date: CalendarDate = input.from ?? today();
     return new Map(
       people.map((person) => [
@@ -52,10 +53,7 @@ export async function readPersonTimeOff(
           timeOffType,
           versions: withOfferStops(
             personVersionsFrom(person.timelineOf(timeOffType.id), date),
-            stops.filter(
-              (stop) =>
-                stop.employeeId === person.employeeId && stop.timeOffTypeId === timeOffType.id,
-            ),
+            stopsOf(person.employeeId, timeOffType.id),
             date,
           ),
         })),

@@ -14,7 +14,7 @@ import {
 } from "../../employees";
 import { timeOffPolicyRepository, timeOffRepository, type TimeOffStatus } from "../db";
 import { bookingWindow, type CostedDay, totalCost } from "../domain";
-import { type Person, readPeople } from "./allowanceEngine";
+import { type Person, readPeople } from "./readPeople";
 import { checkDays } from "./checkDays";
 import type { ParsedBooking } from "./parseBooking";
 import type { TimeOffService } from "./timeOffService";

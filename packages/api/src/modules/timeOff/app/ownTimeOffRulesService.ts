@@ -25,7 +25,7 @@ import {
   type TimeOffType,
   versionFromRules,
 } from "../domain";
-import { readPeople } from "./allowanceEngine";
+import { readPeople } from "./readPeople";
 import { watchBookedTimeOff } from "./watchBookedTimeOff";
 import { appendOwnRulesHistory } from "./ownRulesHistory";
 import { NOT_OFFERED, type OwnRules, readOwnRules, saveOwnRules } from "./ownRulesStore";

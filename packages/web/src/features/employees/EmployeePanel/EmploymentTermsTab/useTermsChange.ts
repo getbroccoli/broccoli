@@ -148,7 +148,7 @@ function usePreview(employeeId: string, value: TermsChoice, open: boolean) {
   };
 }
 
-/** The week and each type the person has their own on `date`, by name. */
+/** The week and each type the person has their own on `date`, by name; a stop gives them none. */
 function keptOwn(
   { workingWeek, timeOff }: EmploymentTermsTab_TermsFragment,
   date: string,
@@ -159,7 +159,7 @@ function keptOwn(
   return [
     ...(own(workingWeek) ? [t("changeTerms.workingWeek")] : []),
     ...(timeOff ?? []).flatMap(({ timeOffType, versions }) =>
-      own(versions) ? [timeOffType.name] : [],
+      own(versions) && versionOn(versions, date)?.rules ? [timeOffType.name] : [],
     ),
   ];
 }

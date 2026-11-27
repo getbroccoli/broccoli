@@ -2,7 +2,8 @@ import type { Transact } from "../../../core/db";
 import { isInRecordScope, type SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseUuid } from "../../../utils";
 import { type StoredTimeOff, type TimeOffRequest, timeOffRequestRepository } from "../db";
-import { type AllowanceEngineDependencies, readPeople } from "./allowanceEngine";
+import { type AllowanceEngineDependencies } from "./allowanceEngine";
+import { readPeople } from "./readPeople";
 import { windowOf } from "./bookingSteps";
 
 type Dependencies = Pick<AllowanceEngineDependencies, "employeeReads" | "today"> & {

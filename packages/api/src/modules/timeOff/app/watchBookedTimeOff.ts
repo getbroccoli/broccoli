@@ -4,7 +4,7 @@ import type { CalendarDate } from "../../../utils";
 import type { EmployeeReadService } from "../../employees";
 import { timeOffRepository } from "../db";
 import { datesLabel, type TimeOffType } from "../domain";
-import { readPeople } from "./allowanceEngine";
+import { readPeople } from "./readPeople";
 
 /**
  * Notes which booked days of the type from `from` have rules now; the returned check refuses, with
