@@ -27,7 +27,8 @@ export interface TermsChange {
   open: boolean;
   value: TermsChoice;
   earliest: string;
-  termsName: string;
+  /** Null: no terms. */
+  termsName: string | null;
   /** The person's terms as they are and as they would be after the move, from its date; null until known. */
   before: EmploymentTermsTab_TermsFragment | null;
   after: EmploymentTermsTab_TermsFragment | null;
@@ -142,7 +143,7 @@ function usePreview(employeeId: string, value: TermsChoice, open: boolean) {
     input,
     termsName:
       value.termsId === NO_TERMS
-        ? t("changeTerms.noTerms")
+        ? null
         : (terms?.allTerms.find(({ id }) => id === input.termsId)?.name ?? ""),
     // A skipped query keeps its last answer, which a closed edit must not show.
     ...((open && preview.data?.termsChangePreview) || { moves: [], skipped: [] }),

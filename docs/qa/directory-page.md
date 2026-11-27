@@ -36,6 +36,7 @@ As an admin, with terms "Scotland" added in Settings › Employment terms (the d
 
 - [ ] Ticking three people shows "Change terms" beside "Set manager"; it opens "Change terms for 3 people" with Terms, Applies from (today; nothing before 1 January this year) and "Earlier days stay on their terms."
 - [ ] Picking Scotland reads "Saving moves 3 people to Scotland from <today>." with Cancel and "Change terms".
+- [ ] Picking "No terms" reads "Saving moves 3 people to No terms from <today>."; someone already without terms is listed under "Already on No terms on <date>, so they stay as they are". A booking that would lose its rules refuses the whole change with the server's message, and nobody moves.
 - [ ] A person already on Scotland on that date shows "Already on Scotland on <date>, so they stay as they are: <name>." and isn't counted; with only such people, the footer reads "Nobody here moves to Scotland from <date>." and the button is disabled.
 - [ ] A person starting after the date shows under "Start after <date>, so they move from their start date: …"; one with a later planned move to other terms under "Have a later change that stays: <name> moves to <terms> on <date>."
 - [ ] More than three names in a line end "and N more".

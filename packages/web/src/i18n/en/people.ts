@@ -68,6 +68,9 @@ export const peopleEn = {
   "changeTerms.hint": "Earlier days stay on {terms}.",
   "changeTerms.hintMarked": "What changes on {date} is marked below.",
   "changeTerms.saveLine": "Saving moves {name} to {terms} from {date}.",
+  "changeTerms.saveLineNoTerms":
+    "Saving takes {name} off their terms from {date}. Their employment continues.",
+  "changeTerms.noTermsFrom": "{name} has no terms from {date}.",
   "changeTerms.reworked": "{name}’s allowance is worked out again from that date.",
   "changeTerms.keeps": "{name} keeps their own {parts}.",
   "changeTerms.workingWeek": "working week",
