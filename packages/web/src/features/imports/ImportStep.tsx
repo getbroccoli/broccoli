@@ -134,7 +134,11 @@ export function ImportStep() {
           <SlackSourceRow
             connection={data.slackConnection}
             source={slackSource}
-            onReadingChange={setReadingSlack}
+            onReadingChange={(reading) => {
+              setReadingSlack(reading);
+              // A lost response may hide people the read saved: ask the API what it holds.
+              if (!reading) void refetch();
+            }}
           />
           <FileSources
             sources={fileSources}

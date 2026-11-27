@@ -35,16 +35,19 @@ export function useTaskActions({ refetch }: { refetch?: DocumentNode[] } = {}) {
 
   return {
     isPending: markDoneState.loading || deleteState.loading,
-    /** Resolves true once marked done; a refusal shows and resolves false. */
-    markDone: (id: string, result?: TaskResultInput) =>
+    /**
+     * Resolves DONE once marked done, REFUSED when the API refused it, such as for a change someone
+     * made first, and FAILED when it may not have reached the API; a failure shows its reason.
+     */
+    markDone: (id: string, result?: TaskResultInput): Promise<MarkDoneOutcome> =>
       markDone({ variables: { input: { id, result } } }).then(
         () => {
           toast(t("tasks.markedDone"));
-          return true;
+          return "DONE";
         },
         (failure: unknown) => {
           refused(id)(failure);
-          return false;
+          return failure instanceof PayloadFailure ? "REFUSED" : "FAILED";
         },
       ),
     /** Resolves true once deleted, the task gone from the cache; a refusal shows and resolves false. */
@@ -62,3 +65,6 @@ export function useTaskActions({ refetch }: { refetch?: DocumentNode[] } = {}) {
       ),
   };
 }
+
+/** How marking a task done ended. */
+export type MarkDoneOutcome = "DONE" | "REFUSED" | "FAILED";

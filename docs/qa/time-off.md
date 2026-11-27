@@ -64,7 +64,7 @@ Add two people with `example.com` addresses (demo people can't be invited), make
 - [ ] Another request, then Reject with a comment: the bar disappears; the row reads "Rejected" with the comment.
 - [ ] As the manager, click a waiting request on the Time off calendar: its card shows Approve and Reject, and no Cancel request. Approve closes the card, the bar turns solid, and the task leaves Needs you.
 - [ ] On another waiting request's card, Reject asks for a comment and Send stays off until one is typed; sending it removes the bar.
-- [ ] As the manager, open a waiting request's card in two tabs and Reject it in the first. In the second, Approve shows why it was refused, closes the card, and the month reloads without the request.
+- [ ] As the manager, open a waiting request's card in two tabs; in the first, Reject it with a comment and Send. In the second, Approve shows why it was refused, closes the card, and the month reloads without the request.
 - [ ] As the owner who is not the approver, the employee's approved leave shows Cancel time off; a waiting one shows Cancel request and no Approve or Reject.
 
 ## Withdraw and cancel
