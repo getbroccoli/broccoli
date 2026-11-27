@@ -75,7 +75,9 @@ test("keeps booked days and a manual adjustment after the balance goes negative"
       balanceAfter: 1.5,
       comment,
       author: { kind: "SIGNED_IN_USER", id: "test-owner" },
-      parts: [{ kind: "manual_adjustment", amount: 3.5 }],
+      entitlementAfter: 19.5,
+      bankHolidaysAfter: 8,
+      usedAfter: 10,
     },
     { cause: "time_off_rules_changed", causeDate: "2026-01-01", amount: -12, balanceAfter: -2 },
     {

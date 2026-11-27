@@ -16,11 +16,10 @@ query AllowanceHistory($employeeId: ID!) {
         firstBookedDay
         lastBookedDay
         amount
+        entitlementAfter
+        bankHolidaysAfter
+        usedAfter
         balanceAfter
-        parts {
-          kind
-          amount
-        }
         author {
           kind
           userId

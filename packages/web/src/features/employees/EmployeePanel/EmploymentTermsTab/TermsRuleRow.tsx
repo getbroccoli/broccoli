@@ -1,13 +1,24 @@
-import { CalendarBlank } from "@phosphor-icons/react";
+import { CalendarBlank, DotsThree } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 
 import type { RuleSource } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { t } from "@/i18n";
+
+/** One entry of a row's ⋯ menu. */
+export type RowAction = { label: string; onSelect: () => void; destructive?: boolean };
 
 type Props = {
   /** The row's name, with its icon for a time off type. */
   label: ReactNode;
+  /** The row's name in words, for its menu: "Annual leave". */
+  name: string;
   /** What applies today, with any detail under it; null shows `missing` instead. */
   value: { text: string; detail?: string; source: RuleSource; sourceLabel: string } | null;
   /** Shown, muted, when nothing applies today, such as "Not offered on England and Wales". */
@@ -16,8 +27,8 @@ type Props = {
   planned: { text: string; startDate: string }[];
   /** Planned changes Cancel change can remove, by start date, and what it does. */
   onCancel?: { startDates: readonly string[]; cancel: (startDate: string) => void };
-  /** Actions on the row, such as Edit, beside its source. */
-  actions?: ReactNode;
+  /** The row's actions, such as Edit, in a ⋯ menu beside its source; false skips one, none hides the menu. */
+  actions: readonly (RowAction | false)[];
   /** The row's editor, open in place of its value. */
   editor?: ReactNode;
   /** What a move being edited changes here, as "From 1 Dec 2026: …"; none when it changes nothing. */
@@ -27,6 +38,7 @@ type Props = {
 /** One row of a person's employment terms: the working week or a time off type. */
 export function TermsRuleRow({
   label,
+  name,
   value,
   missing,
   planned,
@@ -35,6 +47,7 @@ export function TermsRuleRow({
   actions,
   editor,
 }: Props) {
+  const menu = actions.filter((action) => action !== false);
   return (
     <li className="flex flex-col gap-1 border-b border-border/60 px-3 py-2.5 last:border-b-0">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -58,7 +71,32 @@ export function TermsRuleRow({
           ) : (
             <span className="text-[13px] text-muted-foreground">{value.sourceLabel}</span>
           ))}
-        {actions}
+        {menu.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("people.panel.terms.rowActions", { name })}
+                />
+              }
+            >
+              <DotsThree weight="bold" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-auto max-w-80">
+              {menu.map((action) => (
+                <DropdownMenuItem
+                  key={action.label}
+                  variant={action.destructive ? "destructive" : "default"}
+                  onClick={action.onSelect}
+                >
+                  {action.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
       {editor}
       {planned.map(({ text, startDate }) => (

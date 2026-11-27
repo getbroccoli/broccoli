@@ -45,7 +45,9 @@ test("adds an owner's carry-over to entitlement, remaining and history", async (
       balanceAfter: 22,
       comment,
       author: { kind: "SIGNED_IN_USER", id: "test-owner" },
-      parts: [{ kind: "manual_adjustment", amount: 2 }],
+      entitlementAfter: 30,
+      bankHolidaysAfter: 8,
+      usedAfter: 0,
     },
     { cause: "time_off_turned_on", balanceAfter: 20 },
   ]);

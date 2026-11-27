@@ -62,9 +62,9 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Withdraw**: the person cancels their own request while it waits for approval; its approval ends and it reads "Withdrawn". Someone else allowed to cancel it, such as an admin, cancels it, and it reads "Cancelled".
 - **Write mode**: how the caller may write a record: **direct** (straight away), **request** (only by asking for approval, such as an employee's own time off) or **refused**. GraphQL shows it as a `Permit`: `ALLOWED`, `ALLOWED_WITH_APPROVAL`, `NOT_ALLOWED`.
 - **Who's out**: the Time off page's month of everyone's time off, bank holidays and days off. A private type shows to colleagues as **Off**.
-- **Allowance figures**: what a person's panel shows for a time off type with an allowance, in days for one leave year: **entitlement** (everything granted, bank holidays on top and adjustments included), **bank holidays** (those the year takes from it), **used** and **remaining** (entitlement less bank holidays and used).
+- **Allowance figures**: what a person's panel shows for a time off type with an allowance, in days for one leave year, as a sum: **allowance** (everything granted, bank holidays on top and adjustments included; the API calls it entitlement) − **bank holidays taken** (those the year takes from it) − **used** = **left** (the API's remaining).
 - **Adjustment**: days an admin adds to or takes from a person's balance, with a comment everyone who reads the balance sees; not "correction" or "override".
-- **Balance history**: a balance's changes, one row each, newest first, with the days left after each.
+- **Balance history**: a balance's changes, one row each, newest first, with the days left after each and how each allowance figure moved, such as "Allowance 28 → 26.5".
 - **Days recorded**: the days of a time off type with no balance, such as Sickness, a person has in a calendar year; a half day counts 0.5.
 - **Security context**: who is calling application code: a signed-in user, and whether they are the owner; the setup holder; or the system.
 - **System**: Broccoli acting on its own, such as creating the owner at setup or seeding the demo company after it.

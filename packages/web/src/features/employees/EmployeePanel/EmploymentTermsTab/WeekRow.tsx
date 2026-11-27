@@ -6,7 +6,6 @@ import {
   type EmploymentTermsTab_TermsFragment,
 } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
-import { Button } from "@/components/ui/button";
 import {
   CancelChangeDialog,
   companyToday,
@@ -101,19 +100,18 @@ export function WeekRow({
             ? { startDates: cancellableStarts(workingWeek, today), cancel: setCancelling }
             : undefined
         }
+        name={t("people.panel.terms.workingWeek")}
         actions={
-          canAct && (
-            <span className="flex gap-1">
-              <Button variant="ghost" size="sm" onClick={() => open("own")}>
-                {t("ownWeek.edit")}
-              </Button>
-              {hasOwn && returnTerms && (
-                <Button variant="ghost" size="sm" onClick={() => open("terms")}>
-                  {t("ownWeek.useTerms", { terms: returnTerms })}
-                </Button>
-              )}
-            </span>
-          )
+          canAct
+            ? [
+                { label: t("ownWeek.edit"), onSelect: () => open("own") },
+                hasOwn &&
+                  Boolean(returnTerms) && {
+                    label: t("ownWeek.useTerms", { terms: returnTerms }),
+                    onSelect: () => open("terms"),
+                  },
+              ]
+            : []
         }
         editor={edit?.mode && <WeekRowEditor edit={edit} firstName={firstName} />}
       />

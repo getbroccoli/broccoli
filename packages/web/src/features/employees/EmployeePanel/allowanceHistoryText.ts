@@ -1,8 +1,4 @@
-import type {
-  AllowanceChangeCause,
-  AllowanceHistoryQuery,
-  AllowanceLineKind,
-} from "@/__generated__/graphql";
+import type { AllowanceChangeCause, AllowanceHistoryQuery } from "@/__generated__/graphql";
 import { type MessageKey, t } from "@/i18n";
 import { calendarDayOf } from "@/lib/calendarDay";
 import { bookingDates, dateRange, dayMonthYear } from "@/lib/formatDate";
@@ -77,14 +73,25 @@ export function recordedDate(recordedAt: string, today: string): string {
   return day.slice(0, 4) === today.slice(0, 4) ? dateRange(day, day) : dayMonthYear(day);
 }
 
-/** What a change is made of, signed: "+28 granted, −8 bank holidays"; null where the title says it. */
-export function partsLine(change: Pick<AllowanceChange, "cause" | "parts">): string | null {
-  if (titleSaysItAll(change)) {
-    return null;
-  }
-  return change.parts
-    .map(({ kind, amount }) => `${signedDays(amount)} ${t(PART_WORDS[kind])}`)
-    .join(", ");
+/** How the card's figures moved in a change, each with its effect on the days left; empty where the title says it. */
+export function figureLines(
+  change: Pick<AllowanceChange, "cause" | FigureField>,
+  previous: Pick<AllowanceChange, FigureField> | undefined,
+): { text: string; amount: string }[] {
+  const lines = FIGURES.flatMap(({ field, words, takes }) => {
+    const before = previous?.[field] ?? 0;
+    const after = change[field];
+    if (before === after) {
+      return [];
+    }
+    return [
+      {
+        text: t(words, { before: formatDayCount(before), after: formatDayCount(after) }),
+        amount: signedDays(takes ? before - after : after - before),
+      },
+    ];
+  });
+  return lines.length === 1 && TITLED_CAUSES.has(change.cause) ? [] : lines;
 }
 
 /** Days with their sign: "+2", "−2.5". */
@@ -122,16 +129,23 @@ function authorName(change: Pick<AllowanceChange, "author">, readerUserId: strin
     : (change.author.email ?? t("people.panel.timeOff.history.someone"));
 }
 
-/** An adjustment or its reversal, or a booking or cancellation that only moved booked days. */
-function titleSaysItAll({ cause, parts }: Pick<AllowanceChange, "cause" | "parts">): boolean {
-  return (
-    cause === "ALLOWANCE_ADJUSTED" ||
-    cause === "ALLOWANCE_ADJUSTMENT_REVERSED" ||
-    (BOOKING_CAUSES.has(cause) && parts.every(({ kind }) => kind === "TIME_OFF_BOOKED"))
-  );
-}
+type FigureField = "entitlementAfter" | "bankHolidaysAfter" | "usedAfter";
 
-const BOOKING_CAUSES = new Set<AllowanceChangeCause>([
+/** The card's figures in its order; bank holidays and used take from the days left. */
+const FIGURES = [
+  { field: "entitlementAfter", words: "people.panel.timeOff.history.allowance", takes: false },
+  {
+    field: "bankHolidaysAfter",
+    words: "people.panel.timeOff.history.bankHolidaysTaken",
+    takes: true,
+  },
+  { field: "usedAfter", words: "people.panel.timeOff.history.used", takes: true },
+] as const satisfies readonly { field: FigureField; words: MessageKey; takes: boolean }[];
+
+/** Adjustments, their reversals and bookings, whose title and amount say what one moved figure did. */
+const TITLED_CAUSES = new Set<AllowanceChangeCause>([
+  "ALLOWANCE_ADJUSTED",
+  "ALLOWANCE_ADJUSTMENT_REVERSED",
   "TIME_OFF_BOOKED",
   "TIME_OFF_APPROVED",
   "TIME_OFF_CANCELLED",
@@ -167,12 +181,3 @@ const UNDATED_CAUSE_TITLES = {
   TERMS_CHANGED: "people.panel.timeOff.history.termsChangedUndated",
   TIME_OFF_RULES_CHANGED: "people.panel.timeOff.history.timeOffRulesChangedUndated",
 } as const satisfies Record<keyof typeof CAUSE_TITLES, MessageKey>;
-
-const PART_WORDS = {
-  ENTITLEMENT_GRANT: "people.panel.timeOff.history.part.granted",
-  BANK_HOLIDAY_ALLOWANCE_GRANT: "people.panel.timeOff.history.part.bankHolidaysGranted",
-  BANK_HOLIDAY_TAKEN: "people.panel.timeOff.history.part.bankHolidays",
-  TIME_OFF_BOOKED: "people.panel.timeOff.history.part.booked",
-  MANUAL_ADJUSTMENT: "people.panel.timeOff.history.part.adjusted",
-  ROUNDING_UP_TO_HALF_DAY: "people.panel.timeOff.history.part.rounding",
-} as const satisfies Record<AllowanceLineKind, MessageKey>;

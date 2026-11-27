@@ -47,8 +47,12 @@ type AllowanceChange {
   amount: Float!
   "Days remaining after the change, worked out as remaining is, so the newest equals it."
   balanceAfter: Float!
-  "What the change is made of, by kind, each rounded on its own so they may not add up to amount; kinds that add up to 0 are left out. A change whose amount and parts are all 0 is not listed."
-  parts: [AllowanceChangePart!]!
+  "Allowance after the change, as entitlement reads: everything granted, bank holidays on top and adjustments included."
+  entitlementAfter: Float!
+  "Bank holidays taken from the allowance after the change, as bankHolidays reads."
+  bankHolidaysAfter: Float!
+  "Days used after the change, as used reads."
+  usedAfter: Float!
   author: RecordChangeAuthor!
   "The adjustment's comment, or the reversal's reason; null for other causes and a reversal without one."
   comment: String
@@ -56,22 +60,6 @@ type AllowanceChange {
   adjustmentId: ID
   "Whether a later change reversed this adjustment; false for other causes."
   reversed: Boolean!
-}
-
-"The days of one kind a change is made of."
-type AllowanceChangePart {
-  kind: AllowanceLineKind!
-  amount: Float!
-}
-
-"What a ledger line of an allowance counts."
-enum AllowanceLineKind {
-  ENTITLEMENT_GRANT
-  BANK_HOLIDAY_ALLOWANCE_GRANT
-  BANK_HOLIDAY_TAKEN
-  TIME_OFF_BOOKED
-  MANUAL_ADJUSTMENT
-  ROUNDING_UP_TO_HALF_DAY
 }
 
 "Why a balance changed."

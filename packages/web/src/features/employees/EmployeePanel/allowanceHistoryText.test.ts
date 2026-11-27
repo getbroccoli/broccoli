@@ -3,8 +3,8 @@ import { expect, it } from "vitest";
 import {
   adjustLabel,
   changeTitle,
+  figureLines,
   parseAdjustment,
-  partsLine,
   recordedDate,
   reverseWords,
   signedDays,
@@ -78,41 +78,67 @@ it.each([
   expect(changeTitle(change, reader)).toBe(expected);
 });
 
+it("shows how each figure in a working week change affects the days left", () => {
+  const previous = { entitlementAfter: 28, bankHolidaysAfter: 8, usedAfter: 10 };
+  const lines = figureLines(
+    {
+      cause: "WORKING_PATTERN_CHANGED",
+      entitlementAfter: 26.5,
+      bankHolidaysAfter: 7,
+      usedAfter: 6,
+    },
+    previous,
+  );
+
+  expect(lines).toEqual([
+    { text: "Allowance 28 → 26.5", amount: "−1.5" },
+    { text: "Bank holidays taken 8 → 7", amount: "+1" },
+    { text: "Used 10 → 6", amount: "+4" },
+  ]);
+});
+
+it("counts the oldest change's figures from zero", () => {
+  expect(figureLines(grant, undefined)).toEqual([
+    { text: "Allowance 0 → 28", amount: "+28" },
+    { text: "Bank holidays taken 0 → 8", amount: "−8" },
+  ]);
+});
+
+it("shows only the allowance when a rules change leaves the other figures alone", () => {
+  const previous = { entitlementAfter: 26.5, bankHolidaysAfter: 7, usedAfter: 6 };
+  const lines = figureLines(
+    { ...previous, cause: "TIME_OFF_RULES_CHANGED", entitlementAfter: 35.5 },
+    previous,
+  );
+
+  expect(lines).toEqual([{ text: "Allowance 26.5 → 35.5", amount: "+9" }]);
+});
+
 it.each([
-  ["ALLOWANCE_ADJUSTED", "MANUAL_ADJUSTMENT", 2],
-  ["ALLOWANCE_ADJUSTMENT_REVERSED", "MANUAL_ADJUSTMENT", -5],
-  ["TIME_OFF_BOOKED", "TIME_OFF_BOOKED", -1],
-  ["TIME_OFF_CANCELLED", "TIME_OFF_BOOKED", 1],
+  ["ALLOWANCE_ADJUSTED", 30, 1],
+  ["ALLOWANCE_ADJUSTMENT_REVERSED", 26, 1],
+  ["TIME_OFF_BOOKED", 28, 2],
+  ["TIME_OFF_APPROVED", 28, 2],
+  ["TIME_OFF_CANCELLED", 28, 0],
 ] as const)(
-  "omits the parts line for %s when the title explains the only part",
-  (cause, kind, amount) => {
-    expect(partsLine({ cause, parts: [{ kind, amount }] })).toBeNull();
+  "omits the only changed figure when the %s title explains it",
+  (cause, entitlementAfter, usedAfter) => {
+    const previous = { entitlementAfter: 28, bankHolidaysAfter: 8, usedAfter: 1 };
+
+    expect(figureLines({ ...previous, cause, entitlementAfter, usedAfter }, previous)).toEqual([]);
   },
 );
 
-it("shows the grant and booked day when a booking also creates the allowance", () => {
-  expect(
-    partsLine({
-      cause: "TIME_OFF_BOOKED",
-      parts: [
-        { kind: "ENTITLEMENT_GRANT", amount: 20 },
-        { kind: "TIME_OFF_BOOKED", amount: -1 },
-      ],
-    }),
-  ).toBe("+20 granted, −1 booked");
-});
+it("shows allowance and used days when a booking also starts the allowance", () => {
+  const lines = figureLines(
+    { cause: "TIME_OFF_BOOKED", entitlementAfter: 20, bankHolidaysAfter: 0, usedAfter: 1 },
+    undefined,
+  );
 
-it("joins signed grant and bank holiday parts in one line", () => {
-  expect(partsLine(grant)).toBe("+28 granted, −8 bank holidays");
-});
-
-it.each([
-  ["BANK_HOLIDAY_ALLOWANCE_GRANT", 8, "+8 bank holidays granted"],
-  ["TIME_OFF_BOOKED", -2.5, "−2.5 booked"],
-  ["MANUAL_ADJUSTMENT", 2, "+2 adjusted"],
-  ["ROUNDING_UP_TO_HALF_DAY", 0.25, "+0.25 rounding"],
-] as const)("labels the %s part", (kind, amount, expected) => {
-  expect(partsLine({ ...grant, parts: [{ kind, amount }] })).toBe(expected);
+  expect(lines).toEqual([
+    { text: "Allowance 0 → 20", amount: "+20" },
+    { text: "Used 0 → 1", amount: "−1" },
+  ]);
 });
 
 it.each([
@@ -213,10 +239,9 @@ const grant = {
   lastBookedDay: null,
   amount: 20,
   balanceAfter: 20,
-  parts: [
-    { kind: "ENTITLEMENT_GRANT" as const, amount: 28 },
-    { kind: "BANK_HOLIDAY_TAKEN" as const, amount: -8 },
-  ],
+  entitlementAfter: 28,
+  bankHolidaysAfter: 8,
+  usedAfter: 0,
   author: { kind: "BROCCOLI_ITSELF" as const, userId: null, email: null },
   comment: null,
 };

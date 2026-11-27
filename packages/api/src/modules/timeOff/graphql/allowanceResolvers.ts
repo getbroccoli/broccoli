@@ -49,7 +49,6 @@ export function allowanceResolvers(allowances: AllowanceService) {
       cause: ({ cause }) => toEnum(cause),
       firstBookedDay: ({ bookedDays }) => bookedDays?.first ?? null,
       lastBookedDay: ({ bookedDays }) => bookedDays?.last ?? null,
-      parts: ({ parts }) => parts.map(({ kind, amount }) => ({ kind: toEnum(kind), amount })),
     },
   } satisfies Resolvers;
 }
