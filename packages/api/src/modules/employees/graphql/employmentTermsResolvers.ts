@@ -11,6 +11,7 @@ import type {
   EmployeeWorkingPatternService,
   OwnWorkingWeekService,
   TermsChange,
+  TermsChangeInput,
 } from "../app";
 import type { Employee } from "../domain";
 
@@ -35,7 +36,7 @@ export function employmentTermsResolvers(
     Query: {
       async termsChangePreview(_parent, { input }, context) {
         const actor = context.getActor();
-        const { moved, skipped } = await services.previewTermsChange(actor, input);
+        const { moved, skipped } = await services.previewTermsChange(actor, termsChangeOf(input));
         const employees = await services.readEmployees(
           actor,
           [...moved, ...skipped].map(({ employeeId }) => employeeId),
@@ -50,7 +51,7 @@ export function employmentTermsResolvers(
       changeTerms: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["EmployeeTermsChangePayload"]>(async () => {
           const actor = context.getActor();
-          const { moved, skipped } = await services.changeTerms(actor, input);
+          const { moved, skipped } = await services.changeTerms(actor, termsChangeOf(input));
           const employees = await services.readEmployees(actor, input.employeeIds);
           return {
             moved: moved.map(({ employeeId, startDate }) => ({
@@ -59,7 +60,7 @@ export function employmentTermsResolvers(
             })),
             skipped: skippedOf(skipped, employees),
           };
-        }, ["INVALID_INPUT", "NOT_FOUND"]),
+        }, ["INVALID_INPUT", "NOT_FOUND", "CONFLICT"]),
       cancelTermsChange: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["EmployeeTermsCancelChangePayload"]>(async () => {
           await services.cancelTermsChange(context.getActor(), input);
@@ -103,4 +104,9 @@ function skippedOf(
     employee: employees.get(employeeId)!,
     reason: toEnum(reason),
   }));
+}
+
+/** The input as the service takes it: a missing terms id is no terms. */
+function termsChangeOf(input: ResolversTypes["EmployeeTermsChangeInput"]): TermsChangeInput {
+  return { ...input, termsId: input.termsId ?? null };
 }

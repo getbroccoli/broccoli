@@ -35,7 +35,7 @@ export function employeeChangeSentence({
   const move = parseMove(newValue);
   if (move) {
     return t("people.panel.terms.history.changed", {
-      terms: newLabel ?? "",
+      terms: move.termsId === null ? t("changeTerms.noTerms") : (newLabel ?? ""),
       date: shortDate(move.startDate),
     });
   }
@@ -43,7 +43,7 @@ export function employeeChangeSentence({
   return (
     cancelled &&
     t("people.panel.terms.history.cancelled", {
-      terms: oldLabel ?? "",
+      terms: cancelled.termsId === null ? t("changeTerms.noTerms") : (oldLabel ?? ""),
       date: shortDate(cancelled.startDate),
     })
   );
@@ -132,6 +132,9 @@ function minutesOf(minutes: readonly number[]): WeekMinutes {
 }
 
 /** A terms change's stored value: the terms and the date it applies from. */
-function parseMove(value: string | null): { termsId: string; startDate: string } | null {
-  return value === null ? null : (JSON.parse(value) as { termsId: string; startDate: string });
+/** A terms change's stored value: the terms, null for none, and the date it applies from. */
+function parseMove(value: string | null): { termsId: string | null; startDate: string } | null {
+  return value === null
+    ? null
+    : (JSON.parse(value) as { termsId: string | null; startDate: string });
 }

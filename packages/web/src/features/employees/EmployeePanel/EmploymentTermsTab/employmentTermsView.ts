@@ -38,6 +38,18 @@ export function termsPeriodsOn<P extends TermsPeriod>(
 }
 
 /**
+ * The dates after `today` on which the person's terms end with none starting that day: their moves
+ * to no terms, oldest first.
+ */
+export function plannedNoTerms(periods: readonly TermsPeriod[], today: string): string[] {
+  const starts = new Set(periods.map(({ startDate }) => startDate));
+  return periods
+    .flatMap(({ endDate }) => (endDate ? [addDays(endDate, 1)] : []))
+    .filter((date) => date > today && !starts.has(date))
+    .toSorted();
+}
+
+/**
  * Where a row comes from, as the reader sees it: an admin or manager reads the terms' name or the
  * person's name; the person reads "your".
  */

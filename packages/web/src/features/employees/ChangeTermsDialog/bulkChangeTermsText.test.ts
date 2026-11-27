@@ -95,9 +95,19 @@ it("names the first later terms move that stays", () => {
     employmentTerms: {
       ...move.employmentTerms,
       periods: [
-        ...move.employmentTerms.periods,
-        { termsName: "Northern Ireland", startDate: "2027-02-01" },
-        { termsName: "Scotland", startDate: "2027-03-01" },
+        {
+          termsId: "scotland",
+          termsName: "Scotland",
+          startDate: move.startDate,
+          endDate: "2027-01-31",
+        },
+        {
+          termsId: "northern-ireland",
+          termsName: "Northern Ireland",
+          startDate: "2027-02-01",
+          endDate: "2027-02-28",
+        },
+        { termsId: "scotland", termsName: "Scotland", startDate: "2027-03-01" },
       ],
     },
   };
@@ -109,6 +119,27 @@ it("names the first later terms move that stays", () => {
     moving: 1,
     laterMoves: ["Jo Clarke moves to Northern Ireland on 1 Feb 2027"],
   });
+});
+
+it("names a later move to No terms when the person's last terms period ends", () => {
+  const later = {
+    ...move,
+    employmentTerms: {
+      ...move.employmentTerms,
+      periods: [
+        {
+          termsId: "scotland",
+          termsName: "Scotland",
+          startDate: move.startDate,
+          endDate: "2027-01-31",
+        },
+      ],
+    },
+  };
+
+  const groups = bulkGroups({ moves: [later], skipped: [], startDate: move.startDate });
+
+  expect(groups.laterMoves).toEqual(["Sam Patel has no terms from 1 Feb 2027"]);
 });
 
 it("counts a plain move without adding a reason line", () => {
@@ -227,7 +258,7 @@ const move = {
   employee: { firstName: "Sam", lastName: "Patel" },
   startDate: "2026-12-01",
   employmentTerms: {
-    periods: [{ termsName: "Scotland", startDate: "2026-12-01" }],
+    periods: [{ termsId: "scotland", termsName: "Scotland", startDate: "2026-12-01" }],
     workingWeek: [{ source: "FROM_THEIR_TERMS" as const, startDate: "2026-12-01", endDate: null }],
     timeOff: [],
   },

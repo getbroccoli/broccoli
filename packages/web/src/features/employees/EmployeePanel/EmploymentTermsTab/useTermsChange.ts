@@ -14,7 +14,7 @@ import { companyToday, shortDate, versionOn } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
 import { forgetTermsChange } from "../../cache";
-import { savedToast, skipError } from "../../ChangeTermsForm";
+import { NO_TERMS, savedToast, skipError } from "../../ChangeTermsForm";
 
 /** The terms and date picked in Change terms; no terms until one is picked. */
 export interface TermsChoice {
@@ -27,12 +27,15 @@ export interface TermsChange {
   open: boolean;
   value: TermsChoice;
   earliest: string;
-  termsName: string;
+  /** Null: no terms. */
+  termsName: string | null;
   /** The person's terms as they are and as they would be after the move, from its date; null until known. */
   before: EmploymentTermsTab_TermsFragment | null;
   after: EmploymentTermsTab_TermsFragment | null;
   /** What of their own the person keeps on that date, for the save line. */
   keepsOwn: string[];
+  /** After the move they are offered time off on that date but have no working week. */
+  noWorkingWeek: boolean;
   error: string | null;
   /** A move is picked that would reach the person. */
   ready: boolean;
@@ -82,6 +85,7 @@ export function useTermsChange({
     before: moves[0]?.currentTerms ?? null,
     after: moves[0]?.employmentTerms ?? null,
     keepsOwn: moves[0] ? keptOwn(moves[0].employmentTerms, value.startDate) : [],
+    noWorkingWeek: moves[0] ? offeredWithoutWeek(moves[0].employmentTerms, value.startDate) : false,
     error:
       error ??
       (failed ? t("changeTerms.previewFailed") : null) ??
@@ -128,7 +132,7 @@ export function useTermsChange({
 function usePreview(employeeId: string, value: TermsChoice, open: boolean) {
   const input = {
     employeeIds: [employeeId],
-    termsId: value.termsId ?? "",
+    termsId: value.termsId === NO_TERMS ? null : (value.termsId ?? ""),
     startDate: value.startDate,
   };
   const { data: terms } = useQuery(ChangeTermsFormTermsDocument, { skip: !open });
@@ -136,11 +140,14 @@ function usePreview(employeeId: string, value: TermsChoice, open: boolean) {
   const preview = useQuery(TermsChangePreviewDocument, {
     variables: { input },
     fetchPolicy: "network-only",
-    skip: !open || !input.termsId,
+    skip: !open || !value.termsId,
   });
   return {
     input,
-    termsName: terms?.allTerms.find(({ id }) => id === input.termsId)?.name ?? "",
+    termsName:
+      value.termsId === NO_TERMS
+        ? null
+        : (terms?.allTerms.find(({ id }) => id === input.termsId)?.name ?? ""),
     // A skipped query keeps its last answer, which a closed edit must not show.
     ...((open && preview.data?.termsChangePreview) || { moves: [], skipped: [] }),
     loading: preview.loading,
@@ -164,12 +171,25 @@ function keptOwn(
   ];
 }
 
+/** Whether some type is offered on `date` while no working week applies, so it would cost no days. */
+function offeredWithoutWeek(
+  { workingWeek, timeOff }: EmploymentTermsTab_TermsFragment,
+  date: string,
+): boolean {
+  return (
+    !versionOn(workingWeek, date) &&
+    (timeOff ?? []).some(({ versions }) => Boolean(versionOn(versions, date)?.rules))
+  );
+}
+
 type ChangeTermsError = ChangeTermsMutation["employees"]["changeTerms"]["error"];
 
 /** The form's message for a refused or failed save. */
 function failureMessage(failed: unknown, earliest: string): string {
   const refused =
     failed instanceof PayloadFailure ? (failed.payloadError as ChangeTermsError) : null;
+  // The server names whose booked time off would lose its rules.
+  if (refused?.__typename === "ConflictError") return refused.message;
   const tooEarly =
     refused?.__typename === "InvalidInputError" &&
     refused.fields.some(({ field }) => field === "startDate");

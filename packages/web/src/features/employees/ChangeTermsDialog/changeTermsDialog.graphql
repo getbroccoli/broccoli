@@ -10,8 +10,10 @@ query BulkTermsChangePreview($input: EmployeeTermsChangeInput!) {
       }
       employmentTerms {
         periods {
+          termsId
           termsName
           startDate
+          endDate
         }
         workingWeek {
           source

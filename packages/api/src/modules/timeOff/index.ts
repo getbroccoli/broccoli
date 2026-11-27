@@ -12,6 +12,7 @@ import {
   createTimeOffRequestService,
   createWhosOutService,
   ensureAllowancesJob,
+  refuseBookingsWithoutRules,
   timeOffRecordType,
   type TimeOffSetupService,
   type TimeOffService,
@@ -71,6 +72,10 @@ export function timeOffModule({
     bankHolidays,
     approvals,
   });
+  const refuseBookings = refuseBookingsWithoutRules({
+    employeeReads: createEmployeeReadService(dependencies),
+    logger: dependencies.logger,
+  });
   return {
     name: "timeOff",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
@@ -88,8 +93,12 @@ export function timeOffModule({
       requests,
       tasks,
     }),
-    // The decision on requested time off commits with the approval that decided it.
-    eventsBeforeCommit: requests.finishApprovals,
+    // The decision on requested time off commits with the approval that decided it, and a terms
+    // change only when nobody's booked time off loses its rules.
+    eventsBeforeCommit: async (tx, events) => {
+      await requests.finishApprovals(tx, events);
+      await refuseBookings(tx, events);
+    },
     recordTypes: { time_off: timeOffRecordType(dependencies.orm) },
     events: {
       ...allowanceEventHandlers({ timeOff, ...dependencies }),

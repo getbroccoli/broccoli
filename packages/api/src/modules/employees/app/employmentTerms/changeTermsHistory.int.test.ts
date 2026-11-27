@@ -82,3 +82,32 @@ test("publishes no terms change when nobody moves", async ({ orm, seed }) => {
 
   expect(events).toEqual([]);
 });
+
+test("records No terms in the person's history with no new terms label", async ({ orm, seed }) => {
+  const employee = await seed.employee({ startDate: "2024-03-01" });
+  const england = await seed.defaultTermsId();
+  const startDate = "2027-01-01";
+
+  await workingPatternService(orm, { today: "2026-11-09" }).changeTerms(OWNER, {
+    employeeIds: [employee.id],
+    termsId: null,
+    startDate,
+  });
+
+  const history = await employeeServices(orm).readEmployeeHistory(OWNER, employee.id, {});
+  expect(history.edges).toMatchObject([
+    {
+      node: {
+        changes: [
+          {
+            field: "terms",
+            oldValue: JSON.stringify({ termsId: england, startDate }),
+            oldLabel: "England and Wales",
+            newValue: JSON.stringify({ termsId: null, startDate }),
+            newLabel: null,
+          },
+        ],
+      },
+    },
+  ]);
+});

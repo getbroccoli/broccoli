@@ -2,20 +2,20 @@ import { CalendarBlank } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { CancelTermsChangeDocument } from "@/__generated__/graphql";
-import { usePayloadMutation } from "@/apollo";
+import { CancelTermsChangeDocument, type CancelTermsChangeMutation } from "@/__generated__/graphql";
+import { PayloadFailure, usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import { CancelChangeDialog, shortDate } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
 import { forgetHistory } from "../../cache";
-import type { TermsPeriod } from "./employmentTermsView";
 import { TermsName } from "./TermsName";
 
 type Props = {
   employeeId: string;
   firstName: string;
-  period: TermsPeriod & { startDate: string };
+  /** The terms moved to; null terms: a move to no terms. */
+  period: { termsId: string | null; termsName: string; startDate: string };
   /** The terms the person stays on when the move is cancelled. */
   staysOn: string;
   linksToSettings: boolean;
@@ -23,7 +23,12 @@ type Props = {
   canCancel: boolean;
 };
 
-/** A move to other terms that has not started, "From 1 Dec 2026: Scotland", and its Cancel change. */
+type CancelTermsChangeError = CancelTermsChangeMutation["employees"]["cancelTermsChange"]["error"];
+
+/**
+ * A move to other terms, or to no terms, that has not started, "From 1 Dec 2026: Scotland", and its
+ * Cancel change.
+ */
 export function PlannedMove({
   employeeId,
   firstName,
@@ -40,8 +45,14 @@ export function PlannedMove({
     try {
       await cancelChange({ variables: { input: { employeeId, startDate: period.startDate } } });
       toast(t("people.panel.terms.cancelled"));
-    } catch {
-      toast.error(t("people.panel.terms.cancelFailed"));
+    } catch (error) {
+      const refused =
+        error instanceof PayloadFailure ? (error.payloadError as CancelTermsChangeError) : null;
+      toast.error(
+        refused?.__typename === "ConflictError"
+          ? refused.message
+          : t("people.panel.terms.cancelFailed"),
+      );
     }
     setAsking(false);
   };
@@ -52,7 +63,14 @@ export function PlannedMove({
         <span className="font-semibold">
           {t("people.panel.terms.plannedFrom", { date: shortDate(period.startDate) })}
         </span>{" "}
-        <TermsName period={period} linksToSettings={linksToSettings} />
+        {period.termsId ? (
+          <TermsName
+            period={{ ...period, termsId: period.termsId }}
+            linksToSettings={linksToSettings}
+          />
+        ) : (
+          <span className="font-semibold">{period.termsName}</span>
+        )}
       </span>
       {canCancel && (
         <Button variant="ghost" size="sm" onClick={() => setAsking(true)}>

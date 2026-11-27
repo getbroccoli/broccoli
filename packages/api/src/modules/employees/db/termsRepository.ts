@@ -159,13 +159,11 @@ export function termsRepository(db: Orm | Tx): TermsRepository {
     async replaceMemberships(memberships) {
       if (memberships.size === 0) return;
       await orm().delete(employeeTerms).where(anyOf(employeeTerms.employeeId, memberships.keys()));
-      await orm()
-        .insert(employeeTerms)
-        .values(
-          [...memberships].flatMap(([employeeId, rows]) =>
-            rows.map((row) => ({ employeeId, ...row })),
-          ),
-        );
+      const rows = [...memberships].flatMap(([employeeId, periods]) =>
+        periods.map((period) => ({ employeeId, ...period })),
+      );
+      // A person taken off terms from their first day keeps no rows.
+      if (rows.length > 0) await orm().insert(employeeTerms).values(rows);
     },
 
     async findMemberIds(termsIds) {

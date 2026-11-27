@@ -1,4 +1,4 @@
-import { expect, test, TEST_OWNER } from "#test/support";
+import { expect, test, TEST_OWNER, seedNoTermsMove, seedBookedTermsDay } from "#test/support";
 
 test("the owner previews a person's new terms, moves them and cancels the move through GraphQL", async ({
   env,
@@ -183,6 +183,107 @@ test("previews a move to terms named by an uppercase id", async ({ env }) => {
             },
           },
         ],
+      },
+    },
+  });
+});
+
+test("moving to No terms keeps the person's own week and Annual leave until and beyond their next move", async ({
+  env,
+}) => {
+  const { browser } = await env.signInAsOwner();
+  const { employeeId, england, scotland, from, laterMove, previousEnd } =
+    await seedNoTermsMove(env);
+
+  const response = await browser.graphql(
+    `mutation Move($input: EmployeeTermsChangeInput!, $from: Date!) {
+    employees { changeTerms(input: $input) {
+      error { __typename }
+      moved { employee { employmentTerms {
+        periods { termsId startDate endDate }
+        workingWeek { source startDate endDate week { mondayMinutes } }
+        timeOff(from: $from) { timeOffType { name } versions { source startDate endDate rules { balance } } }
+      } } }
+    } }
+  }`,
+    { input: { employeeIds: [employeeId], termsId: null, startDate: from }, from },
+  );
+
+  expect(await response.json()).toMatchObject({
+    data: {
+      employees: {
+        changeTerms: {
+          error: null,
+          moved: [
+            {
+              employee: {
+                employmentTerms: {
+                  periods: [
+                    { termsId: england, startDate: null, endDate: previousEnd },
+                    { termsId: scotland, startDate: laterMove, endDate: null },
+                  ],
+                  workingWeek: [
+                    { source: "THEIR_OWN", endDate: null, week: { mondayMinutes: 360 } },
+                  ],
+                  timeOff: expect.arrayContaining([
+                    {
+                      timeOffType: { name: "Annual leave" },
+                      versions: [
+                        {
+                          source: "THEIR_OWN",
+                          startDate: from,
+                          endDate: null,
+                          rules: { balance: "UNLIMITED_BALANCE" },
+                        },
+                      ],
+                    },
+                    {
+                      timeOffType: { name: "Sickness" },
+                      versions: [
+                        {
+                          source: "FROM_THEIR_TERMS",
+                          startDate: laterMove,
+                          endDate: null,
+                          rules: { balance: "NO_BALANCE" },
+                        },
+                      ],
+                    },
+                  ]) as unknown,
+                },
+              },
+            },
+          ],
+        },
+      },
+    },
+  });
+});
+
+test("returns a ConflictError payload when a move to No terms would uncover a booking", async ({
+  env,
+}) => {
+  const { browser } = await env.signInAsOwner();
+  const { employeeId, startDate, bookedDay } = await seedBookedTermsDay(env);
+
+  const response = await browser.graphql(
+    `mutation Move($input: EmployeeTermsChangeInput!) {
+    employees { changeTerms(input: $input) {
+      moved { startDate } error { __typename ... on ConflictError { message } }
+    } }
+  }`,
+    { input: { employeeIds: [employeeId], termsId: null, startDate } },
+  );
+
+  expect(await response.json()).toEqual({
+    data: {
+      employees: {
+        changeTerms: {
+          moved: null,
+          error: {
+            __typename: "ConflictError",
+            message: `Aisha Begum has Annual leave booked on ${Number(bookedDay.slice(-2))} Jan.`,
+          },
+        },
       },
     },
   });

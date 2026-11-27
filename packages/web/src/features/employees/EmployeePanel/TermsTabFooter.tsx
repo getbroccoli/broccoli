@@ -29,6 +29,7 @@ export function TermsTabFooter({ termsChange, weekEdit, rulesEdit, firstName }: 
                   startDate: termsChange.value.startDate,
                   today: companyToday(),
                   keepsOwn: termsChange.keepsOwn,
+                  noWorkingWeek: termsChange.noWorkingWeek,
                 })
               : null
           }

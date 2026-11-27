@@ -2,6 +2,8 @@ import type { EmployeeTermsChangeSkipReason, RuleSource } from "@/__generated__/
 import { shortDate, versionOn } from "@/features/termsDisplay";
 import { type MessageKey, t } from "@/i18n";
 
+import { plannedNoTerms, type TermsPeriod } from "../EmployeePanel/EmploymentTermsTab";
+
 type Version = { source: RuleSource; startDate: string; endDate?: string | null };
 type Person = { firstName: string; lastName: string };
 
@@ -10,7 +12,7 @@ type Move = {
   employee: Person;
   startDate: string;
   employmentTerms: {
-    periods: readonly { termsName: string; startDate?: string | null }[];
+    periods: readonly TermsPeriod[];
     workingWeek: readonly Version[];
     timeOff?: readonly { versions: readonly Version[] }[] | null;
   };
@@ -55,7 +57,7 @@ export function bulkGroups({
     skipped.filter((skip) => skip.reason === reason).map(({ employee }) => nameOf(employee));
   return {
     moving: moves.length,
-    alreadyOn: skippedFor("ALREADY_ON_TERMS"),
+    alreadyOn: [...skippedFor("ALREADY_ON_TERMS"), ...skippedFor("ALREADY_ON_NO_TERMS")],
     left: skippedFor("LEFT_BEFORE_DATE"),
     startLater: moves.filter((move) => move.startDate > startDate).map(personOf),
     keepOwn: moves.filter(keepsOwn).map(personOf),
@@ -63,6 +65,12 @@ export function bulkGroups({
       const later = move.employmentTerms.periods.find(
         (period) => period.startDate != null && period.startDate > move.startDate,
       );
+      const noTerms = plannedNoTerms(move.employmentTerms.periods, move.startDate)[0];
+      if (noTerms && (!later || noTerms < later.startDate!)) {
+        return [
+          t("changeTerms.bulk.laterNoTerms", { name: personOf(move), date: shortDate(noTerms) }),
+        ];
+      }
       return later
         ? [
             t("changeTerms.bulk.laterMove", {

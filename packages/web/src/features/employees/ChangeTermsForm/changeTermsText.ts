@@ -3,8 +3,9 @@ import { shortDate } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
 /**
- * What saving a move does, before it is saved: where the person moves and from when, that their
- * allowance is worked out again from a date that has come, and what of their own they keep.
+ * What saving a move does, before it is saved: where the person moves (null terms: off their terms)
+ * and from when, that their allowance is worked out again from a date that has come, and what of
+ * their own they keep.
  */
 export function saveLine({
   firstName,
@@ -12,18 +13,23 @@ export function saveLine({
   startDate,
   today,
   keepsOwn,
+  noWorkingWeek = false,
 }: {
   firstName: string;
-  termsName: string;
+  termsName: string | null;
   startDate: string;
   today: string;
   /** What the person has of their own on that date, such as "working week" or "Annual leave". */
   keepsOwn: readonly string[];
+  /** They are offered time off from that date but have no working week, so it costs no days. */
+  noWorkingWeek?: boolean;
 }): string {
+  const values = { name: firstName, terms: termsName ?? "", date: shortDate(startDate) };
   return [
-    t("changeTerms.saveLine", { name: firstName, terms: termsName, date: shortDate(startDate) }),
+    t(termsName === null ? "changeTerms.saveLineNoTerms" : "changeTerms.saveLine", values),
     startDate <= today && t("changeTerms.reworked", { name: firstName }),
     keepsOwn.length > 0 && t("changeTerms.keeps", { name: firstName, parts: listOf(keepsOwn) }),
+    noWorkingWeek && t("changeTerms.noWorkingWeek"),
   ]
     .filter(Boolean)
     .join(" ");
@@ -37,11 +43,13 @@ export function savedToast({
   today,
 }: {
   firstName: string;
-  termsName: string;
+  /** Null: no terms. */
+  termsName: string | null;
   startDate: string;
   today: string;
 }): string {
-  const values = { name: firstName, terms: termsName, date: shortDate(startDate) };
+  const values = { name: firstName, terms: termsName ?? "", date: shortDate(startDate) };
+  if (termsName === null) return t("changeTerms.noTermsFrom", values);
   return t(startDate > today ? "changeTerms.movesOn" : "changeTerms.isOn", values);
 }
 
@@ -53,14 +61,14 @@ export function skipError({
   reason,
 }: {
   firstName: string;
-  termsName: string;
+  termsName: string | null;
   startDate: string;
   reason: EmployeeTermsChangeSkipReason;
 }): string {
-  const values = { name: firstName, terms: termsName, date: shortDate(startDate) };
-  return reason === "ALREADY_ON_TERMS"
-    ? t("changeTerms.alreadyOn", values)
-    : t("changeTerms.leftBefore", values);
+  const values = { name: firstName, terms: termsName ?? "", date: shortDate(startDate) };
+  if (reason === "ALREADY_ON_TERMS") return t("changeTerms.alreadyOn", values);
+  if (reason === "ALREADY_ON_NO_TERMS") return t("changeTerms.alreadyNoTerms", values);
+  return t("changeTerms.leftBefore", values);
 }
 
 /** "a", "a and b", "a, b and c". */

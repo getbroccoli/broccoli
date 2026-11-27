@@ -14,6 +14,21 @@ it("says when a future move will apply", () => {
   expect(line).toBe("Saving moves Sam to Scotland from 1 Dec 2026.");
 });
 
+it("warns when moving to No terms keeps own time off without a working week", () => {
+  const line = saveLine({
+    firstName: "Sam",
+    termsName: null,
+    startDate: "2026-12-01",
+    today: "2026-11-09",
+    keepsOwn: ["Annual leave"],
+    noWorkingWeek: true,
+  });
+
+  expect(line).toBe(
+    "Saving takes Sam off their terms from 1 Dec 2026. Their employment continues. Sam keeps their own Annual leave. Their own time off counts no days until they have a working week.",
+  );
+});
+
 it.each([
   { startDate: "2026-11-09", date: "9 Nov 2026" },
   { startDate: "2026-03-01", date: "1 Mar 2026" },

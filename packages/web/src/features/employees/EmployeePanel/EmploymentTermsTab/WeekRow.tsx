@@ -7,7 +7,12 @@ import {
 } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
-import { CancelChangeDialog, companyToday, splitVersions } from "@/features/termsDisplay";
+import {
+  CancelChangeDialog,
+  companyToday,
+  DEFAULT_WEEK,
+  splitVersions,
+} from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
 import { forgetHistory } from "../../cache";
@@ -62,14 +67,15 @@ export function WeekRow({
   const base = versionToEditFrom(workingWeek, today);
   const { planned } = splitVersions(workingWeek, today);
   const hasOwn = [base, ...planned].some((version) => version?.source === "THEIR_OWN");
-  const canAct = edit !== null && edit.mode === null && !locked && base !== null;
+  const returnTerms = termsNameOn(base && base.startDate > today ? base.startDate : today);
+  const canAct = edit !== null && edit.mode === null && !locked;
   const open = (mode: "own" | "terms") =>
-    base &&
     edit?.open({
       mode,
-      current: base.week,
+      // Without terms or a week of their own, the form starts from the usual week.
+      current: base?.week ?? DEFAULT_WEEK,
       earliest,
-      alreadyOwn: base.source === "THEIR_OWN",
+      alreadyOwn: base?.source === "THEIR_OWN",
       termsNameOn,
     });
   const cancel = async (startDate: string) => {
@@ -101,11 +107,9 @@ export function WeekRow({
               <Button variant="ghost" size="sm" onClick={() => open("own")}>
                 {t("ownWeek.edit")}
               </Button>
-              {hasOwn && (
+              {hasOwn && returnTerms && (
                 <Button variant="ghost" size="sm" onClick={() => open("terms")}>
-                  {t("ownWeek.useTerms", {
-                    terms: termsNameOn(base && base.startDate > today ? base.startDate : today),
-                  })}
+                  {t("ownWeek.useTerms", { terms: returnTerms })}
                 </Button>
               )}
             </span>

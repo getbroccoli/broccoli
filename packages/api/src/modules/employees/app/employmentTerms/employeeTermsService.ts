@@ -21,9 +21,9 @@ const recordHistory = createRecordHistoryService();
 /** Moving people to other terms from a date, and cancelling a move that has not started. Admins only. */
 export interface EmployeeTermsService {
   /**
-   * Moves each person to the terms from `startDate`, or from their start date when they start
-   * later; a later move stays. Skips, saying why, a person already on the terms then or who left
-   * before. Adds a history line per person moved.
+   * Moves each person to the terms from `startDate`, or to no terms when `termsId` is null, or from
+   * their start date when they start later; a later move stays. Skips, saying why, a person already
+   * on the terms (or without terms) then or who left before. Adds a history line per person moved.
    */
   changeTerms: (ctx: SecurityContext, input: TermsChangeInput) => Promise<TermsChange>;
   /**
@@ -35,8 +35,8 @@ export interface EmployeeTermsService {
     input: TermsChangeInput,
   ) => Promise<TermsChangePreview>;
   /**
-   * Removes the person's move starting on `startDate`; the terms before it run on. CONFLICT once
-   * it has started, or when there is none.
+   * Removes the person's move starting on `startDate`, to terms or to no terms; the terms before it
+   * run on. CONFLICT once it has started, or when there is none.
    */
   cancelTermsChange: (
     ctx: SecurityContext,
@@ -46,7 +46,8 @@ export interface EmployeeTermsService {
 
 export interface TermsChangeInput {
   employeeIds: readonly string[];
-  termsId: string;
+  /** Null: no terms. */
+  termsId: string | null;
   startDate: string;
 }
 
@@ -94,7 +95,7 @@ export function createEmployeeTermsService({
                 oldValue: fromTermsId && termsValue(fromTermsId, from),
                 newValue: termsValue(request.termsId, from),
                 oldLabel: fromTermsId && (names.get(fromTermsId) ?? null),
-                newLabel: names.get(request.termsId) ?? null,
+                newLabel: (request.termsId && names.get(request.termsId)) ?? null,
               },
             ],
           })),
@@ -156,7 +157,8 @@ export function createEmployeeTermsService({
         const rows = (await terms.findMemberships([employeeId])).get(employeeId) ?? [];
         const { cancelled: row, memberships } = cancelTermsMove(rows, input.startDate, today());
         await terms.replaceMemberships(new Map([[employeeId, memberships]]));
-        const name = (await terms.findNames([row.termsId])).get(row.termsId) ?? null;
+        const name =
+          row.termsId && ((await terms.findNames([row.termsId])).get(row.termsId) ?? null);
         await recordHistory.append(ctx, tx, {
           recordType: "employee",
           operation: "UPDATED",
@@ -167,7 +169,7 @@ export function createEmployeeTermsService({
               changes: [
                 {
                   field: "terms",
-                  oldValue: termsValue(row.termsId, row.startDate!),
+                  oldValue: termsValue(row.termsId, row.startDate),
                   newValue: null,
                   oldLabel: name,
                   newLabel: null,
@@ -176,7 +178,7 @@ export function createEmployeeTermsService({
             },
           ],
         });
-        publishTermsChange(tx, [employeeId], row.startDate!);
+        publishTermsChange(tx, [employeeId], row.startDate);
         return row;
       });
       logger.info(
@@ -189,7 +191,7 @@ export function createEmployeeTermsService({
 
 interface Request {
   employeeIds: string[];
-  termsId: string;
+  termsId: string | null;
   startDate: CalendarDate;
 }
 
@@ -197,6 +199,9 @@ function parseRequest(ctx: SecurityContext, input: TermsChangeInput, today: Cale
   ctx.require("MANAGE_WORKSPACE");
   const employeeIds = parseEmployeeIds(input.employeeIds);
   const startDate = parseChangeDate(input.startDate, today);
+  if (input.termsId === null) {
+    return { employeeIds, termsId: null, startDate };
+  }
   const termsId = parseUuid(input.termsId);
   if (!termsId) {
     throw termsNotFound();
@@ -222,7 +227,7 @@ async function planMoves(
 }> {
   const terms = termsRepository(tx);
   // Kept until the transaction ends, so the terms cannot be deleted while people move onto them.
-  if (!(await terms.keep(termsId))) {
+  if (termsId && !(await terms.keep(termsId))) {
     throw termsNotFound();
   }
   if ((await employeeRepository(tx).findByIds(employeeIds)).length < employeeIds.length) {
@@ -247,12 +252,12 @@ async function planMoves(
       moves.push({ employeeId, ...plan });
     }
   }
-  const named = [termsId, ...moves.flatMap(({ fromTermsId }) => fromTermsId ?? [])];
+  const named = [termsId ?? [], ...moves.map(({ fromTermsId }) => fromTermsId ?? [])].flat();
   return { moves, skipped, names: await terms.findNames([...new Set(named)]) };
 }
 
-/** A terms change's value in history: the terms and the date it applies from. */
-function termsValue(termsId: string, startDate: CalendarDate): string {
+/** A terms change's value in history: the terms, null for none, and the date it applies from. */
+function termsValue(termsId: string | null, startDate: CalendarDate): string {
   return JSON.stringify({ termsId, startDate });
 }
 

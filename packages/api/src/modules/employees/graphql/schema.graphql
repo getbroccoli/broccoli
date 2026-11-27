@@ -194,7 +194,7 @@ type EmployeesMutations {
   cancelWorkingPatternChange(
     input: WorkingPatternCancelChangeInput!
   ): WorkingPatternCancelChangePayload!
-  "Moves people to terms from a date no earlier than the start of the current leave year, each with a history line; a later move stays. Skips, saying why, who cannot move. Admins only."
+  "Moves people to terms, or to no terms, from a date no earlier than the start of the current leave year, each with a history line; a later move stays. Skips, saying why, who cannot move. Refused with a ConflictError, moving nobody, while it would leave someone's approved or pending time off without rules. Admins only."
   changeTerms(input: EmployeeTermsChangeInput!): EmployeeTermsChangePayload!
   "Removes a person's move to other terms that has not started; the terms before it run on. Refused with a ConflictError once it has started. Admins only."
   cancelTermsChange(input: EmployeeTermsCancelChangeInput!): EmployeeTermsCancelChangePayload!
@@ -246,7 +246,8 @@ union EmployeeOwnWorkingWeekError = InvalidInputError | NotFoundError | Conflict
 input EmployeeTermsChangeInput {
   "1 to 1,000 people."
   employeeIds: [ID!]!
-  termsId: ID!
+  "Null: no terms; the terms covering the date end the day before, and a later move stays."
+  termsId: ID
   "A person who starts later moves from their start date."
   startDate: Date!
 }
@@ -264,7 +265,7 @@ type EmployeeTermsChangePayload {
   error: EmployeeTermsChangeError
 }
 
-union EmployeeTermsChangeError = InvalidInputError | NotFoundError
+union EmployeeTermsChangeError = InvalidInputError | NotFoundError | ConflictError
 
 "A person moving to terms, and the date they move from."
 type EmployeeTermsMove {
@@ -281,6 +282,8 @@ type EmployeeTermsChangeSkip {
 enum EmployeeTermsChangeSkipReason {
   "They are on these terms on that date already."
   ALREADY_ON_TERMS
+  "They have no terms on that date already."
+  ALREADY_ON_NO_TERMS
   "Their employment ended before that date."
   LEFT_BEFORE_DATE
 }

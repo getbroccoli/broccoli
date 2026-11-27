@@ -6,7 +6,7 @@ import { addDays } from "@/lib/calendarDay";
 import { cn } from "@/lib/class-names";
 
 import { ChangeTermsForm } from "../../ChangeTermsForm";
-import { termsPeriodsOn } from "./employmentTermsView";
+import { plannedNoTerms, termsPeriodsOn } from "./employmentTermsView";
 import { PlannedMove } from "./PlannedMove";
 import { TermsLastChange } from "./TermsLastChange";
 import { TermsName } from "./TermsName";
@@ -47,8 +47,16 @@ export function TermsCard({
 }: Props) {
   const { periods, timeOff } = employmentTerms;
   const today = companyToday();
-  const { current, planned, earlier } = termsPeriodsOn(periods, today);
-  const termsOn = (date: string) => termsPeriodsOn(periods, date).current ?? current;
+  const { current, planned: plannedPeriods, earlier } = termsPeriodsOn(periods, today);
+  const planned = [
+    ...plannedPeriods.map((period) => ({ ...period, startDate: period.startDate! })),
+    ...plannedNoTerms(periods, today).map((startDate) => ({
+      termsId: null,
+      termsName: t("changeTerms.noTerms"),
+      startDate,
+    })),
+  ].toSorted((a, b) => a.startDate.localeCompare(b.startDate));
+  const termsOn = (date: string) => termsPeriodsOn(periods, date).current;
   const termsNameOn = (date: string) => termsOn(date)?.termsName ?? "";
   // A type without a balance has no leave year; the first one with one says it.
   const leaveYear = timeOff
@@ -121,7 +129,7 @@ export function TermsCard({
             key={period.startDate}
             employeeId={employeeId}
             firstName={firstName}
-            period={{ ...period, startDate: period.startDate! }}
+            period={period}
             staysOn={(index === 0 ? current : planned[index - 1])?.termsName ?? ""}
             linksToSettings={linksToSettings}
             canCancel={Boolean(change) && !editing && !otherEdit}
