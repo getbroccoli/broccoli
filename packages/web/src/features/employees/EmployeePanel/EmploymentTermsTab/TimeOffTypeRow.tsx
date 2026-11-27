@@ -111,7 +111,11 @@ export function TimeOffTypeRow({
         }
         value={editing === "own" ? null : row.value}
         missing={
-          editing === "own" ? "" : t("people.panel.terms.notOffered", { terms: currentTermsName })
+          editing === "own"
+            ? ""
+            : currentTermsName
+              ? t("people.panel.terms.notOffered", { terms: currentTermsName })
+              : t("people.panel.terms.notOfferedWithoutTerms")
         }
         planned={row.planned}
         change={change}
@@ -131,9 +135,9 @@ export function TimeOffTypeRow({
                   {t("ownRules.stop", { name: firstName })}
                 </Button>
               )}
-              {hasOwn && (
+              {hasOwn && termsOn(returnDate) && (
                 <Button variant="ghost" size="sm" onClick={() => open("terms")}>
-                  {t("ownRules.useTerms", { terms: termsOn(returnDate)?.termsName ?? "" })}
+                  {t("ownRules.useTerms", { terms: termsOn(returnDate)!.termsName })}
                 </Button>
               )}
             </span>
