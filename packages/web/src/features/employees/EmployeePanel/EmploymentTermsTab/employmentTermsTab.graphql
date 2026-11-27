@@ -235,6 +235,14 @@ mutation UseTermsRules($input: TimeOffTermsRulesUseInput!) {
   }
 }
 
+mutation StopOffering($input: TimeOffOfferStopInput!) {
+  timeOff {
+    stopOffering(input: $input) {
+      ...OwnRulesPayload @unmask
+    }
+  }
+}
+
 mutation CancelOwnRulesChange($input: TimeOffOwnRulesCancelChangeInput!) {
   timeOff {
     cancelOwnRulesChange(input: $input) {

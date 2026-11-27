@@ -12,6 +12,7 @@ import {
   type Allowance,
   allowanceRepository,
   type BookedDay,
+  offerStopRepository,
   type PolicyAssignment,
   timeOffPolicyRepository,
   timeOffRepository,
@@ -119,6 +120,9 @@ export async function readPeople(
   const termsIds = [...new Set([...memberships.values()].flat().map(({ termsId }) => termsId))];
   const stored = await policyRepository.findAssignments({ employeeIds: ids, termsIds });
   const rows = Map.groupBy(assignments ? assignments(stored) : stored, laneKey);
+  const stops = await offerStopRepository(tx).findByEmployees(ids);
+  const stopsOf = (employeeId: string, typeId: string) =>
+    stops.filter((stop) => stop.employeeId === employeeId && stop.timeOffTypeId === typeId);
   const versions = new Map(
     policies.flatMap((policy) => policy.versions.map((version) => [version.id, version])),
   );
@@ -131,7 +135,10 @@ export async function readPeople(
       serviceStart: periods[0]?.startDate ?? null,
       timelineOf: (timeOffTypeId: string) =>
         createPersonTimeline({
-          direct: rows.get(laneKey({ owner: { employeeId }, timeOffTypeId })) ?? [],
+          direct: [
+            ...(rows.get(laneKey({ owner: { employeeId }, timeOffTypeId })) ?? []),
+            ...stopsOf(employeeId, timeOffTypeId).map((stop) => ({ ...stop, versionId: null })),
+          ],
           terms: memberships.get(employeeId) ?? [],
           termsAssignments: (termsId) =>
             rows.get(laneKey({ owner: { termsId }, timeOffTypeId })) ?? [],

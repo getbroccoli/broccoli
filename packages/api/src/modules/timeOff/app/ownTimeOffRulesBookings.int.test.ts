@@ -35,7 +35,7 @@ test("refuses returning to terms without rules for booked time off and keeps the
     service.useTermsRules(OWNER, { ...input, startDate: "2026-11-11" }),
   ).rejects.toMatchObject({
     code: "CONFLICT",
-    message: "1 person has this time off type booked from that date.",
+    message: "Study leave is booked on 18 Nov.",
   });
 
   expect(await timeOff.readPersonTimeOff(OWNER, { employeeIds: [employee.id] })).toEqual(before);
@@ -88,7 +88,7 @@ test("refuses cancelling a planned own offer needed by a booking and keeps the p
     service.cancelOwnRulesChange(OWNER, { ...input, startDate: "2026-12-01" }),
   ).rejects.toMatchObject({
     code: "CONFLICT",
-    message: "1 person has this time off type booked from that date.",
+    message: "Study leave is booked on 2 Dec.",
   });
 
   expect(await timeOff.readPersonTimeOff(OWNER, { employeeIds: [employee.id] })).toEqual(before);

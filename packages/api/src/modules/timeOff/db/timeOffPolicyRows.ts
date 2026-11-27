@@ -33,9 +33,10 @@ export function versionColumns({ balance, bankHolidays, leaveYear }: NewPolicyVe
 export function toAssignment(row: typeof timeOffPolicyAssignments.$inferSelect): PolicyAssignment {
   return {
     id: row.id,
-    versionId: row.timeOffPolicyVersionId,
+    // Callers read stops, the rows without a version, apart.
+    versionId: row.timeOffPolicyVersionId!,
     timeOffTypeId: row.timeOffTypeId,
-    timeOffPolicyId: row.timeOffPolicyId,
+    timeOffPolicyId: row.timeOffPolicyId!,
     owner: row.employeeId !== null ? { employeeId: row.employeeId } : { termsId: row.termsId! },
     startDate: row.startDate,
     endDate: row.endDate,

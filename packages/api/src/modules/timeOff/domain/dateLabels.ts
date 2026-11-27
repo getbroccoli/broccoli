@@ -1,4 +1,4 @@
-import { type CalendarDate, weekdayOf } from "../../../utils";
+import { addDays, type CalendarDate, weekdayOf } from "../../../utils";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -18,6 +18,17 @@ export function dateRangeLabel(first: CalendarDate, last: CalendarDate): string 
   }
   if (from.month !== to.month) return `${from.day} ${from.month} – ${to.day} ${to.month}`;
   return `${from.day}–${to.day} ${to.month}`;
+}
+
+/** Dates as runs of consecutive days, each as `dateRangeLabel` shows it: "4–8 Jan, 11 Jan". */
+export function datesLabel(dates: readonly CalendarDate[]): string {
+  const runs: { first: CalendarDate; last: CalendarDate }[] = [];
+  for (const date of [...new Set(dates)].toSorted()) {
+    const run = runs.at(-1);
+    if (run && addDays(run.last, 1) === date) run.last = date;
+    else runs.push({ first: date, last: date });
+  }
+  return runs.map(({ first, last }) => dateRangeLabel(first, last)).join(", ");
 }
 
 function parts(date: CalendarDate) {

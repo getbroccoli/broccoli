@@ -1,8 +1,7 @@
-import { ApplicationError } from "../../../core/applicationError";
+import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import type { Transact, Tx } from "../../../core/db";
 import type { Logger } from "../../../core/logger";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
-import { createRecordHistoryService } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
 import { addDays, type CalendarDate, parseUuid, todayInLondon } from "../../../utils";
 import {
@@ -22,21 +21,22 @@ import {
   type NewPolicyVersion,
   parseRules,
   refuseCountsChangesMidYear,
-  rulesOfVersion,
   type TimeOffRulesInput,
   type TimeOffType,
   versionFromRules,
 } from "../domain";
 import { readPeople } from "./allowanceEngine";
 import { watchBookedTimeOff } from "./watchBookedTimeOff";
-import { readOwnRules, saveOwnRules } from "./ownRulesStore";
+import { appendOwnRulesHistory } from "./ownRulesHistory";
+import { NOT_OFFERED, type OwnRules, readOwnRules, saveOwnRules } from "./ownRulesStore";
 import { existingType, rulesChanged } from "./policyRules";
 import type { TimeOffService } from "./timeOffService";
 
 /**
  * A person's own rules for one time off type on top of their terms: set or changed from a date,
- * given back to the terms from a date, and a change that has not started cancelled. Each keeps
- * the person's allowances and adds a line to their history. Admins only.
+ * the type stopped for them alone, given back to the terms from a date, and a change that has not
+ * started cancelled. Each keeps the person's allowances and adds a line to their history. Admins
+ * only.
  */
 export interface OwnTimeOffRulesService {
   /**
@@ -47,6 +47,12 @@ export interface OwnTimeOffRulesService {
     ctx: SecurityContext,
     input: OwnRulesInput & { rules: TimeOffRulesInput },
   ) => Promise<void>;
+  /**
+   * Stops offering the type to the person from `startDate`, whether their terms or their own rules
+   * offer it, until their next own change; INVALID_INPUT when nothing offers it then, CONFLICT
+   * while that leaves their booked time off of the type without rules.
+   */
+  stopOffering: (ctx: SecurityContext, input: OwnRulesInput) => Promise<void>;
   /**
    * Their terms' rules for the type from `startDate`: own rules covering it end the day before,
    * later ones go. CONFLICT while that leaves their booked time off of the type without rules.
@@ -101,6 +107,26 @@ export function createOwnTimeOffRulesService({
       logger.info(changed, "Set own time off rules");
     },
 
+    async stopOffering(ctx, input) {
+      ctx.require("MANAGE_WORKSPACE");
+      const changed = await changeOwnRules(
+        dependencies,
+        ctx,
+        input,
+        ({ stretches, from, onDate }) => {
+          if (!onDate) {
+            throw invalidInput([{ field: "timeOffTypeId", code: "not_offered" }]);
+          }
+          return {
+            stretches: withOwnStretch<OwnRules>(stretches, from, NOT_OFFERED),
+            before: ownStretchOn(stretches, from)?.value ?? null,
+            after: NOT_OFFERED,
+          };
+        },
+      );
+      logger.info(changed, "Stopped offering a time off type to a person");
+    },
+
     async useTermsRules(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
       const changed = await changeOwnRules(dependencies, ctx, input, ({ stretches, from }) => ({
@@ -139,7 +165,7 @@ interface Dependencies {
   employeeReads: EmployeeReadService;
 }
 
-type Rules = NewPolicyVersion;
+type Rules = OwnRules;
 
 /** A change to a person's own rules for one type, and what its history line says it changed. */
 interface Applied {
@@ -155,7 +181,7 @@ interface Applied {
 interface ChangeStart {
   stretches: OwnStretch<Rules>[];
   from: CalendarDate;
-  onDate: Rules | null;
+  onDate: NewPolicyVersion | null;
 }
 
 /**
@@ -187,7 +213,7 @@ async function changeOwnRules(
     const applied = apply({ stretches, from, onDate });
     const refuseLostBookings = await watchBookedTimeOff(employeeReads, tx, {
       employeeIds: [employeeId],
-      timeOffTypeId: timeOffType.id,
+      timeOffType,
       from,
     });
     const timeOffPolicyId = await saveOwnRules(tx, lane, versions, applied.stretches);
@@ -197,10 +223,11 @@ async function changeOwnRules(
       timeOffTypeId: timeOffType.id,
       startDate: from,
     });
-    await appendOwnRulesHistory(ctx, tx, { employeeId, timeOffType, from, applied });
+    await appendOwnRulesHistory(ctx, tx, { employeeId, timeOffType, from, ...applied });
     const ensured = await timeOff.ensureAllowances(ctx, tx, {
       employeeIds: [employeeId],
-      cause: rulesChanged(timeOffPolicyId, from),
+      // A person with only stops has no policy of their own; the type names the rules changed.
+      cause: rulesChanged(timeOffPolicyId ?? timeOffType.id, from),
     });
     return {
       employeeId,
@@ -301,45 +328,6 @@ async function timelineOf(
 ) {
   const { people } = await readPeople(employeeReads, tx, [employeeId]);
   return people[0]!.timelineOf(timeOffType.id);
-}
-
-const recordHistory = createRecordHistoryService();
-
-/** The line in the person's history: their own rules before and after, each with the date. */
-async function appendOwnRulesHistory(
-  ctx: SecurityContext,
-  tx: Tx,
-  {
-    employeeId,
-    timeOffType,
-    from,
-    applied,
-  }: { employeeId: string; timeOffType: TimeOffType; from: CalendarDate; applied: Applied },
-) {
-  await recordHistory.append(ctx, tx, {
-    recordType: "employee",
-    operation: "UPDATED",
-    cause: { kind: "EDITED_DIRECTLY" },
-    records: [
-      {
-        recordId: employeeId,
-        changes: [
-          {
-            field: `timeOff.${timeOffType.id}`,
-            oldValue: rulesValue(applied.before, from),
-            newValue: applied.cancelled ? null : rulesValue(applied.after ?? null, from),
-            oldLabel: timeOffType.name,
-            newLabel: timeOffType.name,
-          },
-        ],
-      },
-    ],
-  });
-}
-
-/** Rules as the line in history keeps them, with the date they apply from; null rules are the terms'. */
-function rulesValue(rules: Rules | null, startDate: CalendarDate): string {
-  return JSON.stringify({ startDate, rules: rules && rulesOfVersion(rules) });
 }
 
 const LAST_DATE = "9999-12-31" as CalendarDate;

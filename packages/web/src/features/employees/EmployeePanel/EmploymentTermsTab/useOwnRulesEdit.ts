@@ -6,6 +6,7 @@ import {
   PersonRulesSinceDocument,
   type OwnRulesPayloadFragment,
   SetOwnRulesDocument,
+  StopOfferingDocument,
   type RuleSource,
   type TimeOffBalanceKind,
   type TimeOffRulesInput,
@@ -28,6 +29,7 @@ import { forgetHistory } from "../../cache";
 import {
   ownRulesSavedToast,
   ownRulesSaveLine,
+  ownRulesStopLine,
   termsRulesSavedToast,
   termsRulesSaveLine,
 } from "./ownRulesText";
@@ -36,18 +38,18 @@ import { rulesBefore, rulesDateError } from "./ownRulesForm";
 /** Why the server refused an own rules save, as the payload says. */
 export type OwnRulesFailure = NonNullable<OwnRulesPayloadFragment["error"]>;
 
-/** What a type row edits: the person's own rules, or a return to their terms' rules. */
-export type OwnRulesMode = "own" | "terms";
+/** What a type row edits: the person's own rules, a return to their terms' rules, or a stop. */
+export type OwnRulesMode = "own" | "terms" | "stop";
 
 /** The rules form with the date it applies from. */
 export type OwnRulesDraft = RulesValues & { startDate: string };
 
-/** A person's rules for a type from a date, and where they come from. */
+/** A person's rules for a type from a date, and where they come from; null rules: their own stop. */
 export type PersonRules = {
   source: RuleSource;
   startDate: string;
   endDate?: string | null;
-  rules: { balance: TimeOffBalanceKind };
+  rules: { balance: TimeOffBalanceKind } | null;
 };
 
 /** The terms a person is on on a date. */
@@ -90,6 +92,9 @@ export function useOwnRulesEdit(person: { employeeId: string; firstName: string 
   const [returnToTerms, returning] = usePayloadMutation(UseTermsRulesDocument, {
     update: forgetHistory,
   });
+  const [stopOffering, stopping] = usePayloadMutation(StopOfferingDocument, {
+    update: forgetHistory,
+  });
   const today = companyToday();
   const shown = draft ?? closedDraft(today);
   const { terms, termsRules } = useTermsRules(opened, shown.startDate);
@@ -123,7 +128,7 @@ export function useOwnRulesEdit(person: { employeeId: string; firstName: string 
       ? t("ownRules.loadFailed", { name: firstName })
       : (failure ?? formError ?? null),
     changed: isChanged(opened, draft),
-    saving: setting.loading || returning.loading,
+    saving: setting.loading || returning.loading || stopping.loading,
     open: (start) => {
       opening.current++;
       setOpened(start);
@@ -146,7 +151,9 @@ export function useOwnRulesEdit(person: { employeeId: string; firstName: string 
       try {
         await (opened.mode === "own"
           ? setOwn({ variables: { input: { ...input, rules: rulesInputOf(shown) } } })
-          : returnToTerms({ variables: { input } }));
+          : opened.mode === "stop"
+            ? stopOffering({ variables: { input } })
+            : returnToTerms({ variables: { input } }));
         if (submittedOpening !== opening.current) return;
         toast(
           savedToastOf(opened, {
@@ -159,7 +166,7 @@ export function useOwnRulesEdit(person: { employeeId: string; firstName: string 
         close();
       } catch (error) {
         if (submittedOpening === opening.current) {
-          setFailure(failureOf(error, { name: firstName, type: opened.timeOffType.name }));
+          setFailure(failureOf(error));
         }
       }
     },
@@ -218,12 +225,13 @@ function saveLineOf(
   },
 ): string | null {
   const values = { firstName, typeName: start.timeOffType.name, startDate, today };
+  if (start.mode === "stop") return ownRulesStopLine(values);
   if (start.mode === "own") {
     const onDate = versionOn(versions, startDate);
     return ownRulesSaveLine({
       ...values,
-      alreadyOwn: onDate?.source === "THEIR_OWN",
-      offer: onDate === null,
+      alreadyOwn: onDate?.source === "THEIR_OWN" && onDate.rules !== null,
+      offer: !onDate?.rules,
     });
   }
   return termsOffer === null
@@ -247,15 +255,14 @@ function savedToastOf(
   },
 ): string {
   const typeName = start.timeOffType.name;
-  return start.mode === "own"
-    ? ownRulesSavedToast(firstName, typeName)
-    : termsRulesSavedToast({
-        firstName,
-        typeName,
-        termsName: terms?.termsName ?? "",
-        termsOffer,
-        startDate,
-      });
+  if (start.mode === "own") return ownRulesSavedToast(firstName, typeName);
+  return termsRulesSavedToast({
+    firstName,
+    typeName,
+    termsName: terms?.termsName ?? "",
+    termsOffer: start.mode === "terms" && termsOffer,
+    startDate,
+  });
 }
 
 /** What the form holds while closed. */
@@ -297,8 +304,9 @@ function formErrorOf(
     rulesDateError({
       startDate: draft.startDate,
       earliest: start.earliest,
-      before: (versions && rulesBefore(versions, draft.startDate)?.rules.balance) ?? null,
-      balance: start.mode === "own" ? draft.balance : termsBalance,
+      before: (versions && rulesBefore(versions, draft.startDate)?.rules?.balance) ?? null,
+      // Ending rules partway through a leave year is allowed.
+      balance: start.mode === "own" ? draft.balance : start.mode === "terms" ? termsBalance : null,
     }) ??
     days ??
     null
@@ -306,9 +314,10 @@ function formErrorOf(
 }
 
 /** What the form says when the server refuses the save. */
-function failureOf(error: unknown, { name, type }: { name: string; type: string }): string {
+function failureOf(error: unknown): string {
   const refused = error instanceof PayloadFailure ? (error.payloadError as OwnRulesFailure) : null;
-  if (refused?.__typename === "ConflictError") return t("ownRules.booked", { name, type });
+  // The server names the type and the booked days.
+  if (refused?.__typename === "ConflictError") return refused.message;
   const fields = refused?.__typename === "InvalidInputError" ? refused.fields : [];
   return fields.some(({ code }) => code === "not_leave_year_start")
     ? t("ownRules.countsDate")

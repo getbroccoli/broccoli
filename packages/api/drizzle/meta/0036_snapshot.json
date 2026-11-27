@@ -2985,13 +2985,13 @@
           "name": "time_off_policy_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "time_off_policy_version_id": {
           "name": "time_off_policy_version_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "start_date": {
           "name": "start_date",
@@ -3089,6 +3089,10 @@
         "time_off_policy_assignments_one_owner": {
           "name": "time_off_policy_assignments_one_owner",
           "value": "num_nonnulls(\"time_off_policy_assignments\".\"employee_id\", \"time_off_policy_assignments\".\"terms_id\") = 1"
+        },
+        "time_off_policy_assignments_version_or_stop": {
+          "name": "time_off_policy_assignments_version_or_stop",
+          "value": "(\"time_off_policy_assignments\".\"time_off_policy_id\" is null) = (\"time_off_policy_assignments\".\"time_off_policy_version_id\" is null) and (\"time_off_policy_assignments\".\"employee_id\" is not null or \"time_off_policy_assignments\".\"time_off_policy_version_id\" is not null)"
         },
         "time_off_policy_assignments_dates_in_order": {
           "name": "time_off_policy_assignments_dates_in_order",

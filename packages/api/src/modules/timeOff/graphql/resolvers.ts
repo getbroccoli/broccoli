@@ -191,7 +191,7 @@ export function createResolvers({
           source: toEnum(source),
           startDate,
           endDate,
-          rules: { ...toGraphqlRules(version), id: version.id, startDate, endDate },
+          rules: version && { ...toGraphqlRules(version), id: version.id, startDate, endDate },
         })),
     },
     Terms: {

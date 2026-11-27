@@ -8,8 +8,9 @@ import { timeOffTypes } from "./timeOffTypesTable";
 
 /**
  * Who has a policy version for its type from a date to a date: one person ahead of their terms, or
- * one set of terms. An owner's rows for one type never overlap; the migration adds those exclusion
- * constraints and the foreign keys to employees and terms, which another module owns.
+ * one set of terms. A person's row without a version stops offering them the type. An owner's rows
+ * for one type never overlap; the migration adds those exclusion constraints and the foreign keys
+ * to employees and terms, which another module owns.
  */
 export const timeOffPolicyAssignments = pgTable(
   "time_off_policy_assignments",
@@ -20,8 +21,9 @@ export const timeOffPolicyAssignments = pgTable(
     employeeId: uuid("employee_id"),
     termsId: uuid("terms_id"),
     timeOffTypeId: uuid("time_off_type_id").notNull(),
-    timeOffPolicyId: uuid("time_off_policy_id").notNull(),
-    timeOffPolicyVersionId: uuid("time_off_policy_version_id").notNull(),
+    /** Null with the version: the type is not offered to the person. */
+    timeOffPolicyId: uuid("time_off_policy_id"),
+    timeOffPolicyVersionId: uuid("time_off_policy_version_id"),
     startDate: date("start_date", { mode: "string" }).$type<CalendarDate>().notNull(),
     /** The last day the row applies; null: open-ended. */
     endDate: date("end_date", { mode: "string" }).$type<CalendarDate>(),
@@ -51,6 +53,10 @@ export const timeOffPolicyAssignments = pgTable(
     check(
       "time_off_policy_assignments_one_owner",
       sql`num_nonnulls(${table.employeeId}, ${table.termsId}) = 1`,
+    ),
+    check(
+      "time_off_policy_assignments_version_or_stop",
+      sql`(${table.timeOffPolicyId} is null) = (${table.timeOffPolicyVersionId} is null) and (${table.employeeId} is not null or ${table.timeOffPolicyVersionId} is not null)`,
     ),
     check(
       "time_off_policy_assignments_dates_in_order",

@@ -748,6 +748,8 @@ type TimeOffMutations {
   setOwnRules(input: TimeOffOwnRulesSetInput!): TimeOffOwnRulesPayload!
   "Puts a person back on their terms' rules for a type from a date: their own rules covering it end the day before, later ones go. The type is not offered to them where their terms don't offer it; refused with a ConflictError while that would leave their booked time off of the type without rules. Admins only."
   useTermsRules(input: TimeOffTermsRulesUseInput!): TimeOffOwnRulesPayload!
+  "Stops offering a type to one person from a date no earlier than this leave year's start or their start, whether their terms or their own rules offer it, until their next own rules change; their terms' rules come back with useTermsRules, and cancelOwnRulesChange removes a stop that has not started. Refused when nothing offers them the type then (`timeOffTypeId` / `not_offered`), and with a ConflictError while it would leave their booked time off of the type without rules. Admins only."
+  stopOffering(input: TimeOffOfferStopInput!): TimeOffOwnRulesPayload!
   "Removes a change to a person's own rules for a type that has not started: new own rules, a change to them, or a return to their terms. Refused with a ConflictError once it has started, or while cancelling it would leave their booked time off of the type without rules. Admins only."
   cancelOwnRulesChange(input: TimeOffOwnRulesCancelChangeInput!): TimeOffOwnRulesPayload!
   "Adds days to or takes days from a person's current balance, with a comment everyone who reads the balance sees; refused for a leave year that has ended (ConflictError). Admins only."
@@ -795,6 +797,13 @@ input TimeOffOwnRulesSetInput {
 input TimeOffTermsRulesUseInput {
   employeeId: ID!
   timeOffTypeId: ID!
+  startDate: Date!
+}
+
+input TimeOffOfferStopInput {
+  employeeId: ID!
+  timeOffTypeId: ID!
+  "The first day the type is not offered to the person."
   startDate: Date!
 }
 
@@ -887,7 +896,8 @@ type PersonTimeOffRules {
   startDate: Date!
   "The last day; null: open-ended."
   endDate: Date
-  rules: TimeOffPolicyVersion!
+  "Null: not offered to the person, stopped for them alone (source THEIR_OWN)."
+  rules: TimeOffPolicyVersion
 }
 
 # Time off is a record type.

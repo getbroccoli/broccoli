@@ -94,7 +94,7 @@ export function TermsRows({
                 before?.versions ?? [],
                 after?.versions ?? [],
                 change.date,
-                describeRules,
+                (version) => describeRules(version, notOffered),
                 notOffered,
               )
             }

@@ -181,7 +181,7 @@ function assertTimeline(versions: PersonTimeOff["versions"], model: Model) {
     if (!previous) continue;
     expect(previous.endDate).not.toBeNull();
     expect(previous.endDate! < row.startDate).toBe(true);
-    if (previous.version.balance !== row.version.balance) {
+    if (previous.version?.balance !== row.version?.balance) {
       expect(row.startDate.endsWith("-01-01")).toBe(true);
     }
   }
@@ -194,12 +194,12 @@ function assertTimeline(versions: PersonTimeOff["versions"], model: Model) {
     const row = versions.find(
       (version) => version.startDate <= date && (!version.endDate || date <= version.endDate),
     );
-    const yearly = row?.version.rules.find((rule) => rule.kind === "yearly_entitlement");
+    const yearly = row?.version?.rules.find((rule) => rule.kind === "yearly_entitlement");
     actual.push({
       source: row?.source,
-      balance: row?.version.balance,
+      balance: row?.version?.balance,
       entitlementDays: yearly?.entitlementDays ?? null,
-      bankHolidays: row?.version.bankHolidays,
+      bankHolidays: row?.version?.bankHolidays,
     });
     expected.push({ source: own ? "their_own" : "from_their_terms", ...(own ?? TERMS_RULES) });
   }

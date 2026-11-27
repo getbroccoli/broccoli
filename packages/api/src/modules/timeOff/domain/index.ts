@@ -28,7 +28,7 @@ export {
 } from "./allowanceCalculator";
 export { cancelRefusal, type CancelRefusal } from "./cancelRefusal";
 export { chargedDays } from "./chargedDays";
-export { dateRangeLabel, dayLabel } from "./dateLabels";
+export { dateRangeLabel, datesLabel, dayLabel } from "./dateLabels";
 export {
   type BookedDayLine,
   ledgerDifference,

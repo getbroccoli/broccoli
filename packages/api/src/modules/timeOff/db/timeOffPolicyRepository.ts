@@ -1,4 +1,4 @@
-import { asc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 
 import { anyOf, isUniqueViolation, type Orm, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
@@ -77,7 +77,7 @@ export interface TimeOffPolicyRepository {
    * nothing else may point at a policy or own type.
    */
   deleteAll(): Promise<void>;
-  /** The assignments of these employees and terms, oldest first. */
+  /** The assignments of these employees and terms, oldest first; stops are left out. */
   findAssignments(owners: {
     employeeIds?: readonly string[];
     termsIds?: readonly string[];
@@ -86,11 +86,12 @@ export interface TimeOffPolicyRepository {
   findAssignmentsOfVersions(versionIds: readonly string[]): Promise<PolicyAssignment[]>;
   /** The assignments with these ids. */
   findAssignmentsById(ids: readonly string[]): Promise<PolicyAssignment[]>;
-  /** Every assignment, oldest first. */
+  /** Every assignment, oldest first; stops are left out. */
   findAllAssignments(): Promise<PolicyAssignment[]>;
   insertAssignment(row: Omit<PolicyAssignment, "id">): Promise<string>;
   /** Sets an assignment's last day; null makes it open-ended. */
   endAssignment(id: string, endDate: CalendarDate | null): Promise<void>;
+  /** Deletes an assignment or a stop. */
   deleteAssignment(id: string): Promise<void>;
 }
 
@@ -264,11 +265,14 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
         .select()
         .from(timeOffPolicyAssignments)
         .where(
-          or(
-            employeeIds.length > 0
-              ? anyOf(timeOffPolicyAssignments.employeeId, employeeIds)
-              : undefined,
-            termsIds.length > 0 ? anyOf(timeOffPolicyAssignments.termsId, termsIds) : undefined,
+          and(
+            HAS_VERSION,
+            or(
+              employeeIds.length > 0
+                ? anyOf(timeOffPolicyAssignments.employeeId, employeeIds)
+                : undefined,
+              termsIds.length > 0 ? anyOf(timeOffPolicyAssignments.termsId, termsIds) : undefined,
+            ),
           ),
         )
         .orderBy(asc(timeOffPolicyAssignments.startDate));
@@ -291,7 +295,7 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
       const rows = await orm()
         .select()
         .from(timeOffPolicyAssignments)
-        .where(inArray(timeOffPolicyAssignments.id, [...ids]));
+        .where(and(HAS_VERSION, inArray(timeOffPolicyAssignments.id, [...ids])));
       return rows.map(toAssignment);
     },
 
@@ -299,6 +303,7 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
       const rows = await orm()
         .select()
         .from(timeOffPolicyAssignments)
+        .where(HAS_VERSION)
         .orderBy(asc(timeOffPolicyAssignments.startDate));
       return rows.map(toAssignment);
     },
@@ -323,6 +328,8 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
     },
   };
 }
+
+const HAS_VERSION = isNotNull(timeOffPolicyAssignments.timeOffPolicyVersionId);
 
 function nameTakenOr(error: unknown): unknown {
   return isUniqueViolation(error, TIME_OFF_TYPE_NAME_UNIQUE)
