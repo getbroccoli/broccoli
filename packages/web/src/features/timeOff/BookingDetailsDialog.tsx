@@ -191,8 +191,9 @@ export function BookingDetailsDialog({
             <DialogFooter className="sm:justify-start">
               <TaskDecision
                 task={decisionTask}
-                refetch={[WhosOutDocument, EmployeePanelDocument, MyTasksDocument]}
-                onDone={() => {
+                refetch={DECIDED_REFETCH}
+                // Also after a refusal: someone decided or withdrew it first, so the month reloads.
+                onSettled={() => {
                   evictWhosOut(cache, employeeId);
                   onClose();
                 }}
@@ -237,6 +238,14 @@ export function BookingDetailsDialog({
 function dayPartOn(timeOff: WhosOutTimeOff, date: string) {
   return timeOff.days.find((day) => day.date === date)!.dayPart;
 }
+
+/** What a decision changes: the month, the person's figures, an open booking's clashes, Tasks. */
+const DECIDED_REFETCH = [
+  WhosOutDocument,
+  EmployeePanelDocument,
+  TimeOffBookingPreviewDocument,
+  MyTasksDocument,
+];
 
 type OpenTask = WhosOutTimeOff["myOpenTasks"][number];
 

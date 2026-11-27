@@ -106,7 +106,8 @@ export const setupEn = {
   "setup.import.description": "Bring in your team from Slack and your files, then review them.",
   "setup.import.demo": "Explore the demo",
   "setup.import.demoStarting": "Opening the demo…",
-  "setup.import.demoUnavailable": "Not available once you’ve added Slack or a file.",
+  "setup.import.demoUnavailable":
+    "Not available while people are being gathered, or once they are.",
   "setup.import.skipFailed": "Couldn’t continue. Try again.",
   "setup.import.gather": "Gather everyone’s details",
   "setup.import.next": "Review your people",

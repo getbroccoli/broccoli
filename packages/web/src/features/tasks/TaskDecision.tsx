@@ -11,22 +11,22 @@ import { useTaskActions } from "./useTaskActions";
 
 type Props = {
   task: { id: string; resultForm: NonNullable<TaskRow["resultForm"]> };
-  /** Active queries the decision changes, refetched before `onDone`. */
+  /** Active queries a decision changes, refetched once it is made, before `onSettled`. */
   refetch: DocumentNode[];
-  /** Runs once the task is marked done with the chosen result. */
-  onDone: () => void;
+  /** Runs once the decision ends: made, or refused because the task changed meanwhile. */
+  onSettled: () => void;
 };
 
 /**
  * A task's result form outside its panel, such as Approve and Reject on the time off it asks to
  * decide: buttons or choices, and a comment when the chosen option requires one.
  */
-export function TaskDecision({ task, refetch, onDone }: Props) {
+export function TaskDecision({ task, refetch, onSettled }: Props) {
   const actions = useTaskActions({ refetch });
   const [chosenCode, setChosenCode] = useState<string | null>(null);
   const form = task.resultForm;
   const finish = (result: TaskResultInput) =>
-    void actions.markDone(task.id, result).then((done) => done && onDone());
+    void actions.markDone(task.id, result).then(onSettled);
 
   return (
     <div className="flex flex-col gap-3">

@@ -182,12 +182,12 @@
       "src/features/demo",
       "src/features/employees",
       "src/features/records",
-      "src/features/setup",
       "src/features/termsDisplay",
       "src/i18n",
       "src/lib/calendarDay",
       "src/lib/class-names",
-      "src/lib/formatDays"
+      "src/lib/formatDays",
+      "src/lib/useSessionChange"
     ],
     "src/features/termsDisplay": [
       "src/__generated__",

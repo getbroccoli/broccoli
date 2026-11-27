@@ -65,9 +65,8 @@ export function ImportStep() {
     externalAgent && !externalAgent.listening
       ? pendingAgentFiles.filter((source) => !source.pickedUpByExternalAgent)
       : [];
-  // A connected Slack is being read, or was: people are coming from the owner's own sources.
-  const gathering =
-    data?.import.demoAvailable === false || uploading || Boolean(data?.slackConnection);
+  const [readingSlack, setReadingSlack] = useState(false);
+  const gathering = data?.import.demoAvailable === false || uploading;
 
   return (
     <SetupStepForm
@@ -93,8 +92,8 @@ export function ImportStep() {
               // The title shows on hover only when the disabled button takes pointer events.
               className="h-10 px-4 disabled:pointer-events-auto"
               // Until the import loads, it may already hold people.
-              disabled={starting || gathering || !data}
-              title={gathering ? t("setup.import.demoUnavailable") : undefined}
+              disabled={starting || gathering || readingSlack || !data}
+              title={gathering || readingSlack ? t("setup.import.demoUnavailable") : undefined}
               onClick={startDemo}
             >
               {t(starting ? "setup.import.demoStarting" : "setup.import.demo")}
@@ -132,7 +131,11 @@ export function ImportStep() {
       )}
       {data ? (
         <>
-          <SlackSourceRow connection={data.slackConnection} source={slackSource} />
+          <SlackSourceRow
+            connection={data.slackConnection}
+            source={slackSource}
+            onReadingChange={setReadingSlack}
+          />
           <FileSources
             sources={fileSources}
             onUploaded={() => refetch()}

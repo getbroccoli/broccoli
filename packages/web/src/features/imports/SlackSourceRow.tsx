@@ -25,23 +25,28 @@ interface SlackSourceRowProps {
   connection: ImportStepQuery["slackConnection"];
   /** The Slack source, or undefined until its members are imported. */
   source: ImportStepQuery["import"]["sources"][number] | undefined;
+  /** Told when a read of Slack starts and ends, as the page cannot offer the demo meanwhile. */
+  onReadingChange: (reading: boolean) => void;
 }
 
 /**
  * Slack as a source of people: connect it, read it again, and remove it. A connected workspace
  * without imported members is imported as soon as the row shows it.
  */
-export function SlackSourceRow({ connection, source }: SlackSourceRowProps) {
+export function SlackSourceRow({ connection, source, onReadingChange }: SlackSourceRowProps) {
   const [readSlack, { loading: reading }] = usePayloadMutation(ReadSlackDocument);
   const [readFailed, setReadFailed] = useState(false);
   const [removing, setRemoving] = useState(false);
 
   const read = async () => {
     setReadFailed(false);
+    onReadingChange(true);
     try {
       await readSlack();
     } catch {
       setReadFailed(true);
+    } finally {
+      onReadingChange(false);
     }
   };
 

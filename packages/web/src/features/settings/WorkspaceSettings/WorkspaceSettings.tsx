@@ -2,8 +2,9 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useDemoPresent } from "@/features/demo";
-import { ResetSetupDialog } from "@/features/setup";
 import { t } from "@/i18n";
+
+import { ResetSetupDialog } from "./ResetSetupDialog";
 
 /** The Settings page's Workspace section: its danger zone, where the owner resets setup. */
 export function WorkspaceSettings() {
