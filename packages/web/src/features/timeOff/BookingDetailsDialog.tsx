@@ -8,7 +8,7 @@ import {
   TimeOffBookingPreviewDocument,
   WhosOutDocument,
 } from "@/__generated__/graphql";
-import { PayloadFailure, useCache, usePayloadMutation } from "@/apollo";
+import { PayloadFailure, usePayloadMutation } from "@/apollo";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,11 +22,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, decisionLine, TimeOffStatusChip } from "@/features/employees";
-import { TaskDecision } from "@/features/tasks";
 import { t } from "@/i18n";
 import { calendarDayOf } from "@/lib/calendarDay";
 import { cn } from "@/lib/class-names";
 
+import { BookingDecision } from "./BookingDecision";
+import { decisionTaskOf } from "./decisionTaskOf";
 import { evictWhosOut } from "./cache";
 import { bookingTotal, cancelDialogWords, dayCostLine } from "./timeOffText";
 import { bookingDates, dateRange, dayMonthYear, weekdayDay } from "@/lib/formatDate";
@@ -53,7 +54,6 @@ export function BookingDetailsDialog({
   viewerEmployeeId,
   onClose,
 }: Props) {
-  const cache = useCache();
   const [confirming, setConfirming] = useState(false);
   const [cancel, cancelling] = usePayloadMutation(CancelTimeOffDocument, {
     update: (cache) => evictWhosOut(cache, employeeId),
@@ -66,7 +66,7 @@ export function BookingDetailsDialog({
     ],
   });
   const typeName = timeOff.timeOffType?.name ?? t("timeOff.off");
-  const decisionTask = timeOff.myOpenTasks.find(hasResultForm) ?? null;
+  const decisionTask = decisionTaskOf(timeOff);
   // The approver decides rather than cancels.
   const cancellable =
     !decisionTask &&
@@ -188,17 +188,7 @@ export function BookingDetailsDialog({
             </p>
           )}
           {decisionTask && (
-            <DialogFooter className="sm:justify-start">
-              <TaskDecision
-                task={decisionTask}
-                refetch={DECIDED_REFETCH}
-                // Also after a refusal: someone decided or withdrew it first, so the month reloads.
-                onSettled={() => {
-                  evictWhosOut(cache, employeeId);
-                  onClose();
-                }}
-              />
-            </DialogFooter>
+            <BookingDecision employeeId={employeeId} task={decisionTask} onClose={onClose} />
           )}
           {cancelWords && (
             <DialogFooter>
@@ -237,20 +227,4 @@ export function BookingDetailsDialog({
 /** The part of the day booked on a date: full day, morning or afternoon. */
 function dayPartOn(timeOff: WhosOutTimeOff, date: string) {
   return timeOff.days.find((day) => day.date === date)!.dayPart;
-}
-
-/** What a decision changes: the month, the person's figures, an open booking's clashes, Tasks. */
-const DECIDED_REFETCH = [
-  WhosOutDocument,
-  EmployeePanelDocument,
-  TimeOffBookingPreviewDocument,
-  MyTasksDocument,
-];
-
-type OpenTask = WhosOutTimeOff["myOpenTasks"][number];
-
-function hasResultForm(
-  task: OpenTask,
-): task is OpenTask & { resultForm: NonNullable<OpenTask["resultForm"]> } {
-  return task.resultForm !== null && task.resultForm !== undefined;
 }
