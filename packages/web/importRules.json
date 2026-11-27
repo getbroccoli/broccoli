@@ -58,6 +58,7 @@
       "src/components/ui",
       "src/features/employees",
       "src/features/records",
+      "src/features/termsDisplay",
       "src/i18n",
       "src/lib/calendarDay",
       "src/lib/class-names"
@@ -107,7 +108,18 @@
       "src/components/ui",
       "src/i18n"
     ],
-    "src/features/today": ["src/__generated__", "src/features/mcpAgents", "src/i18n", "src/shell"],
+    "src/features/today": [
+      "src/__generated__",
+      "src/components/ui",
+      "src/features/employees",
+      "src/features/tasks",
+      "src/features/termsDisplay",
+      "src/i18n",
+      "src/lib/calendarDay",
+      "src/lib/formatDate",
+      "src/lib/formatDays",
+      "src/shell"
+    ],
     "src/features/mcpAgents": [
       "src/__generated__",
       "src/apollo",

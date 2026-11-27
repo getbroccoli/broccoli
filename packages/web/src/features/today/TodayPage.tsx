@@ -1,41 +1,63 @@
-import { useFragment } from "@apollo/client/react";
-import { Link, useRouteContext } from "@tanstack/react-router";
+import { useFragment, useQuery } from "@apollo/client/react";
+import { useRouteContext } from "@tanstack/react-router";
 
-import { Today_EmployeeFragmentDoc } from "@/__generated__/graphql";
-import { AgentInvitation } from "@/features/mcpAgents";
+import { Today_EmployeeFragmentDoc, TodayPeopleDocument } from "@/__generated__/graphql";
+import { Card } from "@/components/ui/card";
+import { TasksNeedingYouCard } from "@/features/tasks";
+import { companyToday } from "@/features/termsDisplay";
 import { t } from "@/i18n";
+import { weekdayDayMonth } from "@/lib/formatDate";
 import { PageHeader } from "@/shell";
 
+import { ComingUpCard } from "./ComingUpCard";
+import { fortnightFrom } from "./fortnightFrom";
+import { LoadFailed } from "./LoadFailed";
+import { MyTimeOffCard } from "./MyTimeOffCard";
 import { partOfDay } from "./partOfDay";
+import { WhosOutCard } from "./WhosOutCard";
 
-/** The home page: a greeting and what needs the person today, for now the invitation to connect their agent. */
+/** The home page: what needs the person, who is out, their own time off and who starts soon. */
 export function TodayPage() {
   const { me } = useRouteContext({ from: "/_authenticated" });
   // The session already read the employee, so the greeting renders at once.
   const employee = useFragment({ fragment: Today_EmployeeFragmentDoc, from: me.employee });
   const firstName = me.employee && employee.complete ? employee.data.firstName : null;
+  const viewerId = me.employee?.id ?? null;
   const part = partOfDay(new Date());
+  const today = companyToday();
+  // Time off and Tasks change it without a write here, so revisits read it again.
+  const { data, error, refetch } = useQuery(TodayPeopleDocument, {
+    variables: fortnightFrom(today),
+    fetchPolicy: "cache-and-network",
+  });
+  const people = data?.employees.edges.map(({ node }) => node);
 
   return (
-    <div className="flex max-w-3xl flex-col">
+    <div className="flex max-w-6xl flex-col">
       <PageHeader
         title={
           firstName
             ? t(`today.greeting.${part}.named`, { name: firstName })
             : t(`today.greeting.${part}`)
         }
-        description={t("today.description")}
+        description={weekdayDayMonth(today)}
       />
-      <AgentInvitation
-        otherwise={
-          <p className="text-sm text-muted-foreground">
-            {t("today.nothingNew")}{" "}
-            <Link to="/tasks" className="font-medium text-foreground underline underline-offset-4">
-              {t("today.seeTasks")}
-            </Link>
-          </p>
-        }
-      />
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <div className="flex flex-col gap-4">
+          <TasksNeedingYouCard today={today} />
+          {people ? (
+            <WhosOutCard people={people} viewerId={viewerId} today={today} />
+          ) : (
+            <Card title={t("today.out.title")}>
+              {error && <LoadFailed onRetry={() => void refetch()} />}
+            </Card>
+          )}
+        </div>
+        <div className="flex flex-col gap-4">
+          {viewerId && <MyTimeOffCard employeeId={viewerId} today={today} />}
+          {people && <ComingUpCard people={people} today={today} />}
+        </div>
+      </div>
     </div>
   );
 }

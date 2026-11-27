@@ -16,8 +16,12 @@ export function countTasksNeedingYou(
   groups: { needsYou: TaskRow[] },
   viewerId: string | null,
 ): number {
-  return groups.needsYou.filter((task) => task.status === "TO_DO" && task.assignee.id === viewerId)
-    .length;
+  return groups.needsYou.filter((task) => needsYou(task, viewerId)).length;
+}
+
+/** Whether the viewer holds the task and it is still to do. */
+export function needsYou(task: TaskRow, viewerId: string | null): boolean {
+  return isOpen(task) && task.assignee.id === viewerId;
 }
 
 /** Whether a task still open was due before `today`. */

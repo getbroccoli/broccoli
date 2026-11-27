@@ -20,8 +20,3 @@ export function showAgentDisconnected(
   });
   evictRecord(cache, "AgentConnection", connectionId);
 }
-
-/** Shows the invitation to connect an agent as closed, or open again after a failed close. */
-export function showAgentInvitationClosed(cache: ApolloCache, closed: boolean): void {
-  cache.modify({ id: "ROOT_QUERY", fields: { agentInvitationClosed: () => closed } });
-}

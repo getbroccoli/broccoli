@@ -24,6 +24,11 @@ export function weekdayDay(date: string): string {
   return format(date, { weekday: "short", day: "numeric", month: "short" });
 }
 
+/** "Friday 27 November". */
+export function weekdayDayMonth(date: string): string {
+  return format(date, { weekday: "long", day: "numeric", month: "long" });
+}
+
 /** "4 Jan 2027". */
 export function dayMonthYear(date: string): string {
   return format(date, { day: "numeric", month: "short", year: "numeric" });
