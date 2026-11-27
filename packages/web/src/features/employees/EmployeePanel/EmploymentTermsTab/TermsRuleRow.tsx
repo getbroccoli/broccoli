@@ -11,9 +11,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { t } from "@/i18n";
 
-/** One entry of a row's ⋯ menu. */
-export type RowAction = { label: string; onSelect: () => void; destructive?: boolean };
-
 type Props = {
   /** The row's name, with its icon for a time off type. */
   label: ReactNode;
@@ -34,6 +31,9 @@ type Props = {
   /** What a move being edited changes here, as "From 1 Dec 2026: …"; none when it changes nothing. */
   change?: string | null;
 };
+
+/** One entry of a row's ⋯ menu. */
+type RowAction = { label: string; onSelect: () => void; destructive?: boolean };
 
 /** One row of a person's employment terms: the working week or a time off type. */
 export function TermsRuleRow({

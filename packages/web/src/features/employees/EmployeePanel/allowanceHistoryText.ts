@@ -9,6 +9,9 @@ export type AllowanceChange = NonNullable<
   NonNullable<NonNullable<AllowanceHistoryQuery["employee"]>["timeOffTypes"]>[number]["history"]
 >[number];
 
+/** The figures a change leaves on the card. */
+type FigureField = "entitlementAfter" | "bankHolidaysAfter" | "usedAfter";
+
 /** What happened, in words: "Booked 7–9 Dec 2026", "Adjusted by you". */
 export function changeTitle(change: AllowanceChange, readerUserId: string): string {
   switch (change.cause) {
@@ -128,8 +131,6 @@ function authorName(change: Pick<AllowanceChange, "author">, readerUserId: strin
     ? t("people.panel.timeOff.history.you")
     : (change.author.email ?? t("people.panel.timeOff.history.someone"));
 }
-
-type FigureField = "entitlementAfter" | "bankHolidaysAfter" | "usedAfter";
 
 /** The card's figures in its order; bank holidays and used take from the days left. */
 const FIGURES = [

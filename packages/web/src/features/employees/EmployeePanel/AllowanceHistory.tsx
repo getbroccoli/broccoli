@@ -1,20 +1,14 @@
 import { useQuery } from "@apollo/client/react";
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { useRouteContext } from "@tanstack/react-router";
 
 import { AllowanceHistoryDocument } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { companyToday } from "@/features/termsDisplay";
-import { formatDays } from "@/lib/formatDays";
 
-import {
-  type AllowanceChange,
-  changeTitle,
-  figureLines,
-  recordedDate,
-  signedDays,
-} from "./allowanceHistoryText";
+import { AllowanceChangeRow } from "./AllowanceChangeRow";
+import type { AllowanceChange } from "./allowanceHistoryText";
 import { ReverseAdjustmentDialog } from "./ReverseAdjustmentDialog";
 
 type Props = {
@@ -66,7 +60,7 @@ export function AllowanceHistory({ employeeId, allowanceId, reverseFor }: Props)
     <>
       <ol className="flex flex-col border-t border-border/60">
         {shown.map((change, index) => (
-          <ChangeRow
+          <AllowanceChangeRow
             key={`${change.recordedAt}:${change.cause}:${index}`}
             change={change}
             previous={changes[index + 1]}
@@ -94,64 +88,6 @@ export function AllowanceHistory({ employeeId, allowanceId, reverseFor }: Props)
         />
       )}
     </>
-  );
-}
-
-type ChangeRowProps = {
-  change: AllowanceChange;
-  /** The next older change, whose figures this one moved from. */
-  previous: AllowanceChange | undefined;
-  readerUserId: string;
-  today: string;
-  /** Set when the reader may reverse this adjustment. */
-  onReverse?: (adjustmentId: string | null) => void;
-};
-
-/** One change: what happened, its amount and the days left, and how each figure moved. */
-function ChangeRow({ change, previous, readerUserId, today, onReverse }: ChangeRowProps) {
-  return (
-    <li className="grid grid-cols-[3.5rem_minmax(0,1fr)_auto] gap-x-2 border-b border-border/60 px-3 py-2 text-sm last:border-b-0">
-      <span className="text-muted-foreground">{recordedDate(change.recordedAt, today)}</span>
-      <span className="flex min-w-0 flex-col items-start">
-        <span className="flex flex-wrap items-center gap-x-2">
-          {changeTitle(change, readerUserId)}
-          {change.reversed && (
-            <span className="rounded-full bg-muted px-2 text-xs text-muted-foreground">
-              {t("people.panel.timeOff.history.reversedTag")}
-            </span>
-          )}
-        </span>
-        {change.comment && (
-          <span className="text-muted-foreground break-words">{change.comment}</span>
-        )}
-        {onReverse && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-1"
-            aria-label={t("people.panel.timeOff.reverse.openLabel", {
-              amount: signedDays(change.amount),
-              date: recordedDate(change.recordedAt, today),
-            })}
-            onClick={() => onReverse(change.adjustmentId)}
-          >
-            {t("people.panel.timeOff.reverse.open")}
-          </Button>
-        )}
-      </span>
-      <span className="flex flex-col items-end">
-        <span className="font-medium tabular-nums">{signedDays(change.amount)}</span>
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {t("people.panel.timeOff.history.left", { days: formatDays(change.balanceAfter) })}
-        </span>
-      </span>
-      {figureLines(change, previous).map(({ text, amount }) => (
-        <Fragment key={text}>
-          <span className="col-start-2 text-xs text-muted-foreground">{text}</span>
-          <span className="text-right text-xs text-muted-foreground tabular-nums">{amount}</span>
-        </Fragment>
-      ))}
-    </li>
   );
 }
 
