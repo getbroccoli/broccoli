@@ -288,6 +288,13 @@
       "when": 1795764567611,
       "tag": "0040_acting_as",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1795766311236,
+      "tag": "0041_allowance_adjustment_reversal",
+      "breakpoints": true
     }
   ]
 }
