@@ -97,6 +97,7 @@ fragment EmployeePanel_employee on Employee {
   }
   avatarUrl
   permissionProfiles
+  canActAs
   signInStatus {
     ...SignInStatus @unmask
   }

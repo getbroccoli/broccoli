@@ -6,6 +6,7 @@ import {
   OWNER,
   seedEmploymentEnd,
   seedTimeOffType,
+  signedIn,
   test,
   bookTimeOffService,
   timeOffPolicyService,
@@ -13,6 +14,25 @@ import {
 } from "#test/support";
 
 import { timeOffTypes } from "../db";
+
+test.for([1, 2, 3, 4, 5])(
+  "two admins can book time off for each other at the same time (run %i)",
+  async (_run, { orm, seed, transact }) => {
+    const { employeeId, timeOffTypeId } = await seedAnnualLeaveEmployee(orm, seed, transact);
+    const colleague = await seed.employee({ startDate: "2025-01-01" });
+    const admin = signedIn(orm, { employeeId, profiles: ["ADMIN"] });
+    const otherAdmin = signedIn(orm, { employeeId: colleague.id, profiles: ["ADMIN"] });
+    const bookings = bookTimeOffService(orm);
+    const leave = { timeOffTypeId, startDate: "2026-12-07", endDate: "2026-12-07" };
+
+    const results = await Promise.all([
+      bookings.bookTimeOff(admin, { ...leave, employeeId: colleague.id }),
+      bookings.bookTimeOff(otherAdmin, { ...leave, employeeId }),
+    ]);
+
+    expect(results).toMatchObject([{ employeeId: colleague.id }, { employeeId }]);
+  },
+);
 
 test("books while a policy change runs for the same people without a deadlock", async ({
   orm,
@@ -197,14 +217,9 @@ test.for([
   "refuses $reason for $startDate to $endDate",
   async ({ reason, startDate, endDate }, { orm, seed, transact }) => {
     const person = await seedAnnualLeaveEmployee(orm, seed, transact);
+    const booking = { ...person, startDate, endDate };
 
-    await expect(
-      bookTimeOffService(orm).bookTimeOff(OWNER, {
-        ...person,
-        startDate,
-        endDate,
-      }),
-    ).rejects.toMatchObject({
+    await expect(bookTimeOffService(orm).bookTimeOff(OWNER, booking)).rejects.toMatchObject({
       code: "INVALID_INPUT",
       fieldErrors: [{ field: "dates", code: reason }],
     });

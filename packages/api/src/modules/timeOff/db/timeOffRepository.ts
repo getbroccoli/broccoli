@@ -66,7 +66,7 @@ export interface TimeOffRepository {
     timeOffTypeId: string;
     status: "approved" | "requested";
     note: string | null;
-    createdByUserId: string | null;
+    createdByEmployeeId: string | null;
     days: readonly { date: CalendarDate; dayPart: DayPart }[];
   }): Promise<{ id: string; createdAt: Date }>;
   /** The time off's person, status and first day, locked until the transaction ends; null when there is none. */

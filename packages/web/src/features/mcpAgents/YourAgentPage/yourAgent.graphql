@@ -7,6 +7,9 @@ query YourAgent {
       firstName
       lastName
     }
+    actingAs {
+      id
+    }
   }
   setup {
     id

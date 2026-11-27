@@ -20,6 +20,7 @@
     "src/shell": [
       "src/__generated__",
       "src/components/ui",
+      "src/features/actingAs",
       "src/features/auth",
       "src/features/demo",
       "src/features/employees",
@@ -29,6 +30,7 @@
       "src/lib/class-names",
       "src/lib/useSessionChange"
     ],
+    "src/features/actingAs": ["src/apollo", "src/components/ui", "src/i18n", "src/lib/postJson"],
     "src/features/auth": [
       "src/__generated__",
       "src/components/form",
@@ -89,6 +91,7 @@
       "src/components/dataTable",
       "src/components/form",
       "src/components/ui",
+      "src/features/actingAs",
       "src/features/invites",
       "src/features/records",
       "src/features/termsDisplay",

@@ -57,13 +57,18 @@ export function bookingDependencies({
   };
 }
 
-/** Locks the person and checks the type exists; refuses an unknown person or type. */
+/**
+ * Locks the person, with the employee who books for them when another one does (the time off names
+ * them), and checks the type exists; refuses an unknown person or type.
+ */
 export async function begin(
   dependencies: BookingDependencies,
   tx: Tx,
   booking: Pick<ParsedBooking, "employeeId" | "timeOffTypeId">,
+  bookerId: string | null = null,
 ): Promise<Person> {
-  if (!(await lockPerson(dependencies, tx, booking.employeeId))) {
+  const others = bookerId && bookerId !== booking.employeeId ? [bookerId] : [];
+  if (!(await lockPerson(dependencies, tx, booking.employeeId, others))) {
     throw new ApplicationError("NOT_FOUND", "No employee has this id.");
   }
   const types = await timeOffPolicyRepository(tx).findAllTypes();
@@ -131,7 +136,7 @@ export async function saveTimeOff(
     timeOffTypeId: booking.timeOffTypeId,
     status,
     note: booking.note,
-    createdByUserId: ctx.user?.userId ?? null,
+    createdByEmployeeId: ctx.user?.employeeId ?? null,
     days: booked.map(({ date, dayPart }) => ({ date, dayPart })),
   });
   await recordHistory.append(ctx, tx, {

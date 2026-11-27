@@ -138,7 +138,8 @@ function cancelRefusalFor(
 ): CancelRefusal | null {
   return cancelRefusal({
     ownRules: stored.employeeId === ctx.user?.employeeId && deleteScope !== "all",
-    bookedByCaller: stored.createdByUserId !== null && stored.createdByUserId === ctx.user?.userId,
+    bookedByCaller:
+      stored.createdByEmployeeId !== null && stored.createdByEmployeeId === ctx.user?.employeeId,
     status: stored.status,
     firstDate: stored.firstDate,
     today,

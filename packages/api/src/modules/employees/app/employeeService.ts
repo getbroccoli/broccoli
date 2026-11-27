@@ -133,6 +133,8 @@ export function createEmployeeService({
       return readableResult(ctx, employee, historyLine);
     },
     async deleteEmployee(ctx, { id, changeReason }) {
+      // Deleting someone also deletes their account and invite, which stay the signed-in user's call.
+      ctx.requireOwnIdentity();
       const reason = parseChangeReason(changeReason);
       const employeeId = parseUuid(id);
       if (!employeeId) {

@@ -1,5 +1,3 @@
-import type { IncomingHttpHeaders } from "node:http";
-
 import { ApplicationError } from "../applicationError";
 import {
   type EffectiveProfile,
@@ -17,6 +15,7 @@ import {
 } from "./permissions";
 import { isInRecordScope } from "./recordScope";
 import type { AgentConnectionOfCall } from "./agentConnectionOfCall";
+import type { EmployeeDirectory } from "./employeeDirectory";
 
 /**
  * Who is calling application code, and what they may do. Every business function
@@ -26,9 +25,13 @@ import type { AgentConnectionOfCall } from "./agentConnectionOfCall";
 export interface SecurityContext {
   /**
    * The effective signed-in user; null for work Broccoli does on its own and for the
-   * setup holder. A request without either session has no security context at all.
+   * setup holder. A request without either session has no security context at all. While acting
+   * as another employee, it holds that employee's rights under the signed-in user's id.
    */
   readonly user: Readonly<SignedInUser> | null;
+
+  /** The signed-in user with their own rights while they act as another employee; null otherwise. */
+  readonly actor: Readonly<SignedInUser> | null;
 
   /** Whether Broccoli acts on its own; then `user` is null. */
   readonly isSystem: boolean;
@@ -50,6 +53,12 @@ export interface SecurityContext {
 
   /** Broccoli's own work, which no user starts; refuses everyone else with FORBIDDEN. */
   requireSystem(): void;
+
+  /**
+   * Refuses with FORBIDDEN while acting as another employee: credentials, permissions and whom
+   * one acts as stay the signed-in user's own business.
+   */
+  requireOwnIdentity(): void;
 
   /** Setup work: the setup holder, or whoever holds the operation; refuses others with FORBIDDEN. */
   requireSetupAccess(operation: Operation): void;
@@ -100,21 +109,6 @@ export interface RecordAccess {
   writableFields: "*" | readonly string[];
 }
 
-/** What permission checks read about people; the module that keeps employees provides it. */
-export interface EmployeeDirectory {
-  /** The employee linked to this user; null without one. */
-  employeeIdOfUser(userId: string): Promise<string | null>;
-  /**
-   * Everyone above each employee today, by employee: their direct manager first, then that one's,
-   * and so on; employees without a manager are left out.
-   */
-  managersAbove(employeeIds: readonly string[]): Promise<Map<string, string[]>>;
-  /** Everyone below the employee today, with their depth: 1 for a direct report, and so on. */
-  reportsBelow(employeeId: string): Promise<{ id: string; depth: number }[]>;
-  /** The employee linked to the owner's user; null without one. */
-  ownersEmployeeId(): Promise<string | null>;
-}
-
 /** A signed-in user as application code sees them. */
 export interface SignedInUser {
   userId: string;
@@ -145,6 +139,7 @@ export class PrincipalSecurityContext implements SecurityContext {
     private readonly directory: EmployeeDirectory | null = null,
     private readonly profiles: Record<PermissionProfile, ProfileDefinition> = PERMISSION_PROFILES,
     readonly agentConnection: Readonly<AgentConnectionOfCall> | null = null,
+    readonly actor: Readonly<SignedInUser> | null = null,
   ) {}
 
   private ownersEmployeeId: Promise<string | null> | undefined;
@@ -154,15 +149,20 @@ export class PrincipalSecurityContext implements SecurityContext {
   private managers: Promise<Map<string, string[]>> | undefined;
 
   /**
-   * A signed-in user, or their connected agent acting as them; built by `resolveSecurityContext`
-   * and the agent's token check, and by tests with other profiles.
+   * A signed-in user, their connected agent acting as them, or with `actor` the signed-in user
+   * acting as another employee; built by `resolveSecurityContext`, the agent's token check and
+   * acting as, and by tests with other profiles.
    */
   static user(
     user: SignedInUser,
     directory: EmployeeDirectory,
-    options: { profiles?: ProfileDefinitions; agentConnection?: AgentConnectionOfCall | null } = {},
+    options: {
+      profiles?: ProfileDefinitions;
+      agentConnection?: AgentConnectionOfCall | null;
+      actor?: SignedInUser | null;
+    } = {},
   ): SecurityContext {
-    const { profiles, agentConnection = null } = options;
+    const { profiles, agentConnection = null, actor = null } = options;
     return new PrincipalSecurityContext(
       { ...user },
       false,
@@ -170,6 +170,7 @@ export class PrincipalSecurityContext implements SecurityContext {
       directory,
       profiles,
       agentConnection,
+      actor && { ...actor },
     );
   }
 
@@ -219,6 +220,12 @@ export class PrincipalSecurityContext implements SecurityContext {
   requireSystem(): void {
     if (!this.isSystem) {
       throw new ApplicationError("FORBIDDEN", "Only Broccoli can do this.");
+    }
+  }
+
+  requireOwnIdentity(): void {
+    if (this.actor) {
+      throw new ApplicationError("FORBIDDEN", "Stop acting as someone else to do this.");
     }
   }
 
@@ -294,7 +301,11 @@ export class PrincipalSecurityContext implements SecurityContext {
     for (const [subject, actions] of access) {
       records.set(subject, {
         canUpdate: actions.has("update"),
-        canDelete: actions.has("delete") && !(await this.isOwnersEmployee(object, subject)),
+        // Deleting someone also deletes how they sign in, which acting as someone never does.
+        canDelete:
+          actions.has("delete") &&
+          !(object === "employee" && this.actor) &&
+          !(await this.isOwnersEmployee(object, subject)),
         writableFields: actions.get("update") ?? [],
       });
     }
@@ -400,26 +411,4 @@ export class PrincipalSecurityContext implements SecurityContext {
     this.ownersEmployeeId ??= this.directory?.ownersEmployeeId() ?? Promise.resolve(null);
     return (await this.ownersEmployeeId) === subject;
   }
-}
-
-/** The security context of a request, and the session cookies to send back with the response. */
-export interface RequestSecurity {
-  /** Null without a valid session. */
-  security: SecurityContext | null;
-  /** `Set-Cookie` values for a session that was due for renewal; empty otherwise. */
-  renewedCookies: string[];
-}
-
-/** Reads the security context of a request from its headers; see `resolveSecurityContext`. */
-export type SecurityResolver = (headers: IncomingHttpHeaders) => Promise<RequestSecurity>;
-
-/**
- * The security context of a request that needs a signed-in user. Adapters (GraphQL,
- * HTTP, MCP) call it, so application code always receives a context.
- */
-export function requireSignedIn(security: SecurityContext | null): SecurityContext {
-  if (!security) {
-    throw new ApplicationError("UNAUTHENTICATED", "Sign in to continue.");
-  }
-  return security;
 }

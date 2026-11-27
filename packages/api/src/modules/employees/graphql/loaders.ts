@@ -1,6 +1,7 @@
 import DataLoader from "dataloader";
 
 import { type GraphqlContext, perRequest } from "../../../core/graphql";
+import type { ActingAsService } from "../../../core/instance";
 import { createWriteModeService, type WriteMode } from "../../../core/records";
 import type { PermissionObject, PermissionProfile, SecurityContext } from "../../../core/security";
 import type { CalendarDate } from "../../../utils";
@@ -28,6 +29,8 @@ export interface EmployeeLoaders {
   permissionProfiles: DataLoader<string, PermissionProfile[] | null>;
   /** Whether a person can sign in, and their invite. */
   signInStatus: DataLoader<string, SignInStatus | null>;
+  /** Whether the caller may act as an employee now. */
+  actable: DataLoader<string, boolean>;
   /** A location by id; every location is read once per request, since a company has few. */
   location: DataLoader<string, LocationWithPeopleCount | null>;
   /**
@@ -43,6 +46,14 @@ export interface EmployeeLoaders {
   createMode: DataLoader<CreateKey, WriteMode, string>;
 }
 
+/** The module's services the loaders read through. */
+type LoadedServices = EmployeeReadService &
+  EmployeeManagerService &
+  EmployeePermissionService &
+  LocationService &
+  TermsService &
+  EmployeeWorkingPatternService;
+
 const writeModes = createWriteModeService();
 
 /** The `terms` loader's key for the default terms, which a location without terms starts people on. */
@@ -50,13 +61,9 @@ export const DEFAULT_TERMS = "default";
 
 /** One request's loaders: related data in one query per list, not one per item. Create once, in `createResolvers`. */
 export function employeeLoaders(
-  services: EmployeeReadService &
-    EmployeeManagerService &
-    EmployeePermissionService &
-    LocationService &
-    TermsService &
-    EmployeeWorkingPatternService,
+  services: LoadedServices,
   invites: EmployeeInviteService,
+  actingAs: ActingAsService,
 ): (context: GraphqlContext) => EmployeeLoaders {
   return perRequest((context) => ({
     employee: new DataLoader<string, Employee | null>(async (employeeIds) => {
@@ -79,6 +86,7 @@ export function employeeLoaders(
       const statuses = await invites.readStatuses(context.getActor(), employeeIds);
       return employeeIds.map((id) => statuses.get(id) ?? null);
     }),
+    actable: actableLoader(actingAs, context.getActor()),
     location: new DataLoader<string, LocationWithPeopleCount | null>(async (locationIds) => {
       const locations = await services.listLocations(context.getActor());
       return locationIds.map((id) => locations.find((location) => location.id === id) ?? null);
@@ -97,6 +105,17 @@ export function employeeLoaders(
     }),
     createMode: createModeLoader(context.getActor()),
   }));
+}
+
+/** `actable`: whom the caller may act as, in one read for every employee a request asks about. */
+function actableLoader(
+  actingAs: ActingAsService,
+  ctx: SecurityContext,
+): DataLoader<string, boolean> {
+  return new DataLoader(async (employeeIds) => {
+    const actable = await actingAs.actableEmployees(ctx, employeeIds);
+    return employeeIds.map((id) => actable.has(id));
+  });
 }
 
 /** `createMode`: one write-modes read per record type, however many people a list holds. */

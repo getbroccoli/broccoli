@@ -99,6 +99,7 @@ export function createSlackConnectionService({
 
   return {
     beginSlackConnection: (ctx: SecurityContext, returnTo: string): SlackConnectionStart => {
+      ctx.requireOwnIdentity();
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       const pending = { state: randomToken(), codeVerifier: randomToken() };
       const codeChallenge = createHash("sha256").update(pending.codeVerifier).digest("base64url");
@@ -230,6 +231,7 @@ const REQUIRED_SCOPES = ["users:read", "users:read.email"];
 /** Whether `ctx` may connect Slack; the context decides, the flow only turns a refusal into an outcome. */
 function mayConnect(ctx: SecurityContext): boolean {
   try {
+    ctx.requireOwnIdentity();
     ctx.requireSetupAccess("MANAGE_WORKSPACE");
     return true;
   } catch (error) {

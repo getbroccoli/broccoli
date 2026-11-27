@@ -4,7 +4,7 @@ import type { CalendarDate } from "../../../utils";
 export function cancelRefusal(cancel: {
   /** The person's own rules apply: their own time off, without a delete grant reaching everyone. */
   ownRules: boolean;
-  /** The caller's own user booked or requested it. */
+  /** The caller's employee booked or requested it. */
   bookedByCaller: boolean;
   status: "requested" | "approved" | "rejected" | "cancelled";
   firstDate: CalendarDate;

@@ -21,8 +21,11 @@ export const timeOff = pgTable(
     /** Where it stands, never what waits on it; never deleted to cancel. */
     status: text("status", { enum: ["requested", "approved", "rejected", "cancelled"] }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    /** The signed-in user who booked or requested it; null when Broccoli itself did. */
-    createdByUserId: text("created_by_user_id"),
+    /**
+     * The employee who booked or requested it, as whom the user acted then; null when nobody's
+     * employee did, such as Broccoli itself, or once that employee is deleted.
+     */
+    createdByEmployeeId: uuid("created_by_employee_id"),
     /** When it was asked for with approval; null for a booking. */
     requestedAt: timestamp("requested_at", { withTimezone: true }),
     /** When its approval was decided; null for a booking and until then. */
@@ -40,6 +43,7 @@ export const timeOff = pgTable(
     index("time_off_employee_idx").on(table.employeeId),
     index("time_off_time_off_type_idx").on(table.timeOffTypeId),
     // Deleting an employee clears the decisions they made, and the cancels, without scanning all time off.
+    index("time_off_created_by_idx").on(table.createdByEmployeeId),
     index("time_off_decided_by_idx").on(table.decidedByEmployeeId),
     index("time_off_cancelled_by_idx").on(table.cancelledByEmployeeId),
   ],

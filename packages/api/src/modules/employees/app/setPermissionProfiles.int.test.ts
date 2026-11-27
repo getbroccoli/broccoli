@@ -1,4 +1,32 @@
-import { ADMIN, EMPLOYEE, employeeServices, expect, OWNER, signedIn, test } from "#test/support";
+import {
+  actingAs,
+  ADMIN,
+  EMPLOYEE,
+  employeeServices,
+  expect,
+  OWNER,
+  signedIn,
+  test,
+} from "#test/support";
+
+test("refuses changing permission profiles while acting as an ordinary employee", async ({
+  orm,
+  seed,
+}) => {
+  const joined = await seed.user({ email: "casey@example.com" });
+  const employee = await seed.employee({ userId: joined.id });
+  const acting = actingAs(orm, {
+    actor: ADMIN,
+    employeeId: employee.id,
+  });
+
+  await expect(
+    employeeServices(orm).setPermissionProfiles(acting, { id: employee.id, profiles: ["ADMIN"] }),
+  ).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    message: "Stop acting as someone else to do this.",
+  });
+});
 
 test("allows an admin to make a joined employee an admin and records the change", async ({
   orm,

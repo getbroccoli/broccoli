@@ -1,6 +1,7 @@
 import "./events";
 // Public values.
 export {
+  createActingAsService,
   createAiSettingsService,
   createExternalAgentChoiceService,
   createInstanceService,
@@ -12,6 +13,7 @@ export {
   createSetupStepService,
 } from "./app";
 export {
+  actingAsPlugin,
   inAuthTransaction,
   linkPassword,
   refuseBearerAuth,
@@ -23,6 +25,7 @@ export { AssignmentConflictError, NO_SETUP_INVITES, OwnerExistsError } from "./d
 
 // Public types.
 export type {
+  ActingAsService,
   AddApprovedPeople,
   DemoStart,
   SetupDemo,

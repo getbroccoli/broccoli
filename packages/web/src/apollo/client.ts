@@ -11,6 +11,7 @@ import {
 import introspection from "@/__generated__/possible-types";
 import { connectionTypes, typePolicies } from "@/__generated__/type-policies";
 
+import { staleSessionLink } from "./staleSessionLink";
 import { unauthenticatedLink } from "./unauthenticatedLink";
 
 interface ApolloClientOptions {
@@ -21,6 +22,7 @@ interface ApolloClientOptions {
 export function createApolloClient({ onUnauthenticated }: ApolloClientOptions): ApolloClient {
   return new ApolloClient({
     link: ApolloLink.from([
+      staleSessionLink(),
       unauthenticatedLink(onUnauthenticated),
       new HttpLink({ uri: "/api/graphql" }),
     ]),

@@ -13,7 +13,7 @@ import {
   type RequestSecurity,
   type SecurityContext,
 } from "../../security";
-import { createSetupSessionService, createInstanceService } from "../app";
+import { type ActingAsService, createSetupSessionService, createInstanceService } from "../app";
 import type { Instance } from "../domain";
 import { readSetupToken } from "./setupCookie";
 
@@ -21,15 +21,15 @@ const setupSessions = createSetupSessionService();
 const instances = createInstanceService();
 
 /**
- * The signed-in user of a request, or the browser holding setup; the demo's provisional
- * owner only until the demo ends. Reading the session also extends one that is due
- * for renewal; the GraphQL adapter sends `renewedCookies` back, or the browser's
- * cookie would expire before the session does.
+ * The signed-in user of a request, as themselves or as the employee their session acts as, or the
+ * browser holding setup; the demo's provisional owner only until the demo ends. Reading the
+ * session also extends one that is due for renewal; the GraphQL adapter sends `renewedCookies`
+ * back, or the browser's cookie would expire before the session does.
  */
 export async function resolveSecurityContext(
   authSource: AuthSource,
   orm: Orm,
-  directory: EmployeeDirectory,
+  people: { directory: EmployeeDirectory; actingAs: ActingAsService },
   requestHeaders: IncomingHttpHeaders,
 ): Promise<RequestSecurity> {
   const auth = await authSource.current();
@@ -52,8 +52,28 @@ export async function resolveSecurityContext(
   if (!session) {
     return { security: await resolveSetupHolder(orm, requestHeaders), renewedCookies };
   }
-  const security = await resolveUserSecurity(orm, directory, session.user);
+  const security = await resolveSessionSecurity(orm, people, session);
   return security ? { security, renewedCookies } : { security: null, renewedCookies: [] };
+}
+
+/**
+ * The security context of a browser session: its user, or the employee it acts as while the user
+ * still may; null for the demo's provisional owner after the demo ended.
+ */
+export async function resolveSessionSecurity(
+  orm: Orm,
+  people: { directory: EmployeeDirectory; actingAs: ActingAsService },
+  session: {
+    user: { id: string; email: string };
+    session: { id: string; actingAsEmployeeId?: string | null };
+  },
+): Promise<SecurityContext | null> {
+  const user = await resolveUserSecurity(orm, people.directory, session.user);
+  const { id: sessionId, actingAsEmployeeId: employeeId } = session.session;
+  if (!user || !employeeId) {
+    return user;
+  }
+  return (await people.actingAs.resolveActing(user, { sessionId, employeeId })) ?? user;
 }
 
 /**

@@ -22,8 +22,11 @@ export interface PermissionObjects {
 /** A kind of record permissions apply to. */
 export type PermissionObject = keyof PermissionObjects;
 
-/** What can be done to one record of an object. */
-export type RecordAction = "create" | "read" | "update" | "delete";
+/**
+ * What can be done to one record of an object; `act_as` uses Broccoli as the employee, with their
+ * rights instead of one's own.
+ */
+export type RecordAction = "create" | "read" | "update" | "delete" | "act_as";
 
 /**
  * Which records a grant reaches, by their subject, relative to the caller's employee: the caller,
@@ -78,7 +81,7 @@ const ADMIN: ProfileDefinition = {
     {
       key: "employee.manage.all",
       object: "employee",
-      actions: ["create", "read", "update", "delete"],
+      actions: ["create", "read", "update", "delete", "act_as"],
       scope: "all",
       fields: "*",
     },
@@ -136,6 +139,13 @@ export const PERMISSION_PROFILES: Record<PermissionProfile, ProfileDefinition> =
         actions: ["update"],
         scope: "all_reports",
         fields: ["firstName", "lastName", "avatar", "jobTitle"],
+      },
+      // A manager may use Broccoli as a direct report, never further down.
+      {
+        key: "employee.act_as.direct_reports",
+        object: "employee",
+        actions: ["act_as"],
+        scope: "direct_reports",
       },
       {
         key: "working_pattern.read.self",

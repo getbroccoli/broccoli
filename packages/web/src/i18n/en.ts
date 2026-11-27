@@ -1,3 +1,4 @@
+import { actingAsEn } from "./en/actingAs";
 import { appEn } from "./en/app";
 import { authEn } from "./en/auth";
 import { demoEn } from "./en/demo";
@@ -24,6 +25,7 @@ import { workspaceEn } from "./en/workspace";
 export const en = {
   ...appEn,
   ...authEn,
+  ...actingAsEn,
   ...setupEn,
   ...setupTimeOffEn,
   ...setupWhoEn,

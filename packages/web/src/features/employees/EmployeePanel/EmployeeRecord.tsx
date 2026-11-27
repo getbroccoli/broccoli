@@ -59,7 +59,9 @@ export function EmployeeRecord({ employee, onClose }: Props) {
   const editable = new Set(employee.access.editableFields);
   const canEdit = (key: EmployeeFieldKey) =>
     key === "permissionProfiles"
-      ? operations.includes("MANAGE_WORKSPACE") && !employee.permissionProfiles?.includes("OWNER")
+      ? operations.includes("MANAGE_WORKSPACE") &&
+        !employee.permissionProfiles?.includes("OWNER") &&
+        !me.actingAs
       : editable.has(INPUT_KEYS[key as keyof typeof INPUT_KEYS] ?? key);
   // In panel order, as the person reads the fields.
   const changedLabels = EMPLOYEE_DESCRIPTION.fields
@@ -125,7 +127,11 @@ export function EmployeeRecord({ employee, onClose }: Props) {
             }
             signIn={
               employee.signInStatus
-                ? { status: employee.signInStatus, onInvite: () => setInviting(true) }
+                ? {
+                    status: employee.signInStatus,
+                    // Inviting stays the signed-in user's own business, never done as someone else.
+                    onInvite: me.actingAs ? null : () => setInviting(true),
+                  }
                 : null
             }
           />

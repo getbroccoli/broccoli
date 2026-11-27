@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { AllowAgentPage } from "@/features/mcpAgents";
@@ -10,7 +10,12 @@ import { requireFinishedSetup } from "@/features/setup";
  */
 export const Route = createFileRoute("/agent/allow")({
   validateSearch: z.object({ request: z.string().catch("") }),
-  beforeLoad: (gate) => ({ me: requireFinishedSetup(gate) }),
+  beforeLoad: (gate) => {
+    const me = requireFinishedSetup(gate);
+    // Allowing an agent stays the signed-in user's own business, never done as someone else.
+    if (me.actingAs) throw redirect({ to: "/", replace: true });
+    return { me };
+  },
   component: function AllowAgentRoute() {
     return <AllowAgentPage signedRequest={Route.useSearch().request} />;
   },

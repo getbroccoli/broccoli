@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { onTestFinished } from "vitest";
 
 import {
+  actingAs,
   aiSettings,
   expect,
   EMPLOYEE,
@@ -12,6 +13,16 @@ import {
   test,
   TEST_SECRET_BOX,
 } from "#test/support";
+
+test("refuses saving AI settings while acting as another employee", async ({ orm, seed }) => {
+  const employee = await seed.employee();
+  const acting = actingAs(orm, { actor: OWNER, employeeId: employee.id });
+
+  await expect(aiSettings(orm).save(acting, { source: "broccoli_ai" })).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    message: "Stop acting as someone else to do this.",
+  });
+});
 
 test.for([OWNER, SETUP_HOLDER, SYSTEM])(
   "reads Broccoli AI on a new self-hosted instance with setup access",

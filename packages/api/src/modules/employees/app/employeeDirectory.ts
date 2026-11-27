@@ -21,5 +21,7 @@ export function employeeDirectory(db: Orm | Tx): EmployeeDirectory {
       const owner = await owners.readOwner(db);
       return owner ? employeeIdOfUser(owner.userId) : null;
     },
+    usersOfEmployees: async (employeeIds) =>
+      new Map((await employees.findByIds(employeeIds)).map(({ id, userId }) => [id, userId])),
   };
 }

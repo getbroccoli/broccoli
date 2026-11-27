@@ -1,6 +1,7 @@
 import { useRef, type ReactNode } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
+import { ActingAsBanner } from "@/features/actingAs";
 import { DemoBanner } from "@/features/demo";
 
 import { cn } from "@/lib/class-names";
@@ -27,10 +28,11 @@ export function AppShell({ children, agentActivity }: Props) {
   useLiveAgentConnection();
 
   return (
-    <>
+    <div className="flex h-dvh flex-col">
+      <ActingAsBanner />
       <div
         className={cn(
-          "surface-grain flex h-dvh w-full flex-col overflow-hidden transition-colors duration-500 motion-reduce:transition-none md:flex-row",
+          "surface-grain flex min-h-0 w-full flex-1 flex-col overflow-hidden transition-colors duration-500 motion-reduce:transition-none md:flex-row",
           inSettings ? "bg-settings-backdrop" : "bg-app-backdrop",
         )}
       >
@@ -54,6 +56,6 @@ export function AppShell({ children, agentActivity }: Props) {
       </div>
       {/* Outside the frame, whose isolation would keep toasts under panels and dialogs. */}
       <Toaster position="top-center" />
-    </>
+    </div>
   );
 }

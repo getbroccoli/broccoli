@@ -1,4 +1,6 @@
 import {
+  actingAs,
+  ADMIN,
   EXAMPLE_RECORD,
   EXAMPLE_REGISTRATION,
   READABLE_EXAMPLE_REGISTRATION,
@@ -203,6 +205,21 @@ test("answers access through each subject and allows deleting the owner's non-em
       ["example-3", { canUpdate: true, canDelete: true, editableFields: ["title"] }],
     ]),
   );
+});
+
+test("an admin can delete an employee only when using their own identity", async ({
+  orm,
+  seed,
+}) => {
+  const colleague = await seed.employee();
+  const employee = await seed.employee();
+  const acting = actingAs(orm, { actor: ADMIN, employeeId: colleague.id, profiles: ["ADMIN"] });
+
+  const ownAccess = await ADMIN.recordAccess("employee", [employee.id]);
+  const actingAccess = await acting.recordAccess("employee", [employee.id]);
+
+  expect(ownAccess.get(employee.id)?.canDelete).toBe(true);
+  expect(actingAccess.get(employee.id)?.canDelete).toBe(false);
 });
 
 test("permits writing a public record only with update on all", async ({ orm, seed }) => {

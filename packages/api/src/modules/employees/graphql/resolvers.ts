@@ -4,6 +4,7 @@ import {
   type ResolversTypes,
   toEnum,
 } from "../../../core/graphql";
+import type { ActingAsService } from "../../../core/instance";
 import type {
   EmployeeInviteService,
   EmployeeManagerService,
@@ -35,8 +36,9 @@ export function createResolvers(
     EmployeeTermsService &
     OwnWorkingWeekService,
   invites: EmployeeInviteService,
+  actingAs: ActingAsService,
 ): Resolvers {
-  const loaders = employeeLoaders(services, invites);
+  const loaders = employeeLoaders(services, invites, actingAs);
   const terms = employmentTermsResolvers(services);
   return {
     Query: {
@@ -226,6 +228,10 @@ export function createResolvers(
     },
     User: {
       employee: (_user, _args, context) => services.readMyEmployee(context.getActor()),
+      actingAs: (_user, _args, context) => {
+        const actor = context.getActor();
+        return actor.actor ? services.readMyEmployee(actor) : null;
+      },
     },
     Employee: {
       avatarUrl: ({ avatarFileId }) => avatarFileId && avatarUrl(avatarFileId),
@@ -235,6 +241,7 @@ export function createResolvers(
       manager: (employee, _args, context) => loaders(context).manager.load(employee.id),
       location: ({ locationId }, _args, context) =>
         locationId ? loaders(context).location.load(locationId) : null,
+      canActAs: (employee, _args, context) => loaders(context).actable.load(employee.id),
       permissionProfiles: (employee, _args, context) =>
         loaders(context).permissionProfiles.load(employee.id),
       canCreate: async (employee, { recordType }, context) =>

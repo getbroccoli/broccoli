@@ -88,6 +88,7 @@ export function createMailSettingsService({
     },
 
     save: async (ctx, choice, linkOrigin) => {
+      ctx.requireOwnIdentity();
       ctx.require("MANAGE_WORKSPACE");
       if (deployment.mode === "managed") {
         throw new ApplicationError("CONFLICT", "A managed instance sends email through Broccoli.");

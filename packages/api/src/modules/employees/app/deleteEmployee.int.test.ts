@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { assert } from "vitest";
 
 import {
+  actingAs,
   ADMIN,
   signedIn,
   recordChangedEvents,
@@ -16,6 +17,18 @@ import {
 } from "#test/support";
 
 import { user } from "../../../core/auth";
+
+test("refuses deleting an employee while acting as another employee", async ({ orm, seed }) => {
+  const employee = await seed.employee();
+  const acting = actingAs(orm, { actor: OWNER, employeeId: employee.id });
+
+  await expect(
+    employeeServices(orm).deleteEmployee(acting, { id: employee.id }),
+  ).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    message: "Stop acting as someone else to do this.",
+  });
+});
 
 test("removing a manager clears them from every report with a history line", async ({
   orm,
