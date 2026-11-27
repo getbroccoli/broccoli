@@ -13,7 +13,6 @@ export type RefusalReason =
 
 import type {
   TimeOffApproval,
-  TimeOffBalanceKind,
   TimeOffDayCostReason,
   TimeOffDayPart,
   WhosOutDayKind,
@@ -249,6 +248,37 @@ export function requestedToast(cost: number): string {
   return t("timeOff.text.requested", { days: formatDays(cost) });
 }
 
+/** "8 days deducted from Annual leave" when it takes from an allowance, else its days: "3 days". */
+export function bookingTotal({
+  cost,
+  deductedDays,
+  typeName,
+}: {
+  cost: number;
+  deductedDays: number | null;
+  typeName: string;
+}): string {
+  return deductedDays === null
+    ? formatDays(cost)
+    : t("timeOff.details.deductedFrom", { days: formatDays(deductedDays), type: typeName });
+}
+
+/** One booked day and what it adds: "Full day · 1 day", "Non-working day · 0 days". */
+export function dayCostLine({
+  dayPart,
+  cost,
+  reason,
+}: {
+  dayPart: TimeOffDayPart;
+  cost: number;
+  reason: TimeOffDayCostReason;
+}): string {
+  return t("timeOff.details.dayCost", {
+    part: t(reason === "WORKING_DAY" ? DAY_PART_LABELS[dayPart] : DAY_REASON_LABELS[reason]),
+    days: formatDays(cost),
+  });
+}
+
 /**
  * The words for cancelling this time off: the person withdraws their own request, others cancel
  * it, and approved time off is cancelled; `confirm` is also the button that opens the confirmation.
@@ -310,48 +340,6 @@ const CANCEL_WORDS = {
     done: "timeOff.cancel.timeOffDone",
   },
 } as const satisfies Record<CancelAction, Record<string, MessageKey>>;
-
-/**
- * A booking's total as it counts: "8 days deducted from Annual leave", "2.5 days from Annual leave
- * if approved", or "3 days recorded" for a type without an allowance.
- */
-export function bookingTotal({
-  cost,
-  status,
-  balance,
-  typeName,
-}: {
-  cost: number;
-  status: TimeOffStatus | null;
-  balance: TimeOffBalanceKind | null;
-  typeName: string;
-}): string {
-  const requested = status === "REQUESTED";
-  const days = formatDays(cost);
-  if (balance === "BALANCE_FROM_ALLOWANCE") {
-    return t(requested ? "timeOff.details.fromIfApproved" : "timeOff.details.deductedFrom", {
-      days,
-      type: typeName,
-    });
-  }
-  return t(requested ? "timeOff.details.ifApproved" : "timeOff.details.recorded", { days });
-}
-
-/** One booked day and what it adds: "Full day · 1 day", "Non-working day · 0 days". */
-export function dayCostLine({
-  dayPart,
-  cost,
-  reason,
-}: {
-  dayPart: TimeOffDayPart;
-  cost: number;
-  reason: TimeOffDayCostReason;
-}): string {
-  return t("timeOff.details.dayCost", {
-    part: t(reason === "WORKING_DAY" ? DAY_PART_LABELS[dayPart] : DAY_REASON_LABELS[reason]),
-    days: formatDays(cost),
-  });
-}
 
 const DAY_PART_LABELS = {
   FULL_DAY: "timeOff.dialog.fullDay",

@@ -5,13 +5,17 @@ import {
   seedWorkingPattern,
   giveDefaultTermsStatutoryMinimum,
   giveTermsPolicies,
+  leaveRequestSetup,
   OWNER,
+  SYSTEM,
   signedIn,
   test,
   bookTimeOffService,
   whosOutService,
+  timeOffService,
 } from "#test/support";
 
+import type { Orm } from "../../../core/db";
 import { timeOffTypes } from "../db";
 
 test("lists every date of a month with employment, working days and bank holidays", async ({
@@ -71,12 +75,7 @@ test("prices each booked day using the working week in effect on that date", asy
     endDate: "2026-12-11",
     halfDays: [{ date: "2026-12-09", dayPart: "morning" }],
   });
-  const pattern = await seedWorkingPattern(orm, { minutes: [450, 450, 450, 0, 450, 0, 0] });
-  await seedOwnWeek(orm, {
-    employeeId: person.employeeId,
-    versionId: pattern.versionId,
-    startDate: "2026-11-27",
-  });
+  await makeThursdaysNonWorking(orm, person.employeeId);
 
   const rows = await whosOutService(orm).readWhosOut(OWNER, {
     employeeIds: [person.employeeId],
@@ -84,11 +83,82 @@ test("prices each booked day using the working week in effect on that date", asy
     until: "2026-12-31",
   });
 
-  expect(rows.get(person.employeeId)?.timeOff[0]?.days).toEqual([
-    { date: "2026-12-09", dayPart: "morning", cost: 0.5, reason: "working_day" },
-    { date: "2026-12-10", dayPart: "full_day", cost: 0, reason: "not_a_working_day" },
-    { date: "2026-12-11", dayPart: "full_day", cost: 1, reason: "working_day" },
+  expect(rows.get(person.employeeId)?.timeOff[0]?.dayCosts).toEqual([
+    { date: "2026-12-09", cost: 0.5, reason: "working_day" },
+    { date: "2026-12-10", cost: 0, reason: "not_a_working_day" },
+    { date: "2026-12-11", cost: 1, reason: "working_day" },
   ]);
+});
+
+test("reports eight deducted days after the ledger gives back two Thursdays", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const person = await seedAnnualLeaveEmployee(orm, seed, transact);
+  await bookTimeOffService(orm).bookTimeOff(OWNER, {
+    ...person,
+    startDate: "2026-12-07",
+    endDate: "2026-12-18",
+  });
+  await makeThursdaysNonWorking(orm, person.employeeId);
+  const calendar = whosOutService(orm);
+  const range = { employeeIds: [person.employeeId], from: "2026-12-07", until: "2026-12-18" };
+  const before = await calendar.readWhosOut(OWNER, range);
+  expect(before.get(person.employeeId)?.timeOff).toMatchObject([{ cost: 8, deductedDays: 10 }]);
+
+  const engine = timeOffService(orm, { today: "2026-11-27" });
+  await transact((tx) =>
+    engine.ensureAllowances(SYSTEM, tx, {
+      employeeIds: [person.employeeId],
+      cause: { kind: "WORKING_PATTERN_CHANGED", ref: "2026-11-27" },
+    }),
+  );
+
+  const after = await calendar.readWhosOut(OWNER, range);
+  expect(after.get(person.employeeId)?.timeOff).toMatchObject([{ deductedDays: 8 }]);
+});
+
+test("shows no allowance deduction for a request awaiting approval", async ({ orm, seed }) => {
+  const { requests, requester, input } = await leaveRequestSetup(orm, seed);
+  const request = await requests.requestTimeOff(requester, input);
+
+  const rows = await whosOutService(orm).readWhosOut(requester, {
+    employeeIds: [input.employeeId],
+    from: input.startDate,
+    until: input.endDate,
+  });
+
+  expect(rows.get(input.employeeId)?.timeOff).toMatchObject([
+    { id: request.id, deductedDays: null },
+  ]);
+});
+
+test("shows no allowance deduction for approved record-only Sickness", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const employee = await seed.employee({ startDate: "2025-01-01" });
+  const termsId = await seed.defaultTermsId();
+  await giveTermsPolicies(orm, transact, { termsId, policies: [{ recordOnly: "sickness" }] });
+  const sickness = (await orm.select().from(timeOffTypes)).find(
+    ({ typeKey }) => typeKey === "sickness",
+  )!;
+  const booked = await bookTimeOffService(orm).bookTimeOff(OWNER, {
+    employeeId: employee.id,
+    timeOffTypeId: sickness.id,
+    startDate: "2026-12-07",
+    endDate: "2026-12-07",
+  });
+
+  const rows = await whosOutService(orm).readWhosOut(OWNER, {
+    employeeIds: [employee.id],
+    from: "2026-12-07",
+    until: "2026-12-07",
+  });
+
+  expect(rows.get(employee.id)?.timeOff).toMatchObject([{ id: booked.id, deductedDays: null }]);
 });
 
 test("shows a colleague Annual leave's type and days but hides its details", async ({
@@ -124,9 +194,11 @@ test("shows a colleague Annual leave's type and days but hides its details", asy
       id: booked.id,
       timeOffTypeId: annual.id,
       days: [
-        { date: "2026-12-07", dayPart: "full_day", cost: null, reason: null },
-        { date: "2026-12-08", dayPart: "morning", cost: null, reason: null },
+        { date: "2026-12-07", dayPart: "full_day" },
+        { date: "2026-12-08", dayPart: "morning" },
       ],
+      dayCosts: null,
+      deductedDays: null,
       cost: null,
       note: null,
       bookedAt: null,
@@ -236,3 +308,8 @@ test("omits a cancelled booking from who's out", async ({ orm, seed, transact })
 
   expect(rows.get(person.employeeId)?.timeOff).toEqual([]);
 });
+
+async function makeThursdaysNonWorking(orm: Orm, employeeId: string) {
+  const pattern = await seedWorkingPattern(orm, { minutes: [450, 450, 450, 0, 450, 0, 0] });
+  await seedOwnWeek(orm, { employeeId, versionId: pattern.versionId, startDate: "2026-11-27" });
+}

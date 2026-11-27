@@ -4,7 +4,8 @@ import type {
   AllowanceLineKind,
 } from "@/__generated__/graphql";
 import { type MessageKey, t } from "@/i18n";
-import { bookingDates, dayMonthYear } from "@/lib/formatDate";
+import { calendarDayOf } from "@/lib/calendarDay";
+import { bookingDates, dateRange, dayMonthYear } from "@/lib/formatDate";
 import { formatDayCount, formatDays } from "@/lib/formatDays";
 
 /** One change to a balance as the history query reads it. */
@@ -44,10 +45,11 @@ export function changeTitle(change: AllowanceChange, readerUserId: string): stri
 export function reverseWords(
   change: Pick<AllowanceChange, "amount" | "recordedAt">,
   balance: { remaining: number; firstName: string; isReader: boolean },
+  today: string,
 ) {
   const values = {
     days: formatDays(Math.abs(change.amount)),
-    date: recordedDay.format(new Date(change.recordedAt)),
+    date: recordedDate(change.recordedAt, today),
   };
   const left = formatDays(balance.remaining - change.amount);
   return {
@@ -67,6 +69,12 @@ export function reverseWords(
     confirm: t("people.panel.timeOff.reverse.confirm"),
     done: t("people.panel.timeOff.reverse.done"),
   };
+}
+
+/** "27 Nov", the day the change was recorded in London, with the year when it isn't today's. */
+export function recordedDate(recordedAt: string, today: string): string {
+  const day = calendarDayOf(new Date(recordedAt), "Europe/London");
+  return day.slice(0, 4) === today.slice(0, 4) ? dateRange(day, day) : dayMonthYear(day);
 }
 
 /** What a change is made of, signed: "+28 granted, −8 bank holidays"; null where the title says it. */
@@ -113,13 +121,6 @@ function authorName(change: Pick<AllowanceChange, "author">, readerUserId: strin
     ? t("people.panel.timeOff.history.you")
     : (change.author.email ?? t("people.panel.timeOff.history.someone"));
 }
-
-/** "27 Nov", the day the instant falls on in London, where the company's days are. */
-const recordedDay = new Intl.DateTimeFormat("en-GB", {
-  day: "numeric",
-  month: "short",
-  timeZone: "Europe/London",
-});
 
 /** An adjustment or its reversal, or a booking or cancellation that only moved booked days. */
 function titleSaysItAll({ cause, parts }: Pick<AllowanceChange, "cause" | "parts">): boolean {

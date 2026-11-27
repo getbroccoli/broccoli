@@ -6,6 +6,7 @@ import type { CalendarDate } from "../../../utils";
 import type { LedgerLineKind, LedgerSum, NewLedgerLine, StoredLedgerLine } from "../domain";
 import { allowanceLedgerLines } from "./allowanceLedgerLinesTable";
 import { allowances } from "./allowancesTable";
+import { timeOffDays } from "./timeOffDaysTable";
 
 /** One person's allowance for one type and leave year. */
 export interface Allowance {
@@ -39,6 +40,11 @@ export interface AllowanceRepository {
   findAdjustment(
     request: Pick<NewAdjustment, "allowanceId" | "requestId">,
   ): Promise<{ amount: string; reason: string | null } | null>;
+  /**
+   * Days each time off takes from allowances now, minus its booked days' lines, by time off id;
+   * time off with no such lines, such as of a type without an allowance, is absent.
+   */
+  findDeductedDays(timeOffIds: readonly string[]): Promise<Map<string, number>>;
   /** The adjustment line with this id; null when there is none or the line is no adjustment. */
   findAdjustmentById(id: string): Promise<{ allowanceId: string; amount: string } | null>;
   /** Appends the reversal of an adjustment and returns its id; null when it was reversed before. */
@@ -202,6 +208,19 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
         .from(allowanceLedgerLines)
         .where(eq(allowanceLedgerLines.idempotencyKey, adjustmentKey(allowanceId, requestId)));
       return row ?? null;
+    },
+
+    async findDeductedDays(timeOffIds) {
+      const rows = await orm()
+        .select({
+          timeOffId: timeOffDays.timeOffId,
+          amount: sql<string>`sum(${allowanceLedgerLines.amount})`,
+        })
+        .from(allowanceLedgerLines)
+        .innerJoin(timeOffDays, eq(timeOffDays.id, allowanceLedgerLines.timeOffDayId))
+        .where(anyOf(timeOffDays.timeOffId, timeOffIds))
+        .groupBy(timeOffDays.timeOffId);
+      return new Map(rows.map(({ timeOffId, amount }) => [timeOffId, -Number(amount) + 0]));
     },
 
     async findAdjustmentById(id) {

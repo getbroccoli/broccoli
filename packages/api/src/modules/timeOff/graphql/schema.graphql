@@ -564,6 +564,10 @@ type TimeOff implements AnyRecord {
   days: [TimeOffDay!]!
   "Days booked, a half day 0.5; null unless the caller may read this person's time off."
   cost: Float
+  "Each day's cost now, oldest first; null outside who's out, and unless the caller may read this person's time off."
+  dayCosts: [TimeOffDayCost!]
+  "Days approved time off takes from allowances now; null for requests, types without an allowance, outside who's out, and unless the caller may read this person's time off."
+  deductedDays: Float
   "Null unless the caller may read this person's time off."
   note: String
   "When it was booked or requested; null unless the caller may read this person's time off."
@@ -597,10 +601,14 @@ type TimeOffDecision {
 type TimeOffDay {
   date: Date!
   dayPart: TimeOffDayPart!
-  "What the day costs under the person's working week and bank holidays on that date, so a day they no longer work costs 0; null outside who's out, and unless the caller may read this person's time off."
-  cost: Float
-  "Why the day costs that; null whenever cost is."
-  reason: TimeOffDayCostReason
+}
+
+"What one booked day costs now, and why."
+type TimeOffDayCost {
+  date: Date!
+  "Under the person's working week and bank holidays on that date, so a day they no longer work costs 0."
+  cost: Float!
+  reason: TimeOffDayCostReason!
 }
 
 enum TimeOffDayPart {

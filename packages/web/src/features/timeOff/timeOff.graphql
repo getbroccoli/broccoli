@@ -11,10 +11,14 @@ fragment WhosOutTimeOff on TimeOff {
   days {
     date
     dayPart
+  }
+  cost
+  dayCosts {
+    date
     cost
     reason
   }
-  cost
+  deductedDays
   note
   bookedAt
   status

@@ -1,9 +1,7 @@
-import { useQuery } from "@apollo/client/react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import {
-  BookingPersonTypesDocument,
   CancelTimeOffDocument,
   EmployeePanelDocument,
   MyTasksDocument,
@@ -124,10 +122,36 @@ export function BookingDetailsDialog({
             />
             {person.firstName} {person.lastName}
           </div>
-          {detailed ? (
-            <BookingCost employeeId={employeeId} timeOff={timeOff} typeName={typeName} />
-          ) : (
-            <p className="text-sm">{bookingDates(timeOff.startDate, timeOff.endDate)}</p>
+          <p className="text-sm">
+            {bookingDates(timeOff.startDate, timeOff.endDate)}
+            {detailed && (
+              <span className="text-muted-foreground">
+                {" · "}
+                {bookingTotal({
+                  cost: timeOff.cost!,
+                  deductedDays: timeOff.deductedDays ?? null,
+                  typeName,
+                })}
+              </span>
+            )}
+          </p>
+          {timeOff.dayCosts && (
+            <ul className="overflow-hidden rounded-lg border border-border text-sm">
+              {timeOff.dayCosts.map((day) => (
+                <li
+                  key={day.date}
+                  className={cn(
+                    "flex justify-between gap-3 border-b border-border/60 px-3 py-1.5 last:border-b-0",
+                    day.reason !== "WORKING_DAY" && "text-muted-foreground",
+                  )}
+                >
+                  {weekdayDay(day.date)}
+                  <span className="text-right text-muted-foreground">
+                    {dayCostLine({ ...day, dayPart: dayPartOn(timeOff, day.date) })}
+                  </span>
+                </li>
+              ))}
+            </ul>
           )}
           {timeOff.note && <p className="text-sm whitespace-pre-line">{timeOff.note}</p>}
           {timeOff.status && timeOff.bookedAt && requested && (
@@ -191,61 +215,7 @@ export function BookingDetailsDialog({
   );
 }
 
-/**
- * A booking's dates with what it counts as, "8 days deducted from Annual leave", and each day's
- * share, for who may read the person's time off.
- */
-function BookingCost({
-  employeeId,
-  timeOff,
-  typeName,
-}: {
-  employeeId: string;
-  timeOff: WhosOutTimeOff;
-  typeName: string;
-}) {
-  // Whether the type counts against an allowance; whoever reads the cost may read this too.
-  const { data } = useQuery(BookingPersonTypesDocument, { variables: { id: employeeId } });
-  const balance =
-    data?.employee?.timeOffTypes?.find((type) => type.timeOffType.id === timeOff.timeOffType?.id)
-      ?.balance ?? null;
-  return (
-    <>
-      <div className="flex flex-col gap-0.5 text-sm">
-        <p>
-          {bookingDates(timeOff.startDate, timeOff.endDate)}
-          <span className="text-muted-foreground">
-            {" · "}
-            {bookingTotal({
-              cost: timeOff.cost!,
-              status: timeOff.status ?? null,
-              balance,
-              typeName,
-            })}
-          </span>
-        </p>
-        {balance === "NO_BALANCE" && (
-          <p className="text-[13px] text-muted-foreground">
-            {t("timeOff.dialog.noBalance", { type: typeName })}
-          </p>
-        )}
-      </div>
-      <ul className="overflow-hidden rounded-lg border border-border text-sm">
-        {timeOff.days.map(({ date, dayPart, cost, reason }) => (
-          <li
-            key={date}
-            className={cn(
-              "flex justify-between gap-3 border-b border-border/60 px-3 py-1.5 last:border-b-0",
-              reason !== "WORKING_DAY" && "text-muted-foreground",
-            )}
-          >
-            {weekdayDay(date)}
-            <span className="text-right text-muted-foreground">
-              {dayCostLine({ dayPart, cost: cost ?? 0, reason: reason ?? "WORKING_DAY" })}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </>
-  );
+/** The part of the day booked on a date: full day, morning or afternoon. */
+function dayPartOn(timeOff: WhosOutTimeOff, date: string) {
+  return timeOff.days.find((day) => day.date === date)!.dayPart;
 }

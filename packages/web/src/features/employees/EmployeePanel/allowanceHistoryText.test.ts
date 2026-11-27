@@ -5,6 +5,7 @@ import {
   changeTitle,
   parseAdjustment,
   partsLine,
+  recordedDate,
   reverseWords,
   signedDays,
 } from "./allowanceHistoryText";
@@ -148,10 +149,23 @@ it.each([
   expect(adjustLabel(amount)).toBe(expected);
 });
 
+it("omits the year when the recorded London day is in the current year", () => {
+  expect(recordedDate("2026-07-26T23:30:00Z", "2026-11-27")).toBe("27 Jul");
+});
+
+it("includes the year when the adjustment was recorded in an earlier year", () => {
+  expect(recordedDate("2025-11-27T12:00:00Z", "2026-11-27")).toBe("27 Nov 2025");
+});
+
+it("uses the London date for an adjustment recorded late at night", () => {
+  expect(recordedDate("2026-11-27T23:30:00Z", "2026-11-28")).toBe("27 Nov");
+});
+
 it("explains how reversing added days takes them away", () => {
   const words = reverseWords(
     { amount: 5, recordedAt },
     { remaining: 16.5, firstName: "Aisha", isReader: false },
+    "2026-11-28",
   );
 
   expect(words).toEqual({
@@ -167,6 +181,7 @@ it("explains how reversing a deduction gives days back", () => {
   const words = reverseWords(
     { amount: -2, recordedAt },
     { remaining: 9, firstName: "Aisha", isReader: false },
+    "2026-11-28",
   );
 
   expect(words.body).toBe(
@@ -178,6 +193,7 @@ it("addresses the reader when reversing their own adjustment", () => {
   const words = reverseWords(
     { amount: 5, recordedAt },
     { remaining: 16.5, firstName: "Aisha", isReader: true },
+    "2026-11-28",
   );
 
   expect(words.body).toBe(

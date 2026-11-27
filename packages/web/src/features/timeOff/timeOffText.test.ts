@@ -157,40 +157,19 @@ it.each([
   expect(bookingTooltip(booking)).toBe(expected);
 });
 
-it.each(["APPROVED", null] as const)("describes an allowance deduction for status %s", (status) => {
-  expect(
-    bookingTotal({ status, cost: 8, balance: "BALANCE_FROM_ALLOWANCE", typeName: "Annual leave" }),
-  ).toBe("8 days deducted from Annual leave");
+it.each([
+  [8, "8 days deducted from Annual leave"],
+  [0.5, "0.5 days deducted from Annual leave"],
+] as const)("shows the allowance deduction of %s days", (deductedDays, expected) => {
+  expect(bookingTotal({ cost: 10, deductedDays, typeName: "Annual leave" })).toBe(expected);
 });
 
-it("shows the allowance cost of a request if approved", () => {
-  expect(
-    bookingTotal({
-      status: "REQUESTED",
-      cost: 2.5,
-      balance: "BALANCE_FROM_ALLOWANCE",
-      typeName: "Annual leave",
-    }),
-  ).toBe("2.5 days from Annual leave if approved");
+it.each([
+  [3, "3 days"],
+  [1, "1 day"],
+] as const)("shows only the cost of %s when there is no deduction", (cost, expected) => {
+  expect(bookingTotal({ cost, deductedDays: null, typeName: "Sickness" })).toBe(expected);
 });
-
-it.each(["UNLIMITED_BALANCE", "NO_BALANCE", null] as const)(
-  "shows days recorded for balance %s",
-  (balance) => {
-    expect(bookingTotal({ status: "APPROVED", cost: 3, balance, typeName: "Sickness" })).toBe(
-      "3 days recorded",
-    );
-  },
-);
-
-it.each(["UNLIMITED_BALANCE", "NO_BALANCE", null] as const)(
-  "shows days if approved for balance %s",
-  (balance) => {
-    expect(bookingTotal({ status: "REQUESTED", cost: 3, balance, typeName: "Sickness" })).toBe(
-      "3 days if approved",
-    );
-  },
-);
 
 it.each([
   ["FULL_DAY", 1, "WORKING_DAY", "Full day · 1 day"],
