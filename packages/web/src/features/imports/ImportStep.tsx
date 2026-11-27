@@ -65,7 +65,9 @@ export function ImportStep() {
     externalAgent && !externalAgent.listening
       ? pendingAgentFiles.filter((source) => !source.pickedUpByExternalAgent)
       : [];
-  const gathering = data?.import.demoAvailable === false || uploading;
+  // A connected Slack is being read, or was: people are coming from the owner's own sources.
+  const gathering =
+    data?.import.demoAvailable === false || uploading || Boolean(data?.slackConnection);
 
   return (
     <SetupStepForm

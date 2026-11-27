@@ -59,9 +59,9 @@ With Broccoli AI, then again with OpenRouter, on a self-hosted instance:
 
 ## Leaving the step
 
-- [ ] Before Slack is imported, the footer shows only "Explore the demo"; "Back" on the left opens `/setup/ai` (self-hosted) or `/setup/company` (managed), with the company name filled in.
+- [ ] Before Slack is connected or a file added, the footer shows only "Explore the demo"; "Back" on the left opens `/setup/ai` (self-hosted) or `/setup/company` (managed), with the company name filled in.
 - [ ] Pressing Enter on the page never starts the demo.
-- [ ] With members imported, "Explore the demo" is disabled and hovering it shows "Not available once you’ve gathered people.", and "Review your people" opens the [review](import-review.md).
+- [ ] While a just-connected Slack is being imported, and once its members are imported, "Explore the demo" is disabled and hovering it shows "Not available once you’ve added Slack or a file."; "Review your people" opens the [review](import-review.md).
 - [ ] On a fresh instance, "Explore the demo" shows "Opening the demo…" and opens `/people` with the demo people (self-hosted: signed in as the demo's owner, without an account).
 
 ## Layout
