@@ -95,14 +95,16 @@ export async function leaveRequestSetup(
   };
 }
 
-/** A waiting request and its manager’s open approval task. */
+/** A waiting request and its manager’s open approval task. `today` sets the fixture clock. */
 export async function pendingRequest(
   orm: Orm,
   seed: TestSeed,
-  dates?: { startDate: string; endDate: string },
+  options?: { startDate: string; endDate: string; today?: string },
 ) {
-  const setup = await leaveRequestSetup(orm, seed);
-  const input = dates ? { ...setup.input, ...dates, halfDays: [] } : setup.input;
+  const setup = await leaveRequestSetup(orm, seed, { today: options?.today });
+  const input = options
+    ? { ...setup.input, startDate: options.startDate, endDate: options.endDate, halfDays: [] }
+    : setup.input;
   const request = await setup.requests.requestTimeOff(setup.requester, input);
   const [task] = (await setup.tasks.listMyTasks(setup.manager)).needsYou;
   return { ...setup, input, request, task: task! };

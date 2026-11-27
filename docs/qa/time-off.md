@@ -35,9 +35,8 @@ A manual check of the Time off page, booking time off for someone, asking for on
 
 ## A changed working week
 
-- [ ] Book Annual leave for two whole future weeks without bank holidays (such as Mon 7 – Fri 18 Dec) for someone on Monday to Friday, then give them Thursdays off from a date no later than the first Thursday (Employment terms › Working week).
-- [ ] Time off page: Thu 10 and 17 Dec are plain non-working days on their row, with no bar; the bar's pieces round off on each side; the Off each day counts above those Thursdays leave them out.
-- [ ] Booking details: "8 days deducted from Annual leave"; Thu 10 and Thu 17 Dec read "Non-working day · 0 days".
+For the dated booking, balance and open-tab checks, see [Changes after booking time off](time-off-after-booking.md).
+
 - [ ] A lone afternoon shows in the right half of its day, wide enough to click; a morning in the left half.
 - [ ] For another person on Monday to Friday, book a single future Thursday, then give them Thursdays off from before it: its bar stays, so it can still be opened; the booking reads "0 days deducted from Annual leave"; Off each day leaves them out; cancelling it leaves Remaining unchanged.
 - [ ] Cancel time off asks "Cancel this time off?"; Keep time off leaves it; Cancel time off removes the bar, shows "Time off cancelled." and gives the days back on the panel.

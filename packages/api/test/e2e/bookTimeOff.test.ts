@@ -2,22 +2,35 @@ import { afterEach, beforeEach, vi } from "vitest";
 
 import { approveReviewedImport, expect, test, TEST_OWNER, type TestEnv } from "#test/support";
 
-test("the owner previews, books, reads and cancels two working days", async ({ env }) => {
+test("the owner previews, books, reads and cancels leave over New Year", async ({ env }) => {
   const { browser, employeeId, timeOffTypeId } = await setUpBooking(env);
-  const input = { employeeId, timeOffTypeId, startDate: "2026-12-07", endDate: "2026-12-08" };
+  const input = { employeeId, timeOffTypeId, startDate: "2026-12-31", endDate: "2027-01-04" };
   const days = [
-    { date: "2026-12-07", dayPart: "FULL_DAY" },
-    { date: "2026-12-08", dayPart: "FULL_DAY" },
+    { date: "2026-12-31", dayPart: "FULL_DAY" },
+    { date: "2027-01-04", dayPart: "FULL_DAY" },
   ];
 
   const preview = await browser.graphql(
     `query Preview($input: TimeOffBookInput!) {
-    timeOffBookingPreview(input: $input) { cost refusal { reason } }
+    timeOffBookingPreview(input: $input) {
+      cost
+      balances { periodStart balance }
+      refusal { reason }
+    }
   }`,
     { input },
   );
   expect(await preview.json()).toEqual({
-    data: { timeOffBookingPreview: { cost: 2, refusal: null } },
+    data: {
+      timeOffBookingPreview: {
+        cost: 2,
+        balances: [
+          { periodStart: "2026-01-01", balance: "BALANCE_FROM_ALLOWANCE" },
+          { periodStart: "2027-01-01", balance: "BALANCE_FROM_ALLOWANCE" },
+        ],
+        refusal: null,
+      },
+    },
   });
   const response = await browser.graphql(BOOK_TIME_OFF, { input });
   const booked = (await response.json()) as {
@@ -46,7 +59,10 @@ test("the owner previews, books, reads and cancels two working days", async ({ e
   });
   const cancelled = await browser.graphql(
     `mutation Cancel($input: TimeOffCancelInput!) {
-    timeOff { cancelTimeOff(input: $input) { cancelledTimeOffId error { __typename } } }
+    timeOff { cancelTimeOff(input: $input) {
+      cancelledTimeOffId
+      error { __typename ... on Error { message } }
+    } }
   }`,
     { input: { timeOffId } },
   );
@@ -152,7 +168,7 @@ test("a time off history line returns the booking's note, cost and booking time 
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(new Date("2026-11-09T12:00:00Z"));
+  vi.setSystemTime(new Date("2026-11-27T12:00:00Z"));
 });
 
 afterEach(() => vi.useRealTimers());
@@ -224,6 +240,6 @@ const BOOK_TIME_OFF = `mutation Book($input: TimeOffBookInput!) {
 
 const WHOS_OUT = `query Calendar($employeeId: ID!) {
   employee(id: $employeeId) {
-    whosOut(from: "2026-12-01", until: "2026-12-31") { timeOff { cost days { date dayPart } } }
+    whosOut(from: "2026-12-31", until: "2027-01-04") { timeOff { cost days { date dayPart } } }
   }
 }`;
