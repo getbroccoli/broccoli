@@ -2,7 +2,6 @@ import { Fragment, type Ref } from "react";
 
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
-import { formatDays } from "@/lib/formatDays";
 
 import {
   type AllowanceChange,
@@ -24,7 +23,7 @@ type Props = {
   onReverse?: (adjustmentId: string | null) => void;
 };
 
-/** One change: what happened, its amount and the days left, and how each figure moved. */
+/** One change: what happened, its amount and how each figure moved. */
 export function AllowanceChangeRow({
   ref,
   change,
@@ -67,12 +66,7 @@ export function AllowanceChangeRow({
           </Button>
         )}
       </span>
-      <span className="flex flex-col items-end">
-        <span className="font-medium tabular-nums">{signedDays(change.amount)}</span>
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {t("people.panel.timeOff.history.left", { days: formatDays(change.balanceAfter) })}
-        </span>
-      </span>
+      <span className="text-right font-medium tabular-nums">{signedDays(change.amount)}</span>
       {figureLines(change, previous).map(({ text, amount }) => (
         <Fragment key={text}>
           <span className="col-start-2 text-xs text-muted-foreground">{text}</span>

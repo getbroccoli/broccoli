@@ -19,7 +19,7 @@ type Props = {
   reverseFor?: { firstName: string; isReader: boolean };
 };
 
-/** A balance's changes, newest first, each with what it did and the days left after it. */
+/** A balance's changes, newest first, each with what it did and how it moved the figures. */
 export function AllowanceHistory({ employeeId, allowanceId, reverseFor }: Props) {
   const { me } = useRouteContext({ from: "/_authenticated" });
   const [reversingId, setReversingId] = useState<string | null>(null);

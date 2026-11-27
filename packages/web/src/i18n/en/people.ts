@@ -251,7 +251,6 @@ export const peopleEn = {
   "people.panel.timeOff.history.loading": "Loading history…",
   "people.panel.timeOff.history.failed": "History couldn’t load.",
   "people.panel.timeOff.history.retry": "Try again",
-  "people.panel.timeOff.history.left": "{days} left",
   "people.panel.timeOff.history.showAll": "Show all {count} changes",
   "people.panel.timeOff.history.allowance": "Allowance {before} → {after}",
   "people.panel.timeOff.history.bankHolidaysTaken": "Bank holidays taken {before} → {after}",
