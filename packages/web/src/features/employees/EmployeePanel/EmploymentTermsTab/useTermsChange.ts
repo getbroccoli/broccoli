@@ -34,6 +34,8 @@ export interface TermsChange {
   after: EmploymentTermsTab_TermsFragment | null;
   /** What of their own the person keeps on that date, for the save line. */
   keepsOwn: string[];
+  /** After the move they are offered time off on that date but have no working week. */
+  noWorkingWeek: boolean;
   error: string | null;
   /** A move is picked that would reach the person. */
   ready: boolean;
@@ -83,6 +85,7 @@ export function useTermsChange({
     before: moves[0]?.currentTerms ?? null,
     after: moves[0]?.employmentTerms ?? null,
     keepsOwn: moves[0] ? keptOwn(moves[0].employmentTerms, value.startDate) : [],
+    noWorkingWeek: moves[0] ? offeredWithoutWeek(moves[0].employmentTerms, value.startDate) : false,
     error:
       error ??
       (failed ? t("changeTerms.previewFailed") : null) ??
@@ -168,12 +171,25 @@ function keptOwn(
   ];
 }
 
+/** Whether some type is offered on `date` while no working week applies, so it would cost no days. */
+function offeredWithoutWeek(
+  { workingWeek, timeOff }: EmploymentTermsTab_TermsFragment,
+  date: string,
+): boolean {
+  return (
+    !versionOn(workingWeek, date) &&
+    (timeOff ?? []).some(({ versions }) => Boolean(versionOn(versions, date)?.rules))
+  );
+}
+
 type ChangeTermsError = ChangeTermsMutation["employees"]["changeTerms"]["error"];
 
 /** The form's message for a refused or failed save. */
 function failureMessage(failed: unknown, earliest: string): string {
   const refused =
     failed instanceof PayloadFailure ? (failed.payloadError as ChangeTermsError) : null;
+  // The server names whose booked time off would lose its rules.
+  if (refused?.__typename === "ConflictError") return refused.message;
   const tooEarly =
     refused?.__typename === "InvalidInputError" &&
     refused.fields.some(({ field }) => field === "startDate");

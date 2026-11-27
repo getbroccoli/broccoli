@@ -164,6 +164,8 @@ function errorOf({
   earliest: string;
 }): string | null {
   if (previewFailed) return t("changeTerms.previewFailed");
+  // The server names whose booked time off would lose its rules.
+  if (saveError?.__typename === "ConflictError") return saveError.message;
   if (
     saveError?.__typename === "InvalidInputError" &&
     saveError.fields.some(({ field }) => field === "startDate")

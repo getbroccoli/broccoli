@@ -13,6 +13,7 @@ export function saveLine({
   startDate,
   today,
   keepsOwn,
+  noWorkingWeek = false,
 }: {
   firstName: string;
   termsName: string | null;
@@ -20,12 +21,15 @@ export function saveLine({
   today: string;
   /** What the person has of their own on that date, such as "working week" or "Annual leave". */
   keepsOwn: readonly string[];
+  /** They are offered time off from that date but have no working week, so it costs no days. */
+  noWorkingWeek?: boolean;
 }): string {
   const values = { name: firstName, terms: termsName ?? "", date: shortDate(startDate) };
   return [
     t(termsName === null ? "changeTerms.saveLineNoTerms" : "changeTerms.saveLine", values),
     startDate <= today && t("changeTerms.reworked", { name: firstName }),
     keepsOwn.length > 0 && t("changeTerms.keeps", { name: firstName, parts: listOf(keepsOwn) }),
+    noWorkingWeek && t("changeTerms.noWorkingWeek"),
   ]
     .filter(Boolean)
     .join(" ");

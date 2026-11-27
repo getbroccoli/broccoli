@@ -79,6 +79,8 @@ export function createEmployeeTermsService({
       const request = parseRequest(ctx, input, today());
       const change = await transact(async (tx) => {
         await employmentRepository(tx).lockForWrites();
+        // Held to commit, so a person's own time off rules change waits and checks these terms.
+        await employeeRepository(tx).lockByIds(request.employeeIds);
         const { moves, skipped, names } = await planMoves(tx, request);
         await termsRepository(tx).replaceMemberships(
           new Map(moves.map(({ employeeId, memberships }) => [employeeId, memberships])),
@@ -150,6 +152,7 @@ export function createEmployeeTermsService({
       }
       const cancelled = await transact(async (tx) => {
         await employmentRepository(tx).lockForWrites();
+        await employeeRepository(tx).lockByIds([employeeId]);
         if (!(await employeeRepository(tx).findById(employeeId))) {
           throw employeeNotFound();
         }

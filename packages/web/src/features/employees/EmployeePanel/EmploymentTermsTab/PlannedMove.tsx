@@ -2,8 +2,8 @@ import { CalendarBlank } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { CancelTermsChangeDocument } from "@/__generated__/graphql";
-import { usePayloadMutation } from "@/apollo";
+import { CancelTermsChangeDocument, type CancelTermsChangeMutation } from "@/__generated__/graphql";
+import { PayloadFailure, usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import { CancelChangeDialog, shortDate } from "@/features/termsDisplay";
 import { t } from "@/i18n";
@@ -22,6 +22,8 @@ type Props = {
   /** Admins may cancel it. */
   canCancel: boolean;
 };
+
+type CancelTermsChangeError = CancelTermsChangeMutation["employees"]["cancelTermsChange"]["error"];
 
 /**
  * A move to other terms, or to no terms, that has not started, "From 1 Dec 2026: Scotland", and its
@@ -43,8 +45,14 @@ export function PlannedMove({
     try {
       await cancelChange({ variables: { input: { employeeId, startDate: period.startDate } } });
       toast(t("people.panel.terms.cancelled"));
-    } catch {
-      toast.error(t("people.panel.terms.cancelFailed"));
+    } catch (error) {
+      const refused =
+        error instanceof PayloadFailure ? (error.payloadError as CancelTermsChangeError) : null;
+      toast.error(
+        refused?.__typename === "ConflictError"
+          ? refused.message
+          : t("people.panel.terms.cancelFailed"),
+      );
     }
     setAsking(false);
   };

@@ -1,5 +1,9 @@
+import { sql } from "drizzle-orm";
+
 import {
+  calendarDate,
   expect,
+  expectBlockedBy,
   giveTermsPolicies,
   OWNER,
   ownTimeOffRulesService,
@@ -7,15 +11,25 @@ import {
   readTermsPolicies,
   seedTimeOff,
   test,
+  type TestSeed,
   testTransactor,
   timeOffService,
   workingPatternService,
 } from "#test/support";
-import { createBeforeCommitBus, type Orm, transactor } from "../../../core/db";
+import { ApplicationError } from "../../../core/applicationError";
+import {
+  type BeforeCommitHandler,
+  createBeforeCommitBus,
+  type Orm,
+  ormOf,
+  transactor,
+  type Tx,
+} from "../../../core/db";
 import { createEventBus } from "../../../core/events";
 import { createLogger } from "../../../core/logger";
 import { createEmployeeReadService } from "../../employees";
 import { allowanceEventHandlers } from "./allowanceEventHandlers";
+import { createOwnTimeOffRulesService } from "./ownTimeOffRulesService";
 import { refuseBookingsWithoutRules } from "./termsChangeBookings";
 
 test("refuses No terms and names the person, type and booked dates that would lose their rules", async ({
@@ -47,27 +61,58 @@ test("refuses No terms and names the person, type and booked dates that would lo
 });
 
 test("allows No terms when the person's own rules cover the booked day", async ({ orm, seed }) => {
-  const employee = await seed.employee({ startDate: "2025-01-01" });
-  const timeOffTypeId = await giveAnnualLeave(orm, await seed.defaultTermsId());
-  const person = { employeeId: employee.id, timeOffTypeId };
-  await ownTimeOffRulesService(orm, { today }).setOwnRules(OWNER, {
-    ...person,
-    startDate,
-    rules: { balance: "unlimited_balance" },
-  });
-  await seedTimeOff(orm, {
-    ...person,
-    status: "approved",
-    days: [{ date: "2027-01-04", dayPart: "full_day" }],
-  });
+  const { employeeId } = await bookedOwnAndInheritedLeave(orm, seed);
 
   const result = await termsChanges(orm).changeTerms(OWNER, {
-    employeeIds: [employee.id],
+    employeeIds: [employeeId],
     termsId: null,
     startDate,
   });
 
-  expect(result).toEqual({ moved: [{ employeeId: employee.id, startDate }], skipped: [] });
+  expect(result).toEqual({ moved: [{ employeeId, startDate }], skipped: [] });
+});
+
+test("refuses Use terms’ rules when a concurrent move to No terms keeps a booking covered by own rules", async ({
+  orm,
+  seed,
+}) => {
+  const input = await bookedOwnAndInheritedLeave(orm, seed);
+  const move = { employeeIds: [input.employeeId], termsId: null, startDate };
+
+  await expectConcurrentBookingConflict(
+    orm,
+    (pause) => termsChanges(orm, pause).changeTerms(OWNER, move),
+    () => ownTimeOffRulesService(orm, { today }).useTermsRules(OWNER, input),
+  );
+});
+
+test("refuses No terms without a deadlock when a concurrent return to inherited rules keeps a booking covered", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const input = await bookedOwnAndInheritedLeave(orm, seed);
+  const move = { employeeIds: [input.employeeId], termsId: null, startDate };
+  const timeOff = timeOffService(orm, { today });
+
+  await expectConcurrentBookingConflict(
+    orm,
+    (pause) =>
+      createOwnTimeOffRulesService({
+        orm,
+        transact,
+        logger: createLogger("silent"),
+        today: () => calendarDate(today),
+        timeOff: {
+          // The return has checked inherited cover. Resume its real allowance calculation once the move waits.
+          async ensureAllowances(ctx, tx, change) {
+            await pause(tx);
+            return timeOff.ensureAllowances(ctx, tx, change);
+          },
+        },
+      }).useTermsRules(OWNER, input),
+    () => termsChanges(orm).changeTerms(OWNER, move),
+  );
 });
 
 test("refuses a move to other terms that do not offer a pending booking's type", async ({
@@ -183,6 +228,51 @@ test("No terms from December prorates the inherited allowance through November",
 const today = "2026-11-09";
 const startDate = "2027-01-01";
 
+async function bookedOwnAndInheritedLeave(orm: Orm, seed: TestSeed) {
+  const { id: employeeId } = await seed.employee({ startDate: "2025-01-01" });
+  const timeOffTypeId = await giveAnnualLeave(orm, await seed.defaultTermsId());
+  const input = { employeeId, timeOffTypeId, startDate };
+  await ownTimeOffRulesService(orm, { today }).setOwnRules(OWNER, {
+    ...input,
+    rules: { balance: "unlimited_balance" },
+  });
+  await seedTimeOff(orm, {
+    employeeId,
+    timeOffTypeId,
+    status: "approved",
+    days: [{ date: "2027-01-04", dayPart: "full_day" }],
+  });
+  return input;
+}
+
+async function expectConcurrentBookingConflict(
+  orm: Orm,
+  first: (pause: (tx: Tx) => Promise<void>) => Promise<unknown>,
+  second: () => Promise<unknown>,
+) {
+  const checked = Promise.withResolvers<number>();
+  const release = Promise.withResolvers<void>();
+  const firstChange = first(async (tx) => {
+    const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+    checked.resolve(rows[0]!.pid);
+    await release.promise;
+  });
+  void firstChange.catch(checked.reject);
+  const blockingPid = await checked.promise;
+  const secondChange = second();
+  const results = Promise.allSettled([firstChange, secondChange]);
+  try {
+    await expectBlockedBy(orm, blockingPid);
+  } finally {
+    release.resolve();
+    await results;
+  }
+
+  await firstChange;
+  await expect(secondChange).rejects.toBeInstanceOf(ApplicationError);
+  await expect(secondChange).rejects.toMatchObject({ code: "CONFLICT" });
+}
+
 async function giveAnnualLeave(orm: Orm, termsId: string) {
   await giveTermsPolicies(orm, testTransactor(orm), {
     termsId,
@@ -193,12 +283,13 @@ async function giveAnnualLeave(orm: Orm, termsId: string) {
   return annual!.timeOffTypeId;
 }
 
-function termsChanges(orm: Orm) {
+function termsChanges(orm: Orm, afterBookingCheck?: BeforeCommitHandler) {
   const logger = createLogger("silent");
   const beforeCommit = createBeforeCommitBus();
   beforeCommit.subscribe(
     refuseBookingsWithoutRules({ employeeReads: createEmployeeReadService({ orm }), logger }),
   );
+  if (afterBookingCheck) beforeCommit.subscribe(afterBookingCheck);
   const events = createEventBus(logger);
   const transact = transactor(orm, events, beforeCommit);
   events.subscribe(
