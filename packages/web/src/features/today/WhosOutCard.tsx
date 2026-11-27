@@ -8,8 +8,8 @@ import { Avatar } from "@/features/employees";
 import { t } from "@/i18n";
 import { dateRange } from "@/lib/formatDate";
 
-import { teamOf } from "./team";
-import { type Absence, whosOutSoon } from "./whosOutSoon";
+import { teamOf } from "./teamOf";
+import { whosOutSoon } from "./whosOutSoon";
 
 type Person = TodayPeopleQuery["employees"]["edges"][number]["node"];
 type Scope = "team" | "everyone";
@@ -63,49 +63,50 @@ export function WhosOutCard({ people, viewerId, today }: Props) {
       {nobody ? (
         <p className="text-sm text-muted-foreground">{t("today.out.nobody")}</p>
       ) : (
-        <>
-          <AbsenceList label={t("today.out.today")} absences={out.today} />
-          <AbsenceList label={t("today.out.upcoming")} absences={out.upcoming} />
-        </>
+        LISTS.map(({ list, label }) => {
+          const absences = out[list].slice(0, SHOWN);
+          return (
+            absences.length > 0 && (
+              <div key={list} className="flex flex-col gap-2.5">
+                <h3 className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
+                  {t(label)}
+                </h3>
+                <ul className="flex flex-col gap-3">
+                  {absences.map(({ person, timeOff }) => (
+                    <li key={timeOff.id} className="flex items-center gap-3">
+                      <Avatar
+                        url={person.avatarUrl}
+                        firstName={person.firstName}
+                        lastName={person.lastName}
+                      />
+                      <div className="grid min-w-0 flex-1 gap-0.5">
+                        <span className="truncate text-sm font-medium">
+                          {person.firstName} {person.lastName}
+                        </span>
+                        {/* The type is private to who may read the person's time off. */}
+                        <span className="truncate text-xs text-muted-foreground">
+                          {timeOff.timeOffType?.name ?? t("today.out.off")}
+                        </span>
+                      </div>
+                      <span className="text-sm whitespace-nowrap tabular-nums">
+                        {dateRange(timeOff.startDate, timeOff.endDate)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          );
+        })
       )}
     </Card>
   );
 }
 
 const SCOPES: Scope[] = ["team", "everyone"];
+const LISTS = [
+  { list: "today", label: "today.out.today" },
+  { list: "upcoming", label: "today.out.upcoming" },
+] as const;
 /** Per list; Time off shows everyone. */
 const SHOWN = 8;
-
-function AbsenceList({ label, absences }: { label: string; absences: Absence<Person>[] }) {
-  if (absences.length === 0) return null;
-  return (
-    <div className="flex flex-col gap-2.5">
-      <h3 className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
-        {label}
-      </h3>
-      <ul className="flex flex-col gap-3">
-        {absences.slice(0, SHOWN).map(({ person, timeOff }) => (
-          <li key={timeOff.id} className="flex items-center gap-3">
-            <Avatar
-              url={person.avatarUrl}
-              firstName={person.firstName}
-              lastName={person.lastName}
-            />
-            <div className="grid min-w-0 flex-1 gap-0.5">
-              <span className="truncate text-sm font-medium">
-                {person.firstName} {person.lastName}
-              </span>
-              {/* The type is private to who may read the person's time off. */}
-              <span className="truncate text-xs text-muted-foreground">
-                {timeOff.timeOffType?.name ?? t("today.out.off")}
-              </span>
-            </div>
-            <span className="text-sm whitespace-nowrap tabular-nums">
-              {dateRange(timeOff.startDate, timeOff.endDate)}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}

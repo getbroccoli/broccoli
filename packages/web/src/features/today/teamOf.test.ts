@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { teamOf } from "./team";
+import { teamOf } from "./teamOf";
 
 it("includes the viewer's manager, peers and direct reports only", () => {
   const people = [

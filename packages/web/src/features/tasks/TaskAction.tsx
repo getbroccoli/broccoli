@@ -6,8 +6,10 @@ import { t } from "@/i18n";
 import type { TaskRow } from "./taskText";
 import { useTaskActions } from "./useTaskActions";
 
+type Props = { task: TaskRow };
+
 /** The next step on a task the viewer holds: Answer in its panel when it asks for a result, else Mark done. */
-export function TaskAction({ task }: { task: TaskRow }) {
+export function TaskAction({ task }: Props) {
   const actions = useTaskActions();
   // A task that asks for a result is answered in its panel, not with one click.
   return task.resultForm ? (

@@ -38,11 +38,25 @@ export function MyTimeOffCard({ employeeId, today }: Props) {
       }
     >
       {allowance?.remaining != null && allowance.entitlement != null && (
-        <AllowanceLeft
-          name={allowance.timeOffType.name}
-          remaining={allowance.remaining}
-          entitlement={allowance.entitlement}
-        />
+        <div className="flex flex-col gap-2">
+          <p className="flex flex-wrap items-baseline gap-x-1.5">
+            <span className="text-3xl font-semibold tracking-tight tabular-nums">
+              {formatDayCount(allowance.remaining)}
+            </span>
+            <span className="text-sm text-muted-foreground">
+              {t("today.timeOff.left", {
+                entitlement: formatDayCount(allowance.entitlement),
+                name: allowance.timeOffType.name,
+              })}
+            </span>
+          </p>
+          <div aria-hidden className="h-1.5 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-brand"
+              style={{ width: `${shareLeft(allowance.remaining, allowance.entitlement) * 100}%` }}
+            />
+          </div>
+        </div>
       )}
       {coming.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t("today.timeOff.nothingBooked")}</p>
@@ -59,7 +73,6 @@ export function MyTimeOffCard({ employeeId, today }: Props) {
                   {timeOff.timeOffType?.name}
                 </span>
               </div>
-              {/* Only requested or approved time off is coming, so how a request ended never shows. */}
               <TimeOffStatusChip status={timeOff.status!} ending={NO_ENDING} />
             </li>
           ))}
@@ -80,32 +93,12 @@ export function MyTimeOffCard({ employeeId, today }: Props) {
   );
 }
 
-function AllowanceLeft({
-  name,
-  remaining,
-  entitlement,
-}: {
-  name: string;
-  remaining: number;
-  entitlement: number;
-}) {
-  const share = entitlement > 0 ? Math.min(Math.max(remaining / entitlement, 0), 1) : 0;
-  return (
-    <div className="flex flex-col gap-2">
-      <p className="flex flex-wrap items-baseline gap-x-1.5">
-        <span className="text-3xl font-semibold tracking-tight tabular-nums">
-          {formatDayCount(remaining)}
-        </span>
-        <span className="text-sm text-muted-foreground">
-          {t("today.timeOff.left", { entitlement: formatDayCount(entitlement), name })}
-        </span>
-      </p>
-      <div aria-hidden className="h-1.5 overflow-hidden rounded-full bg-muted">
-        <div className="h-full rounded-full bg-brand" style={{ width: `${share * 100}%` }} />
-      </div>
-    </div>
-  );
+/** What is left of an allowance, from 0 to 1, for its bar; days taken beyond it show an empty bar. */
+function shareLeft(remaining: number, entitlement: number): number {
+  return entitlement > 0 ? Math.min(Math.max(remaining / entitlement, 0), 1) : 0;
 }
 
+/** Today shows the next few; the person's panel has them all. */
 const SHOWN = 2;
+/** Requested or approved time off has no ending, so the chip never reads one. */
 const NO_ENDING = { hasDecision: false, cancelledBy: null };

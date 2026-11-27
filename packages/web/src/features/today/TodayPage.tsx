@@ -9,7 +9,7 @@ import { utcDay } from "@/lib/calendarDay";
 import { PageHeader } from "@/shell";
 
 import { ComingUpCard } from "./ComingUpCard";
-import { fortnightFrom } from "./fortnight";
+import { fortnightFrom } from "./fortnightFrom";
 import { MyTimeOffCard } from "./MyTimeOffCard";
 import { partOfDay } from "./partOfDay";
 import { WhosOutCard } from "./WhosOutCard";

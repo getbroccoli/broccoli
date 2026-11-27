@@ -1,4 +1,4 @@
-import { fortnightFrom } from "./fortnight";
+import { fortnightFrom } from "./fortnightFrom";
 
 export type Starter = { id: string; firstName: string; lastName: string; startDate: string | null };
 export type ComingUpEvent<P extends Starter> =

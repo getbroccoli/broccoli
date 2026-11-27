@@ -49,9 +49,11 @@ export function TasksNeedingYouCard() {
                   >
                     {task.title}
                   </Link>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {taskFact(task, viewerId)}
-                  </span>
+                  {taskFact(task, viewerId) && (
+                    <span className="truncate text-xs text-muted-foreground">
+                      {taskFact(task, viewerId)}
+                    </span>
+                  )}
                   {task.dueDate && (
                     <span
                       className={cn(
