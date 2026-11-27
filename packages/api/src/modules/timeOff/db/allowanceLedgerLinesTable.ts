@@ -72,7 +72,8 @@ export const allowanceLedgerLines = pgTable(
     index("allowance_ledger_lines_time_off_day_idx").on(table.timeOffDayId),
     check(
       "allowance_ledger_lines_manual_adjustment_reason",
-      sql`${table.kind} <> 'manual_adjustment' or ${table.reason} is not null`,
+      // A reversal's reason is optional.
+      sql`${table.kind} <> 'manual_adjustment' or ${table.reason} is not null or ${table.causeKind} = 'allowance_adjustment_reversed'`,
     ),
   ],
 );

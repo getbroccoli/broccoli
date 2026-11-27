@@ -1,7 +1,9 @@
+import { useQuery } from "@apollo/client/react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import {
+  BookingPersonTypesDocument,
   CancelTimeOffDocument,
   EmployeePanelDocument,
   MyTasksDocument,
@@ -24,10 +26,10 @@ import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/u
 import { Avatar, decisionLine, TimeOffStatusChip } from "@/features/employees";
 import { t } from "@/i18n";
 import { calendarDayOf } from "@/lib/calendarDay";
-import { formatDays } from "@/lib/formatDays";
+import { cn } from "@/lib/class-names";
 
 import { evictWhosOut } from "./cache";
-import { cancelDialogWords } from "./timeOffText";
+import { bookingTotal, cancelDialogWords, dayCostLine } from "./timeOffText";
 import { bookingDates, dateRange, dayMonthYear, weekdayDay } from "@/lib/formatDate";
 import type { WhosOutPerson, WhosOutTimeOff } from "./WhosOutGrid";
 
@@ -39,12 +41,6 @@ type Props = {
   viewerEmployeeId: string | null;
   onClose: () => void;
 };
-
-const PART_LABELS = {
-  FULL_DAY: "timeOff.dialog.fullDay",
-  MORNING: "timeOff.dialog.morning",
-  AFTERNOON: "timeOff.dialog.afternoon",
-} as const;
 
 /**
  * One booking or request as the viewer may see it: its type (or "Off"), dates and, for who may
@@ -83,6 +79,15 @@ export function BookingDetailsDialog({
       dates: dateRange(timeOff.startDate, timeOff.endDate),
     });
   const detailed = timeOff.cost !== null && timeOff.cost !== undefined;
+  // Whether the type counts against an allowance; whoever reads the cost may read this too.
+  const { data: personTypes } = useQuery(BookingPersonTypesDocument, {
+    variables: { id: employeeId },
+    skip: !detailed,
+  });
+  const balance =
+    personTypes?.employee?.timeOffTypes?.find(
+      (type) => type.timeOffType.id === timeOff.timeOffType?.id,
+    )?.balance ?? null;
   // A booking is approved straight away with no decision; anything else was asked for.
   const requested = timeOff.status !== "APPROVED" || Boolean(timeOff.decision);
 
@@ -128,21 +133,41 @@ export function BookingDetailsDialog({
             />
             {person.firstName} {person.lastName}
           </div>
-          <p className="text-sm">
-            {bookingDates(timeOff.startDate, timeOff.endDate)}
-            {detailed && (
-              <span className="text-muted-foreground"> · {formatDays(timeOff.cost!)}</span>
+          <div className="flex flex-col gap-0.5">
+            <p className="text-sm">
+              {bookingDates(timeOff.startDate, timeOff.endDate)}
+              {detailed && (
+                <span className="text-muted-foreground">
+                  {" · "}
+                  {bookingTotal({
+                    cost: timeOff.cost!,
+                    status: timeOff.status ?? null,
+                    balance,
+                    typeName,
+                  })}
+                </span>
+              )}
+            </p>
+            {detailed && balance === "NO_BALANCE" && (
+              <p className="text-[13px] text-muted-foreground">
+                {t("timeOff.dialog.noBalance", { type: typeName })}
+              </p>
             )}
-          </p>
+          </div>
           {detailed && (
             <ul className="overflow-hidden rounded-lg border border-border text-sm">
-              {timeOff.days.map(({ date, dayPart }) => (
+              {timeOff.days.map(({ date, dayPart, cost, reason }) => (
                 <li
                   key={date}
-                  className="flex justify-between border-b border-border/60 px-3 py-1.5 last:border-b-0"
+                  className={cn(
+                    "flex justify-between gap-3 border-b border-border/60 px-3 py-1.5 last:border-b-0",
+                    reason !== "WORKING_DAY" && "text-muted-foreground",
+                  )}
                 >
                   {weekdayDay(date)}
-                  <span className="text-muted-foreground">{t(PART_LABELS[dayPart])}</span>
+                  <span className="text-right text-muted-foreground">
+                    {dayCostLine({ dayPart, cost: cost ?? 0, reason: reason ?? "WORKING_DAY" })}
+                  </span>
                 </li>
               ))}
             </ul>

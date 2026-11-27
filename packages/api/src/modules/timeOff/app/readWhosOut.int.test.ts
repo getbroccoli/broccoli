@@ -1,6 +1,8 @@
 import {
   expect,
   seedAnnualLeaveEmployee,
+  seedOwnWeek,
+  seedWorkingPattern,
   giveDefaultTermsStatutoryMinimum,
   giveTermsPolicies,
   OWNER,
@@ -57,6 +59,38 @@ test("lists every date of a month with employment, working days and bank holiday
   ]);
 });
 
+test("prices each booked day using the working week in effect on that date", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const person = await seedAnnualLeaveEmployee(orm, seed, transact);
+  await bookTimeOffService(orm).bookTimeOff(OWNER, {
+    ...person,
+    startDate: "2026-12-09",
+    endDate: "2026-12-11",
+    halfDays: [{ date: "2026-12-09", dayPart: "morning" }],
+  });
+  const pattern = await seedWorkingPattern(orm, { minutes: [450, 450, 450, 0, 450, 0, 0] });
+  await seedOwnWeek(orm, {
+    employeeId: person.employeeId,
+    versionId: pattern.versionId,
+    startDate: "2026-11-27",
+  });
+
+  const rows = await whosOutService(orm).readWhosOut(OWNER, {
+    employeeIds: [person.employeeId],
+    from: "2026-12-01",
+    until: "2026-12-31",
+  });
+
+  expect(rows.get(person.employeeId)?.timeOff[0]?.days).toEqual([
+    { date: "2026-12-09", dayPart: "morning", cost: 0.5, reason: "working_day" },
+    { date: "2026-12-10", dayPart: "full_day", cost: 0, reason: "not_a_working_day" },
+    { date: "2026-12-11", dayPart: "full_day", cost: 1, reason: "working_day" },
+  ]);
+});
+
 test("shows a colleague Annual leave's type and days but hides its details", async ({
   orm,
   seed,
@@ -73,7 +107,8 @@ test("shows a colleague Annual leave's type and days but hides its details", asy
     employeeId: employee.id,
     timeOffTypeId: annual.id,
     startDate: "2026-12-07",
-    endDate: "2026-12-07",
+    endDate: "2026-12-08",
+    halfDays: [{ date: "2026-12-08", dayPart: "morning" }],
     note: "Family visit",
   });
   const colleague = signedIn(orm, { employeeId: peer.id, profiles: ["EMPLOYEE"] });
@@ -88,7 +123,10 @@ test("shows a colleague Annual leave's type and days but hides its details", asy
     {
       id: booked.id,
       timeOffTypeId: annual.id,
-      days: [{ date: "2026-12-07", dayPart: "full_day" }],
+      days: [
+        { date: "2026-12-07", dayPart: "full_day", cost: null, reason: null },
+        { date: "2026-12-08", dayPart: "morning", cost: null, reason: null },
+      ],
       cost: null,
       note: null,
       bookedAt: null,

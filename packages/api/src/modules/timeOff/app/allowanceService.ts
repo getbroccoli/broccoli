@@ -26,6 +26,14 @@ export interface AllowanceService {
    * reads it sees; returns the person's figures for that type. Admins only.
    */
   adjustAllowance(ctx: SecurityContext, input: AdjustmentInput): Promise<EmployeeTimeOffType>;
+  /**
+   * Undoes one adjustment with a line of the opposite amount, keeping the adjustment in the
+   * history; returns the person's figures for that type. Admins only.
+   */
+  reverseAdjustment(
+    ctx: SecurityContext,
+    input: { adjustmentId: string; comment?: string | null },
+  ): Promise<EmployeeTimeOffType>;
 }
 
 export interface AdjustmentInput {
@@ -80,6 +88,40 @@ export function createAllowanceService({
       );
       return card;
     },
+
+    async reverseAdjustment(ctx, input) {
+      const adjustment = await findAdjustment(transact, input.adjustmentId);
+      const allowance = await findAllowance(transact, adjustment.allowanceId);
+      await ctx.requireInScope("time_off", "update", allowance.employeeId);
+      const reason = parseReversalComment(input.comment);
+      const { card, lineId } = await transact((tx) =>
+        appendToCurrentCard(reads, tx, allowance, async (effectiveDate) => {
+          const reversalId = await allowanceRepository(tx).insertReversal({
+            allowanceId: allowance.id,
+            adjustmentId: adjustment.id,
+            amount: Big(adjustment.amount).neg().toString(),
+            effectiveDate,
+            reason,
+            author: authorOf(ctx),
+          });
+          if (reversalId === null) {
+            throw new ApplicationError("CONFLICT", "This adjustment has been reversed already.");
+          }
+          return reversalId;
+        }),
+      );
+      logger.info(
+        {
+          allowanceId: allowance.id,
+          employeeId: allowance.employeeId,
+          timeOffTypeId: allowance.timeOffTypeId,
+          adjustmentId: adjustment.id,
+          lineId,
+        },
+        "Reversed allowance adjustment",
+      );
+      return card;
+    },
   };
 }
 
@@ -89,6 +131,20 @@ type CardReads = Parameters<typeof readTimeOffTypesInTransaction>[0] & {
 };
 
 type ParsedAdjustment = ReturnType<typeof parseAdjustment>;
+
+async function findAdjustment(
+  transact: Transact,
+  id: string,
+): Promise<{ id: string; allowanceId: string; amount: string }> {
+  const parsed = parseUuid(id);
+  const adjustment = parsed
+    ? await transact((tx) => allowanceRepository(tx).findAdjustmentById(parsed))
+    : null;
+  if (!adjustment) {
+    throw new ApplicationError("NOT_FOUND", "No adjustment has this id.");
+  }
+  return { id: parsed!, ...adjustment };
+}
 
 async function findAllowance(transact: Transact, id: string): Promise<Allowance> {
   const parsed = parseUuid(id);
@@ -102,9 +158,8 @@ async function findAllowance(transact: Transact, id: string): Promise<Allowance>
 }
 
 /**
- * Appends the adjustment to the person's current balance and returns that card's figures. Locks
- * as bookings do, so no start date, terms or policy change moves the card in between; a repeated
- * request appends nothing, and one reused for other values is refused.
+ * Appends the adjustment to the person's current balance and returns that card's figures; a
+ * repeated request appends nothing, and one reused for other values is refused.
  */
 async function appendAdjustment(
   reads: CardReads,
@@ -112,6 +167,34 @@ async function appendAdjustment(
   input: { allowance: Allowance; adjustment: ParsedAdjustment; author: HistoryAuthor },
 ): Promise<{ card: EmployeeTimeOffType; lineId: string | null }> {
   const { allowance, adjustment, author } = input;
+  return appendToCurrentCard(reads, tx, allowance, async (effectiveDate) => {
+    const repository = allowanceRepository(tx);
+    const newLine = {
+      allowanceId: allowance.id,
+      amount: adjustment.amount,
+      effectiveDate,
+      reason: adjustment.comment,
+      author,
+      requestId: adjustment.requestId,
+    };
+    const lineId = await repository.insertAdjustment(newLine);
+    if (lineId === null && !isSameAdjustment(await repository.findAdjustment(newLine), newLine)) {
+      throw invalidInput([{ field: "requestId", code: "taken" }]);
+    }
+    return lineId;
+  });
+}
+
+/**
+ * Appends a line to the person's current balance and returns that card's figures. Locks as
+ * bookings do, so no start date, terms or policy change moves the card in between.
+ */
+async function appendToCurrentCard(
+  reads: CardReads,
+  tx: Tx,
+  allowance: Allowance,
+  append: (effectiveDate: CalendarDate) => Promise<string | null>,
+): Promise<{ card: EmployeeTimeOffType; lineId: string | null }> {
   await lockCardInputs(reads, tx, allowance.employeeId);
   const date = reads.today();
   const onDate = { ...reads, today: () => date };
@@ -121,20 +204,8 @@ async function appendAdjustment(
   if (!(await currentCardOf(onDate, tx, allowance))) {
     throw invalidInput([{ field: "allowanceId", code: "invalid" }]);
   }
-  const repository = allowanceRepository(tx);
-  const newLine = {
-    allowanceId: allowance.id,
-    amount: adjustment.amount,
-    // The adjustment counts for the card's leave year, which may start after today.
-    effectiveDate: date < allowance.leaveYearStart ? allowance.leaveYearStart : date,
-    reason: adjustment.comment,
-    author,
-    requestId: adjustment.requestId,
-  };
-  const lineId = await repository.insertAdjustment(newLine);
-  if (lineId === null && !isSameAdjustment(await repository.findAdjustment(newLine), newLine)) {
-    throw invalidInput([{ field: "requestId", code: "taken" }]);
-  }
+  // The line counts for the card's leave year, which may start after today.
+  const lineId = await append(date < allowance.leaveYearStart ? allowance.leaveYearStart : date);
   const card = await currentCardOf(onDate, tx, allowance);
   if (!card) {
     // Rolls the line back: the locks above keep the card, so this is a bug, not a race.
@@ -195,6 +266,15 @@ function parseAdjustment({ amount, comment, requestId }: AdjustmentInput) {
     throw invalidInput(errors);
   }
   return { amount: days!.toString(), comment: trimmed, requestId: parsedRequestId! };
+}
+
+/** The trimmed reason for a reversal, null when blank; refuses one over the comment limit. */
+function parseReversalComment(comment: string | null | undefined): string | null {
+  const trimmed = comment?.trim() ?? "";
+  if (trimmed.length > MAX_COMMENT_LENGTH) {
+    throw invalidInput([{ field: "comment", code: "too_long" }]);
+  }
+  return trimmed === "" ? null : trimmed;
 }
 
 /** The most an adjustment changes a balance by: a leap year's days. */

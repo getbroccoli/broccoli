@@ -11,7 +11,13 @@ export type RefusalReason =
   | "OUTSIDE_EMPLOYMENT"
   | "LONGER_THAN_A_YEAR";
 
-import type { TimeOffApproval } from "@/__generated__/graphql";
+import type {
+  TimeOffApproval,
+  TimeOffBalanceKind,
+  TimeOffDayCostReason,
+  TimeOffDayPart,
+  WhosOutDayKind,
+} from "@/__generated__/graphql";
 import { type DialogMode, modeOf, type Permit, type TimeOffStatus } from "@/features/employees";
 
 /** One line of the dialog's balance strip. */
@@ -162,15 +168,21 @@ export function bookingTooltip(timeOff: {
  */
 export function offCounts(
   people: readonly {
+    days: readonly { date: string; kind: WhosOutDayKind }[];
     timeOff: readonly { status: TimeOffStatus | null; days: readonly { date: string }[] }[];
   }[],
 ): Map<string, number> {
   const counts = new Map<string, number>();
   for (const person of people) {
+    // A booked day the person no longer works, such as after their week changed, isn't time off.
+    const working = new Set(
+      person.days.filter(({ kind }) => kind === "WORKING_DAY").map(({ date }) => date),
+    );
     const dates = new Set(
       person.timeOff
         .filter(({ status }) => status === null || status === "APPROVED")
-        .flatMap(({ days }) => days.map(({ date }) => date)),
+        .flatMap(({ days }) => days.map(({ date }) => date))
+        .filter((date) => working.has(date)),
     );
     for (const date of dates) {
       counts.set(date, (counts.get(date) ?? 0) + 1);
@@ -298,3 +310,56 @@ const CANCEL_WORDS = {
     done: "timeOff.cancel.timeOffDone",
   },
 } as const satisfies Record<CancelAction, Record<string, MessageKey>>;
+
+/**
+ * A booking's total as it counts: "8 days deducted from Annual leave", "2.5 days from Annual leave
+ * if approved", or "3 days recorded" for a type without an allowance.
+ */
+export function bookingTotal({
+  cost,
+  status,
+  balance,
+  typeName,
+}: {
+  cost: number;
+  status: TimeOffStatus | null;
+  balance: TimeOffBalanceKind | null;
+  typeName: string;
+}): string {
+  const requested = status === "REQUESTED";
+  const days = formatDays(cost);
+  if (balance === "BALANCE_FROM_ALLOWANCE") {
+    return t(requested ? "timeOff.details.fromIfApproved" : "timeOff.details.deductedFrom", {
+      days,
+      type: typeName,
+    });
+  }
+  return t(requested ? "timeOff.details.ifApproved" : "timeOff.details.recorded", { days });
+}
+
+/** One booked day and what it adds: "Full day · 1 day", "Non-working day · 0 days". */
+export function dayCostLine({
+  dayPart,
+  cost,
+  reason,
+}: {
+  dayPart: TimeOffDayPart;
+  cost: number;
+  reason: TimeOffDayCostReason;
+}): string {
+  return t("timeOff.details.dayCost", {
+    part: t(reason === "WORKING_DAY" ? DAY_PART_LABELS[dayPart] : DAY_REASON_LABELS[reason]),
+    days: formatDays(cost),
+  });
+}
+
+const DAY_PART_LABELS = {
+  FULL_DAY: "timeOff.dialog.fullDay",
+  MORNING: "timeOff.dialog.morning",
+  AFTERNOON: "timeOff.dialog.afternoon",
+} as const satisfies Record<TimeOffDayPart, MessageKey>;
+
+const DAY_REASON_LABELS = {
+  NOT_A_WORKING_DAY: "timeOff.details.notWorkingDay",
+  BANK_HOLIDAY: "timeOff.details.bankHoliday",
+} as const satisfies Record<Exclude<TimeOffDayCostReason, "WORKING_DAY">, MessageKey>;

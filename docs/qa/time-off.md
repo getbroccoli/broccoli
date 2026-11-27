@@ -30,8 +30,23 @@ A manual check of the Time off page, booking time off for someone, asking for on
 
 ## Details and cancel
 
-- [ ] Click a bar: the booking shows its type, person, dates, days with Full day or Morning, note and "Booked on".
+- [ ] Click a bar: the booking shows its type, person, dates with "2.5 days deducted from Annual leave", one row per day with what it costs ("Full day · 1 day", "Morning · 0.5 days"), note and "Booked on".
+- [ ] Sickness: "3 days recorded" and "Sickness doesn't count against a balance."
+
+## A changed working week
+
+- [ ] Book Annual leave Mon 7 – Fri 18 Dec for someone on Monday to Friday, then give them Thursdays off from today (Employment terms › Working week).
+- [ ] Time off page: Thu 10 and 17 Dec are plain non-working days on their row, with no bar; the bar's pieces round off on each side; the Off each day counts above those Thursdays leave them out.
+- [ ] Booking details: "8 days deducted from Annual leave"; Thu 10 and Thu 17 Dec read "Non-working day · 0 days".
+- [ ] A lone afternoon shows in the right half of its day, wide enough to click; a morning in the left half.
 - [ ] Cancel time off asks "Cancel this time off?"; Keep time off leaves it; Cancel time off removes the bar, shows "Time off cancelled." and gives the days back on the panel.
+
+## Reverse an adjustment
+
+- [ ] As the owner, Adjust a person's Annual leave by +5 with a comment, then open History: the row "Adjusted by you" has Reverse.
+- [ ] Reverse asks "Reverse this adjustment?" with "This takes away the 5 days added on <date>. <name> will have <days> left." and an optional "Why?"; Keep adjustment leaves it.
+- [ ] Reverse adjustment: the toast reads "Adjustment reversed."; Remaining drops by 5; the history shows "Adjustment of +5 reversed by you" (−5, with the reason) above the adjustment, now tagged "Reversed" and without Reverse.
+- [ ] As an employee on their own panel: no Reverse.
 
 ## Request and approve
 

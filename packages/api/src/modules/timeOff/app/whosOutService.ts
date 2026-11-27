@@ -22,7 +22,14 @@ import {
   timeOffRepository,
   type TimeOffStatus,
 } from "../db";
-import { costedDays, type DayPart, datesFrom, type TimeOffType, totalCost } from "../domain";
+import {
+  costedDays,
+  type DayCostReason,
+  type DayPart,
+  datesFrom,
+  type TimeOffType,
+  totalCost,
+} from "../domain";
 
 /** Who's out over a range, as the Time off page shows it. */
 export interface WhosOutService {
@@ -53,7 +60,16 @@ export interface WhosOutTimeOff {
   id: string;
   /** Null for a private type when the reader may not read the person's time off. */
   timeOffTypeId: string | null;
-  days: { date: CalendarDate; dayPart: DayPart }[];
+  /**
+   * Each day's cost and its reason under the person's week on that date: null unless readable,
+   * absent on time off read outside who's out.
+   */
+  days: {
+    date: CalendarDate;
+    dayPart: DayPart;
+    cost?: number | null;
+    reason?: DayCostReason | null;
+  }[];
   /** Approved for everyone; requested reaches only who may read the person's time off. */
   status: TimeOffStatus;
   /** Null unless the reader may read the person's time off. */
@@ -196,15 +212,25 @@ function whosOutOf(
         : "not_employed",
       bankHolidayName,
     })),
-    timeOff: (facts.bookingsOf.get(employeeId) ?? []).map((booking) => ({
-      id: booking.id,
-      timeOffTypeId:
-        readable || !facts.privateTypeIds.has(booking.timeOffTypeId) ? booking.timeOffTypeId : null,
-      days: booking.days,
-      status: booking.status,
-      cost: readable ? totalCost(costed(booking.days)) : null,
-      note: readable ? booking.note : null,
-      bookedAt: readable ? booking.createdAt : null,
-    })),
+    timeOff: (facts.bookingsOf.get(employeeId) ?? []).map((booking) => {
+      const days = costed(booking.days);
+      return {
+        id: booking.id,
+        timeOffTypeId:
+          readable || !facts.privateTypeIds.has(booking.timeOffTypeId)
+            ? booking.timeOffTypeId
+            : null,
+        days: days.map(({ date, dayPart, cost, reason }) => ({
+          date,
+          dayPart,
+          cost: readable ? cost : null,
+          reason: readable ? reason : null,
+        })),
+        status: booking.status,
+        cost: readable ? totalCost(days) : null,
+        note: readable ? booking.note : null,
+        bookedAt: readable ? booking.createdAt : null,
+      };
+    }),
   };
 }

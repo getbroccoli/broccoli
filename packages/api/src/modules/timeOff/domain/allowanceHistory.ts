@@ -6,7 +6,10 @@ import type { AllowanceCause } from "./allowanceCause";
 import { type LedgerLineKind, timeOffFigures } from "./timeOffFigures";
 
 /** Why a balance changed: a cause of the engine's lines, or someone adjusting it. */
-export type AllowanceChangeCause = Lowercase<AllowanceCause["kind"]> | "allowance_adjusted";
+export type AllowanceChangeCause =
+  | Lowercase<AllowanceCause["kind"]>
+  | "allowance_adjusted"
+  | "allowance_adjustment_reversed";
 
 /** A ledger line as stored, for the history. */
 export interface StoredLedgerLine {
@@ -38,8 +41,12 @@ export interface AllowanceChange {
   /** The change's lines summed by kind; kinds adding up to 0 are left out. */
   parts: { kind: LedgerLineKind; amount: number }[];
   author: HistoryAuthor;
-  /** The adjustment's comment. */
+  /** The adjustment's comment, or the reversal's reason. */
   comment: string | null;
+  /** The adjustment's or reversal's line id; null for other changes. */
+  adjustmentId: string | null;
+  /** Whether a reversal undid this adjustment. */
+  reversed: boolean;
 }
 
 /**
@@ -48,6 +55,11 @@ export interface AllowanceChange {
  */
 export function allowanceHistory(lines: readonly StoredLedgerLine[]): AllowanceChange[] {
   const oldestFirst = [...lines].sort(byTimeThenId);
+  const reversedIds = new Set(
+    lines.flatMap(({ causeKind, causeRef }) =>
+      causeKind === "allowance_adjustment_reversed" && causeRef ? [causeRef] : [],
+    ),
+  );
   const groups = Map.groupBy(oldestFirst, changeKeyOf);
   const sums = new Map<LedgerLineKind, Big>();
   let previousBalance = 0;
@@ -59,7 +71,7 @@ export function allowanceHistory(lines: readonly StoredLedgerLine[]): AllowanceC
     const balanceAfter = timeOffFigures(
       [...sums].map(([kind, sum]) => ({ kind, amount: sum.toNumber() })),
     ).remaining;
-    const change = toChange(group, balanceAfter, previousBalance);
+    const change = toChange(group, balanceAfter, previousBalance, reversedIds);
     previousBalance = balanceAfter;
     if (change.amount !== 0 || change.parts.length > 0) {
       changes.push(change);
@@ -91,8 +103,11 @@ function toChange(
   group: readonly StoredLedgerLine[],
   balanceAfter: number,
   previousBalance: number,
+  reversedIds: ReadonlySet<string>,
 ): AllowanceChange {
   const first = group[0]!;
+  // An adjustment or reversal is a change of its own, so its line is the first.
+  const adjustment = first.kind === "manual_adjustment";
   return {
     recordedAt: first.createdAt,
     cause: first.causeKind,
@@ -102,8 +117,9 @@ function toChange(
     balanceAfter,
     parts: partsOf(group),
     author: first.author,
-    // An adjustment is a change of its own, so its line is the first.
-    comment: first.kind === "manual_adjustment" ? first.reason : null,
+    comment: adjustment ? first.reason : null,
+    adjustmentId: adjustment ? first.id : null,
+    reversed: adjustment && reversedIds.has(first.id),
   };
 }
 

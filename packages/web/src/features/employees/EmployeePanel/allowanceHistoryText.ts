@@ -17,10 +17,12 @@ export function changeTitle(change: AllowanceChange, readerUserId: string): stri
   switch (change.cause) {
     case "ALLOWANCE_ADJUSTED":
       return t("people.panel.timeOff.history.adjusted", {
-        author:
-          change.author.userId === readerUserId
-            ? t("people.panel.timeOff.history.you")
-            : (change.author.email ?? t("people.panel.timeOff.history.someone")),
+        author: authorName(change, readerUserId),
+      });
+    case "ALLOWANCE_ADJUSTMENT_REVERSED":
+      return t("people.panel.timeOff.history.reversed", {
+        amount: signedDays(-change.amount),
+        author: authorName(change, readerUserId),
       });
     case "TIME_OFF_BOOKED":
     case "TIME_OFF_APPROVED":
@@ -36,6 +38,35 @@ export function changeTitle(change: AllowanceChange, readerUserId: string): stri
         ? t(CAUSE_TITLES[change.cause], { date: dayMonthYear(change.causeDate) })
         : t(UNDATED_CAUSE_TITLES[change.cause]);
   }
+}
+
+/** The confirmation's words for reversing an adjustment, with the balance it leaves. */
+export function reverseWords(
+  change: Pick<AllowanceChange, "amount" | "recordedAt">,
+  balance: { remaining: number; firstName: string; isReader: boolean },
+) {
+  const values = {
+    days: formatDays(Math.abs(change.amount)),
+    date: recordedDay.format(new Date(change.recordedAt)),
+  };
+  const left = formatDays(balance.remaining - change.amount);
+  return {
+    title: t("people.panel.timeOff.reverse.title"),
+    body: [
+      t(
+        change.amount > 0
+          ? "people.panel.timeOff.reverse.takesAway"
+          : "people.panel.timeOff.reverse.givesBack",
+        values,
+      ),
+      balance.isReader
+        ? t("people.panel.timeOff.reverse.leftForYou", { days: left })
+        : t("people.panel.timeOff.reverse.left", { name: balance.firstName, days: left }),
+    ].join(" "),
+    keep: t("people.panel.timeOff.reverse.keep"),
+    confirm: t("people.panel.timeOff.reverse.confirm"),
+    done: t("people.panel.timeOff.reverse.done"),
+  };
 }
 
 /** What a change is made of, signed: "+28 granted, −8 bank holidays"; null where the title says it. */
@@ -76,10 +107,25 @@ export function adjustLabel(amount: number): string {
 /** The API's limit on one adjustment: a leap year's days. */
 const MAX_ADJUSTMENT_DAYS = 366;
 
-/** An adjustment, or a booking or cancellation that only moved booked days. */
+/** "you", the author's email, or "someone". */
+function authorName(change: Pick<AllowanceChange, "author">, readerUserId: string): string {
+  return change.author.userId === readerUserId
+    ? t("people.panel.timeOff.history.you")
+    : (change.author.email ?? t("people.panel.timeOff.history.someone"));
+}
+
+/** "27 Nov", the day the instant falls on in London, where the company's days are. */
+const recordedDay = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  timeZone: "Europe/London",
+});
+
+/** An adjustment or its reversal, or a booking or cancellation that only moved booked days. */
 function titleSaysItAll({ cause, parts }: Pick<AllowanceChange, "cause" | "parts">): boolean {
   return (
     cause === "ALLOWANCE_ADJUSTED" ||
+    cause === "ALLOWANCE_ADJUSTMENT_REVERSED" ||
     (BOOKING_CAUSES.has(cause) && parts.every(({ kind }) => kind === "TIME_OFF_BOOKED"))
   );
 }
@@ -106,7 +152,10 @@ const CAUSE_TITLES = {
   TIME_OFF_RULES_CHANGED: "people.panel.timeOff.history.timeOffRulesChanged",
   DAILY_CHECK: "people.panel.timeOff.history.dailyCheck",
 } as const satisfies Record<
-  Exclude<AllowanceChangeCause, keyof typeof BOOKING_TITLES | "ALLOWANCE_ADJUSTED">,
+  Exclude<
+    AllowanceChangeCause,
+    keyof typeof BOOKING_TITLES | "ALLOWANCE_ADJUSTED" | "ALLOWANCE_ADJUSTMENT_REVERSED"
+  >,
   MessageKey
 >;
 

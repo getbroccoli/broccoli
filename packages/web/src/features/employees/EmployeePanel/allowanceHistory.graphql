@@ -22,6 +22,8 @@ query AllowanceHistory($employeeId: ID!) {
           email
         }
         comment
+        adjustmentId
+        reversed
       }
     }
   }
@@ -48,6 +50,27 @@ mutation AdjustAllowance($input: AllowanceAdjustInput!) {
             field
             code
           }
+        }
+      }
+    }
+  }
+}
+
+mutation ReverseAllowanceAdjustment($input: AllowanceAdjustmentReverseInput!) {
+  timeOff {
+    reverseAllowanceAdjustment(input: $input) {
+      employeeTimeOffType {
+        id
+        allowanceId
+        entitlement
+        bankHolidays
+        used
+        remaining
+      }
+      error {
+        __typename
+        ... on Error {
+          message
         }
       }
     }

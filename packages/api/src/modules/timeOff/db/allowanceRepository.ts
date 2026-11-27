@@ -39,6 +39,10 @@ export interface AllowanceRepository {
   findAdjustment(
     request: Pick<NewAdjustment, "allowanceId" | "requestId">,
   ): Promise<{ amount: string; reason: string | null } | null>;
+  /** The adjustment line with this id; null when there is none or the line is no adjustment. */
+  findAdjustmentById(id: string): Promise<{ allowanceId: string; amount: string } | null>;
+  /** Appends the reversal of an adjustment and returns its id; null when it was reversed before. */
+  insertReversal(reversal: NewReversal): Promise<string | null>;
 }
 
 /** Days someone added to or took from an allowance, with their comment. */
@@ -51,6 +55,17 @@ export interface NewAdjustment {
   author: HistoryAuthor;
   /** One per adjustment meant, so a repeated request appends nothing. */
   requestId: string;
+}
+
+/** A line undoing one adjustment, with an optional reason. */
+export interface NewReversal {
+  allowanceId: string;
+  adjustmentId: string;
+  /** Minus the adjustment's amount. */
+  amount: string;
+  effectiveDate: CalendarDate;
+  reason: string | null;
+  author: HistoryAuthor;
 }
 
 export function allowanceRepository(tx: Tx): AllowanceRepository {
@@ -187,6 +202,47 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
         .from(allowanceLedgerLines)
         .where(eq(allowanceLedgerLines.idempotencyKey, adjustmentKey(allowanceId, requestId)));
       return row ?? null;
+    },
+
+    async findAdjustmentById(id) {
+      const [row] = await orm()
+        .select({
+          allowanceId: allowanceLedgerLines.allowanceId,
+          amount: allowanceLedgerLines.amount,
+        })
+        .from(allowanceLedgerLines)
+        .where(
+          and(
+            eq(allowanceLedgerLines.id, id),
+            eq(
+              allowanceLedgerLines.causeKind,
+              "allowance_adjusted" satisfies StoredLedgerLine["causeKind"],
+            ),
+          ),
+        );
+      return row ?? null;
+    },
+
+    async insertReversal({ allowanceId, adjustmentId, amount, effectiveDate, reason, author }) {
+      const [row] = await orm()
+        .insert(allowanceLedgerLines)
+        .values({
+          allowanceId,
+          effectiveDate,
+          unit: "days",
+          amount,
+          kind: "manual_adjustment",
+          causeKind: "allowance_adjustment_reversed" satisfies StoredLedgerLine["causeKind"],
+          causeRef: adjustmentId,
+          reason,
+          authorKind: author.kind.toLowerCase(),
+          authorId: author.id,
+          // One reversal per adjustment, however often it is asked for.
+          idempotencyKey: `${allowanceId}:adjustment_reversed:${adjustmentId}`,
+        })
+        .onConflictDoNothing({ target: allowanceLedgerLines.idempotencyKey })
+        .returning({ id: allowanceLedgerLines.id });
+      return row?.id ?? null;
     },
   };
 }

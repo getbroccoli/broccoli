@@ -50,8 +50,12 @@ type AllowanceChange {
   "What the change is made of, by kind, each rounded on its own so they may not add up to amount; kinds that add up to 0 are left out. A change whose amount and parts are all 0 is not listed."
   parts: [AllowanceChangePart!]!
   author: RecordChangeAuthor!
-  "The adjustment's comment; null for other causes."
+  "The adjustment's comment, or the reversal's reason; null for other causes and a reversal without one."
   comment: String
+  "The adjustment's own id, to reverse it by; set on ALLOWANCE_ADJUSTED and ALLOWANCE_ADJUSTMENT_REVERSED, null otherwise."
+  adjustmentId: ID
+  "Whether a later change reversed this adjustment; false for other causes."
+  reversed: Boolean!
 }
 
 "The days of one kind a change is made of."
@@ -85,6 +89,8 @@ enum AllowanceChangeCause {
   TIME_OFF_APPROVED
   TIME_OFF_CANCELLED
   ALLOWANCE_ADJUSTED
+  "An admin reversed an adjustment."
+  ALLOWANCE_ADJUSTMENT_REVERSED
 }
 
 input AllowanceAdjustInput {
@@ -95,6 +101,13 @@ input AllowanceAdjustInput {
   comment: String!
   "Made once for each adjustment meant, so sending the same one again appends nothing."
   requestId: ID
+}
+
+input AllowanceAdjustmentReverseInput {
+  "AllowanceChange.adjustmentId of an ALLOWANCE_ADJUSTED change."
+  adjustmentId: ID!
+  "Why, up to 1,000 characters once trimmed; everyone who reads the balance sees it."
+  comment: String
 }
 
 "The adjusted balance's figures, or why the adjustment was refused."
@@ -584,6 +597,10 @@ type TimeOffDecision {
 type TimeOffDay {
   date: Date!
   dayPart: TimeOffDayPart!
+  "What the day costs under the person's working week and bank holidays on that date, so a day they no longer work costs 0; null outside who's out, and unless the caller may read this person's time off."
+  cost: Float
+  "Why the day costs that; null whenever cost is."
+  reason: TimeOffDayCostReason
 }
 
 enum TimeOffDayPart {
@@ -727,6 +744,8 @@ type TimeOffMutations {
   cancelOwnRulesChange(input: TimeOffOwnRulesCancelChangeInput!): TimeOffOwnRulesPayload!
   "Adds days to or takes days from a person's current balance, with a comment everyone who reads the balance sees; refused for a leave year that has ended (ConflictError). Admins only."
   adjustAllowance(input: AllowanceAdjustInput!): AllowanceAdjustPayload!
+  "Undoes an adjustment with a change of the opposite amount; the adjustment stays in the history, marked reversed. Refused once it is reversed or its leave year has ended (ConflictError). Admins only."
+  reverseAllowanceAdjustment(input: AllowanceAdjustmentReverseInput!): AllowanceAdjustPayload!
 }
 
 "The requested time off, or why it was refused."

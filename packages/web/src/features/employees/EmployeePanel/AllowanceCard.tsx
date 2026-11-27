@@ -82,7 +82,13 @@ export function AllowanceCard({ employeeId, type, period, adjustFor }: Props) {
             </Button>
           </div>
           <div id={historyId}>
-            {historyOpen && <AllowanceHistory employeeId={employeeId} allowanceId={allowanceId} />}
+            {historyOpen && (
+              <AllowanceHistory
+                employeeId={employeeId}
+                allowanceId={allowanceId}
+                reverseFor={adjustFor && { ...adjustFor, remaining: type.remaining ?? 0 }}
+              />
+            )}
           </div>
         </>
       )}
