@@ -92,6 +92,10 @@ Full-timer in England and Wales employed all of 2026 on the statutory minimum: g
 }
 ```
 
+## Terms changes and booked time off
+
+A terms change, to other terms or to none, commits only when nobody's approved or pending time off from its date is left without rules: the module's before-commit handler reads `employees.terms_changed` inside the change's transaction and refuses with CONFLICT, naming each person, type and dates, so the whole change rolls back. Own rules that still cover a day keep it.
+
 ## Booking time off
 
 `BookTimeOffService` books time off, approved straight away, for whoever the caller may book for directly (write mode `direct`: admins, through `time_off.manage.all`), and cancels it (see Cancelling). Anyone with the `time_off` create scope previews it, so employees preview their own (`time_off.create.self`), whose write mode is `request`: they book their own time off only of a type nobody approves (see Who approves); for any other type booking refuses them with "Your time off needs to be requested."
