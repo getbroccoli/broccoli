@@ -1,5 +1,6 @@
 import { useQuery } from "@apollo/client/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useRouteContext } from "@tanstack/react-router";
 
 import { AllowanceHistoryDocument } from "@/__generated__/graphql";
@@ -23,6 +24,7 @@ export function AllowanceHistory({ employeeId, allowanceId, reverseFor }: Props)
   const { me } = useRouteContext({ from: "/_authenticated" });
   const [reversingId, setReversingId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const firstRevealed = useRef<HTMLLIElement>(null);
   // Bookings and adjustments made while it was closed change it, so each open asks again.
   const { data, error, loading, refetch } = useQuery(AllowanceHistoryDocument, {
     variables: { employeeId },
@@ -61,6 +63,7 @@ export function AllowanceHistory({ employeeId, allowanceId, reverseFor }: Props)
       <ol className="flex flex-col border-t border-border/60">
         {shown.map((change, index) => (
           <AllowanceChangeRow
+            ref={index === FIRST_SHOWN ? firstRevealed : undefined}
             key={`${change.recordedAt}:${change.cause}:${index}`}
             change={change}
             previous={changes[index + 1]}
@@ -72,7 +75,15 @@ export function AllowanceHistory({ employeeId, allowanceId, reverseFor }: Props)
       </ol>
       {!showAll && changes.length > FIRST_SHOWN && (
         <div className="border-t border-border/60 px-1.5 py-1.5">
-          <Button variant="ghost" size="sm" onClick={() => setShowAll(true)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              // The button goes away, so focus moves to the first row it revealed.
+              flushSync(() => setShowAll(true));
+              firstRevealed.current?.focus();
+            }}
+          >
             {t("people.panel.timeOff.history.showAll", { count: String(changes.length) })}
           </Button>
         </div>

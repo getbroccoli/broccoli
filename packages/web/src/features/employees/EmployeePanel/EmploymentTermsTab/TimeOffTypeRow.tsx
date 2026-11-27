@@ -72,7 +72,9 @@ export function TimeOffTypeRow({
   const { planned } = splitVersions(versions, today);
   const hasOwn = [base, ...planned].some((version) => version?.source === "THEIR_OWN");
   const canAct = edit !== null && edit.mode === null && !locked;
-  const returnTerms = termsOn(base && base.startDate > today ? base.startDate : today);
+  // Only a row that offers "Use England and Wales’s rules" looks up the terms it returns to.
+  const returnTerms =
+    canAct && hasOwn ? termsOn(base && base.startDate > today ? base.startDate : today) : null;
   const open = (mode: OwnRulesMode) =>
     edit?.open({
       mode,
@@ -131,11 +133,10 @@ export function TimeOffTypeRow({
                   label: offered ? t("ownWeek.edit") : t("ownRules.offer", { name: firstName }),
                   onSelect: () => open("own"),
                 },
-                hasOwn &&
-                  returnTerms !== null && {
-                    label: t("ownRules.useTerms", { terms: returnTerms.termsName }),
-                    onSelect: () => open("terms"),
-                  },
+                returnTerms !== null && {
+                  label: t("ownRules.useTerms", { terms: returnTerms.termsName }),
+                  onSelect: () => open("terms"),
+                },
                 offered && {
                   label: t("ownRules.stop", { name: firstName }),
                   onSelect: () => open("stop"),

@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, type Ref } from "react";
 
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
@@ -13,6 +13,8 @@ import {
 } from "./allowanceHistoryText";
 
 type Props = {
+  /** Set on a row that takes focus, such as the first one Show all reveals. */
+  ref?: Ref<HTMLLIElement>;
   change: AllowanceChange;
   /** The next older change, whose figures this one moved from. */
   previous: AllowanceChange | undefined;
@@ -23,9 +25,20 @@ type Props = {
 };
 
 /** One change: what happened, its amount and the days left, and how each figure moved. */
-export function AllowanceChangeRow({ change, previous, readerUserId, today, onReverse }: Props) {
+export function AllowanceChangeRow({
+  ref,
+  change,
+  previous,
+  readerUserId,
+  today,
+  onReverse,
+}: Props) {
   return (
-    <li className="grid grid-cols-[3.5rem_minmax(0,1fr)_auto] gap-x-2 border-b border-border/60 px-3 py-2 text-sm last:border-b-0">
+    <li
+      ref={ref}
+      tabIndex={ref ? -1 : undefined}
+      className="grid grid-cols-[3.5rem_minmax(0,1fr)_auto] gap-x-2 border-b border-border/60 px-3 py-2 text-sm last:border-b-0"
+    >
       <span className="text-muted-foreground">{recordedDate(change.recordedAt, today)}</span>
       <span className="flex min-w-0 flex-col items-start">
         <span className="flex flex-wrap items-center gap-x-2">

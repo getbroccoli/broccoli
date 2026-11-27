@@ -88,6 +88,7 @@ export function TermsRuleRow({
               {menu.map((action) => (
                 <DropdownMenuItem
                   key={action.label}
+                  className="[overflow-wrap:anywhere]"
                   variant={action.destructive ? "destructive" : "default"}
                   onClick={action.onSelect}
                 >

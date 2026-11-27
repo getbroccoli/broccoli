@@ -15,7 +15,7 @@ type EmployeeTimeOffType {
   balance: TimeOffBalanceKind!
   "The allowance these figures come from; null unless BALANCE_FROM_ALLOWANCE."
   allowanceId: ID
-  "Every change to the balance, newest first, one per change; null unless BALANCE_FROM_ALLOWANCE."
+  "The changes to the balance that moved one of its figures, newest first; null unless BALANCE_FROM_ALLOWANCE."
   history: [AllowanceChange!]
   "The first day of the leave year, or of the calendar year for NO_BALANCE."
   periodStart: Date!
