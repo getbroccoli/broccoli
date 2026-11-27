@@ -1,10 +1,11 @@
 import { useQuery } from "@apollo/client/react";
 import { CalendarBlank, CaretLeft, CheckSquare, House, Robot, Users } from "@phosphor-icons/react";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouteContext } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 
 import { LeftNavAgentConnectionDocument } from "@/__generated__/graphql";
 
+import { useDemoPresent } from "@/features/demo";
 import { useTasksNeedingYou } from "@/features/tasks";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
@@ -22,6 +23,8 @@ const SETTINGS_AREA_ITEMS: NavItem[] = [
 const SETTINGS_SYSTEM_ITEMS: NavItem[] = [
   { to: "/settings/email", label: t("settings.email.title") },
 ];
+/** For the owner outside the demo, whose owner exits the demo instead. */
+const WORKSPACE_ITEM: NavItem = { to: "/settings/workspace", label: t("settings.workspace.title") };
 
 type Props = {
   /** What the person's agent is doing, shown at the Your agent dot while it is connected. */
@@ -33,6 +36,8 @@ type Props = {
  * sit side by side in one strip that slides between them.
  */
 export function LeftNav({ agentActivity }: Props) {
+  const { me } = useRouteContext({ from: "/_authenticated" });
+  const demoPresent = useDemoPresent();
   const inSettings = useInSettings();
   const tasksNeedingYou = useTasksNeedingYou() ?? 0;
   const agentConnected = Boolean(
@@ -58,6 +63,10 @@ export function LeftNav({ agentActivity }: Props) {
       besideDot: agentConnected && !inSettings ? agentActivity : undefined,
     },
   ];
+  const systemItems =
+    me.operations.includes("RESET_WORKSPACE") && demoPresent === false
+      ? [...SETTINGS_SYSTEM_ITEMS, WORKSPACE_ITEM]
+      : SETTINGS_SYSTEM_ITEMS;
   return (
     <aside className="shrink-0 md:h-full md:w-56 md:overflow-hidden">
       <div
@@ -88,7 +97,7 @@ export function LeftNav({ agentActivity }: Props) {
           <span className={groupLabelClass}>{t("settings.areas")}</span>
           <NavList label={t("settings.areas")} items={SETTINGS_AREA_ITEMS} />
           <span className={cn(groupLabelClass, "md:pt-4")}>{t("settings.system")}</span>
-          <NavList label={t("settings.system")} items={SETTINGS_SYSTEM_ITEMS} />
+          <NavList label={t("settings.system")} items={systemItems} />
           <ProfileMenu />
         </div>
       </div>

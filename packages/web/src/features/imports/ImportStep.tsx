@@ -65,6 +65,7 @@ export function ImportStep() {
     externalAgent && !externalAgent.listening
       ? pendingAgentFiles.filter((source) => !source.pickedUpByExternalAgent)
       : [];
+  const [readingSlack, setReadingSlack] = useState(false);
   const gathering = data?.import.demoAvailable === false || uploading;
 
   return (
@@ -91,8 +92,8 @@ export function ImportStep() {
               // The title shows on hover only when the disabled button takes pointer events.
               className="h-10 px-4 disabled:pointer-events-auto"
               // Until the import loads, it may already hold people.
-              disabled={starting || gathering || !data}
-              title={gathering ? t("setup.import.demoUnavailable") : undefined}
+              disabled={starting || gathering || readingSlack || !data}
+              title={gathering || readingSlack ? t("setup.import.demoUnavailable") : undefined}
               onClick={startDemo}
             >
               {t(starting ? "setup.import.demoStarting" : "setup.import.demo")}
@@ -130,7 +131,15 @@ export function ImportStep() {
       )}
       {data ? (
         <>
-          <SlackSourceRow connection={data.slackConnection} source={slackSource} />
+          <SlackSourceRow
+            connection={data.slackConnection}
+            source={slackSource}
+            onReadingChange={(reading) => {
+              setReadingSlack(reading);
+              // A lost response may hide people the read saved: ask the API what it holds.
+              if (!reading) void refetch();
+            }}
+          />
           <FileSources
             sources={fileSources}
             onUploaded={() => refetch()}

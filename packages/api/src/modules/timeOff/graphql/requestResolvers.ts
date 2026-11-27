@@ -7,15 +7,20 @@ import {
   type ResolversTypes,
   toEnum,
 } from "../../../core/graphql";
+import type { Task, TaskService } from "../../../core/tasks";
 import type { EmployeeReadService } from "../../employees";
 import type { StoredTimeOff, TimeOffRequestService } from "../app";
 import { dayCount } from "../domain";
 import { toBookingInput } from "./bookingResolvers";
 
-/** Requesting time off, its status, decision and cancellation, and a person's requests; merged into the module's resolvers. */
+/**
+ * Requesting time off, its status, decision and cancellation, the caller's tasks on it, and a
+ * person's requests; merged into the module's resolvers.
+ */
 export function requestResolvers(
   requests: TimeOffRequestService,
   employees: Pick<EmployeeReadService, "readEmployees">,
+  tasks: Pick<TaskService, "listMyOpenTasksOnRecords">,
 ) {
   const loaders = perRequest((context) => ({
     statuses: new DataLoader<string, StoredTimeOff | null>(async (ids) => {
@@ -25,6 +30,10 @@ export function requestResolvers(
     cancellable: new DataLoader<string, boolean>(async (ids) => {
       const found = await requests.readCancellable(context.getActor(), ids);
       return ids.map((id) => found.has(id));
+    }),
+    myOpenTasks: new DataLoader<string, Task[]>(async (ids) => {
+      const found = await tasks.listMyOpenTasksOnRecords(context.getActor(), "time_off", ids);
+      return ids.map((id) => found.get(id) ?? []);
     }),
     requests: new DataLoader(async (employeeIds: readonly string[]) => {
       const found = await requests.readRequests(context.getActor(), employeeIds);
@@ -61,6 +70,7 @@ export function requestResolvers(
       decision: async ({ id }, _args, context) =>
         (await loaders(context).statuses.load(id))?.decision ?? null,
       canCancel: ({ id }, _args, context) => loaders(context).cancellable.load(id),
+      myOpenTasks: ({ id }, _args, context) => loaders(context).myOpenTasks.load(id),
       cancellation: async ({ id }, _args, context) =>
         (await loaders(context).statuses.load(id))?.cancellation ?? null,
       // Colleagues see a person's approved time off but not its history: theirs is empty.

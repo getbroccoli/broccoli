@@ -179,12 +179,16 @@ export function WhoStep({ search }: Props) {
         <section className="flex max-w-[592px] flex-col gap-3">
           <h2 className="text-sm font-medium">{t("setup.who.youTitle")}</h2>
           {!changing && (
-            <div className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3">
-              <p className="text-sm">{me ? me.name : t("setup.who.notInList")}</p>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setChanging(true)}>
+            <button
+              type="button"
+              onClick={() => setChanging(true)}
+              className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-colors hover:bg-muted/50"
+            >
+              <span className="text-sm">{me ? me.name : t("setup.who.notInList")}</span>
+              <span className={buttonVariants({ variant: "ghost", size: "sm" })}>
                 {t("setup.who.change")}
-              </Button>
-            </div>
+              </span>
+            </button>
           )}
           {changing && (
             <div className="rounded-xl border">

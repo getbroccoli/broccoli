@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 
-import type { TaskRow } from "../taskText";
+import type { TaskRow } from "./taskText";
 
 type Props = {
   options: NonNullable<TaskRow["resultForm"]>["options"];
@@ -9,7 +9,7 @@ type Props = {
   onChoose: (option: Props["options"][number]) => void;
 };
 
-/** A result form shown as buttons, in the panel's header in place of Mark done. */
+/** A result form shown as buttons: in the task panel's header in place of Mark done, or on the record it decides. */
 export function TaskResultButtons({ options, chosenCode, isPending, onChoose }: Props) {
   // The first option leads until another is chosen.
   const leading = chosenCode ?? options[0]!.code;

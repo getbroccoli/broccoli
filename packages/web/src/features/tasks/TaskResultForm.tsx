@@ -4,7 +4,7 @@ import type { TaskResultInput } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
-import type { TaskRow } from "../taskText";
+import type { TaskRow } from "./taskText";
 import { SECTION_LABEL } from "./sectionLabel";
 
 type Props = {
@@ -17,8 +17,9 @@ type Props = {
 };
 
 /**
- * The part of a task's result form in the panel's body: the options as a list when the form shows
- * choices, and the comment box of a chosen option that requires one, then Send.
+ * The part of a task's result form below its buttons, in the task panel's body or on the record it
+ * decides: the options as a list when the form shows choices, and the comment box of a chosen
+ * option that requires one, then Send.
  */
 export function TaskResultForm({ form, chosenCode, onChoose, isPending, onSend }: Props) {
   const [comment, setComment] = useState("");

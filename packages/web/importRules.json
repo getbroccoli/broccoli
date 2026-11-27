@@ -70,6 +70,7 @@
       "src/apollo",
       "src/components/ui",
       "src/features/employees",
+      "src/features/tasks",
       "src/features/termsDisplay",
       "src/i18n",
       "src/lib/calendarDay",
@@ -178,13 +179,15 @@
       "src/apollo",
       "src/components/form",
       "src/components/ui",
+      "src/features/demo",
       "src/features/employees",
       "src/features/records",
       "src/features/termsDisplay",
       "src/i18n",
       "src/lib/calendarDay",
       "src/lib/class-names",
-      "src/lib/formatDays"
+      "src/lib/formatDays",
+      "src/lib/useSessionChange"
     ],
     "src/features/termsDisplay": [
       "src/__generated__",

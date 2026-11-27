@@ -33,6 +33,7 @@ A manual check of the home page against a development stack: what needs you, who
 - [ ] As the report, a colleague's approved Annual leave shows with its type, and their Sickness shows as "Off".
 - [ ] A person with no manager and no reports sees no "Your team" / "Everyone" choice.
 - [ ] With nobody out, the card reads "Nobody on your team is out in the next 2 weeks." on Your team and "Nobody is out in the next 2 weeks." on Everyone.
+- [ ] Clicking a person, anywhere on their row, opens their panel on People.
 - [ ] "Time off" opens the Time off page on this month.
 
 ## Your time off

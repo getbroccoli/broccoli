@@ -11,7 +11,7 @@ A manual check of the left menu, the workspace menu, Settings and the profile me
 
 - [ ] The left menu shows the workspace menu at the top, "Today", "Tasks" with the count of tasks that need you, then "People", "Time off" and "Your agent", and the profile button at the bottom.
 - [ ] "Today" is highlighted only on Today, not on other pages.
-- [ ] The workspace menu opens with the company's logo and name, then "Settings"; with demo data, "Exit demo" under "Demo"; without it, "Reset setup".
+- [ ] The workspace menu opens with the company's logo and name, then "Settings"; with demo data, "Exit demo" under "Demo". It never shows "Reset setup", which is in Settings, "Workspace".
 
 ## Settings
 

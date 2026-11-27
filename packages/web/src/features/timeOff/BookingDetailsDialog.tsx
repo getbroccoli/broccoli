@@ -26,6 +26,8 @@ import { t } from "@/i18n";
 import { calendarDayOf } from "@/lib/calendarDay";
 import { cn } from "@/lib/class-names";
 
+import { BookingDecision } from "./BookingDecision";
+import { decisionTaskOf } from "./decisionTaskOf";
 import { evictWhosOut } from "./cache";
 import { bookingTotal, cancelDialogWords, dayCostLine } from "./timeOffText";
 import { bookingDates, dateRange, dayMonthYear, weekdayDay } from "@/lib/formatDate";
@@ -42,8 +44,8 @@ type Props = {
 
 /**
  * One booking or request as the viewer may see it: its type (or "Off"), dates and, for who may
- * read the person's time off, its days, cost, note, status and decision. Whoever may cancel it,
- * or withdraw their own request, does it from here.
+ * read the person's time off, its days, cost, note, status and decision. Its approver decides it
+ * from here; anyone else who may cancel it, or withdraw their own request, does that.
  */
 export function BookingDetailsDialog({
   employeeId,
@@ -64,8 +66,12 @@ export function BookingDetailsDialog({
     ],
   });
   const typeName = timeOff.timeOffType?.name ?? t("timeOff.off");
+  const decisionTask = decisionTaskOf(timeOff);
+  // The approver decides rather than cancels.
   const cancellable =
-    timeOff.canCancel && (timeOff.status === "REQUESTED" || timeOff.status === "APPROVED")
+    !decisionTask &&
+    timeOff.canCancel &&
+    (timeOff.status === "REQUESTED" || timeOff.status === "APPROVED")
       ? timeOff.status
       : null;
   const byThePerson = viewerEmployeeId === employeeId;
@@ -180,6 +186,9 @@ export function BookingDetailsDialog({
                 date: dayMonthYear(calendarDayOf(new Date(timeOff.bookedAt), "Europe/London")),
               })}
             </p>
+          )}
+          {decisionTask && (
+            <BookingDecision employeeId={employeeId} task={decisionTask} onClose={onClose} />
           )}
           {cancelWords && (
             <DialogFooter>

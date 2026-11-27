@@ -29,7 +29,9 @@ export function TaskAction({ task, onDone }: Props) {
       size="xs"
       variant="outline"
       disabled={actions.isPending}
-      onClick={() => void actions.markDone(task.id).then((done) => done && onDone?.())}
+      onClick={() =>
+        void actions.markDone(task.id).then((outcome) => outcome === "DONE" && onDone?.())
+      }
     >
       {t("tasks.markDone")}
     </Button>

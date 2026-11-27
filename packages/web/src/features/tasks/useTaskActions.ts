@@ -1,3 +1,4 @@
+import type { DocumentNode } from "graphql";
 import { toast } from "sonner";
 
 import {
@@ -14,12 +15,14 @@ import { addTaskHistoryLine, forgetStaleTask } from "./cache";
 /**
  * Mark done, with the result a task's form asks for, and Delete for the person who asked. Mark done returns the task, which updates in
  * place; the groups it belongs to change when Tasks next loads. A refusal, such as a change someone
- * made first, shows its reason and loads the task again as it now stands.
+ * made first, shows its reason and loads the task again as it now stands. `refetch` lists the
+ * active queries a done task changes outside Tasks, such as the record it decided.
  */
-export function useTaskActions() {
+export function useTaskActions({ refetch }: { refetch?: DocumentNode[] } = {}) {
   const cache = useCache();
   const [markDone, markDoneState] = usePayloadMutation(MarkTaskDoneDocument, {
     update: (cache, { data }) => addTaskHistoryLine(cache, data?.tasks.markDone),
+    refetch,
   });
   const [deleteTask, deleteState] = usePayloadMutation(DeleteTaskDocument);
 
@@ -32,16 +35,19 @@ export function useTaskActions() {
 
   return {
     isPending: markDoneState.loading || deleteState.loading,
-    /** Resolves true once marked done; a refusal shows and resolves false. */
-    markDone: (id: string, result?: TaskResultInput) =>
+    /**
+     * Resolves DONE once marked done, REFUSED when the API refused it, such as for a change someone
+     * made first, and FAILED when it may not have reached the API; a failure shows its reason.
+     */
+    markDone: (id: string, result?: TaskResultInput): Promise<MarkDoneOutcome> =>
       markDone({ variables: { input: { id, result } } }).then(
         () => {
           toast(t("tasks.markedDone"));
-          return true;
+          return "DONE";
         },
         (failure: unknown) => {
           refused(id)(failure);
-          return false;
+          return failure instanceof PayloadFailure ? "REFUSED" : "FAILED";
         },
       ),
     /** Resolves true once deleted, the task gone from the cache; a refusal shows and resolves false. */
@@ -59,3 +65,6 @@ export function useTaskActions() {
       ),
   };
 }
+
+/** How marking a task done ended. */
+export type MarkDoneOutcome = "DONE" | "REFUSED" | "FAILED";

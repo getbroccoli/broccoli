@@ -49,6 +49,15 @@ export interface TaskService {
   /** A task the caller holds or asked for. */
   readTask(ctx: SecurityContext, taskId: string): Promise<Task>;
   /**
+   * The caller's open tasks on these records of one type, by record id, soonest due first; a
+   * record with none is missing from the map, and a caller with no employee gets an empty map.
+   */
+  listMyOpenTasksOnRecords(
+    ctx: SecurityContext,
+    recordType: string,
+    recordIds: readonly string[],
+  ): Promise<Map<string, Task[]>>;
+  /**
    * A one-time token for deciding this task on a card in the caller's connected agent: their own
    * open task with a result form; valid for an hour, for this connection only.
    */
@@ -141,6 +150,22 @@ export function createTaskService({
     async readTask(ctx, taskId) {
       const id = parseUuid(taskId);
       return requireVisible(ctx, id ? await taskRepository(orm).findById(id) : null).task;
+    },
+
+    async listMyOpenTasksOnRecords(ctx, recordType, recordIds) {
+      const employeeId = ctx.user?.employeeId ?? null;
+      const byRecord = new Map<string, Task[]>();
+      if (!employeeId) return byRecord;
+      const open = await taskRepository(orm).listOpenAssignedOnRecords(
+        employeeId,
+        recordType,
+        recordIds,
+      );
+      for (const task of open) {
+        const recordId = task.record!.recordId;
+        byRecord.set(recordId, [...(byRecord.get(recordId) ?? []), task]);
+      }
+      return byRecord;
     },
 
     readTaskHistory: (ctx, taskId, args) => historyReader.readHistory(ctx, "task", taskId, args),

@@ -1,4 +1,5 @@
 import type { ApprovalService } from "../../core/approvals";
+import type { TaskService } from "../../core/tasks";
 import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import type { BankHolidayService } from "../bankHolidays";
@@ -55,12 +56,14 @@ export function timeOffModule({
   timeOffSetup,
   bankHolidays,
   approvals,
+  tasks,
   ...dependencies
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   timeOff: TimeOffService;
   timeOffSetup: TimeOffSetupService;
   bankHolidays: BankHolidayService;
   approvals: ApprovalService;
+  tasks: TaskService;
 }): ModuleManifest {
   const requests = createTimeOffRequestService({
     ...dependencies,
@@ -83,6 +86,7 @@ export function timeOffModule({
       },
       allowances: createAllowanceService(dependencies),
       requests,
+      tasks,
     }),
     // The decision on requested time off commits with the approval that decided it.
     eventsBeforeCommit: requests.finishApprovals,

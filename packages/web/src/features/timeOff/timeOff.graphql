@@ -32,6 +32,17 @@ fragment WhosOutTimeOff on TimeOff {
     comment
   }
   canCancel
+  myOpenTasks {
+    id
+    resultForm {
+      display
+      options {
+        code
+        label
+        commentRequired
+      }
+    }
+  }
 }
 
 # Everyone the viewer may read, by name, with their month of who's out.
