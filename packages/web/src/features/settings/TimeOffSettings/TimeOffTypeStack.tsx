@@ -1,5 +1,6 @@
 import { useQuery } from "@apollo/client/react";
 import { X } from "@phosphor-icons/react";
+import { useEffect, useRef } from "react";
 
 import { TimeOffSettingsDocument } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,13 @@ type Props = {
 
 /** One time off type over the list: its name, look and privacy, edited in place. */
 export function TimeOffTypeStack({ timeOffTypeId, onClose }: Props) {
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   // The list under the panel loads the same query, so opening a row reads it from the cache.
   const { data, error, loading, refetch } = useQuery(TimeOffSettingsDocument);
   const type = data?.timeOffSettings.timeOffTypes.find(
@@ -31,7 +39,13 @@ export function TimeOffTypeStack({ timeOffTypeId, onClose }: Props) {
       >
         {type ? (
           // A saved change starts the form again from the saved values.
-          <TimeOffTypeRecord key={JSON.stringify(type)} type={type} onDeleted={onClose} />
+          <TimeOffTypeRecord
+            key={JSON.stringify(type)}
+            type={type}
+            onDeleted={() => {
+              if (mounted.current) onClose();
+            }}
+          />
         ) : (
           <div className="flex flex-col gap-4 p-6">
             <div className="flex items-center justify-between">

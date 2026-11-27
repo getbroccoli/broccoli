@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 
-import { DeleteTimeOffTypeDocument, TimeOffSettingsDocument } from "@/__generated__/graphql";
+import { DeleteTimeOffTypeDocument } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import {
   AlertDialog,
@@ -34,7 +34,6 @@ export function DeleteTimeOffTypeDialog({ open, onOpenChange, type, onDeleted }:
         const id = data?.timeOff.deleteType.deletedTimeOffTypeId;
         if (id) forgetTimeOffType(cache, id);
       },
-      refetch: [TimeOffSettingsDocument],
     },
   );
   const failed = Boolean(error || payloadError);
