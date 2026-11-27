@@ -17,17 +17,17 @@ The last command and `new Date().toISOString().slice(0, 10)` in the browser cons
 
 1. Book Annual leave for 7–18 Dec 2026. Check that the booking costs 10 days and the panel shows Used 10 and Remaining 10.
 2. Keep the December Time off calendar open. Open the same person's panel in another tab. Under Employment terms, give them their own working week and set Thursday to Off.
-3. Save from 27 Nov. Switch the panel to Overview and switch back to the existing calendar tab. Keep the calendar on December without refreshing or navigating away.
-4. Repeat with a fresh employee and a change from 14 Dec.
+3. Set **Applies from** to Today and save. Switch the panel to Overview and switch back to the existing calendar tab. Keep the calendar on December without refreshing or navigating away.
+4. Repeat with a fresh employee. With the clock still on 27 Nov, set **Applies from** to 14 Dec 2026.
 
 - [ ] **27 Nov** — the panel shows Entitlement 27.5, Used 8 and Remaining 11.5. The calendar leaves 10 and 17 Dec out of the bar and daily counts, and each piece of the bar has rounded ends. Booking details show 8 days deducted and both Thursdays cost 0.
 - [ ] **14 Dec** — the panel shows Entitlement 28, Used 9 and Remaining 11. The calendar still counts 10 Dec. It leaves 17 Dec out of the bar and daily counts. Booking details show 9 days deducted and 17 Dec costs 0.
-- [ ] If the open calendar stays stale, revisit Time off in the app and record which values change. Record the open-tab result separately from the revisit.
+- [ ] After recording the open-tab result for each date, revisit Time off in the app and select December again. Check the bar, daily counts and booking details separately.
 - [ ] Cancel the 27 Nov fixture's booking. Used falls to 0 and Remaining rises from 11.5 to 19.5. History shows 8 days returned.
 
 ## Reduce entitlement and adjust the balance
 
-1. Book the same 10 days for someone on dedicated test terms. Publish a reduction to 16 days including bank holidays from 1 Jan 2026.
+1. Assign the employee to dedicated test terms with the standard 28-day rule from 1 Jan 2026. Book the same 10 days. Publish a reduction to 16 days including bank holidays from 1 Jan 2026.
 2. Check Entitlement 16, Bank holidays 8, Used 10 and Remaining −2. The booking still deducts 10 days.
 3. Adjust by +3.5 with a reason. Check Remaining 1.5 and the history entries for the adjustment, the rules change and the 10-day booking.
 
@@ -44,6 +44,6 @@ The last command and `new Date().toISOString().slice(0, 10)` in the browser cons
 
 ## Keep personal rules through a change to shared terms
 
-1. Give two people dedicated test terms with 20 days plus bank holidays from 1 Jan 2026. Give one person their own Annual leave rule of 26 days plus bank holidays from that date and book their 10 days in December.
+1. Assign two people to dedicated test terms from 1 Jan 2026, with 20 days plus bank holidays effective from that date. Give one person their own Annual leave rule of 26 days plus bank holidays from that date and book their 10 days in December.
 2. Publish 22 days plus bank holidays on the shared terms from 1 Jan. The person with their own rules stays at 16 remaining. The colleague on the shared terms shows 22 remaining.
-3. Put the first person back on the terms' rules from 27 Nov. Their panel shows the inherited rule. The current year's prorated entitlement still rounds up to 34 including bank holidays, with 10 used and 16 remaining.
+3. On the first person's Employment terms tab, use the shared terms' Annual leave rules from 27 Nov. The Annual leave row shows the inherited 22-day rule plus bank holidays. On Overview, the current year's prorated entitlement still rounds up to 34 including bank holidays, with 10 used and 16 remaining.

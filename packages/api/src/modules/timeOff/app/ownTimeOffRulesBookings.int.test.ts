@@ -210,12 +210,15 @@ test("keeps personal Annual leave through a shared change and prorates a dated r
   const history = await allowanceService(orm, { today }).readAllowanceHistory(OWNER, {
     allowanceIds: [allowanceId],
   });
-  expect(history.get(allowanceId)?.[0]).toMatchObject({
+  const change = history.get(allowanceId)?.[0];
+  expect(change).toMatchObject({
     cause: "time_off_rules_changed",
     causeDate: "2026-07-01",
     amount: -2,
     balanceAfter: 14,
   });
+  expect(change?.parts).toContainEqual({ kind: "entitlement_grant", amount: -2.02 });
+  expect(change?.parts).toContainEqual({ kind: "rounding_up_to_half_day", amount: 0.02 });
 });
 
 const twentyFiveDays = {

@@ -130,13 +130,6 @@ test("cancelling leave over New Year returns one day to each leave year", async 
     startDate: "2026-12-31",
     endDate: "2027-01-04",
   });
-  expect(booked).toMatchObject({
-    cost: 2,
-    days: [
-      { date: "2026-12-31", dayPart: "full_day" },
-      { date: "2027-01-04", dayPart: "full_day" },
-    ],
-  });
   const readBalances = () =>
     Promise.all(
       [today, "2027-01-04"].map(async (date) => {

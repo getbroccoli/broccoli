@@ -89,8 +89,13 @@ test("approval charges the eight days the employee still works after their week 
     from: startDate,
     until: endDate,
   });
-  expect(calendar.get(employeeId)?.timeOff).toMatchObject([
-    { id: request.id, status: "approved", cost: 8, deductedDays: 8 },
+  const shown = calendar.get(employeeId)?.timeOff;
+  expect(shown).toMatchObject([{ id: request.id, status: "approved", cost: 8, deductedDays: 8 }]);
+  expect(
+    shown?.[0]?.dayCosts?.filter(({ date }) => date === "2026-12-10" || date === "2026-12-17"),
+  ).toMatchObject([
+    { date: "2026-12-10", cost: 0, reason: "not_a_working_day" },
+    { date: "2026-12-17", cost: 0, reason: "not_a_working_day" },
   ]);
   const history = await allowanceService(orm, { today }).readAllowanceHistory(requester, {
     allowanceIds: [allowanceId],

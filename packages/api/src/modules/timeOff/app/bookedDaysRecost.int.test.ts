@@ -53,11 +53,20 @@ test.for([
       (await timeOff.readTimeOffTypes(OWNER, { employeeIds })).get(person.employeeId),
     ).toMatchObject([{ entitlement: 28, bankHolidays: 8, used: 10, remaining: 10 }]);
 
-    await workingPatternService(orm, {
+    const weeks = workingPatternService(orm, {
       today,
       transact: transactWithTimeOffEvents(orm, { today }),
-    }).setOwnWorkingWeek(OWNER, { employeeId: person.employeeId, startDate, ...thursdaysOff });
+    });
+    await weeks.setOwnWorkingWeek(OWNER, {
+      employeeId: person.employeeId,
+      startDate,
+      ...thursdaysOff,
+    });
 
+    const terms = await weeks.readEmploymentTerms(OWNER, { employeeIds });
+    expect(
+      terms.get(person.employeeId)?.workingWeek.find(({ source }) => source === "their_own"),
+    ).toMatchObject({ startDate });
     expect(
       (await timeOff.readTimeOffTypes(OWNER, { employeeIds })).get(person.employeeId),
     ).toMatchObject([{ entitlement, bankHolidays: 8, used: cost, remaining }]);

@@ -12,12 +12,25 @@ test("the owner previews, books, reads and cancels leave over New Year", async (
 
   const preview = await browser.graphql(
     `query Preview($input: TimeOffBookInput!) {
-    timeOffBookingPreview(input: $input) { cost refusal { reason } }
+    timeOffBookingPreview(input: $input) {
+      cost
+      balances { periodStart balance }
+      refusal { reason }
+    }
   }`,
     { input },
   );
   expect(await preview.json()).toEqual({
-    data: { timeOffBookingPreview: { cost: 2, refusal: null } },
+    data: {
+      timeOffBookingPreview: {
+        cost: 2,
+        balances: [
+          { periodStart: "2026-01-01", balance: "BALANCE_FROM_ALLOWANCE" },
+          { periodStart: "2027-01-01", balance: "BALANCE_FROM_ALLOWANCE" },
+        ],
+        refusal: null,
+      },
+    },
   });
   const response = await browser.graphql(BOOK_TIME_OFF, { input });
   const booked = (await response.json()) as {
