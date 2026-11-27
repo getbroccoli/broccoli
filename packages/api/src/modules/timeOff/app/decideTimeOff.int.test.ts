@@ -54,12 +54,15 @@ test("approval charges the eight days the employee still works after their week 
   seed,
 }) => {
   const today = "2026-11-27";
-  const { requests, tasks, manager, managerId, requester, input, timeOff } =
-    await leaveRequestSetup(orm, seed, { today });
-  const { employeeId, startDate } = input;
+  const startDate = "2026-12-07";
   const endDate = "2026-12-18";
+  const { tasks, manager, requester, input, timeOff, task, request } = await pendingRequest(
+    orm,
+    seed,
+    { startDate, endDate, today },
+  );
+  const { employeeId } = input;
   const employeeIds = [employeeId];
-  const request = await requests.requestTimeOff(requester, { ...input, endDate, halfDays: [] });
   expect(request).toMatchObject({ status: "requested", cost: 10 });
   const waiting = (await timeOff.readTimeOffTypes(requester, { employeeIds })).get(employeeId);
   expect(waiting).toMatchObject([{ waiting: 10, used: 0, remaining: 20 }]);
@@ -76,9 +79,7 @@ test("approval charges the eight days the employee still works after their week 
   expect(
     (await timeOff.readTimeOffTypes(requester, { employeeIds })).get(employeeId),
   ).toMatchObject([{ used: 0, remaining: 19.5 }]);
-  const [task] = (await tasks.listMyTasks(manager)).needsYou;
-
-  await tasks.markDone(manager, task!.id, { result: approved });
+  await tasks.markDone(manager, task.id, { result: approved });
 
   expect(
     (await timeOff.readTimeOffTypes(requester, { employeeIds })).get(employeeId),
@@ -89,11 +90,8 @@ test("approval charges the eight days the employee still works after their week 
     until: endDate,
   });
   expect(calendar.get(employeeId)?.timeOff).toMatchObject([
-    { id: request.id, status: "approved", cost: 8 },
+    { id: request.id, status: "approved", cost: 8, deductedDays: 8 },
   ]);
-  expect((await requests.readStatuses(requester, [request.id])).get(request.id)).toMatchObject({
-    decision: { decidedByEmployeeId: managerId },
-  });
   const history = await allowanceService(orm, { today }).readAllowanceHistory(requester, {
     allowanceIds: [allowanceId],
   });

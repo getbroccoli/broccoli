@@ -99,10 +99,12 @@ export async function leaveRequestSetup(
 export async function pendingRequest(
   orm: Orm,
   seed: TestSeed,
-  dates?: { startDate: string; endDate: string },
+  dates?: { startDate: string; endDate: string; today?: string },
 ) {
-  const setup = await leaveRequestSetup(orm, seed);
-  const input = dates ? { ...setup.input, ...dates, halfDays: [] } : setup.input;
+  const setup = await leaveRequestSetup(orm, seed, { today: dates?.today });
+  const input = dates
+    ? { ...setup.input, startDate: dates.startDate, endDate: dates.endDate, halfDays: [] }
+    : setup.input;
   const request = await setup.requests.requestTimeOff(setup.requester, input);
   const [task] = (await setup.tasks.listMyTasks(setup.manager)).needsYou;
   return { ...setup, input, request, task: task! };

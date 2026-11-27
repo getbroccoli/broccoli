@@ -11,7 +11,7 @@ import {
   whosOutService,
 } from "#test/support";
 
-test("keeps booked days and a manual adjustment when entitlement falls below the booking", async ({
+test("keeps booked days and a manual adjustment after the balance goes negative", async ({
   orm,
   seed,
   transact,
@@ -58,7 +58,9 @@ test("keeps booked days and a manual adjustment when entitlement falls below the
     from,
     until,
   });
-  expect(calendar.get(employeeId)?.timeOff).toMatchObject([{ id: booking.id, cost: 10 }]);
+  expect(calendar.get(employeeId)?.timeOff).toMatchObject([
+    { id: booking.id, cost: 10, deductedDays: 10 },
+  ]);
 
   const allowances = allowanceService(orm, { today });
   const comment = "Correcting the transferred balance";
@@ -97,4 +99,10 @@ test("keeps booked days and a manual adjustment when entitlement falls below the
   expect(await allowances.readAllowanceHistory(OWNER, { allowanceIds: [allowanceId] })).toEqual(
     history,
   );
+  const recalculated = await whosOutService(orm, { today }).readWhosOut(OWNER, {
+    employeeIds,
+    from,
+    until,
+  });
+  expect(recalculated.get(employeeId)?.timeOff).toEqual(calendar.get(employeeId)?.timeOff);
 });

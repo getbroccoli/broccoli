@@ -117,6 +117,48 @@ test("cancelling gives the booked days back", async ({ orm, seed, transact }) =>
   expect(after.get(person.employeeId)).toMatchObject([{ used: 0, remaining: 20 }]);
 });
 
+test("cancelling leave over New Year returns one day to each leave year", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const today = "2026-11-27";
+  const person = await seedAnnualLeaveEmployee(orm, seed, transact);
+  const bookings = bookTimeOffService(orm, { today });
+  const booked = await bookings.bookTimeOff(OWNER, {
+    ...person,
+    startDate: "2026-12-31",
+    endDate: "2027-01-04",
+  });
+  expect(booked).toMatchObject({
+    cost: 2,
+    days: [
+      { date: "2026-12-31", dayPart: "full_day" },
+      { date: "2027-01-04", dayPart: "full_day" },
+    ],
+  });
+  const readBalances = () =>
+    Promise.all(
+      [today, "2027-01-04"].map(async (date) => {
+        const cards = await timeOffService(orm, { today: date }).readTimeOffTypes(OWNER, {
+          employeeIds: [person.employeeId],
+        });
+        return cards.get(person.employeeId);
+      }),
+    );
+  expect(await readBalances()).toMatchObject([
+    [{ periodStart: "2026-01-01", used: 1, remaining: 19 }],
+    [{ periodStart: "2027-01-01", used: 1, remaining: 19 }],
+  ]);
+
+  await bookings.cancelTimeOff(OWNER, { timeOffId: booked.id });
+
+  expect(await readBalances()).toMatchObject([
+    [{ periodStart: "2026-01-01", used: 0, remaining: 20 }],
+    [{ periodStart: "2027-01-01", used: 0, remaining: 20 }],
+  ]);
+});
+
 test("refuses to cancel a booking twice", async ({ orm, seed, transact }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
   const service = bookTimeOffService(orm);

@@ -2,12 +2,12 @@ import { afterEach, beforeEach, vi } from "vitest";
 
 import { approveReviewedImport, expect, test, TEST_OWNER, type TestEnv } from "#test/support";
 
-test("the owner previews, books, reads and cancels two working days", async ({ env }) => {
+test("the owner previews, books, reads and cancels leave over New Year", async ({ env }) => {
   const { browser, employeeId, timeOffTypeId } = await setUpBooking(env);
-  const input = { employeeId, timeOffTypeId, startDate: "2026-12-07", endDate: "2026-12-08" };
+  const input = { employeeId, timeOffTypeId, startDate: "2026-12-31", endDate: "2027-01-04" };
   const days = [
-    { date: "2026-12-07", dayPart: "FULL_DAY" },
-    { date: "2026-12-08", dayPart: "FULL_DAY" },
+    { date: "2026-12-31", dayPart: "FULL_DAY" },
+    { date: "2027-01-04", dayPart: "FULL_DAY" },
   ];
 
   const preview = await browser.graphql(
@@ -44,64 +44,20 @@ test("the owner previews, books, reads and cancels two working days", async ({ e
   expect(await calendar.json()).toEqual({
     data: { employee: { whosOut: { timeOff: [{ cost: 2, days }] } } },
   });
-  const cancelled = await browser.graphql(CANCEL_TIME_OFF, { input: { timeOffId } });
+  const cancelled = await browser.graphql(
+    `mutation Cancel($input: TimeOffCancelInput!) {
+    timeOff { cancelTimeOff(input: $input) {
+      cancelledTimeOffId
+      error { __typename ... on Error { message } }
+    } }
+  }`,
+    { input: { timeOffId } },
+  );
   expect(await cancelled.json()).toEqual({
     data: { timeOff: { cancelTimeOff: { cancelledTimeOffId: timeOffId, error: null } } },
   });
   const after = await browser.graphql(WHOS_OUT, { employeeId });
   expect(await after.json()).toEqual({ data: { employee: { whosOut: { timeOff: [] } } } });
-});
-
-test("cancelling one booking over New Year returns one day to each leave year", async ({ env }) => {
-  const { browser, employeeId, timeOffTypeId } = await setUpBooking(env);
-  const person = { employeeId, timeOffTypeId };
-  const booked = await browser.graphql(BOOK_TIME_OFF, {
-    input: { ...person, startDate: "2026-12-31", endDate: "2027-01-04" },
-  });
-  const body = (await booked.json()) as {
-    data: { timeOff: { bookTimeOff: { timeOff: { id: string } } } };
-  };
-  expect(body).toMatchObject({
-    data: {
-      timeOff: {
-        bookTimeOff: {
-          timeOff: {
-            cost: 2,
-            days: [
-              { date: "2026-12-31", dayPart: "FULL_DAY" },
-              { date: "2027-01-04", dayPart: "FULL_DAY" },
-            ],
-          },
-          error: null,
-        },
-      },
-    },
-  });
-  const timeOffId = body.data.timeOff.bookTimeOff.timeOff.id;
-  const otherDays = {
-    december: { ...person, startDate: "2026-12-30", endDate: "2026-12-30" },
-    january: { ...person, startDate: "2027-01-05", endDate: "2027-01-05" },
-  };
-  const before = await browser.graphql(LEAVE_YEAR_BALANCES, otherDays);
-  expect(await before.json()).toEqual({
-    data: {
-      december: { balances: [{ periodStart: "2026-01-01", usedBefore: 1, remainingBefore: 19 }] },
-      january: { balances: [{ periodStart: "2027-01-01", usedBefore: 1, remainingBefore: 19 }] },
-    },
-  });
-
-  const cancelled = await browser.graphql(CANCEL_TIME_OFF, { input: { timeOffId } });
-
-  expect(await cancelled.json()).toEqual({
-    data: { timeOff: { cancelTimeOff: { cancelledTimeOffId: timeOffId, error: null } } },
-  });
-  const after = await browser.graphql(LEAVE_YEAR_BALANCES, otherDays);
-  expect(await after.json()).toEqual({
-    data: {
-      december: { balances: [{ periodStart: "2026-01-01", usedBefore: 0, remainingBefore: 20 }] },
-      january: { balances: [{ periodStart: "2027-01-01", usedBefore: 0, remainingBefore: 20 }] },
-    },
-  });
 });
 
 test("returns a weekend-only booking refusal as an InvalidInputError payload", async ({ env }) => {
@@ -269,26 +225,8 @@ const BOOK_TIME_OFF = `mutation Book($input: TimeOffBookInput!) {
   } }
 }`;
 
-const CANCEL_TIME_OFF = `mutation Cancel($input: TimeOffCancelInput!) {
-  timeOff { cancelTimeOff(input: $input) {
-    cancelledTimeOffId
-    error { __typename ... on Error { message } }
-  } }
-}`;
-
-const LEAVE_YEAR_BALANCES = `query LeaveYearBalances(
-  $december: TimeOffBookInput!, $january: TimeOffBookInput!
-) {
-  december: timeOffBookingPreview(input: $december) {
-    balances { periodStart usedBefore remainingBefore }
-  }
-  january: timeOffBookingPreview(input: $january) {
-    balances { periodStart usedBefore remainingBefore }
-  }
-}`;
-
 const WHOS_OUT = `query Calendar($employeeId: ID!) {
   employee(id: $employeeId) {
-    whosOut(from: "2026-12-01", until: "2026-12-31") { timeOff { cost days { date dayPart } } }
+    whosOut(from: "2026-12-31", until: "2027-01-04") { timeOff { cost days { date dayPart } } }
   }
 }`;

@@ -1,6 +1,7 @@
 import {
   allowanceService,
   bookTimeOffService,
+  calendarDate,
   employeeServices,
   expect,
   giveTermsPolicies,
@@ -193,6 +194,18 @@ test("keeps personal Annual leave through a shared change and prorates a dated r
     { entitlement: 32, bankHolidays: 8, used: 10, remaining: 14 },
   ]);
   expect(inherited.get(colleague.id)).toEqual(published.get(colleague.id));
+  const datedRules = await timeOff.readPersonTimeOff(OWNER, {
+    employeeIds: [person.id],
+    from: calendarDate("2026-06-30"),
+  });
+  expect(datedRules.get(person.id)?.[0]?.versions).toMatchObject([
+    { source: "their_own", endDate: "2026-06-30", version: { rules: [{ entitlementDays: 26 }] } },
+    {
+      source: "from_their_terms",
+      startDate: "2026-07-01",
+      version: { rules: [{ entitlementDays: 22 }] },
+    },
+  ]);
   const allowanceId = inherited.get(person.id)![0]!.allowanceId!;
   const history = await allowanceService(orm, { today }).readAllowanceHistory(OWNER, {
     allowanceIds: [allowanceId],

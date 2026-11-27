@@ -1,6 +1,17 @@
 # QA: Changes after booking time off
 
-Use a disposable development workspace with synthetic `example.com` employees, following [QA setup](setup.md). Run these dates with the app and browser on 27 Nov 2026. Use fresh employees for each check. Unless a check specifies other rules, start them before 2026 on Monday to Friday with England and Wales bank holidays and the 28-day Annual leave rules that include bank holidays.
+Use a disposable development workspace with synthetic `example.com` employees, following [QA setup](setup.md). Use fresh employees for each check. Unless a check specifies other rules, start them before 2026 on Monday to Friday with England and Wales bank holidays and the 28-day Annual leave rules that include bank holidays.
+
+The exact figures use 27 Nov 2026. To run later, prepare the checkout and dependencies in a disposable Linux VM and set the guest clock before starting the stack and browser inside it:
+
+```sh
+sudo timedatectl set-ntp false
+sudo timedatectl set-timezone UTC
+sudo timedatectl set-time '2026-11-27 12:00:00'
+date -u +%F
+```
+
+The last command and `new Date().toISOString().slice(0, 10)` in the browser console should both give `2026-11-27`.
 
 ## Change a working week with the calendar open
 
@@ -9,7 +20,7 @@ Use a disposable development workspace with synthetic `example.com` employees, f
 3. Save from 27 Nov. Switch the panel to Overview and switch back to the existing calendar tab. Keep the calendar on December without refreshing or navigating away.
 4. Repeat with a fresh employee and a change from 14 Dec.
 
-- [ ] **27 Nov** — the panel shows Entitlement 27.5, Used 8 and Remaining 11.5. The calendar leaves 10 and 17 Dec out of the bar and daily counts. Booking details show 8 days deducted and both Thursdays cost 0.
+- [ ] **27 Nov** — the panel shows Entitlement 27.5, Used 8 and Remaining 11.5. The calendar leaves 10 and 17 Dec out of the bar and daily counts, and each piece of the bar has rounded ends. Booking details show 8 days deducted and both Thursdays cost 0.
 - [ ] **14 Dec** — the panel shows Entitlement 28, Used 9 and Remaining 11. The calendar still counts 10 Dec. It leaves 17 Dec out of the bar and daily counts. Booking details show 9 days deducted and 17 Dec costs 0.
 - [ ] If the open calendar stays stale, revisit Time off in the app and record which values change. Record the open-tab result separately from the revisit.
 - [ ] Cancel the 27 Nov fixture's booking. Used falls to 0 and Remaining rises from 11.5 to 19.5. History shows 8 days returned.
@@ -24,7 +35,7 @@ Use a disposable development workspace with synthetic `example.com` employees, f
 
 1. Follow [Request and approve](time-off.md#request-and-approve) to set up an employee and their manager. Request 7–18 Dec as the employee.
 2. Check Used 0, Remaining 20 and a waiting request. As the owner, give that employee Thursdays off from 27 Nov.
-3. Approve as the manager. Check that the employee's panel shows Used 8 and Remaining 11.5 and the manager's calendar shows 8 days deducted.
+3. Approve as the manager. Check that the employee's panel shows Used 8 and Remaining 11.5. As the manager, open the booking from the calendar and check that its details show 8 days deducted.
 
 ## Cancel across New Year
 
