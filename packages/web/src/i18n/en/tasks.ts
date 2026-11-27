@@ -1,6 +1,7 @@
 /** English copy under `tasks.*`. */
 export const tasksEn = {
   "tasks.title": "Tasks",
+  "tasks.all": "All tasks",
   "tasks.summary.one": "1 thing needs you. Everything else you asked for is below.",
   "tasks.summary.many": "{count} things need you. Everything else you asked for is below.",
   "tasks.summary.none": "Nothing needs you right now.",

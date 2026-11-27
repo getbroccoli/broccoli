@@ -4,14 +4,14 @@ import { Link, useNavigate, useRouteContext } from "@tanstack/react-router";
 
 import { MyTasksDocument, type MyTasksQuery } from "@/__generated__/graphql";
 import { DataTable, type DataTableColumn, TableState } from "@/components/dataTable";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Avatar } from "@/features/employees";
 import { t } from "@/i18n";
 import { calendarDayOf } from "@/lib/calendarDay";
 import { cn } from "@/lib/class-names";
 
-import { dueText, isLate, isOpen, taskFact, taskSource, type TaskRow } from "./taskText";
-import { useTaskActions } from "./useTaskActions";
+import { TaskAction } from "./TaskAction";
+import { dueText, isLate, isOpen, needsYou, taskFact, taskSource, type TaskRow } from "./taskText";
 
 type Group = keyof Omit<MyTasksQuery["myTasks"], "__typename">;
 type Row = { group: Group; task: TaskRow };
@@ -23,7 +23,6 @@ export function MyTasks() {
   const { me } = useRouteContext({ from: "/_authenticated" });
   const viewerId = me.employee?.id ?? null;
   const navigate = useNavigate();
-  const actions = useTaskActions();
   const { data, error, loading, refetch } = useQuery(MyTasksDocument, {
     fetchPolicy: "cache-and-network",
   });
@@ -95,28 +94,7 @@ export function MyTasks() {
       id: "act",
       header: "",
       className: "w-28 text-right",
-      cell: ({ task }) => {
-        if (task.status !== "TO_DO" || task.assignee.id !== viewerId) return null;
-        // A task that asks for a result is answered in its panel, not with one click.
-        return task.resultForm ? (
-          <Link
-            to="/tasks/$taskId"
-            params={{ taskId: task.id }}
-            className={cn(buttonVariants({ size: "xs", variant: "outline" }))}
-          >
-            {t("tasks.answer")}
-          </Link>
-        ) : (
-          <Button
-            size="xs"
-            variant="outline"
-            disabled={actions.isPending}
-            onClick={() => void actions.markDone(task.id)}
-          >
-            {t("tasks.markDone")}
-          </Button>
-        );
-      },
+      cell: ({ task }) => needsYou(task, viewerId) && <TaskAction task={task} />,
     },
   ];
 
