@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, or } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, or } from "drizzle-orm";
 
 import { ormOf, type Orm, type Tx } from "../../db";
 import { Task, type TaskFields } from "../domain";
@@ -28,6 +28,12 @@ export interface TaskRepository {
    * at or after `closedSince`.
    */
   listForEmployee(employeeId: string, closedSince: Date): Promise<Task[]>;
+  /** The open tasks the employee is assigned on these records of one type, soonest due first. */
+  listOpenAssignedOnRecords(
+    employeeId: string,
+    recordType: string,
+    recordIds: readonly string[],
+  ): Promise<Task[]>;
 }
 
 export function taskRepository(db: Orm | Tx): TaskRepository {
@@ -112,6 +118,23 @@ export function taskRepository(db: Orm | Tx): TaskRepository {
             ),
           ),
         );
+      return rows.map(toTask);
+    },
+
+    async listOpenAssignedOnRecords(employeeId, recordType, recordIds) {
+      if (recordIds.length === 0) return [];
+      const rows = await orm
+        .select()
+        .from(tasks)
+        .where(
+          and(
+            eq(tasks.recordType, recordType),
+            inArray(tasks.recordId, [...recordIds]),
+            eq(tasks.assigneeEmployeeId, employeeId),
+            eq(tasks.status, "to_do"),
+          ),
+        )
+        .orderBy(asc(tasks.dueDate), asc(tasks.id));
       return rows.map(toTask);
     },
   };
