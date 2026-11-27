@@ -48,6 +48,7 @@ test("a manager and starter receive distinct task emails and the manager can ope
     jobs: jobs.queue,
   });
   await flow.processes.turnOn(ADMIN, "notifications.task_created");
+  relay.answerNext(200, "<html>ok</html>");
 
   // Processes have no HTTP start operation yet; the running server consumes these real jobs.
   const started = await flow.processes.startRun(ADMIN, {
@@ -55,7 +56,13 @@ test("a manager and starter receive distinct task emails and the manager can ope
     recordId: starter.id,
   });
 
-  await expect.poll(() => relay.emails.length, { timeout: 15_000 }).toBe(2);
+  await expect.poll(() => relay.emails.length, { timeout: 20_000 }).toBe(3);
+  const first = relay.emails[0]!.body;
+  const attempts = relay.emails.filter(({ body }) => body.to === first.to);
+  expect(attempts.map(({ body }) => body.idempotencyKey)).toEqual([
+    first.idempotencyKey,
+    first.idempotencyKey,
+  ]);
   const managerEmail = relay.emails.find(({ body }) => body.to === manager.email)!.body;
   const starterEmail = relay.emails.find(({ body }) => body.to === starter.email)!.body;
   expect(managerEmail.idempotencyKey).not.toBe(starterEmail.idempotencyKey);
