@@ -19,7 +19,7 @@ import { TypeMenu } from "./TypeMenu";
 import { WhoPicker } from "./WhoPicker";
 import { dateRange } from "@/lib/formatDate";
 
-import { dialogWords, headerMode, modeForType } from "../timeOffText";
+import { dialogWords, unpickedMode, modeForType } from "../timeOffText";
 import { useBookingDraft } from "./useBookingDraft";
 import { useSaveTimeOff } from "./useSaveTimeOff";
 
@@ -53,7 +53,7 @@ export function BookTimeOffDialog({
   ).filter(({ canCreate }) => canCreate !== "NOT_ALLOWED");
   const person = people.find(({ id }) => id === draft.employeeId);
   const personMode =
-    (person ? modeOf(person.canCreate) : headerMode(people.map(({ canCreate }) => canCreate))) ??
+    (person ? modeOf(person.canCreate) : unpickedMode(people.map(({ canCreate }) => canCreate))) ??
     "book";
   const type = draft.types?.find(({ timeOffType }) => timeOffType.id === draft.typeId);
   const mode = modeForType(personMode, type?.timeOffType.approval ?? null);

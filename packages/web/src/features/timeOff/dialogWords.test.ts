@@ -4,7 +4,7 @@ import {
   bookedToast,
   dialogWords,
   headerButtons,
-  headerMode,
+  unpickedMode,
   modeForType,
   requestedToast,
 } from "./timeOffText";
@@ -15,7 +15,7 @@ it.each([
   [["NOT_ALLOWED"], null],
   [[], null],
 ] as const)("chooses the header action for %j", (permits, expected) => {
-  expect(headerMode(permits)).toBe(expected);
+  expect(unpickedMode(permits)).toBe(expected);
 });
 
 it.each([

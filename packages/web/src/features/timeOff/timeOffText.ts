@@ -193,7 +193,7 @@ export function modeForType(mode: DialogMode, approval: TimeOffApproval | null):
 }
 
 /** The dialog's mode before anyone is picked: Book when the viewer books anyone straight away, else Request. */
-export function headerMode(permits: readonly Permit[]): DialogMode | null {
+export function unpickedMode(permits: readonly Permit[]): DialogMode | null {
   if (permits.includes("ALLOWED")) return "book";
   return permits.includes("ALLOWED_WITH_APPROVAL") ? "request" : null;
 }
